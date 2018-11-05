@@ -124,6 +124,24 @@ structure ParseTreePP : sig
             | PT.GD_FieldFunc(ty, {tree=f, ...}, {tree=x, ...}, body) => (
                 prNode' (strm, "Func", concat[Atom.toString f, " (", Atom.toString x, ")"]);
                 nest strm (fn strm => (expr (strm, body))))
+            | PT.GD_Overloading({tree = f, ...}) => (
+             prNode' (strm, "Overloading", Atom.toString f)
+            )
+            | PT.GD_Type(t, {tree = f, ...}, optFile) => (
+             prNode' (strm, "Type", Atom.toString f ^ "=");
+             nest strm (fn strm => (
+                         ty (strm, t);
+                         (case optFile
+                           of SOME(file) => prNode' (strm, "From File ", file)
+                            | NONE => ()
+                         (* end case *))))
+                     
+            )
+            | PT.GD_Overload(t, {tree = f, ...}, isOp, params, body) => (
+             if isOp then prNode' (strm, "Overloading Operator", Atom.toString f)
+             else prNode' (strm, "Overloading Function", Atom.toString f);
+             nest strm (fn strm => (
+                         ty (strm, t); prList param (strm, params); funBody (strm, body))))
           (* end case *))
 
     and strandDcl (strm, obj) = (case obj
