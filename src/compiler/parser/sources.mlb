@@ -30,6 +30,11 @@ local
   keywords.sml
   diderot.lex.sml
 
+(* version 3.0 *)
+  diderot-3.0.grm.sml
+  keywords-3.0.sml
+  diderot-3.0.lex.sml    
+
   parser.sml
 
 in

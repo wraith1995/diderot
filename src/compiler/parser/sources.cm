@@ -30,4 +30,10 @@ is
   diderot.grm : ml-antlr
   keywords.sml
 
+    (* version 3.0 *)
+  diderot-3.0.lex : ml-ulex
+  diderot-3.0.grm : ml-antlr
+  keywords-3.0.sml
+
+
   parser.sml
