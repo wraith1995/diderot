@@ -6,13 +6,14 @@
  * All rights reserved.
  *)
 
-%name DiderotLex300;
+%name Diderot300Lex;
 
 %arg (lexErr);
 
 %defs(
 
-    structure T = DiderotTokens300
+    structure T = Diderot300Tokens
+    structure K = Keywords300
 
   (* some type lex_result is necessitated by ml-ulex *)
     type lex_result = T.token
@@ -154,7 +155,7 @@
 <INITIAL> "∞"           => (T.REAL RealLit.posInf);     (* u221e *)
 <INITIAL> "π"           => (T.REAL RealLit.pi);         (* u03c0 *)
 
-<INITIAL> {id}          => (Keywords.idToken yytext);
+<INITIAL> {id}          => (K.idToken yytext);
 
 <INITIAL> {num}         => (T.INT(valOf (IntInf.fromString yytext)));
 <INITIAL> {num}"."{num}([eE][+-]?{num})?

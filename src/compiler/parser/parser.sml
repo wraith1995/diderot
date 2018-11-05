@@ -117,11 +117,54 @@ structure Parser : sig
           end
     end (* local *)
 
+
+  (***** version 3.0 parser *****)
+    local
+     (* map tokens to strings; when adding a token, we use a generic name where it makes sense *)
+     structure DT = Diderot300Tokens
+      fun tokToString ADD (DT.ID _) = "<identifier>"
+        | tokToString DEL (DT.ID x) = Atom.toString x
+        | tokToString _ (DT.STRING s) = concat["\"", String.toCString s, "\""]
+        | tokToString ADD (DT.REAL f) = "<number>"
+        | tokToString DEL (DT.REAL f) = RealLit.toString f
+        | tokToString ADD (DT.INT i) = "<integer>"
+        | tokToString DEL (DT.INT i) = IntLit.toString i
+        | tokToString ADD DT.KW_vec2 = "<type>"
+        | tokToString ADD DT.KW_vec3 = "<type>"
+        | tokToString ADD DT.KW_vec4 = "<type>"
+        | tokToString ADD DT.KW_mat2 = "<type>"
+        | tokToString ADD DT.KW_mat3 = "<type>"
+        | tokToString ADD DT.KW_mat4 = "<type>"
+        | tokToString ADD DT.KW_real = "<type>"
+        | tokToString ADD DT.KW_int = "<type>"
+        | tokToString ADD DT.KW_bool = "<type>"
+        | tokToString _ tok = DT.toString tok
+
+    (* error function for parsers *)
+      fun parseErr errStrm (pos, _) = Error.errorAt (errStrm, (pos, pos), ["syntax error"])
+(* FIXME: need better support for error-message tuning in ML-Antlr
+      val parseErr = Error.parseError tokToString
+*)
+
+    (* glue together the lexer and parser *)
+      structure DiderotParser = Diderot300ParseFn(Diderot300Lex)
+    in
+    fun parser300 (errStrm, file) = let
+          fun get () = TextIO.input file
+          val lexer = Diderot300Lex.lex (Error.sourceMap errStrm) (lexErr errStrm)
+          val (res, _, errs) = DiderotParser.parse lexer (Diderot300Lex.streamify get)
+          in
+            List.app (parseErr errStrm) errs;
+            res
+          end
+    end (* local *)    
+
   (* select a parser based on the syntax version *)
     local
       val tbl = [
               ([1, 0], parser100),
-              ([2, 0], parser200)
+              ([2, 0], parser200),
+              ([3, 0], parser300)
             ]
       fun lookup vers =
             Option.map #2 (List.find (fn (v, _) => ListPair.allEq (op =) (v, vers)) tbl)

@@ -10,11 +10,11 @@
 
 structure Keywords300 : sig
 
-    val idToken : string -> DiderotTokens300.token
+    val idToken : string -> Diderot300Tokens.token
 
   end = struct
 
-    structure T = DiderotTokens300
+    structure T = Diderot300Tokens
 
     val keywords = [
             ("bool",            T.KW_bool),
