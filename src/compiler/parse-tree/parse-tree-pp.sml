@@ -132,7 +132,8 @@ structure ParseTreePP : sig
              nest strm (fn strm => (
                          ty (strm, t);
                          (case optFile
-                           of SOME(file) => prNode' (strm, "From File ", file)
+                           of SOME(file) =>
+                              prNode' (strm, "From File ", file)
                             | NONE => ()
                          (* end case *))))
                      
