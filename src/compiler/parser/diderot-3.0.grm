@@ -31,6 +31,7 @@
   | KW_file                     ("file")
   | KW_type                     ("type")
   | KW_overload                 ("overload")
+  | KW_operator                 ("operator")
   | KW_int                      ("int")
   | KW_kernel                   ("kernel")
   | KW_load_image               ("load_image")
@@ -200,6 +201,8 @@ GlobalDcl
           => (OverloadingDcl)
         | TypeDcl =>
           (TypeDcl)
+        | OverloadDcl =>
+          (OverloadDcl)
         ;
 
 OverloadingDcl
@@ -211,6 +214,26 @@ TypeDcl
                 => (markDecl(FULL_SPAN,PT.GD_Type(TyDef, BindId, SR)))
          
         ;
+
+
+OverloadDcl
+        : "overload" Type BindId "(" Parameters ")" FunctionDef
+                 => (markDecl(FULL_SPAN, PT.GD_Overload(Type, BindId, false, Parameters, FunctionDef)))
+        | "operator" Type  OpBind "(" Parameters ")" FunctionDef
+                 => (markDecl(FULL_SPAN, PT.GD_Overload(Type, OpBind, true, Parameters, FunctionDef)))
+        ;
+OpBind
+        : OverloadAbleOp
+                  => (({span=FULL_SPAN, tree=OverloadAbleOp}))
+        ;
+OverloadAbleOp
+        : AddOp
+                  => (AddOp)
+        | MultiplyOp
+                  => (MultiplyOp)     
+        ;
+
+
 TyDef
         : ConcreteType
                 => (ConcreteType)
