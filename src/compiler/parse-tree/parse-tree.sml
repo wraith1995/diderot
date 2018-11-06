@@ -44,7 +44,7 @@ structure ParseTree =
       | GD_FieldFunc of ty * var_bind * var_bind * expr (* field defined as function *)
       | GD_Overloading of var_bind (* Declaring that we overload a symbol *)
       | GD_Type of ty * var_bind * string option (* Declaring a new type with a possible file *)
-      | GD_Overload of ty * var_bind * bool * param list * fun_body
+      | GD_Overload of ty * (var_bind * bool) * param list * fun_body
 
     and strand_dcl
       = SD_Mark of strand_dcl mark

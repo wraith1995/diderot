@@ -138,7 +138,7 @@ structure ParseTreePP : sig
                          (* end case *))))
                      
             )
-            | PT.GD_Overload(t, {tree = f, ...}, isOp, params, body) => (
+            | PT.GD_Overload(t, ({tree = f, ...}, isOp), params, body) => (
              if isOp then prNode' (strm, "Overloading Operator", Atom.toString f)
              else prNode' (strm, "Overloading Function", Atom.toString f);
              nest strm (fn strm => (
