@@ -13,7 +13,7 @@ structure About =
 
   (* information about the language and compiler *)
     val message = "\
-          \  Diderot is designed and implemented by Charisee Chiw, Gordon Kindlmann\n\
+          \  Diderot is designed and implemented by Charisee Chiw, Teodoro F. Collin, Gordon Kindlmann\n\
           \  John Reppy, and Lamont Samuels, with partial support from the NSF\n\
           \  under awards CCF-1446412 and CCF-1564298.  Except where otherwise\n\
           \  noted, all code is Copyright (c) 2017 by the University of Chicago\n\
