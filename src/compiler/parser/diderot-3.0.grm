@@ -217,14 +217,16 @@ TypeDcl
 
 
 OverloadDcl
-        : "overload" Type BindId "(" Parameters ")" FunctionDef
-                 => (markDecl(FULL_SPAN, PT.GD_Overload(Type, BindId, false, Parameters, FunctionDef)))
-        | "operator" Type  OpBind "(" Parameters ")" FunctionDef
-                 => (markDecl(FULL_SPAN, PT.GD_Overload(Type, OpBind, true, Parameters, FunctionDef)))
+        (* : "overload" Type BindId "(" Parameters ")" FunctionDef *)
+        (*          => (markDecl(FULL_SPAN, PT.GD_Overload(Type, BindId, false, Parameters, FunctionDef))) *)
+        : "overload" Type  OpBind "(" Parameters ")" FunctionDef
+                 => (markDecl(FULL_SPAN, PT.GD_Overload(Type, OpBind, Parameters, FunctionDef)))
         ;
 OpBind
         : OverloadAbleOp
-                  => (({span=FULL_SPAN, tree=OverloadAbleOp}))
+                 => (({span=FULL_SPAN, tree=OverloadAbleOp}), true)
+        | BindId
+                 => ((BindId, false))
         ;
 OverloadAbleOp
         : AddOp
