@@ -28,6 +28,7 @@ structure Types =
                                 (* sequence of values; the dimension is none for *)
                                 (* dynamic-length sequences *)
       | T_Strand of Atom.atom   (* named type (i.e., a strand) *)
+      | T_Named of Atom.atom * ty    (* other named type *)
     (* convolution kernel; argument is number of levels of differentiation *)
       | T_Kernel of diff
     (* scalars, vectors, matrices, etc.; argument is tensor shape *)
