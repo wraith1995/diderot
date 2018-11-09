@@ -20,7 +20,7 @@ structure GlobalEnv : sig
     datatype fun_def
       = PrimFun of AST.var list                 (* possibly overloaded builtin function *)
       | UserFun of AST.var                      (* user-defined function *)
-
+      | OverloadUserFun of AST.var list         (* overloaded user-defined function*)
   (* lookup a strand *)
     val findStrand : t * Atom.atom -> StrandEnv.t option
 
@@ -61,6 +61,7 @@ structure GlobalEnv : sig
     datatype fun_def
       = PrimFun of AST.var list                 (* possibly overloaded builtin function *)
       | UserFun of AST.var                      (* user-defined function *)
+      | OverloadUserFun of AST.var list         (* overloaded user-defined function*)
 
   (* global environment holds global variables and strands *)
     datatype t = GE of {

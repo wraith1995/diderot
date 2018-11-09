@@ -78,13 +78,23 @@ structure Env : sig
     datatype fun_def
       = PrimFun of AST.var list                 (* possibly overloaded builtin function *)
       | UserFun of AST.var                      (* user-defined function *)
+      | OverloadUserFun of AST.var list         (* overloaded user-defined function*)		     
 
   (* insert a global variable into the environment (includes constants and inputs) *)
     val insertGlobal : t * context * Atom.atom * AST.var -> t
 
   (* insert a user function into the environment *)
     val insertFunc : t * context * Atom.atom * AST.var -> t
+							    
+  (* insert a table for an overloaded user function in the environment*)
+    val insertOverload : t * context * Atom.atom -> t							    
 
+  (* insert overloaded user functions into the environment*)						      
+    val insertOverloadFunc : t * context * Atom.atom * AST.var list -> t
+
+  (* insert overloaded user primitive operations into the enviroment *)
+    val insertOverloadPrim : t * context * Atom.atom * AST.var list -> t
+									 
   (* insert a strand into the environment *)
     val insertStrand : t * context * StrandEnv.t -> t
 
@@ -263,7 +273,43 @@ structure Env : sig
               gEnv = gEnv,
               vEnv = vEnv
             }
-          end
+    end
+
+    fun insertOverload (E{scope, inLoop, bindings, gEnv, vEnv}, cxt, f) =  let
+          val loc = Error.location cxt
+          in
+            GE.insertFunc(gEnv, f, GE.OverloadUserFun([]));
+            E{
+              scope = scope, inLoop = inLoop,
+              bindings = bindings,
+              gEnv = gEnv,
+              vEnv = vEnv
+            }
+	     (* We don't insert a binding for error locations to the place where we declare when we overload something; QUESTION: SHOULD WE?*)
+    end
+    fun insertOverloadFunc (E{scope, inLoop, bindings, gEnv, vEnv}, cxt, f, funcs) =  let
+          val loc = Error.location cxt
+          in
+            GE.insertFunc(gEnv, f, GE.OverloadUserFun funcs);
+            E{
+              scope = scope, inLoop = inLoop,
+              bindings = AtomMap.insert(bindings, f, loc),
+              gEnv = gEnv,
+              vEnv = vEnv
+            }
+    end
+
+    fun insertOverloadPrim (E{scope, inLoop, bindings, gEnv, vEnv}, cxt, f, funcs) =  let
+          val loc = Error.location cxt
+          in
+            GE.insertFunc(gEnv, f, GE.PrimFun funcs);
+            E{
+              scope = scope, inLoop = inLoop,
+              bindings = AtomMap.insert(bindings, f, loc),
+              gEnv = gEnv,
+              vEnv = vEnv
+            }
+    end												
 
     fun insertStrand (E{scope, inLoop, bindings, gEnv, vEnv}, cxt, sEnv) = let
           val () = GE.insertStrand(gEnv, sEnv)
