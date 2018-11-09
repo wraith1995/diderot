@@ -101,6 +101,9 @@ structure Env : sig
   (* insert a local variable into the environment *)
     val insertLocal : t * context * Atom.atom * AST.var -> t
 
+    val insertNamedType : t * context * Atom.atom * Types.ty * (Atom.atom * ConstExpr.t ) list  * (Atom.atom * AST.var ) list -> t
+
+															 
     val findStrand : t * Atom.atom -> StrandEnv.t option
     val findFunc : t * Atom.atom -> fun_def
     val findVar : t * Atom.atom -> AST.var option
@@ -108,6 +111,8 @@ structure Env : sig
 
   (* find the strand-set function with the given name *)
     val findSetFn : t * Atom.atom -> AST.var option
+
+    val findTypeEnv : t * Atom.atom -> TypeEnv.t option
 
   (* unwrap a parse-tree location marker and update the context with the span *)
     val withContext : context * 'a Error.mark -> (context * 'a)
@@ -241,6 +246,7 @@ structure Env : sig
             | someVar => someVar
           (* end case *))
     fun findKernel (E{gEnv, ...}, k) = GE.findKernel(gEnv, k)
+    fun findTypeEnv (E{gEnv, ...}, k) = GE.findTypeEnv(gEnv, k)
 
   (* find the strand-set function with the given name; we do this by brute force
    * for now.
@@ -285,7 +291,7 @@ structure Env : sig
               gEnv = gEnv,
               vEnv = vEnv
             }
-	     (* We don't insert a binding for error locations to the place where we declare when we overload something; QUESTION: SHOULD WE?*)
+    (* We don't insert a binding for error locations to the place where we declare when we overload something; QUESTION: SHOULD WE?*)
     end
     fun insertOverloadFunc (E{scope, inLoop, bindings, gEnv, vEnv}, cxt, f, funcs) =  let
           val loc = Error.location cxt
@@ -332,7 +338,15 @@ structure Env : sig
               gEnv = gEnv,
               vEnv = AMap.insert(vEnv, x, x')
             }
-          end
+    end
+    fun insertNamedType (E{scope, inLoop, bindings, gEnv, vEnv}, cxt, name, def, consts, methods) = let
+     val _ = GE.insertNamedType(gEnv, name, def, consts, methods)
+     val loc = Error.location cxt
+    in
+     E{scope = scope, inLoop = inLoop,
+       bindings = AtomMap.insert(bindings, name, loc),
+       gEnv = gEnv, vEnv = vEnv}
+    end
 
     fun withContext ((errStrm, _), {span, tree}) =
           ((errStrm, span), tree)
