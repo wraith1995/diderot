@@ -28,6 +28,8 @@ structure CheckGlobals : sig
     structure L = Literal
     structure SS = Substring
     structure CO = CheckOverload
+    structure N = BasisNames
+
 		     
     val err = TypeError.error
 
@@ -178,11 +180,11 @@ structure CheckGlobals : sig
 			S "The symbol'", A(f), S"' is already an overloaded symbol!"]);
 		   (ERROR, env))
 	      (* end case *) )
-	    | PT.GD_Overload(ty, ({span, tree=f}, isOp), params, body) =>
+	    | PT.GD_Overload(ty, ({span, tree=ff}, isOp), params, body) =>
 	      let
 	       (* Setup this as if we have a function at first. *)
 	       val ty' = CheckType.check(env, cxt, ty)
-               val env' = E.functionScope (env, ty', f)
+               val env' = E.functionScope (env, ty', ff)
                val (params', env') = CheckParams.check (env', cxt, Var.FunParam, params)
                val body' = (case body
 			     of PT.FB_Expr e => let
@@ -203,13 +205,20 @@ structure CheckGlobals : sig
 			   (* end case *))
 			     
 	       val paramTys = List.map Var.monoTypeOf params'
-
-	       val fnTy = Ty.T_Fun(paramTys, ty')
-               val f' = Var.new (f, span, AST.FunVar, fnTy)
-	       (* Now, we setup utilities to handle checks specific to an overload *)
-				
+	       (*We interrupt this to catch the unary operators*)
 	       val isBinOp = List.length paramTys = 2
 	       val isUnaryOp = List.length paramTys = 1
+	       val f = if not isOp then ff
+			   else if isUnaryOp then if Atom.same(ff, N.op_sub)
+						  then N.op_neg
+						  else ff
+			   else ff
+
+	       val fnTy = Ty.T_Fun(paramTys, ty')
+               val f' = Var.new (ff, span, AST.FunVar, fnTy)
+	       (* Now, we setup utilities to handle checks specific to an overload *)
+				
+
 	       (* If we can't find an overload, we will call this error.*)
 	       fun noOverLoadErr r = (err (cxt, [
 					 S "Declared an overloaded function '", A(r),
@@ -270,7 +279,8 @@ structure CheckGlobals : sig
 			of ([], false) => noOverLoadErr f
 			 | (_, _) => (
 			  (case findConflictingOverload funcs 
-			    of [] => (OTHER(AST.D_Func(f', params', body')), E.insertOverloadPrim(env, cxt, f, f' :: funcs))
+			    of [] =>
+				(OTHER(AST.D_Func(f', params', body')), E.insertOverloadPrim(env, cxt, f, f' :: funcs))
 			     | g::gs =>
 			       (err (cxt, [
 				     S "Declared an operator overload '", A(f),
