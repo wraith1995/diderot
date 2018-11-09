@@ -101,8 +101,10 @@ structure Simplify : sig
                   diff = TU.monoDiff diff,
                   dim = TU.monoDim dim,
                   shape = TU.monoShape shape
-                }
+					     }
+	    | Ty.T_Named(name,def) => cvtTy def
             | Ty.T_Fun(tys1, ty2) => raise Fail "unexpected T_Fun in Simplify"
+
             | Ty.T_Error => raise Fail "unexpected T_Error in Simplify"
           (* end case *))
 
