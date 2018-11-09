@@ -35,6 +35,8 @@ structure StrandEnv : sig
   (* get the spatial dimension for this strand *)
     val getSpaceDim : t -> int option
 
+    val cleanStrand : t -> t
+
   end = struct
 
     structure ATbl = AtomTable
@@ -67,5 +69,11 @@ structure StrandEnv : sig
     fun recordSpaceDim (SE{spatialDim, ...}, d) = spatialDim := SOME d
 
     fun getSpaceDim (SE{spatialDim, ...}) = !spatialDim
+    fun cleanAstVarTable table = ATbl.map CleanAst.varCleanType table
+    fun cleanStrand (SE{name, paramTys, env, spatialDim}) =
+	SE{name=name, paramTys = List.map CleanAst.cleanTy paramTys,
+	   env = cleanAstVarTable env, spatialDim = spatialDim}
+
+
 
   end
