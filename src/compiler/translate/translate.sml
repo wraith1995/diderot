@@ -397,10 +397,12 @@ print(concat["doVar (", SV.uniqueNameOf srcVar, ", ", IR.phiToString phi, ", _) 
                       [IR.ASSGN(lhs, IR.VAR(lookup env x))]
                   | (Ty.T_Kernel, Ty.T_Kernel) =>
                     (* change in continuity is a no-op *)
-                      [IR.ASSGN(lhs, IR.VAR(lookup env x))]
-                  | _ => raise Fail(concat[
-                        "unsupported type coercion: ", Ty.toString srcTy,
-                        " ==> ", Ty.toString dstTy
+                    [IR.ASSGN(lhs, IR.VAR(lookup env x))]
+                  | (t1,t2) =>  if Ty.same(t1, t2)
+				then [IR.ASSGN(lhs,IR.VAR(lookup env x))]
+				else raise Fail(concat[
+						   "unsupported type coercion: ", Ty.toString srcTy,
+						   " ==> ", Ty.toString dstTy
                       ])
                 (* end case *))
             | S.E_BorderCtl(ctl, img) => let
