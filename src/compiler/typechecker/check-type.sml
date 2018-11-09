@@ -59,8 +59,12 @@ structure CheckType : sig
             | PT.T_Id strand => (case Env.findStrand(env, strand)
                  of SOME _ => Ty.T_Strand strand
                   | NONE => (
+		   case Env.findTypeEnv(env, strand)
+		    of SOME(s) => Ty.T_Named(strand, TypeEnv.findDef s)
+		     | NONE =>
+		       (
                       err(cxt, [S "unknown type ", A strand]);
-                      Ty.T_Error)
+                      Ty.T_Error) (* end case*))
                 (* end case *))
             | PT.T_String => Ty.T_String
             | PT.T_Kernel k => Ty.T_Kernel(checkDiff(cxt, SOME k))
