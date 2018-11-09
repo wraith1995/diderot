@@ -16,14 +16,18 @@ structure CheckOverload : sig
 	     | NoOverload
 	     | Error of Env.context * TypeError.token list
 
+	   (* Finds the first possible overload *)
 	   val chkOverload : Env.context * Atom.atom * Types.ty list * AST.expr list * Var.t list -> overload
 
+	   (* Determines if a binary operator needs to be checked for overloads outside of the basis *)
 	   val checkSpecialProduct : Types.ty list * Atom.atom -> Types.shape option option
 
+	   (* Determines if a call matches a specific binary operator*)
 	   val chkInnerProduct : Env.context * AST.expr * Types.ty * AST.expr * Types.ty -> overload
 	   val chkOuterProduct : Env.context * AST.expr * Types.ty * AST.expr * Types.ty -> overload
 	   val chkColonProduct : Env.context * AST.expr * Types.ty * AST.expr * Types.ty -> overload
 
+	   (* Converts an application of a primitive to that of a function if needed.*)
 	   val chkPrim : AST.expr * Types.ty ->  AST.expr * Types.ty
 	  end = struct 
 
@@ -53,7 +57,7 @@ structure CheckOverload : sig
 	     if  Var.kindOf f' = Var.BasisVar
 	     then e
 	     else if Var.kindOf f' = Var.FunVar
-	     then let val span = Var.locationOf f' in (AST.E_Apply( (f', span), expList, fnTy), rngTy) end
+	     then let val span = Var.locationOf f' in (AST.E_Apply((f', span), expList, fnTy), rngTy) end
 	     else raise Fail "impossible"
 	   | _ => raise Fail "impossible"
 	(* end case *))
@@ -61,7 +65,6 @@ structure CheckOverload : sig
 		    
     fun overloadResult a = Overload (chkPrim a)
     fun internalError a = Error a
-
 
 (* resolve overloading: we use a simple scheme that selects the first operator in the
    * list that matches the argument types.
@@ -135,7 +138,6 @@ structure CheckOverload : sig
     end
       | chkInnerProductShape _ = NONE
 
-
     fun chkOuterProductShape (Ty.Shape dd1, Ty.Shape dd2) = SOME(Ty.Shape(dd1@dd2))
       | chkOuterProductShape _ = NONE
 				   
@@ -160,7 +162,7 @@ structure CheckOverload : sig
 
     fun checkSpecialProduct(params, special) =
 	if Atom.same(special, BasisNames.op_dot)
-	then SOME(chkInnerProductParams params) (* check shape overlap, airty, previous existence, insert*)
+	then SOME(chkInnerProductParams params) 
 	else if Atom.same(special, BasisNames.op_outer)
 	then SOME(chkOuterProductParams params)
 	else if Atom.same(special, BasisNames.op_colon)

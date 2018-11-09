@@ -266,7 +266,7 @@ structure CheckExpr : sig
                               Var.monoTypeOf f')
                           | NONE => (case Env.findFunc (env, f)
                                of Env.PrimFun[] => err(cxt, [S "unknown function ", A f])
-                                | Env.PrimFun[f'] => checkPrimApp f'
+                                | Env.PrimFun[f'] => checkPrimApp f' (*NOTE: This needs to change if any more operators like tensor,dot,colon product are added.*)
                                 | Env.PrimFun ovldList => (
                                     case resolveOverload ((#1 cxt, span), f, tys, args, ovldList)
                                      of (e' as AST.E_Prim(f', tyArgs, _, _), rngTy) =>
