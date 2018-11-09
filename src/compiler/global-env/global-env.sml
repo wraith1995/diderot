@@ -56,6 +56,8 @@ structure GlobalEnv : sig
     val hasProp : t * Properties.t -> bool
     val properties : t -> Properties.t list
 
+    val cleanEnv : t -> t
+
   end = struct
 
     structure ATbl = AtomTable
@@ -140,5 +142,25 @@ structure GlobalEnv : sig
     fun hasProp (GE{props, ...}, p) = Properties.hasProp p (!props)
 
     fun properties (GE{props, ...}) = !props
+
+    
+    fun cleanAstVarTable table = ATbl.map CleanAst.varCleanType table
+    fun cleanFunTable table = ATbl.map (fn x => case x
+						 of PrimFun(vars) => PrimFun(List.map CleanAst.varCleanType vars)
+						  | UserFun(var) => UserFun(CleanAst.varCleanType var)
+						  | OverloadUserFun(vars) => OverloadUserFun(List.map CleanAst.varCleanType vars)
+				       (*end case*)
+				       ) table					
+					
+
+    fun cleanEnv (GE{strand, fEnv, vEnv, kEnv, tEnv, props}) =
+	GE{
+	 strand = ref (Option.map StrandEnv.cleanStrand (!strand)),
+	 fEnv = cleanFunTable fEnv,
+	 vEnv = cleanAstVarTable vEnv,
+	 kEnv = kEnv,
+	 tEnv = tEnv,
+	 props = props
+	}
 
   end
