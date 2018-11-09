@@ -180,7 +180,7 @@ structure CheckGlobals : sig
 	      (* end case *) )
 	    | PT.GD_Overload(ty, ({span, tree=f}, isOp), params, body) =>
 	      let
-	       (* Do the usual function stuff *)
+	       (* Setup this as if we have a function at first. *)
 	       val ty' = CheckType.check(env, cxt, ty)
                val env' = E.functionScope (env, ty', f)
                val (params', env') = CheckParams.check (env', cxt, Var.FunParam, params)
@@ -203,16 +203,19 @@ structure CheckGlobals : sig
 			   (* end case *))
 			     
 	       val paramTys = List.map Var.monoTypeOf params'
-	       val isBinOp = List.length paramTys = 2
-	       val isUnaryOp = List.length paramTys = 1
+
 	       val fnTy = Ty.T_Fun(paramTys, ty')
                val f' = Var.new (f, span, AST.FunVar, fnTy)
+	       (* Now, we setup utilities to handle checks specific to an overload *)
 				
+	       val isBinOp = List.length paramTys = 2
+	       val isUnaryOp = List.length paramTys = 1
+	       (* If we can't find an overload, we will call this error.*)
 	       fun noOverLoadErr r = (err (cxt, [
 					 S "Declared an overloaded function '", A(r),
 					 S"' that has not beeen declared to be overloadedable"]);
 				      (ERROR, env))
-				       (*FIX ME -> use the overlaoding mechanic and shift this shi*)
+	       (*NOTE: We should use the overload mechanic to find all duplicates; is it posisble for their to be multiple conflicts?*)
 	       fun findConflictingOverload funcs =
 		    (*make fictoinal variables?*)
 		   let
@@ -226,13 +229,7 @@ structure CheckGlobals : sig
 		      | CO.Overload(_) => raise Fail "Impossible"
 		      | _ => []
 		   end
-
-		   (* List.foldr (fn (trialFunc, list) => *)
-		   (* 						       (case Unify.tryMatchType (Var.monoTypeOf trialFunc, fnTy) *)
-		   (* 							 of Unify.FAIL => list *)
-		   (* 							  | _ => trialFunc :: list *)
-		   (* 						       (* end case *)) *)
-		   (* 						   ) [] funcs *)
+	       (* This produces a value that let's use identify when we need to worry about the special cases of :,\cdot,\otimes*)
 	       val specialProductCheck = (case CO.checkSpecialProduct(paramTys, f)
 					   of SOME(NONE) => true (* an operator that can be overloaded but is not in the basis  *)
 					   |  SOME(s) => (err (cxt, [
@@ -282,7 +279,6 @@ structure CheckGlobals : sig
 				    ]);
 				(ERROR, env))
 			 (* end case *)))
-			 (* | (xs,false) => raise Fail ("impossible:" ^ Atom.toString(f)) *)
 		      (*end case*))
 	       (* end case *))
 	      end

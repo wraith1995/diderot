@@ -86,7 +86,7 @@ structure Env : sig
   (* insert a user function into the environment *)
     val insertFunc : t * context * Atom.atom * AST.var -> t
 							    
-  (* insert a table for an overloaded user function in the environment*)
+  (* insert a table for an overloaded user function into the environment*)
     val insertOverload : t * context * Atom.atom -> t							    
 
   (* insert overloaded user functions into the environment*)						      
