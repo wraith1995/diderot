@@ -15,6 +15,7 @@ library
   structure TypeUtil
   structure MetaVar
   structure Var
+  structure CleanAst
 is
 
   $/basis.cm
@@ -22,6 +23,7 @@ is
   $/pp-lib.cm
 
   ../common/sources.cm
+
 
   ast.sml
   ast-pp.sml
@@ -31,3 +33,4 @@ is
   type-of.sml
   type-util.sml
   var.sml
+  clean-ast.sml

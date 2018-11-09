@@ -27,6 +27,8 @@ structure Var : sig
   (* define a new monomorphic variable *)
     val new : Atom.atom * Error.span * kind * Types.ty -> t
 
+    val cleanType : (Types.ty -> Types.ty) -> t -> t
+
   (* define a new polymorphic variable; this function is used to define Basis variables,
    * but not user-variables, so we omit the location and kind information.
    *)
@@ -121,6 +123,9 @@ structure Var : sig
     fun uniqueNameOf (V{name, id, ...}) = name ^ Stamp.toString id
     fun locationOf (V{loc, ...}) = loc
 
+    fun cleanType clearer (V{name, id, loc ,kind, props, ty=([], ty')})  = V{name=name, id=id, loc=loc ,kind=kind, props=props, ty=([], clearer ty')}
+      | cleanType _ v = v
+			     
     fun newPoly (name, loc, kind, scheme) = let
           val id = Stamp.new()
           in

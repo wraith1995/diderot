@@ -26,6 +26,7 @@ local
   type-util.sml
   const-expr.sml
   ast-pp.sml
+  clean-ast.sml
 
 in
 
@@ -37,5 +38,6 @@ in
   structure TypeUtil
   structure MetaVar
   structure Var
+  structure CleanAst
 
 end

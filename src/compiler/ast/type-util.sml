@@ -295,7 +295,7 @@ structure TypeUtil : sig
             | Ty.T_Sequence(ty, NONE) => concat[toString ty, "[]"]
             | Ty.T_Sequence(ty, SOME dim) => concat[toString ty, "[", dimToString dim, "]"]
             | Ty.T_Strand id => Atom.toString id
-	    | Ty.T_Named (id, ty') => (Atom.toString id ) ^"(" ^ toString ty' ^ ")"
+	    | Ty.T_Named (id, ty') => (Atom.toString id ) ^"( using " ^ toString ty' ^ ")"
             | Ty.T_Kernel(Ty.DiffConst NONE) => raise Fail "unexpected infinite kernel"
             | Ty.T_Kernel diff => "kernel#" ^ diffToString diff
             | Ty.T_Tensor(Ty.Shape[]) => "real"
