@@ -10,6 +10,7 @@ Library
 
   structure GlobalEnv
   structure StrandEnv
+  structure TypeEnv
 
 is
 
