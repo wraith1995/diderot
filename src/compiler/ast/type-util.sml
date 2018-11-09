@@ -101,7 +101,8 @@ structure TypeUtil : sig
            of (ty as Ty.T_Var(Ty.TV{bind, ...})) => (case !bind
                  of NONE => ty
                   | SOME ty => prune ty
-                (* end case *))
+						    (* end case *))
+	    | Ty.T_Named(name, ty') =>  Ty.T_Named(name, prune ty') (*QUESTION: Is this even a concern?*)
             | Ty.T_Sequence(ty, NONE) => Ty.T_Sequence(prune ty, NONE)
             | Ty.T_Sequence(ty, SOME dim) => Ty.T_Sequence(prune ty, SOME(pruneDim dim))
             | (Ty.T_Kernel diff) => Ty.T_Kernel(pruneDiff diff)
@@ -222,6 +223,7 @@ structure TypeUtil : sig
             | Ty.T_Sequence(ty, NONE) => isFixedSize (false, ty)
             | Ty.T_Tensor _ => true
             | Ty.T_Error => true
+	    | Ty.T_Named(_, ty') => isValueType ty'
             | _ => false
           (* end case *))
 
@@ -233,6 +235,7 @@ structure TypeUtil : sig
             | Ty.T_Sequence(ty, SOME _) => isValueOrStrandType ty
             | Ty.T_Sequence(ty, NONE) => isFixedSize (true, ty)
             | Ty.T_Strand _ => true
+	    | Ty.T_Named(_, ty') => isValueOrStrandType ty'
             | Ty.T_Tensor _ => true
             | Ty.T_Error => true
             | _ => false
@@ -292,6 +295,7 @@ structure TypeUtil : sig
             | Ty.T_Sequence(ty, NONE) => concat[toString ty, "[]"]
             | Ty.T_Sequence(ty, SOME dim) => concat[toString ty, "[", dimToString dim, "]"]
             | Ty.T_Strand id => Atom.toString id
+	    | Ty.T_Named (id, ty') => (Atom.toString id ) ^"(" ^ toString ty' ^ ")"
             | Ty.T_Kernel(Ty.DiffConst NONE) => raise Fail "unexpected infinite kernel"
             | Ty.T_Kernel diff => "kernel#" ^ diffToString diff
             | Ty.T_Tensor(Ty.Shape[]) => "real"
