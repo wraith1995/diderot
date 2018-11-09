@@ -25,6 +25,7 @@ local
   unify.sml
   util.sml
   check-const.sml
+  check-overload.sml
   check-expr_mlton.sml	(* generated from check-expr.sml *)
   check-create.sml
   check-type.sml
