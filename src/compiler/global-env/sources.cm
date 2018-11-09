@@ -21,4 +21,5 @@ is
 
   global-env.sml
   strand-env.sml
+  type-env.sml
 

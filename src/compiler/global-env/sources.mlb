@@ -16,6 +16,7 @@ local
   ../common/sources.mlb
   ../ast/sources.mlb
 
+  type-env.sml
   strand-env.sml
   global-env.sml
 

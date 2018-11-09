@@ -33,6 +33,8 @@ structure GlobalEnv : sig
   (* lookup a kernel *)
     val findKernel : t * Atom.atom -> Kernel.t option
 
+    val findTypeEnv : t * Atom.atom -> TypeEnv.t option
+
   (* add the strand to the environment; this function returns the strand
    * environment that we use to track strand state variables.
    *)
@@ -47,6 +49,8 @@ structure GlobalEnv : sig
   (* insert a kernel binding*)
     val insertKernel : t * Atom.atom * Kernel.t -> unit
 
+    val insertNamedType : t * Atom.atom * Types.ty * (Atom.atom * ConstExpr.t ) list  * (Atom.atom * AST.var ) list -> unit
+
   (* tracking program features *)
     val recordProp : t * Properties.t -> unit
     val hasProp : t * Properties.t -> bool
@@ -56,6 +60,8 @@ structure GlobalEnv : sig
 
     structure ATbl = AtomTable
     structure AMap = AtomMap
+    structure TE = TypeEnv
+    structure TY = Types
 
   (* functions are either user-defined or pre-defined *)
     datatype fun_def
@@ -63,12 +69,14 @@ structure GlobalEnv : sig
       | UserFun of AST.var                      (* user-defined function *)
       | OverloadUserFun of AST.var list         (* overloaded user-defined function*)
 
+
   (* global environment holds global variables and strands *)
     datatype t = GE of {
         strand : StrandEnv.t option ref,        (* the strand *)
         fEnv : fun_def ATbl.hash_table,         (* functions, which may be overloaded *)
         vEnv : AST.var ATbl.hash_table,         (* global variable bindings *)
         kEnv : Kernel.t ATbl.hash_table,        (* kernel bindings *)
+	tEnv :  TE.t ATbl.hash_table,            (* type environment *)
         props : Properties.t list ref           (* record program properties *)
       }
 
@@ -77,6 +85,7 @@ structure GlobalEnv : sig
             fEnv = ATbl.mkTable(128, Fail "global function env"),
             vEnv = ATbl.mkTable(128, Fail "global variable env"),
             kEnv = ATbl.mkTable(16, Fail "kernel env"),
+	    tEnv = ATbl.mkTable(16, Fail "type env"),
             props = ref[]
           }
 
@@ -94,6 +103,16 @@ structure GlobalEnv : sig
 
     fun insertKernel (GE{kEnv, ...}, k, k') = ATbl.insert kEnv (k, k')
 
+    fun insertNamedType (GE{tEnv, ...}, name, def, constants, methods) =
+	let
+	 val newType = TE.new(name, def)
+	 val _ = List.app (fn (n,c) => TE.insertConstant(newType,n,c)) constants
+	 val _ = List.app (fn (n,c) => TE.insertMethod(newType,n,c)) methods
+				
+	in
+	 (ATbl.insert tEnv (name, newType))
+	end
+
   (* lookup a strand *)
     fun findStrand (GE{strand, ...}, name) = (case !strand
            of NONE => NONE
@@ -110,6 +129,8 @@ structure GlobalEnv : sig
     fun findVar (GE{vEnv, ...}, x) = ATbl.find vEnv x
 
     fun findKernel (GE{kEnv, ...}, x) = ATbl.find kEnv x
+
+    fun findTypeEnv (GE{tEnv, ...}, x) = ATbl.find tEnv x
 
   (* tracking program features *)
     fun recordProp (GE{props, ...}, p) = if (Properties.hasProp p (!props))
