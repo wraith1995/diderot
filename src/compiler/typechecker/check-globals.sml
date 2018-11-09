@@ -227,7 +227,6 @@ structure CheckGlobals : sig
 				      (ERROR, env))
 	       (*NOTE: We should use the overload mechanic to find all duplicates; is it posisble for their to be multiple conflicts?*)
 	       fun findConflictingOverload funcs =
-		    (*make fictoinal variables?*)
 		   let
 		    val possibleOverload = CO.chkOverload(cxt, f, paramTys, [], funcs)
 							 (*Note: ctx, f', and [] don't matter here unless BV.pow is involved, which is impossible right now*)
