@@ -42,17 +42,18 @@ structure Typechecker : sig
                   | NONE => NONE
                 (* end case *))
           val props = E.properties env
-          val prog = AST.Program{
-                  props = props,
-                  const_dcls = const_dcls,
-                  input_dcls = input_dcls,
-                  globals = other_dcls,
-                  globInit = globInit',
-                  strand = strand',
-                  create = create',
-                  start = start',
-                  update = update'
-                }
+          val prog = CleanAst.cleanAST (AST.Program{
+               props = props,
+               const_dcls = const_dcls,
+               input_dcls = input_dcls,
+               globals = other_dcls,
+               globInit = globInit',
+               strand = strand',
+               create = create',
+               start = start',
+               update = update'
+              })
+	  val gEnv = GlobalEnv.cleanEnv (E.globalEnv env)
           in
           (* check for unused/uninitialized variables *)
             CheckVarUses.check (cxt, prog);
@@ -80,7 +81,7 @@ structure Typechecker : sig
                     else ()
                 end
               else ();
-            (prog, E.globalEnv env)
+            (prog, gEnv)
           end
 
   end

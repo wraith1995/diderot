@@ -229,13 +229,13 @@ structure CheckExpr : sig
                         (* end case *))
                       else raise Fail "unexpected user function"
               (* check the application of a user-defined function *)
-                fun checkFunApp (cxt, f) args = if Var.isPrim f
+                fun checkFunApp (cxt, f) args' tys' = if Var.isPrim f
                       then raise Fail "unexpected primitive function"
                       else (case Var.monoTypeOf f
                          of Ty.T_Fun(domTy, rngTy) => (
-                              case Unify.matchArgs (domTy, args, tys)
+                              case Unify.matchArgs (domTy, args', tys')
                                of SOME args => (AST.E_Apply(useVar(cxt, f), args, rngTy), rngTy)
-                                | NONE => appTyError (f, domTy, tys)
+                                | NONE => appTyError (f, domTy, tys')
                               (* end case *))
                           | _ => err(cxt, [S "application of non-function/field ", V f])
                         (* end case *))
@@ -260,7 +260,7 @@ structure CheckExpr : sig
                       (* end case *))
                 in
                  case stripMark(#2 cxt, e)
-		  of (span, PT.E_Select(exp, field)) =>
+		  of (span, PT.E_Select(exp, field)) => (*QUESTION: Is it possible the select is hidden behind something?*)
 		     (
 		       let
 			val (astExp, astTy) = check (env, cxt, exp)
@@ -280,7 +280,7 @@ structure CheckExpr : sig
 									
 		       in
 			case method 
-			 of SOME(s) => checkFunApp((#1 cxt, span), s) (astExp::args)
+			 of SOME(s) => checkFunApp((#1 cxt, span), s) (astExp::args) (astTy:: tys)
 			 | NONE => bogusExpTy
 		       end
 		     )
@@ -303,7 +303,7 @@ structure CheckExpr : sig
 				      | (e' as AST.E_Apply(_,_,_), rngTy) => (e', rngTy)
                                       | badResult => badResult
                                 (* end case *))
-                                | Env.UserFun f' => checkFunApp((#1 cxt, span), f') args
+                                | Env.UserFun f' => checkFunApp((#1 cxt, span), f') args tys
 				| Env.OverloadUserFun(ovldList) => resolveOverload ((#1 cxt, span), f, tys, args, ovldList)
 				    (* end case *))
 					    (* end case*))

@@ -104,7 +104,7 @@ structure Env : sig
     val insertNamedType : t * context * Atom.atom * Types.ty * (Atom.atom * ConstExpr.t ) list  * (Atom.atom * AST.var ) list -> t
 
 															 
-    val findStrand : t * Atom.atom -> StrandEnv.t option
+    val findStrand : t* Atom.atom -> StrandEnv.t option
     val findFunc : t * Atom.atom -> fun_def
     val findVar : t * Atom.atom -> AST.var option
     val findKernel : t * Atom.atom -> Kernel.t option
