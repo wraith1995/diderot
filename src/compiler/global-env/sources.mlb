@@ -24,5 +24,6 @@ in
 
   structure GlobalEnv
   structure StrandEnv
+  structure TypeEnv
 
 end
