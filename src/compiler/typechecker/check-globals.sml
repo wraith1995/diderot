@@ -27,7 +27,8 @@ structure CheckGlobals : sig
     structure E = Env
     structure L = Literal
     structure SS = Substring
-
+    structure CO = CheckOverload
+		     
     val err = TypeError.error
 
     datatype token = datatype TypeError.token
@@ -38,6 +39,7 @@ structure CheckGlobals : sig
       | INPUT of (AST.var_dcl * string option)
       | OTHER of AST.global_dcl
       | ERROR
+      | IGNORE
 
   (* check the rhs initialization of a 'const' or 'input' declaration.  Return
    * (v, e), where v is the constant value and e is the AST version of the rhs.
@@ -156,7 +158,137 @@ structure CheckGlobals : sig
 (* QUESTION: should we also check for redefinition of basis functions? *)
                   E.checkForRedef (env, cxt, f);
                   (OTHER(AST.D_Func(f', params', body')), E.insertFunc(env, cxt, f, f'))
-                end
+            end
+	    | PT.GD_Overloading({span, tree=f}) =>
+	      (case E.findFunc(env, f) 
+		of E.PrimFun ([]) =>
+		   (E.insertOverload(env, cxt, f); (IGNORE, env)) (*Added overload*)
+		|  E.UserFun(g) => 
+		   (*For now, I'm mandating overload declerations come before any defintions; This could be changed easily.*)
+		   (err (cxt, [
+			 S "Declared a function '", A(f), S"' to be overloaded after the function was defined!"]); 
+		    (ERROR, env))
+		(* FIX ME: handle multiple binding locations for error msgs!*)
+		|  E.OverloadUserFun(g)=>
+		   (err (cxt, [
+			 S "Declared a function '", A(f), S"' to be overloaded multiple times!"]);
+		    (ERROR, env))
+		| _ =>
+		  (err (cxt, [
+			S "The symbol'", A(f), S"' is already an overloaded symbol!"]);
+		   (ERROR, env))
+	      (* end case *) )
+	    | PT.GD_Overload(ty, ({span, tree=f}, isOp), params, body) =>
+	      let
+	       (* Do the usual function stuff *)
+	       val ty' = CheckType.check(env, cxt, ty)
+               val env' = E.functionScope (env, ty', f)
+               val (params', env') = CheckParams.check (env', cxt, Var.FunParam, params)
+               val body' = (case body
+			     of PT.FB_Expr e => let
+                              val eTy = CheckExpr.check (env', cxt, e)
+                             in
+                              case Util.coerceType(ty', eTy)
+                               of SOME e' => AST.S_Return e'
+                                | NONE => (
+                                 err (cxt, [
+                                      S "type of function body does not match return type\n",
+                                      S "  expected: ", TY ty', S "\n",
+                                      S "  found:    ", TY(#2 eTy)
+                                     ]);
+                                 AST.S_Block[])
+					    (* end case *)
+                             end
+                              | PT.FB_Stmt s => CheckStmt.check(env', cxt, s)
+			   (* end case *))
+			     
+	       val paramTys = List.map Var.monoTypeOf params'
+	       val isBinOp = List.length paramTys = 2
+	       val isUnaryOp = List.length paramTys = 1
+	       val fnTy = Ty.T_Fun(paramTys, ty')
+               val f' = Var.new (f, span, AST.FunVar, fnTy)
+				
+	       fun noOverLoadErr r = (err (cxt, [
+					 S "Declared an overloaded function '", A(r),
+					 S"' that has not beeen declared to be overloadedable"]);
+				      (ERROR, env))
+				       (*FIX ME -> use the overlaoding mechanic and shift this shi*)
+	       fun findConflictingOverload funcs =
+		    (*make fictoinal variables?*)
+		   let
+		    val possibleOverload = CO.chkOverload(cxt, f, paramTys, [], funcs)
+							 (*Note: ctx, f', and [] don't matter here unless BV.pow is involved, which is impossible right now*)
+		    
+		   in
+		    case possibleOverload
+		     of CO.Overload(AST.E_Prim(overloadName, _, _, _), ty) => [overloadName]
+		      | CO.Overload(AST.E_Apply((overloadName, _), _ , _), ty) => [overloadName]
+		      | CO.Overload(_) => raise Fail "Impossible"
+		      | _ => []
+		   end
+
+		   (* List.foldr (fn (trialFunc, list) => *)
+		   (* 						       (case Unify.tryMatchType (Var.monoTypeOf trialFunc, fnTy) *)
+		   (* 							 of Unify.FAIL => list *)
+		   (* 							  | _ => trialFunc :: list *)
+		   (* 						       (* end case *)) *)
+		   (* 						   ) [] funcs *)
+	       val specialProductCheck = (case CO.checkSpecialProduct(paramTys, f)
+					   of SOME(NONE) => true (* an operator that can be overloaded but is not in the basis  *)
+					   |  SOME(s) => (err (cxt, [
+							       S "Declared an overload for a builtin operator", A(f),
+							       S "that is compatible with a previous definition."
+							      ]); true) 
+					    | NONE => false (* if it can be overloaded, it is in the basis *)
+					 (*end case*))
+				     
+	      in
+	       (case E.findFunc(env, f) 
+		 of  E.UserFun(g) =>  noOverLoadErr f (* no overload declared*)
+		   | E.OverloadUserFun(funcs) =>
+		     if isOp
+		     then (err (cxt, [
+				S "Declared an operator overload '",
+				A(f), S"' for a user function"]);
+			   (ERROR, env)) (*if isOp -> internal compiler error*) 
+		     else
+		      (case findConflictingOverload funcs 
+			of [] => (OTHER(AST.D_Func(f', params', body')), E.insertOverloadFunc(env, cxt, f, f' :: funcs))
+			 | g::gs =>
+			   (err (cxt, [
+				 S "Declared a function overload '", A(f),
+				 S "' has a type", TY(fnTy) , S " that conflicts with a previous definition '", V(g),
+				 S "' that has type"
+				]);
+			    (ERROR, env))
+		      (* end case *))
+		   | E.PrimFun (funcs) =>
+		     if not isOp
+		     then (err (cxt, [
+				S "Declared a function overload '",
+				A(f), S"' for an operator"]);
+			   (ERROR, env))
+		     else
+		      (case (funcs, specialProductCheck)
+			of ([], false) => noOverLoadErr f
+			 | (_, _) => (
+			  (case findConflictingOverload funcs 
+			    of [] => (OTHER(AST.D_Func(f', params', body')), E.insertOverloadPrim(env, cxt, f, f' :: funcs))
+			     | g::gs =>
+			       (err (cxt, [
+				     S "Declared an operator overload '", A(f),
+				     S "' has a type", TY(fnTy) , S " that conflicts with a previous definition '", V(g),
+				     S "' that has type"
+				    ]);
+				(ERROR, env))
+			 (* end case *)))
+			 (* | (xs,false) => raise Fail ("impossible:" ^ Atom.toString(f)) *)
+		      (*end case*))
+	       (* end case *))
+	      end
+	      
+	
+	
             | PT.GD_FieldFunc(ty, bindF, bindX, body) => (case CheckType.check(env, cxt, ty)
                  of ty' as Ty.T_Field{diff, dim, shape} => let
                       val f = Var.new(#tree bindF, #span bindF, Var.GlobalVar, ty')
@@ -204,6 +336,7 @@ structure CheckGlobals : sig
                   | (INPUT dcl, env) => chk (env, dcls, cdecls, dcl::idecls, gdecls)
                   | (OTHER dcl, env) => chk (env, dcls, cdecls, idecls, dcl::gdecls)
                   | (ERROR, env) => chk (env, dcls, cdecls, idecls, gdecls)
+		  | (IGNORE, env) => chk (env, dcls, cdecls, idecls, gdecls)
                 (* end case *))
           in
             chk (env, globs, [], [], [])
