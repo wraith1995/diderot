@@ -110,7 +110,7 @@
 %keywords
   KW_bool, KW_const, KW_continue, KW_create_array, KW_create_collection, KW_die, KW_else,
   KW_false, KW_field, KW_foreach, KW_function, KW_identity, KW_if, KW_image, KW_in,
-  KW_initialize, KW_input, KW_overload, KW_int, KW_kernel, KW_load_image, KW_load_sequence, KW_mat2,
+  KW_initialize, KW_input, KW_overload, KW_operator, KW_int, KW_kernel, KW_load_image, KW_load_sequence, KW_mat2,
   KW_mat3, KW_mat4, KW_nan, KW_new, KW_output, KW_print, KW_real, KW_return, KW_stabilize,
   KW_start, KW_strand, KW_string, KW_tensor, KW_true, KW_update, KW_vec2, KW_vec3, KW_vec4,
   KW_zeros;
@@ -217,20 +217,22 @@ TypeDcl
 
 
 OverloadDcl
-        : "overload" Type  OpBind "(" Parameters ")" FunctionDef
+        : "overload" Type OpBind "(" Parameters ")" FunctionDef
                  => (markDecl(FULL_SPAN, PT.GD_Overload(Type, OpBind, Parameters, FunctionDef)))
         ;
 OpBind
         : OverloadAbleOp
                  => (({span=FULL_SPAN, tree=OverloadAbleOp}), true)
         | BindId
-                 => ((BindId, false))
+          => ((BindId, false))
+	| "operator" BindId
+	  => ((BindId, true))
         ;
 OverloadAbleOp
         : AddOp
                   => (AddOp)
         | MultiplyOp
-                  => (MultiplyOp)     
+          => (MultiplyOp)
         ;
 
 

@@ -38,6 +38,7 @@ structure Keywords300 : sig
             ("file",            T.KW_file),
             ("type",            T.KW_type),
             ("overload",        T.KW_overload),
+	    ("operator",        T.KW_operator),
             ("int",             T.KW_int),
             ("kernel",          T.KW_kernel),
             ("load_image",      T.KW_load_image),
