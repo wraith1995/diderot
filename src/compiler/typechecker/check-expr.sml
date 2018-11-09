@@ -229,7 +229,7 @@ structure CheckExpr : sig
                         (* end case *))
                       else raise Fail "unexpected user function"
               (* check the application of a user-defined function *)
-                fun checkFunApp (cxt, f) = if Var.isPrim f
+                fun checkFunApp (cxt, f) args = if Var.isPrim f
                       then raise Fail "unexpected primitive function"
                       else (case Var.monoTypeOf f
                          of Ty.T_Fun(domTy, rngTy) => (
@@ -259,8 +259,32 @@ structure CheckExpr : sig
                         | _ => err(cxt, [S "badly formed field application"])
                       (* end case *))
                 in
-                  case stripMark(#2 cxt, e)
-                   of (span, PT.E_Var f) => (case Env.findVar (env, f)
+                 case stripMark(#2 cxt, e)
+		  of (span, PT.E_Select(exp, field)) =>
+		     (
+		       let
+			val (astExp, astTy) = check (env, cxt, exp)
+			val tyName = (case astTy
+				       of Ty.T_Named(tyName, tyDef) => SOME(tyName)
+					| _ => (err (cxt, [S "Only Named Types have field"]); NONE)
+				     (*end case*))
+
+			val tyEnv = (Option.mapPartial (fn name => case Env.findTypeEnv(env, name)
+								    of SOME(s) => SOME(s)
+								     | NONE =>  (err (cxt, [S "There is no type named", A(name)]); NONE) )
+						       tyName)
+			val method : AST.var option = Option.mapPartial (fn env => case TypeEnv.findMethod(env, field)
+										    of SOME(s) => SOME(s)
+										     | NONE => ( (err (cxt, [S "There is no field named",
+													     A(field)])); NONE)) tyEnv
+									
+		       in
+			case method 
+			 of SOME(s) => checkFunApp((#1 cxt, span), s) (astExp::args)
+			 | NONE => bogusExpTy
+		       end
+		     )
+                    | (span, PT.E_Var f) => (case Env.findVar (env, f)
                          of SOME f' => checkFieldApp (
                               AST.E_Var(useVar((#1 cxt, span), f')),
                               Var.monoTypeOf f')
@@ -279,7 +303,7 @@ structure CheckExpr : sig
 				      | (e' as AST.E_Apply(_,_,_), rngTy) => (e', rngTy)
                                       | badResult => badResult
                                 (* end case *))
-                                | Env.UserFun f' => checkFunApp((#1 cxt, span), f')
+                                | Env.UserFun f' => checkFunApp((#1 cxt, span), f') args
 				| Env.OverloadUserFun(ovldList) => resolveOverload ((#1 cxt, span), f, tys, args, ovldList)
 				    (* end case *))
 					    (* end case*))

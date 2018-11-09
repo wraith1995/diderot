@@ -40,6 +40,7 @@ structure CheckGlobals : sig
       = CONST of AST.var_dcl
       | INPUT of (AST.var_dcl * string option)
       | OTHER of AST.global_dcl
+      | OTHERS of AST.global_dcl list
       | ERROR
       | IGNORE
 
@@ -292,6 +293,43 @@ structure CheckGlobals : sig
 		      (*end case*))
 	       (* end case *))
 	      end
+	    | PT.GD_Type(tyDef, {tree=tyName, span=span}, file) =>
+	      let
+	       (*Note: I'm going to reuse the span here a lot in places where it hopefully shouldn't matter.*)
+	       (*Step 1: Check the type definition*)
+	       val astTy = CheckType.check(env, cxt, tyDef)
+	       (* We enforce that this must be value type for now:*)
+	       val _  = if TU.isValueType astTy then () else (err (cxt, [
+								S "Declared a type", A(tyName), S " with definition ", TY(astTy), S " that is not a value."
+							  ]))
+	       (*Step 2: Build the constructor and add to the env*)
+	       val thisTy = Types.T_Named(tyName, astTy)
+	       val conFnTy = Ty.T_Fun([astTy], thisTy)
+	       val funVar = Var.new (tyName, span, AST.FunVar, conFnTy)
+	       val param = Var.new (Atom.atom "arg0", span, AST.FunParam, astTy)
+	       val body = AST.S_Block([AST.S_Return(AST.E_Coerce{srcTy=astTy, dstTy=thisTy, e=AST.E_Var(param,span)})])
+	       val astConFun = AST.D_Func(funVar, [param] , body)
+	       val _ = (E.checkForRedef (env, cxt, tyName); E.insertFunc(env, cxt, tyName, funVar)) (*finish creating constructor and adding to env*)
+					  
+	       (*Step 3: Add methods: For now, we just add .unpack*)
+	       val unpack = Atom.atom "unpack"
+	       val deConFnTy = Ty.T_Fun([thisTy], astTy)
+	       val unpackVar =  Var.new (unpack, span, AST.FunVar, deConFnTy)
+	       val param' = Var.new (Atom.atom "arg0", span, AST.FunParam, thisTy)
+	       val body' = AST.S_Block([AST.S_Return(AST.E_Coerce{srcTy = thisTy, dstTy=astTy, e=AST.E_Var(param',span)})])
+	       val astDeConFun = AST.D_Func(unpackVar, [param'], body')
+	       (* Do Some fem or type specific stuff ... *)
+	       val methods = [(unpack, unpackVar)]
+	       val funDcls = [astConFun, astDeConFun]
+
+               (*Step 4: Add constants: TBD after file formats*)
+	       val constants = []
+
+	       val env' = Env.insertNamedType(env, cxt, tyName, thisTy, constants, methods)
+					   
+	      in
+	       (OTHERS(funDcls), env')
+	      end
 	      
 	
 	
@@ -341,6 +379,7 @@ structure CheckGlobals : sig
                  of (CONST dcl, env) => chk (env, dcls, dcl::cdecls, idecls, gdecls)
                   | (INPUT dcl, env) => chk (env, dcls, cdecls, dcl::idecls, gdecls)
                   | (OTHER dcl, env) => chk (env, dcls, cdecls, idecls, dcl::gdecls)
+		  | (OTHERS dcls', env) => chk (env, dcls, cdecls, idecls, dcls'@gdecls)
                   | (ERROR, env) => chk (env, dcls, cdecls, idecls, gdecls)
 		  | (IGNORE, env) => chk (env, dcls, cdecls, idecls, gdecls)
                 (* end case *))
