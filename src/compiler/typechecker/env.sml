@@ -92,7 +92,7 @@ structure Env : sig
   (* insert overloaded user functions into the environment*)						      
     val insertOverloadFunc : t * context * Atom.atom * AST.var list -> t
 
-  (* insert overloaded user primitive operations into the enviroment *)
+  (* insert new overloads to primitive operations into the environment *)
     val insertOverloadPrim : t * context * Atom.atom * AST.var list -> t
 									 
   (* insert a strand into the environment *)
@@ -101,6 +101,7 @@ structure Env : sig
   (* insert a local variable into the environment *)
     val insertLocal : t * context * Atom.atom * AST.var -> t
 
+  (* insert a new named type into the environment with a list of constants and methods *)
     val insertNamedType : t * context * Atom.atom * Types.ty * (Atom.atom * ConstExpr.t ) list  * (Atom.atom * AST.var ) list -> t
 
 															 
@@ -112,6 +113,7 @@ structure Env : sig
   (* find the strand-set function with the given name *)
     val findSetFn : t * Atom.atom -> AST.var option
 
+  (* find the type environment in the environment with the given type name *)
     val findTypeEnv : t * Atom.atom -> TypeEnv.t option
 
   (* unwrap a parse-tree location marker and update the context with the span *)

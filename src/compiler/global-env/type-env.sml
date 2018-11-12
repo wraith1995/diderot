@@ -9,17 +9,27 @@
 
 structure TypeEnv : sig
 	   type t
-	   (* Create a new enviroment for a type*)
+	   (* Create a new enviroment for a named type*)
 	   val new : Atom.atom * Types.ty -> t
+					       
+	   (* Inserts a new method into a type env*)
 	   val insertMethod : t * Atom.atom * AST.var -> unit
-	   val insertConstant : t * Atom.atom * ConstExpr.t -> unit
-	   val findName : t -> Atom.atom
-	   val findDef : t -> Types.ty
 
+	   (* Inserts a new constant into a type env*)							   
+	   val insertConstant : t * Atom.atom * ConstExpr.t -> unit
+
+	   (* Finds the name of a type associated to an env*)
+	   val findName : t -> Atom.atom
+
+	   (* Finds the def of a type associated to an env*)
+	   val findDef : t -> Types.ty
+				
+	   (* Finds a given method in a type env*)
 	   val findMethod : t * Atom.atom -> AST.var option
+
+	   (* Finds a give constant in a type env*)
 	   val findConstant : t * Atom.atom -> ConstExpr.t option
-		  
-	  end =  struct
+end =  struct
 
 
     structure ATbl = AtomTable

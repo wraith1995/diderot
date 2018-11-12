@@ -27,6 +27,8 @@ structure Var : sig
   (* define a new monomorphic variable *)
     val new : Atom.atom * Error.span * kind * Types.ty -> t
 
+  (* Given a function to clean a type, cleans the type of a variable.*)
+
     val cleanType : (Types.ty -> Types.ty) -> t -> t
 
   (* define a new polymorphic variable; this function is used to define Basis variables,

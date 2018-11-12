@@ -1,0 +1,9 @@
+1. Clean up error messages and provide more information in them
+2. Clean up the documentation
+3. Determine if clean AST is needed.
+4. Fix the for loop issues.
+5. Load constants via files and use them
+6. Determine any default constants.
+7. Make sure named types can't occupy names of old types?
+8. Make fields possible arguments to functions
+9. Deal with inputs of named types

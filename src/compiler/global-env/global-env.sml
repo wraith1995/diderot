@@ -33,6 +33,7 @@ structure GlobalEnv : sig
   (* lookup a kernel *)
     val findKernel : t * Atom.atom -> Kernel.t option
 
+  (* lookup a type env*)
     val findTypeEnv : t * Atom.atom -> TypeEnv.t option
 
   (* add the strand to the environment; this function returns the strand
@@ -46,9 +47,10 @@ structure GlobalEnv : sig
   (* insert a global variable binding *)
     val insertVar : t * Atom.atom * AST.var -> unit
 
-  (* insert a kernel binding*)
+    (* insert a kernel binding*)
     val insertKernel : t * Atom.atom * Kernel.t -> unit
 
+    (* insert a named type into the environment with a collection of constant expressions and method functions*)
     val insertNamedType : t * Atom.atom * Types.ty * (Atom.atom * ConstExpr.t ) list  * (Atom.atom * AST.var ) list -> unit
 
   (* tracking program features *)

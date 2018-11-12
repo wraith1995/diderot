@@ -9,27 +9,25 @@
  *)
 
 structure CleanAst : sig
+	   (*Cleans the ast *)
 	   val cleanAST : AST.program -> AST.program
+	   (*Cleans a type.*)
 	   val cleanTy : Types.ty -> Types.ty
+	   (*Cleans an AST.var*)
 	   val varCleanType : Var.t -> Var.t
-  end = struct
+end = struct
 
 structure Ty = Types
 
 
 
 fun cleanTy ty =
-    let
-     val _ = print ((TypeUtil.toString ty) ^ "\n")
-    in
     (case ty
-      of Ty.T_Named(name, def) => let val _ = print("renamed\n") in def end
+      of Ty.T_Named(name, def) => def
        | Ty.T_Fun(tys, ty) => Ty.T_Fun(List.map cleanTy tys, cleanTy ty)
        | Ty.T_Sequence(ty, dim) => Ty.T_Sequence(cleanTy ty, dim)
        | Ty.T_Var(meta) => Ty.T_Var(cleanMetaTy meta)
        | _ => ty)
-    end
-      
 and cleanMetaTy (res as Ty.TV {id,bind}) =
     (case !bind
       of NONE => res
