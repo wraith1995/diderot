@@ -225,7 +225,7 @@ structure CheckGlobals : sig
 					 S "Declared an overloaded function '", A(r),
 					 S"' that has not beeen declared to be overloadedable"]);
 				      (ERROR, env))
-	       (*NOTE: We should use the overload mechanic to find all duplicates; is it posisble for their to be multiple conflicts?*)
+	       (*NOTE: We should use the overload mechanic to find all duplicates*)
 	       fun findConflictingOverload funcs =
 		   let
 		    val possibleOverload = CO.chkOverload(cxt, f, paramTys, [], funcs)

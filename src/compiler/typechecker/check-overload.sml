@@ -22,7 +22,7 @@ structure CheckOverload : sig
 	   (* Determines if a binary operator needs to be checked for overloads outside of the basis *)
 	   val checkSpecialProduct : Types.ty list * Atom.atom -> Types.shape option option
 
-	   (* Determines if a call matches a specific binary operator*)
+	   (* Determines if a call matches a specific binary operator *)
 	   val chkInnerProduct : Env.context * AST.expr * Types.ty * AST.expr * Types.ty -> overload
 	   val chkOuterProduct : Env.context * AST.expr * Types.ty * AST.expr * Types.ty -> overload
 	   val chkColonProduct : Env.context * AST.expr * Types.ty * AST.expr * Types.ty -> overload
