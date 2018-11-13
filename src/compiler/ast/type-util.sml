@@ -192,9 +192,10 @@ structure TypeUtil : sig
                   diff = pruneDiff diff,
                   dim = pruneDim dim,
                   shape = pruneShape shape
-                }
-            | prune' ty = ty
+              }
 	    | prune' (Ty.T_Named(name, def)) = Ty.T_Named(name,  prune' def)
+            | prune' ty = ty
+
           in
             prune' ty
           end
