@@ -367,6 +367,14 @@ structure CheckStmt : sig
                   | SOME x' => let
                       val ([], ty) = Var.typeOf x'
                       val eTy = chkE (env, cxt, e)
+		      fun ratorTranslate atom =
+			  if Atom.same(atom, Operators.asgn_add) then Operators.op_add
+			  else if Atom.same(atom, Operators.asgn_sub ) then Operators.op_sub
+			  else if Atom.same(atom, Operators.asgn_mul) then Operators.op_mul
+			  else if Atom.same(atom, Operators.asgn_div) then Operators.op_div
+			  else if Atom.same(atom, Operators.asgn_mod) then Operators.op_mod
+			  else raise Fail ("impossible: Non assignment operator used in assign" ^ (Atom.toString atom))
+			    
                       fun illegalAssign kind = (
                             err (cxt, [
                                 S "illegal assignment to ", S kind, S " ", A x,
@@ -399,14 +407,27 @@ structure CheckStmt : sig
                                         val x' = useVar((#1 cxt, span), x')
                                         val e1' = AST.E_Var x'
                                         val (e2', ty2) = eTy
-                                        val Env.PrimFun ovldList = Env.findFunc (env, rator)
+					val translatedRator = ratorTranslate rator (* find binary op equivelant*)
+
+                                        val Env.PrimFun ovldList = Env.findFunc (env, translatedRator)
 (* NOTE: is there a potential problem with something like: i += r (where i is int and r is real)?
  * It is okay to promote the rhs type, but not the lhs!
  *)
-                                        val (rhs, _) = CheckExpr.resolveOverload (
-                                              cxt, rator, [ty, ty2], [e1', e2'], ovldList)
-                                        in
-                                          (AST.S_Assign(x', rhs), env)
+                                        val (rhs', rhsTy) = CheckExpr.resolveOverload (
+                                             cxt, translatedRator, [ty, ty2], [e1', e2'], ovldList)
+
+(* To deal with potential problems, we check the rngTy against the type of e1'*)				     
+                                    in
+				     (case Util.coerceType(ty, (rhs', rhsTy))
+				      of SOME(rhs) => (AST.S_Assign(x', rhs), env)
+				       | NONE =>  (err(cxt, [
+                                                        S "type of assigned variable ", A x,
+                                                        S " does not match type of rhs\n",
+                                                        S "  expected: ", TY ty, S "\n",
+                                                        S "  found:    ", TY(#2 eTy)
+                                                      ]);
+                                                   (AST.S_Assign(x', #1 eTy), env))
+				     (* end case *))
                                         end
                                   (* end case *))
                             (* end case *))
