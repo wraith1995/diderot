@@ -169,7 +169,7 @@ structure Inliner : sig
                   | S.S_IfThenElse(x, b1, b2) =>
                       (env, S.S_IfThenElse(rename env x, doBlock(env, b1), doBlock(env, b2)))
                   | S.S_Foreach(x, xs, blk) =>
-                      (env, S.S_Foreach(rename env x, rename env xs, doBlock(env, blk)))
+                      (env, S.S_Foreach(x, rename env xs, doBlock(V.Map.insert(env, x, x), blk))) (*x is an itter var and is needed in the blk.*)
                   | S.S_New(strnd, xs) => (env, S.S_New(strnd, List.map (rename env) xs))
                   | S.S_KillAll => (env, stm)
                   | S.S_StabilizeAll => (env, stm)
