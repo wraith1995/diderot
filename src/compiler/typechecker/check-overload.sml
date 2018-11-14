@@ -20,7 +20,7 @@ structure CheckOverload : sig
 	   val chkOverload : Env.context * Atom.atom * Types.ty list * AST.expr list * Var.t list -> overload
 
 	   (* Determines if a binary operator needs to be checked for overloads outside of the basis *)
-	   val checkSpecialProduct : Types.ty list * Atom.atom -> Types.shape option option
+	   val checkSpecialProduct : Types.ty list * Atom.atom -> (Types.shape option * Atom.atom) option
 
 	   (* Determines if a call matches a specific binary operator *)
 	   val chkInnerProduct : Env.context * AST.expr * Types.ty * AST.expr * Types.ty -> overload
@@ -162,11 +162,11 @@ structure CheckOverload : sig
 
     fun checkSpecialProduct(params, special) =
 	if Atom.same(special, BasisNames.op_dot)
-	then SOME(chkInnerProductParams params) 
+	then SOME((chkInnerProductParams params , BasisNames.op_dot))
 	else if Atom.same(special, BasisNames.op_outer)
-	then SOME(chkOuterProductParams params)
+	then SOME((chkOuterProductParams params, BasisNames.op_outer))
 	else if Atom.same(special, BasisNames.op_colon)
-	then SOME(chkColonProductParams params)
+	then SOME((chkColonProductParams params, BasisNames.op_colon))
 	else NONE
 
 

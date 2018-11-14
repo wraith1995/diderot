@@ -169,16 +169,15 @@ structure CheckGlobals : sig
 		|  E.UserFun(g) => 
 		   (*For now, I'm mandating overload declerations come before any defintions; This could be changed easily.*)
 		   (err (cxt, [
-			 S "Declared a function '", A(f), S"' to be overloaded after the function was defined!"]); 
+			 S "Declared a function ", A(f), S" to be overloaded after the function was defined on ", LN (Error.location(#1 cxt ,Var.locationOf g))]); 
 		    (ERROR, env))
-		(* FIX ME: handle multiple binding locations for error msgs!*)
-		|  E.OverloadUserFun(g)=>
+		|  E.OverloadUserFun(g::gs)=>
 		   (err (cxt, [
-			 S "Declared a function '", A(f), S"' to be overloaded multiple times!"]);
+			 S "Declared a function ", A(f), S" to be overloaded multiple times, including here and on ", LN (Error.location(#1 cxt ,Var.locationOf g))]);
 		    (ERROR, env))
 		| _ =>
 		  (err (cxt, [
-			S "The symbol'", A(f), S"' is already an overloaded symbol!"]);
+			S "The symbol", A(f), S" is already an overloaded symbol in the basis yet is declared to be overloaded!"]);
 		   (ERROR, env))
 	      (* end case *) )
 	    | PT.GD_Overload(ty, ({span, tree=ff}, isOp), params, body) =>
@@ -195,7 +194,7 @@ structure CheckGlobals : sig
                                of SOME e' => AST.S_Return e'
                                 | NONE => (
                                  err (cxt, [
-                                      S "type of function body does not match return type\n",
+                                      S "type of overload function body does not match return type\n",
                                       S "  expected: ", TY ty', S "\n",
                                       S "  found:    ", TY(#2 eTy)
                                      ]);
@@ -209,6 +208,7 @@ structure CheckGlobals : sig
 	       (*We interrupt this to catch the unary operators*)
 	       val isBinOp = List.length paramTys = 2
 	       val isUnaryOp = List.length paramTys = 1
+	       (*QUESTION: any other unary operators to watch out for?*)
 	       val f = if not isOp then ff
 			   else if isUnaryOp then if Atom.same(ff, N.op_sub)
 						  then N.op_neg
@@ -218,14 +218,12 @@ structure CheckGlobals : sig
 	       val fnTy = Ty.T_Fun(paramTys, ty')
                val f' = Var.new (ff, span, AST.FunVar, fnTy)
 	       (* Now, we setup utilities to handle checks specific to an overload *)
-				
-
 	       (* If we can't find an overload, we will call this error.*)
 	       fun noOverLoadErr r = (err (cxt, [
-					 S "Declared an overloaded function '", A(r),
-					 S"' that has not beeen declared to be overloadedable"]);
+					 S "Declared an overloaded function ", A(r),
+					 S" that has not beeen declared to be overloadedable"]);
 				      (ERROR, env))
-	       (*NOTE: We should use the overload mechanic to find all duplicates*)
+	       (*QUESTION: should use the overload mechanic to find all duplicates?*)
 	       fun findConflictingOverload funcs =
 		   let
 		    val possibleOverload = CO.chkOverload(cxt, f, paramTys, [], funcs)
@@ -235,38 +233,47 @@ structure CheckGlobals : sig
 		    case possibleOverload
 		     of CO.Overload(AST.E_Prim(overloadName, _, _, _), ty) => [overloadName]
 		      | CO.Overload(AST.E_Apply((overloadName, _), _ , _), ty) => [overloadName]
-		      | CO.Overload(_) => raise Fail "Impossible"
+		      | CO.Overload(_) => raise Fail "Impossible: overload table holds non-prim and non-apply"
 		      | _ => []
 		   end
 	       (* This produces a value that let's use identify when we need to worry about the special cases of :,\cdot,\otimes*)
 	       val specialProductCheck = (case CO.checkSpecialProduct(paramTys, f)
-					   of SOME(NONE) => true (* an operator that can be overloaded but is not in the basis  *)
-					   |  SOME(s) => (err (cxt, [
+					   of SOME(NONE, name) => true (* an operator that can be overloaded but is not in the basis  *)
+					   |  SOME(s, name) => (err (cxt, [
 							       S "Declared an overload for a builtin operator", A(f),
-							       S "that is compatible with a previous definition."
+							       S "that is defined via the type ", TY(fnTy),
+							       S "that is compatible with definition of ", A(name), S "."
 							      ]); true) 
 					    | NONE => false (* if it can be overloaded, it is in the basis *)
 					 (*end case*))
-				     
+	       fun overloadExtraToErrors (x::xs) = List.@ ([S "The symbol ", V(x), S "that has type", TY (Var.monoTypeOf x), S "and is defined on", LN (Error.location(#1 cxt ,Var.locationOf x)), S"\n"], (overloadExtraToErrors xs))
+		 | overloadExtraToErrors [] = []
+	       fun overloadPrimExtraToErrors (x::xs) = List.@ ([S "The symbol ", V(x), S "that has a type defined in the documentation", S "and might be defined on", LN (Error.location(#1 cxt ,Var.locationOf x)), S"\n"], (overloadExtraToErrors xs))
+		 | overloadPrimExtraToErrors [] = []
+
+						    
 	      in
 	       (case E.findFunc(env, f) 
 		 of  E.UserFun(g) =>  noOverLoadErr f (* no overload declared*)
 		   | E.OverloadUserFun(funcs) =>
 		     if isOp
 		     then (err (cxt, [
-				S "Declared an operator overload '",
-				A(f), S"' for a user function"]);
-			   (ERROR, env)) (*if isOp -> internal compiler error*) 
+				S "Declared an operator overload ",
+				A(f), S" for a user function"]);
+			   (ERROR, env)) 
 		     else
 		      (case findConflictingOverload funcs 
 			of [] => (OTHER(AST.D_Func(f', params', body')), E.insertOverloadFunc(env, cxt, f, f' :: funcs))
-			 | g::gs =>
-			   (err (cxt, [
-				 S "Declared a function overload '", A(f),
-				 S "' has a type", TY(fnTy) , S " that conflicts with a previous definition '", V(g),
-				 S "' that has type"
-				]);
+			 | possible =>
+			   let
+			    val overloadMsgs = overloadExtraToErrors possible
+			   in
+			   (err (cxt, List.@ ([
+				 S "Declared a function overload ", A(f),
+				 S " has a type", TY(fnTy) , S " that conflicts with previous definitions of this function: "
+				], overloadMsgs)); 
 			    (ERROR, env))
+			   end
 		      (* end case *))
 		   | E.PrimFun (funcs) =>
 		     if not isOp
@@ -281,13 +288,17 @@ structure CheckGlobals : sig
 			  (case findConflictingOverload funcs 
 			    of [] =>
 				(OTHER(AST.D_Func(f', params', body')), E.insertOverloadPrim(env, cxt, f, f' :: funcs))
-			     | g::gs =>
-			       (err (cxt, [
+			     | others =>
+			       let
+				val overloadErros = overloadPrimExtraToErrors others
+			       in
+				
+			       (err (cxt, List.@ ([
 				     S "Declared an operator overload '", A(f),
-				     S "' has a type", TY(fnTy) , S " that conflicts with a previous definition '", V(g),
-				     S "' that has type"
-				    ]);
-				(ERROR, env))
+				     S " has a type", TY(fnTy) , S " that conflicts with a previous definitions: " 
+				    ], overloadErros));
+				     (ERROR, env))
+				end
 			 (* end case *)))
 		      (*end case*))
 	       (* end case *))
@@ -299,7 +310,7 @@ structure CheckGlobals : sig
 	       val astTy = CheckType.check(env, cxt, tyDef)
 	       (* We enforce that this must be value type for now:*)
 	       val _  = if TU.isValueType astTy then () else (err (cxt, [
-								S "Declared a type", A(tyName), S " with definition ", TY(astTy), S " that is not a value."
+								S "Declared a type", A(tyName), S " with a definition ", TY(astTy), S " that is not a value type."
 							  ]))
 	       (*Step 2: Build the constructor and add to the env*)
 	       val thisTy = Types.T_Named(tyName, astTy)
@@ -309,7 +320,8 @@ structure CheckGlobals : sig
 	       val body = AST.S_Block([AST.S_Return(AST.E_Coerce{srcTy=astTy, dstTy=thisTy, e=AST.E_Var(param,span)})])
 	       val astConFun = AST.D_Func(funVar, [param] , body)
 	       val _ = (E.checkForRedef (env, cxt, tyName); E.insertFunc(env, cxt, tyName, funVar)) (*finish creating constructor and adding to env*)
-					  
+
+			 
 	       (*Step 3: Add methods: For now, we just add .unpack*)
 	       val unpack = Atom.atom "unpack"
 	       val deConFnTy = Ty.T_Fun([thisTy], astTy)
