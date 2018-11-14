@@ -67,10 +67,11 @@ structure CheckExpr : sig
 	  of
 	     CO.Overload(res) => res
 	   | CO.Error(res) => err res
-	   | CO.NoOverload =>
-	     raise Fail(concat[
-			  "resolveOverload: \"", Atom.toString rator, "\" has no candidates"
-          ])
+	   | CO.NoOverload => err(cxt, [
+                                      S "Given an operator or function", A(rator), S" with argument types", TYS(argTys),
+				      S " was unable to locate an overloaded operator."
+                                    ])
+
 	(* end case*))
   (* check the type of a literal *)
     fun checkLit lit = (AST.E_Lit lit, TypeOf.literal lit)
@@ -238,7 +239,22 @@ structure CheckExpr : sig
                                 | NONE => appTyError (f, domTy, tys')
                               (* end case *))
                           | _ => err(cxt, [S "application of non-function/field ", V f])
-                        (* end case *))
+                           (* end case *))
+
+                fun checkMethodApp (cxt, f) args' arg tys' ty = if Var.isPrim f
+                      then raise Fail "unexpected primitive function"
+                      else (case Var.monoTypeOf f
+                         of Ty.T_Fun(domTy, rngTy) => (
+                              case Unify.matchArgs (domTy, arg::args', ty::tys')
+                               of SOME args => (AST.E_Apply(useVar(cxt, f), args, rngTy), rngTy)
+                                | NONE => err(cxt, [
+					      S "type error in application of method ", V f, S "defined in type ", TY(ty),
+					      S "  expected: ", TYS domTy, S "\n",
+					      S "  found:    ", TYS tys'
+                      ])
+                              (* end case *))
+                          | _ => err(cxt, [S "application of non-function/field ", V f])
+                        (* end case *))			     
                 fun checkFieldApp (e1', ty1) = (case (args, tys)
                        of ([e2'], [ty2]) => let
                             val (tyArgs, Ty.T_Fun([fldTy, domTy], rngTy)) =
@@ -266,7 +282,7 @@ structure CheckExpr : sig
 			val (astExp, astTy) = check (env, cxt, exp)
 			val tyName = (case astTy
 				       of Ty.T_Named(tyName, tyDef) => SOME(tyName)
-					| _ => (err (cxt, [S "Only Named Types have field"]); NONE)
+					| _ => (err (cxt, [TY(astTy), S " is not a named type and so has no members."]); NONE)
 				     (*end case*))
 
 			val tyEnv = (Option.mapPartial (fn name => case Env.findTypeEnv(env, name)
@@ -275,12 +291,13 @@ structure CheckExpr : sig
 						       tyName)
 			val method : AST.var option = Option.mapPartial (fn env => case TypeEnv.findMethod(env, field)
 										    of SOME(s) => SOME(s)
-										     | NONE => ( (err (cxt, [S "There is no field named",
+										     | NONE => ( (err (cxt, [S"The type named", A (TypeEnv.findName env),
+													     S " does not have a member named",
 													     A(field)])); NONE)) tyEnv
 									
 		       in
 			case method 
-			 of SOME(s) => checkFunApp((#1 cxt, span), s) (astExp::args) (astTy:: tys)
+			 of SOME(s) => checkMethodApp((#1 cxt, span), s) (args) astExp ( tys) astTy (*Note: This could result in a cryptic error message*)
 			 | NONE => bogusExpTy
 		       end
 		     )
@@ -290,7 +307,7 @@ structure CheckExpr : sig
                               Var.monoTypeOf f')
                           | NONE => (case Env.findFunc (env, f)
                                of Env.PrimFun[] => err(cxt, [S "unknown function ", A f])
-                                | Env.PrimFun[f'] => checkPrimApp f' (*NOTE: This needs to change if any more operators like tensor,dot,colon product are added.*)
+                                | Env.PrimFun[f'] => checkPrimApp f' (*NOTE: This needs to change if any more operators like tensor, dot, colon product are added.*)
                                 | Env.PrimFun ovldList => (
                                     case resolveOverload ((#1 cxt, span), f, tys, args, ovldList)
                                      of (e' as AST.E_Prim(f', tyArgs, _, _), rngTy) =>
