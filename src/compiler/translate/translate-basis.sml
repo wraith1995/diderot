@@ -183,7 +183,7 @@ structure TranslateBasis : sig
                 (BV.pow_si,             fn (y, [_, Ty.DIM d1], [f, n]) => let
                                           fun getN x  = (case IR.Var.getDef x
                                                  of IR.LIT(Literal.Int n) => IntInf.toInt n
-(* FIXME: there is no guarantee that n will be constant! *)
+						  (* FIXME: there is no guarantee that n will be constant! *)
                                                   | _ => raise Fail "impossible"
                                                 (* end case *))
                                           in
