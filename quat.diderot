@@ -1,0 +1,111 @@
+#version 3.0
+//In this program, we will make code:
+//that (1) locates the distance between two orientations
+//that (2) provides a new interpolation via geodesics on the unit sphere.
+// and also define +.-. *,/
+
+//we first define quaternions:
+type tensor[4] quat;
+
+//we set two random quats to show off how they are made.
+quat q0 = quat [0,0,0,0];
+quat q1 = quat [1,2,3,4];
+
+//we define addition and subtraction just to get a look at things:
+
+overload + quat (quat x, quat y){
+  //since quats were defined with tensors, the inherit indexing:
+  quat result = quat [x[0] + y[0], x[1] + y[1], x[2] + y[2], x[3] + y[3]];
+  //we could simplify this via allowing a general unpack e.g:
+  //quat result = quat x.unpack() + y.unpack() -> what to call unpack?
+  return result;
+}
+overload - quat (quat x, quat y){
+  quat result = quat [x[0] - y[0], x[1] - y[1], x[2] - y[2], x[3] - y[3]];
+  return result;
+}
+//next we define the inner product
+
+overload • real (quat x, quat y){
+  real result = x[0]*y[0] + x[1]*y[1] + x[2]*y[2] + x[3]*y[3];
+  //or real result = x.unpack() • y.unpack();
+  return result;
+}
+//we define scaling:
+overload * quat (quat x, real y) {return quat y* [x[0], x[1], x[2], x[3]];}
+//we define conjugate
+function quat conj(quat x) = quat [x[0], -x[1], -x[2], -x[3]];
+
+
+//we can now define two useful functions:
+
+//First, we define the distance between two quaternions as orientations:
+
+function oreintDist (quat x, quat y){
+  quat x0 = x * sqrt(x • x );
+  quat y0 = y * sqrt(y • y );
+  return 1 - (x0 • y0 )^2; 
+}
+//Using this function, you can compare two unit normals; thus, I could color a surface by how much its outward pointing normal deviated from some reference normal!
+y
+//we define some helpers via
+//https://www.plunk.org/~hatch/rightway.php (C-x C-f slerp) for special comments
+//This is just to make sure it is right, but I think I can find a more numerically sound
+//method on the basis of oreintdist(x,y) = (1 - cos(\theta))/2 where
+//theta is the angle between the two orientations.
+function real sinOverX(real ang)  = 1 if ang*ang + 1 == 1 else sin(ang)/ang;
+function real angBet(quat x, quat y) {
+  real dot = x • y;
+  if (dot < 0){
+    real arc = sqrt((-v-u) •( -v-u ))/2;
+    return π - 2 * arcsin(arc);
+  }
+  else{
+    real arc = sqrt((v-u) •( v-u ))/2;
+    return 2*arcsin(arc);
+  }
+}
+//Source: https://en.wikipedia.org/wiki/Slerp
+//Second, we can define the interpolation between two unit quaternions; in essence, the path given by t\in [0,1] \to slerp(x,y,t) is the geodesic on the unit sphere between the two positions on the sphere; another way of thinking of it is you parallel transport x to y.
+//Using this function, one can rotate  the sphere in a principled and constant time manner.
+//I hope we can find some application for that.
+function slerp (quat x, quat y, real t){
+  real ang = angBet(x,y);
+  quat result = sinOverX((1-t) * ang)/sinOverX(ang) * (1-t) * x0 + sinOverX(t*ang)/sinOverX(ang) *t * y0;
+  return result;
+}
+
+//we show how other silly things are defined:
+
+
+//next we define multiplication:
+
+overload * quat (quat x, quat y){
+  quat result = quat [x[0]*y[0] - x[1]*y[1] - x[2]*y[2] - x[3]*y[3],
+		      x[0]*y[1] - x[1]*y[0] + x[2]*y[3] - x[3]*y[2],
+		      x[0]*y[2] - x[1]*y[3] + x[2]*y[0] + x[3]*y[1],
+		      x[0]*y[3] - x[1]*y[2] - x[2]*y[1] + x[3]*y[0]];
+  return result;
+}
+
+//we define division:
+overload / quat (quat y, quat x) { // is y/x
+  quat invx = conj(x) * (x • x); // 1/x;
+  return y*x;
+}
+
+
+input image(3)[3] A;
+input image(3)[3] B;
+field#2(3)[3] a = bspln3 ⊛ A;
+field#2(3)[3] b = bspln3 ⊛ B;
+
+field#2(3)[] P = (a/|a|)•(b/|b|); // the PVO
+
+strand f(int i) {
+  output tensor[3] r = ∇P([0,0,0]);/*@\label{line:pvo-grad}@*/
+  update {
+    stabilize;
+  }
+}
+initially [ f(i) | i in 0..0];
