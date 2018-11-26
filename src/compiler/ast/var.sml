@@ -39,6 +39,9 @@ structure Var : sig
   (* make a copy of a variable (same name and type) *)
     val copy : t -> t
 
+  (* return the variable's atom name (as it appears in the source) *)
+    val atomNameOf : t -> Atom.atom
+    
   (* return the variable's name (as it appears in the source) *)
     val nameOf : t -> string
 
@@ -109,6 +112,7 @@ structure Var : sig
       | IterVar                 (* iteration variable *)
 
     datatype t = V of {
+        atomname : Atom.atom,
         name : string,          (* print name of variable *)
         id : Stamp.t,           (* unique ID *)
         loc : Error.span,       (* the location where this variable is bound *)
@@ -117,6 +121,7 @@ structure Var : sig
         props : PropList.holder (* property list *)
       }
 
+    fun atomNameOf (V{atomname, ...}) = atomname
     fun nameOf (V{name, ...}) = name
     fun typeOf (V{ty, ...}) = ty
     fun monoTypeOf (V{ty=([], ty), ...}) = ty
@@ -125,21 +130,21 @@ structure Var : sig
     fun uniqueNameOf (V{name, id, ...}) = name ^ Stamp.toString id
     fun locationOf (V{loc, ...}) = loc
 
-    fun cleanType clearer (V{name, id, loc ,kind, props, ty=([], ty')})  = V{name=name, id=id, loc=loc ,kind=kind, props=props, ty=([], clearer ty')}
+    fun cleanType clearer (V{atomname, name, id, loc ,kind, props, ty=([], ty')})  = V{atomname = atomname, name=name, id=id, loc=loc ,kind=kind, props=props, ty=([], clearer ty')}
       | cleanType _ v = v
 			     
     fun newPoly (name, loc, kind, scheme) = let
           val id = Stamp.new()
           in
-            V{name=Atom.toString name, id=id, loc=loc, kind=kind, ty=scheme, props=PropList.newHolder()}
+            V{atomname = name, name=Atom.toString name, id=id, loc=loc, kind=kind, ty=scheme, props=PropList.newHolder()}
           end
 
     fun newBasis (name, scheme) = newPoly (name, (0, 0), BasisVar, scheme)
 
     fun new (name, loc, kind, ty) = newPoly (name, loc, kind, ([], ty))
 
-    fun copy (V{name, kind, ty, ...}) =
-          V{name=name, id=Stamp.new(), loc=(0, 0), kind=kind, ty=ty, props=PropList.newHolder()}
+    fun copy (V{atomname, name, kind, ty, ...}) =
+          V{atomname=atomname, name=name, id=Stamp.new(), loc=(0, 0), kind=kind, ty=ty, props=PropList.newHolder()}
 
     fun isPrim (V{kind = BasisVar, ...}) = true
       | isPrim _ = false
