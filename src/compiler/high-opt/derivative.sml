@@ -150,6 +150,11 @@ structure Derivative : sig
         (* end case*))
 
     (* rewrite free index (i) in  expression e to vk *)
+    (* The idea of this function is that when I take the derivative of a composition e1 \circ e2, a new index, vk, is added     *)
+    (* to the expresssion e1 as a result of taking a derivative of it. This index needs to be coordinated with outermost index of e2 for the sum to work *)
+    (* Thus, this function finds the outermost index, E.V 0, and replaces all instances of it with vk *)
+    (* We again note that implict in this working is that composition is restricted to e2 being a scalar or vector field*)
+
     fun rewriteIx(vk, e) = let
         (* the variable index inside a composition will start at 0*)
         fun change(E.V 0) = E.V vk
@@ -163,11 +168,22 @@ structure Derivative : sig
             | E.Eps2 (i, j) => E.Eps2(change i, change j)
             | E.Field(id2, alpha) => E.Field(id2, List.map (fn e => change(e)) alpha)
             | E.Lift e1  => E.Lift(rewriteIx(vk, e1))
-            | E.Conv(id2, alpha, h2, dx2) => E.Conv(id2, List.map (fn e => change(e)) alpha, h2, dx2)
+	    (*I've corected this rule from previous code: *)
+	    (* The previous version only tackled the alpha index *)
+	    (* This version searches all indicies because it is possible this could be a gradient of a vector field*)
+	    (* or a scalar field formed as say the trace of a jacobian: Sum_{i} F_{i}_dx_{i}, which would require us to rewrite both i-s! *)
+	    (* The actual bug that made me see this was the case of a gradient of a scalar field: Dx_{i}, where the previous version ignored the i*)
+	    | E.Conv(id2, alpha, h2, dxes) => E.Conv(id2, List.map (fn e => change(e)) alpha, h2, List.map (fn e => change(e)) dxes)
             | E.Partial(alpha) => E.Partial (List.map (fn e => change(e)) alpha)
-            | E.Apply(e1, e2) => E.Apply(e1, rewriteIx(vk, e2))
+	    (* FIX ME:  I'm not sure about these 3: Comeback to check later.*)
+	    (* I guess the main issue is: are the indicies of e1,e2 disjoint in these cases?*)
+	    (* I think the answer is yes and so this is okay, but I'm not sure*)
+	    (* Overlap in indicies here, as opposed to the convo case, would indicate an outter sum*)
+	    (* meaning the index was not used in the shape and so not relevant to rewriteIx*)
+            | E.Apply(e1, e2) => E.Apply(e1, rewriteIx(vk, e2)) (*implicit here is that e1 is not a E.Partial*)
             | E.Probe(e1, e2) => E.Probe(rewriteIx(vk, e1), e2)
             | E.Comp(e1, es) => E.Comp(rewriteIx(vk, e1), es)
+	    (* These are fine:*)
             | E.Sum(sx, e1) => E.Sum(sx, rewriteIx(vk, e1))
             | E.Op1(op1, e1) => E.Op1(op1, rewriteIx(vk, e1))
             | E.Op2(op2, e1, e2) => E.Op2(op2, rewriteIx(vk, e1), rewriteIx(vk, e2))
@@ -229,15 +245,23 @@ structure Derivative : sig
             | E.Value _ => err "Value used before expand"
             | E.Img _ => err "Probe used before expand"
             | E.Krn _ => err "Krn used before expand"
-            | E.Comp(e1, [(e2, n)]) => let
-				val (d0::dn) = dx
-                val vk = 100+sumX (* FIXME fresh index*)
-                val e3 = E.Comp(E.Apply(E.Partial[E.V vk], e1), [(e2, n)])
-                val e4 = E.Apply(E.Partial[d0], rewriteIx(vk, e2)) 
-                val SOME(dim) = findDim(e1, params)
-                val e5 = E.Sum([(vk, 0, dim-1)], E.Opn(E.Prod, [e3, e4]))
-				val e = if null dn then e5 else E.Apply(E.Partial dn, e5)
-				in SOME (e) end
+            | E.Comp(e1, [(e2, n)]) =>
+	      let
+	       (* I want to comment on why this works:*)
+	       (* There are two key assumptions: *)
+	       (* one: the type signature of compose means we only compose things with vector fields:*)
+	       (* two: vector fields that are derivatives of other fields are treated as vector fields in eucldiean space and not on some manifold*)
+	       (* meaning the transforms between types of indicies (or in our case world/index space) are absorbed into the expression for *)
+	       (* a vector field by the act of pushing the derivatives to convo and taken into account properly when a prob of convo is expanded in high to mid.*)
+	       (* With these assumptions, the chain rule reduces to the tensor-vector case every time.*)
+	       val (d0::dn) = dx
+               val vk = 100+sumX (* FIX ME: fresh index*)
+               val e3 = E.Comp(E.Apply(E.Partial[E.V vk], e1), [(e2, n)])
+               val e4 = E.Apply(E.Partial[d0], rewriteIx(vk, e2)) 
+               val SOME(dim) = findDim(e1, params)
+               val e5 = E.Sum([(vk, 0, dim-1)], E.Opn(E.Prod, [e3, e4]))
+	       val e = if null dn then e5 else E.Apply(E.Partial dn, e5)
+	      in SOME (e) end
             | E.Comp _ => err "unsupported differentiation of comp"
             | E.OField(ofld, e2, E.Partial alpha) => SOME(E.OField(ofld, e2, E.Partial(alpha @ dx)))
             | E.If(comp, e3, e4) => SOME(E.If(comp, E.Apply(E.Partial dx, e3), E.Apply(E.Partial dx, e4)))
