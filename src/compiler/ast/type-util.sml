@@ -43,6 +43,9 @@ structure TypeUtil : sig
     (* returns true if the type is T_Fem*)
     val isFemType : Types.ty -> bool
 
+    (* returns true if this is a fem type that we can input*)
+    val isInputFemType : Types.ty -> bool
+
     val extractFemType : Types.ty -> FemData.femType option
 
   (* return the range (return type) of a function type *)
@@ -267,6 +270,12 @@ structure TypeUtil : sig
 	   | _ => false
 	(* end case *))
 
+    fun isInputFemType ty =
+	(case prune ty
+	  of Ty.T_Fem data => FemData.validInput data
+	   | Ty.T_Named(_, ty') => isInputFemType ty'
+	   | _ => false)
+
     fun extractFemType ty =
 	(case ty
 	  of Ty.T_Fem(v) => SOME(v)
@@ -346,6 +355,7 @@ structure TypeUtil : sig
                   String.concat[tysToString tys1, " -> ", toString ty2]
                 end
             | Ty.T_Error => "<error-type>"
+	    | Ty.T_Fem(data) => "FemType: "^ (FemData.femPP data)
           (* end case *))
 
   (* return the range (return type) of a function type *)

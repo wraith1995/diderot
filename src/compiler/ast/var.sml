@@ -51,6 +51,9 @@ structure Var : sig
   (* return the variable's type; this function raise Fail if the variable is polymorphic *)
     val monoTypeOf : t -> Types.ty
 
+    (* Returns the name of the variable's type if it is a named type *)
+    val namedTypeOf : t -> (Atom.atom * Types.ty) option
+
   (* return the variable's kind *)
     val kindOf : t -> kind
 
@@ -126,6 +129,10 @@ structure Var : sig
     fun typeOf (V{ty, ...}) = ty
     fun monoTypeOf (V{ty=([], ty), ...}) = ty
       | monoTypeOf (V{name, ...}) = raise Fail(name ^ " is not monomorphic")
+    fun namedTypeOf (V{ty=([], ty), ...}) = (case ty
+					      of Types.T_Named((name, ty')) => SOME((name, ty'))
+					       | _ => NONE)
+      | namedTypeOf _ = NONE
     fun kindOf (V{kind, ...}) = kind
     fun uniqueNameOf (V{name, id, ...}) = name ^ Stamp.toString id
     fun locationOf (V{loc, ...}) = loc
