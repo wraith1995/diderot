@@ -82,6 +82,12 @@ structure ParseTree =
       | T_Image of {dim : expr, shape : expr list}
       | T_Seq of ty * expr
       | T_DynSeq of ty
+      | T_Mesh  (*Fem types --- used for type definitions and so forth*)
+      | T_Space of var * expr list
+      | T_Func of var
+      | T_RefCell of var
+      | T_Cell of var
+      | T_MeshPos of var
 
     and fun_body                                (* function bodies can be expressions or blocks *)
       = FB_Expr of expr
