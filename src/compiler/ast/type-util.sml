@@ -40,6 +40,11 @@ structure TypeUtil : sig
   (* return true if the type is T_Error *)
     val isErrorType : Types.ty -> bool
 
+    (* returns true if the type is T_Fem*)
+    val isFemType : Types.ty -> bool
+
+    val extractFemType : Types.ty -> FemData.femType option
+
   (* return the range (return type) of a function type *)
     val rngOf : Types.ty -> Types.ty
 
@@ -254,7 +259,19 @@ structure TypeUtil : sig
     fun isErrorType ty = (case prune ty
            of Ty.T_Error => true
             | _ => false
-          (* end case *))
+	  (* end case *))
+
+    fun isFemType ty =
+	(case prune ty
+	  of Ty.T_Fem _ => true
+	   | _ => false
+	(* end case *))
+
+    fun extractFemType ty =
+	(case ty
+	  of Ty.T_Fem(v) => SOME(v)
+	   | _ => NONE
+	(* end case *))
 
   (* equality testing *)
     fun sameDim (Ty.DimConst d1, Ty.DimConst d2) = (d1 = d2)
