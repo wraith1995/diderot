@@ -134,7 +134,7 @@ structure Paths : sig
               | NONE => let
                 (* extra places to look for unu *)
                   val extraPaths = let
-                        val pl = ["/home/teocollin/installs/teem/teem-build" // "bin"]
+                        val pl = ["/usr/local" // "bin"]
                         in
                           case OS.Process.getEnv "DIDEROT_TEEM_DIR"
                            of SOME p => (p // "bin") :: pl
