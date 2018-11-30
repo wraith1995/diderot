@@ -120,7 +120,7 @@ structure CheckGlobals : sig
                       (* end case *))
                 in
                 (* check that input variables have valid types *)
-                  if not(TU.isValueType ty orelse TU.isImageType ty)
+                  if not(TU.isValueType ty orelse TU.isImageType ty orelse TU.isInputFemType ty)
                     then err (cxt, [S "input variable ", V x', S " has invalid type ", TY ty])
                     else ();
                   E.checkForRedef (env, cxt, x);

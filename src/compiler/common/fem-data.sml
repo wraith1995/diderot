@@ -22,10 +22,11 @@ structure FemData : sig
 			    | FuncCell of func
 			    | MeshPos of mesh
 
-
+	   val validInput : femType -> bool
 	   val extractMesh : femType -> mesh option
 	   val extractSpace : femType -> space option
-					       
+	   val femPP : femType -> string
+	   val defaultSpace : mesh -> femType   
 	   val mkMesh : int * int -> femType
 	   val mkSpace : int * int list * mesh -> femType
 	   val mkFunc : space -> femType
@@ -60,6 +61,23 @@ datatype femType = Mesh of mesh
 		 | FuncCell of func
 		 | MeshPos of mesh
 
+fun validInput ty =
+    (case ty
+      of Mesh(_) => true
+       | Space(_) => true
+       | Func(_) => true
+       | _ => false)
+fun femPP ty =
+    (case ty
+      of Mesh(_) => "Mesh"
+       | Space(_) => "Space"
+       | Func(_) => "FemFunc"
+       | RefCell(_) => "RefCell"
+       | MeshCell(_) => "MeshCell"
+       | FuncCell(_) => "FuncCell"
+       | MeshPos(_) => "MeshPos"
+    (* end case*))
+
 fun extractMesh ty =
     (case ty
       of Mesh(m) => SOME(m)
@@ -78,6 +96,9 @@ fun isInputFemType ty =
        | _ => true)
 			  
 fun mkMesh(dim, mDim) = Mesh (Mesh' {dim = dim, mappingDim = mDim, basis = [BD.empty]})
+
+
+fun defaultSpace (m as Mesh'{dim,...}) = Space (Space' {dim = dim, shape = [], basis = [], mesh = m})
 
 fun mkSpace(dim, shape, mesh) = Space(Space' {dim = dim, shape = shape, basis=[BD.empty], mesh = mesh})
 
