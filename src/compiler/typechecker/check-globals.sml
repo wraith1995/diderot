@@ -28,6 +28,7 @@ structure CheckGlobals : sig
     structure L = Literal
     structure SS = Substring
     structure CO = CheckOverload
+    structure FT = FemData
     structure N = BasisNames
 
 		     
@@ -303,43 +304,154 @@ structure CheckGlobals : sig
 		      (*end case*))
 	       (* end case *))
 	      end
-	    | PT.GD_Type(tyDef, {tree=tyName, span=span}, file) =>
+	    | PT.GD_Type(tyDefBind, {tree=tyName, span=span}, file) =>
 	      let
 	       (*Note: I'm going to reuse the span here a lot in places where it hopefully shouldn't matter.*)
-	       (*Step 1: Check the type definition*)
-	       val astTy = CheckType.check(env, cxt, tyDef)
-	       (* We enforce that this must be value type for now:*)
-	       val _  = if TU.isValueType astTy then () else (err (cxt, [
-								S "Declared a type", A(tyName), S " with a definition ", TY(astTy), S " that is not a value type."
-							  ]))
-	       (*Step 2: Build the constructor and add to the env*)
-	       val thisTy = Types.T_Named(tyName, astTy)
-	       val conFnTy = Ty.T_Fun([astTy], thisTy)
-	       val funVar = Var.new (tyName, span, AST.FunVar, conFnTy)
-	       val param = Var.new (Atom.atom "arg0", span, AST.FunParam, astTy)
-	       val body = AST.S_Block([AST.S_Return(AST.E_Coerce{srcTy=astTy, dstTy=thisTy, e=AST.E_Var(param,span)})])
-	       val astConFun = AST.D_Func(funVar, [param] , body)
-	       val _ = (E.checkForRedef (env, cxt, tyName); E.insertFunc(env, cxt, tyName, funVar)) (*finish creating constructor and adding to env*)
+	       (*The zeroeth step is to determine if we are building an fem or non-fem based type.*)
+	       (*FIX ME: reorganize this code*)
+	       val tyDef = (case tyDefBind
+			     of PT.T_Mark({span, tree}) => tree
+			      | _ => tyDefBind
+			   (* end case*))
+				
+	       val isFemType = (case tyDef
+				 of PT.T_Mesh => true
+				  | PT.T_Space(_, _) => true
+				  | PT.T_Func(_) =>  true 
+				  (*TODO: Add Sequences if you want???*)
+				  | _ =>   false)
+	       val _ = print((Bool.toString isFemType) ^ "\n");
+	       (* TODO: Add file parsing; for now, we do dummy info.*)
+	       (* This needs to be moved somewhere else... I think we need it in the type utilities*)
+	       (* At the least, we need to isolate the key functionality *)
+	       fun validateFemType femTyDef fileinfo =
+		   let
+		    (*TODO: parse the file and make these correct...*)
+		    val tempMesh = FT.mkMesh(2,2)
+		    fun tempSpace mesh shape = FT.mkSpace(2, shape, mesh)
+		    fun tempFunc space = FT.mkFunc space
+	            (*TODO : check against the file in the following.*)			   
+		   in
+		    (case femTyDef
+		      of PT.T_Mesh => SOME(tempMesh)
+		       | PT.T_Space(mesh, shape) =>
+			 let
+			  (*validate shape*)
+			  val shapeTy = CheckExpr.checkShape(env, cxt, shape)
+			  val shapeOpt = (case shapeTy
+					   of Ty.Shape(dims) =>
+					      (List.map (fn x =>
+							    (case x
+							      of Ty.DimConst(d) => SOME(d)
+							       | _ => NONE)) dims)
+						
+					    | _ => [NONE]
+					 (*end case*))
+			  val shape' = List.foldr (fn (x, y) => (case (x, y)
+								  of (SOME(d), SOME(y')) => SOME(d :: y')
+								   | _ => NONE)) (SOME([])) shapeOpt
+ 			  (* validate shape against file? *)
+			  val meshType = Option.mapPartial FT.extractMesh (Option.mapPartial TU.extractFemType
+											     (Option.mapPartial
+												(fn x => SOME(TypeEnv.findDef x))
+												(E.findTypeEnv(env, mesh))))
+							   
+			 in
+			  (case (shape', meshType)
+			    of (SOME(lShape), SOME(meshType')) => SOME(tempSpace meshType' lShape)
+			     (*NOTE: these errors could be improved.*)
+			     | (NONE, SOME(_)) => ((err (cxt, [
+				S "Declared a function space type ",
+				A(tyName), S" with an invalid underlying shape type"])); NONE)
+			    | (_, NONE) => ((err (cxt, [
+				S "Declared a function space type ",
+				A(tyName), S" with an underlying type that is not a mesh or not defined", A(mesh)])); NONE)
+			  (*end case*))
+			 end
 
-			 
-	       (*Step 3: Add methods: For now, we just add .unpack*)
-	       val unpack = Atom.atom "unpack"
-	       val deConFnTy = Ty.T_Fun([thisTy], astTy)
-	       val unpackVar =  Var.new (unpack, span, AST.FunVar, deConFnTy)
-	       val param' = Var.new (Atom.atom "arg0", span, AST.FunParam, thisTy)
-	       val body' = AST.S_Block([AST.S_Return(AST.E_Coerce{srcTy = thisTy, dstTy=astTy, e=AST.E_Var(param',span)})])
-	       val astDeConFun = AST.D_Func(unpackVar, [param'], body')
-	       (* Do Some fem or type specific stuff ... *)
-	       val methods = [(unpack, unpackVar)]
-	       val funDcls = [astConFun, astDeConFun]
+		       | PT.T_Func(space) =>
+			 let
+			  val spaceType = Option.mapPartial FT.extractSpace (Option.mapPartial TU.extractFemType (Option.mapPartial
+												(fn x => SOME(TypeEnv.findDef x))
+												(E.findTypeEnv(env, space))))
+			 in
+			  (case spaceType
+			    of SOME(space') => SOME(tempFunc space')
+			    |  NONE =>  ((err (cxt, [
+				S "Declared a femFunction type ",
+				A(tyName), S" with an underlying type that is not a space or not defined", A(space)])); NONE)
+			  (* end case *))
+			 end
+		       | _ => raise Fail ("Non fem type passed to validateFemType: " ^ Atom.toString(tyName))
+		    (* end case *))
+		   end
 
-               (*Step 4: Add constants: TBD after file formats*)
-	       val constants = []
 
-	       val env' = Env.insertNamedType(env, cxt, tyName, thisTy, constants, methods)
-					   
+	       fun makeFemType femTyDef =
+		   let
+		    val femType : FT.femType option = validateFemType femTyDef file
+		    val constants = []
+		    val methods = []
+
+		    val env' =  Option.map (fn x => Env.insertNamedType(env, cxt, tyName, Ty.T_Fem(x), constants, methods)) femType
+		   in
+		    (case env'
+		      of SOME(env'') => (OTHERS([]), env'')
+		       | NONE => (ERROR, env)
+		    (* end case *))
+		    
+		   end
+
+	       fun makeBasicNamedType astTyDef = let
+		(*NOTE: error handling here is borked*)
+		(*Step 1: Check the type definition*)
+		val _ = print("ummm 1\n");
+		val astTy = CheckType.check(env, cxt, astTyDef)
+		val _ = print("umm 2\n");
+		(* We enforce that this must be value type for now:*)
+		(*bad way to do this:*)
+		val isValType  = if TU.isValueType astTy
+				 then true
+				 else ((err (cxt, [
+					     S "Declared a type", A(tyName), S " with a definition ", TY(astTy), S " that is not a value type or a fem type."
+				       ])); false)
+		(*Step 2: Build the constructor and add to the env*)
+		val thisTy = Types.T_Named(tyName, astTy)
+		val conFnTy = Ty.T_Fun([astTy], thisTy)
+		val funVar = Var.new (tyName, span, AST.FunVar, conFnTy)
+		val param = Var.new (Atom.atom "arg0", span, AST.FunParam, astTy)
+		val body = AST.S_Block([AST.S_Return(AST.E_Coerce{srcTy=astTy, dstTy=thisTy, e=AST.E_Var(param,span)})])
+		val astConFun = AST.D_Func(funVar, [param] , body)
+		val _ = (E.checkForRedef (env, cxt, tyName); E.insertFunc(env, cxt, tyName, funVar)) (*finish creating constructor and adding to env*)
+
+			  
+		(*Step 3: Add methods: For now, we just add .unpack*)
+		val unpack = Atom.atom "unpack"
+		val deConFnTy = Ty.T_Fun([thisTy], astTy)
+		val unpackVar =  Var.new (unpack, span, AST.FunVar, deConFnTy)
+		val param' = Var.new (Atom.atom "arg0", span, AST.FunParam, thisTy)
+		val body' = AST.S_Block([AST.S_Return(AST.E_Coerce{srcTy = thisTy, dstTy=astTy, e=AST.E_Var(param',span)})])
+		val astDeConFun = AST.D_Func(unpackVar, [param'], body')
+		(* Do Some fem or type specific stuff ... *)
+		val methods = [(unpack, unpackVar)]
+		val funDcls = [astConFun, astDeConFun]
+
+		(*Step 4: Add constants: TBD after file formats*)
+		val constants = []
+
+		val env' = Env.insertNamedType(env, cxt, tyName, thisTy, constants, methods)
+	       in
+		if isValType
+		then (OTHERS(funDcls), env')
+		else (ERROR, env)
+	       end
+
 	      in
-	       (OTHERS(funDcls), env')
+	       if isFemType
+	       then makeFemType tyDef
+	       else makeBasicNamedType tyDef
+
+					  
 	      end
 	      
 	

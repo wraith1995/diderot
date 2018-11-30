@@ -90,8 +90,12 @@ structure CheckType : sig
                 in
                   if TU.isValueOrStrandType ty
                     then Ty.T_Sequence(ty, NONE)
-                    else err(cxt, [S "invalid element type for sequence: ", TY ty])
-                end
+                  else err(cxt, [S "invalid element type for sequence: ", TY ty])
+            end
+	    | PT.T_Mesh => err(cxt, [S "Mesh is not a valid base type."]) 
+	    | PT.T_Space(_) => err(cxt, [S "Function Space is not a valid base type."])
+	    | PT.T_Func(_) => err(cxt, [S "Fem Function is not a valid base type."])
+
           (* end case *))
 
   end
