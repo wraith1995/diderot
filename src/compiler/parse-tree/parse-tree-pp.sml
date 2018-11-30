@@ -207,6 +207,16 @@ structure ParseTreePP : sig
             | PT.T_DynSeq t => (
                 prNode (strm, "DynSeq");
                 nest strm (fn strm => ty (strm, t)))
+	    | PT.T_Mesh => prNode (strm, "Mesh")
+	    | PT.T_Space(v, shape) => (
+	     prNode (strm, "FunctionSpace(" ^ (Atom.toString v) ^")");
+	     nest strm (fn strm => prList expr (strm, shape)))
+	    | PT.T_Func(v) =>  prNode (strm, "FemFunction(" ^ (Atom.toString v) ^")")
+	    | PT.T_RefCell(v) => prNode (strm, "RefCell(" ^ (Atom.toString v) ^")")
+	    | PT.T_Cell(v) => prNode (strm, "Cell(" ^ (Atom.toString v) ^")")
+	    | PT.T_MeshPos(v) => prNode (strm, "MeshPos(" ^ (Atom.toString v) ^")")
+	    
+	      
           (* end case *))
 
     and funBody (strm, obj) = (case obj

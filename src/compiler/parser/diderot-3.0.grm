@@ -56,6 +56,12 @@
   | KW_vec3                     ("vec3")
   | KW_vec4                     ("vec4")
   | KW_zeros                    ("zeros")
+  | KW_mesh                     ("mesh")
+  | KW_space                    ("functionSpace")
+  | KW_func                     ("femFunction")
+  | KW_refCell                  ("refCell")
+  | KW_cell                     ("cell")
+  | KW_pos                      ("position")
   | OP_eq                       ("=")
   | OP_pluseq                   ("+=")
   | OP_minuseq                  ("-=")
@@ -238,7 +244,13 @@ OverloadAbleOp
 
 TyDef
         : ConcreteType
-                => (ConcreteType)
+                  => (ConcreteType)
+        | "mesh"
+	          => (markTy(FULL_SPAN, PT.T_Mesh))
+	| "functionSpace" "{" ID "}" Shape
+	          => (markTy(FULL_SPAN, PT.T_Space(ID, Shape)))
+	| "femFunction" "{" ID "}"
+	          => (markTy(FULL_SPAN, PT.T_Func(ID)))
         ;
 File
         : "file" "(" STRING ")"
@@ -433,6 +445,9 @@ PrimitiveType
         | "real"                => (PT.T_Tensor[])
         | "string"              => (PT.T_String)
         | ID                    => (PT.T_Id ID)
+	| "refCell""{" ID "}"   => (markTy(FULL_SPAN, PT.T_RefCell ID))
+	| "cell""{" ID "}"      => (markTy(FULL_SPAN, PT.T_Cell ID))
+	| "position""{" ID "}"  => (markTy(FULL_SPAN, PT.T_MeshPos ID))
         ;
 
 Shape
