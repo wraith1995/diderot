@@ -46,7 +46,7 @@ structure Types =
         }
       | T_Fun of ty list * ty
       | T_Error                 (* for when there is a type error *)
-      | T_Fem of FemData.femType
+      | T_Fem of FemData.femType * Atom.atom option
 
 
   (* meta variable of kind type *)

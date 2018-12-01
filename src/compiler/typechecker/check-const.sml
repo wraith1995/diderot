@@ -13,6 +13,7 @@ structure CheckConst : sig
    * The bool should be true if the constant is the default value for an input variable,
    * since we then allow "load" and "image".
    *)
+	   
     val eval : ((Error.err_stream * Error.span) * bool * AST.expr) -> ConstExpr.t option
 
   end = struct
@@ -66,11 +67,15 @@ structure CheckConst : sig
               ];
             tbl
           end
+    
 
     fun eval (cxt, true, e as AST.E_LoadNrrd _) = SOME(C.Expr e) (* top-level load is okay for input *)
+      | eval (cxt, true, e as AST.E_LoadFem(data, _)) = if FemData.validInput data
+						       then SOME(C.Expr e)
+						       else (TypeError.error (cxt, [S "invalid input initialization"]) ; NONE)
       | eval (cxt, isInput, constExp) = let
-          exception EVAL
-          fun err msg = (TypeError.error (cxt, msg); raise EVAL)
+       exception EVAL
+       fun err msg = (TypeError.error (cxt, msg); raise EVAL)
           fun mkPrim (f, mvs, args, ty) =
                 if Basis.allowedInConstExp f
                   then C.Expr(AST.E_Prim(f, mvs, List.map C.valueToExpr args, ty))

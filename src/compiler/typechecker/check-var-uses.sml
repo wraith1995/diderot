@@ -107,6 +107,10 @@ structure CheckVarUses : sig
                   | AST.E_Andalso(e1, e2) => chk (e2, chk (e1, unused))
                   | AST.E_LoadNrrd _ => unused
                   | AST.E_Coerce{e, ...} => chk (e, unused)
+		  (* NOTE: I'm not sure if this is correct:*)
+		  | AST.E_LoadFem(fem, optionalExp) => (case optionalExp
+							 of SOME(e) => chk(e, unused)
+							  | NONE => unused)
                 (* end case *))
           and chk' (es, unused) = List.foldl chk unused es
           in

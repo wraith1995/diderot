@@ -324,16 +324,18 @@ structure CheckGlobals : sig
 	       (* TODO: Add file parsing; for now, we do dummy info.*)
 	       (* This needs to be moved somewhere else... I think we need it in the type utilities*)
 	       (* At the least, we need to isolate the key functionality *)
+	       fun zF(f) = (fn (x,y) => (f x, y) )
 	       fun validateFemType femTyDef fileinfo =
 		   let
 		    (*TODO: parse the file and make these correct...*)
 		    val tempMesh = FT.mkMesh(2,2)
 		    fun tempSpace mesh shape = FT.mkSpace(2, shape, mesh)
 		    fun tempFunc space = FT.mkFunc space
-	            (*TODO : check against the file in the following.*)			   
+		    (*TODO : check against the file in the following.*)
+
 		   in
 		    (case femTyDef
-		      of PT.T_Mesh => SOME(tempMesh)
+		      of PT.T_Mesh => SOME(tempMesh, NONE)
 		       | PT.T_Space(mesh, shape) =>
 			 let
 			  (*validate shape*)
@@ -351,14 +353,14 @@ structure CheckGlobals : sig
 								  of (SOME(d), SOME(y')) => SOME(d :: y')
 								   | _ => NONE)) (SOME([])) shapeOpt
  			  (* validate shape against file? *)
-			  val meshType = Option.mapPartial FT.extractMesh (Option.mapPartial TU.extractFemType
+			  val meshType = Option.mapPartial (FT.extractMesh) (Option.map (fn (x,y) => x) (Option.mapPartial TU.extractFemType
 											     (Option.mapPartial
 												(fn x => SOME(TypeEnv.findDef x))
-												(E.findTypeEnv(env, mesh))))
+												(E.findTypeEnv(env, mesh)))))
 							   
 			 in
 			  (case (shape', meshType)
-			    of (SOME(lShape), SOME(meshType')) => SOME(tempSpace meshType' lShape)
+			    of (SOME(lShape), SOME(meshType')) => SOME(tempSpace meshType' lShape, SOME(mesh))
 			     (*NOTE: these errors could be improved.*)
 			     | (NONE, SOME(_)) => ((err (cxt, [
 				S "Declared a function space type ",
@@ -371,12 +373,12 @@ structure CheckGlobals : sig
 
 		       | PT.T_Func(space) =>
 			 let
-			  val spaceType = Option.mapPartial FT.extractSpace (Option.mapPartial TU.extractFemType (Option.mapPartial
+			  val spaceType = Option.mapPartial (FT.extractSpace) (Option.map (fn (x,y) => x) (Option.mapPartial TU.extractFemType (Option.mapPartial
 												(fn x => SOME(TypeEnv.findDef x))
-												(E.findTypeEnv(env, space))))
+												(E.findTypeEnv(env, space)))))
 			 in
 			  (case spaceType
-			    of SOME(space') => SOME(tempFunc space')
+			    of SOME(space') => SOME(tempFunc space', SOME(space))
 			    |  NONE =>  ((err (cxt, [
 				S "Declared a femFunction type ",
 				A(tyName), S" with an underlying type that is not a space or not defined", A(space)])); NONE)
@@ -389,7 +391,7 @@ structure CheckGlobals : sig
 
 	       fun makeFemType femTyDef =
 		   let
-		    val femType : FT.femType option = validateFemType femTyDef file
+		    val femType : (FT.femType * Atom.atom option) option = validateFemType femTyDef file
 		    val constants = []
 		    val methods = []
 

@@ -94,6 +94,7 @@ structure ASTPP : sig
                       (* end case *);
                       ppTyArgs (ppStrm, mvs); sp();
                       string(concat["(\"", name, "\")"]))
+		  | AST.E_LoadFem(fem, optionalExp) => string ("loadFem(" ^ (FemData.femPP fem) ^ ")")
                   | AST.E_Coerce{dstTy, e, ...} => (
                       PP.openHBox ppStrm;
                         string "("; string(TU.toString dstTy); string ")";

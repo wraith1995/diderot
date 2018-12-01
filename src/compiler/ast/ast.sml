@@ -91,7 +91,8 @@ structure AST =
             srcTy : Ty.ty,
             dstTy : Ty.ty,
             e : expr
-          }
+      }
+      | E_LoadFem of FemData.femType * expr option
 
     withtype var_dcl = var * expr option
          and iter = var * expr

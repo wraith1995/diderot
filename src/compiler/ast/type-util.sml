@@ -46,7 +46,7 @@ structure TypeUtil : sig
     (* returns true if this is a fem type that we can input*)
     val isInputFemType : Types.ty -> bool
 
-    val extractFemType : Types.ty -> FemData.femType option
+    val extractFemType : Types.ty -> (FemData.femType * Atom.atom option) option
 
   (* return the range (return type) of a function type *)
     val rngOf : Types.ty -> Types.ty
@@ -272,7 +272,7 @@ structure TypeUtil : sig
 
     fun isInputFemType ty =
 	(case prune ty
-	  of Ty.T_Fem data => FemData.validInput data
+	  of Ty.T_Fem(data, _) => FemData.validInput data
 	   | Ty.T_Named(_, ty') => isInputFemType ty'
 	   | _ => false)
 
@@ -355,7 +355,13 @@ structure TypeUtil : sig
                   String.concat[tysToString tys1, " -> ", toString ty2]
                 end
             | Ty.T_Error => "<error-type>"
-	    | Ty.T_Fem(data) => "FemType: "^ (FemData.femPP data)
+	    | Ty.T_Fem(data, a) => let
+	     val tyDep = (case a
+			   of SOME(atom) => Atom.toString atom
+			    | NONE => "NONE")
+	    in
+	     "FemType: "^ (FemData.femPP data) ^ " with type var:" ^ tyDep
+	    end
           (* end case *))
 
   (* return the range (return type) of a function type *)
