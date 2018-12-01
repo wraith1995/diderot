@@ -43,6 +43,7 @@ structure CheckExpr : sig
     structure BV = BasisVars
     structure TU = TypeUtil
     structure CO = CheckOverload
+    structure TE = TypeEnv
   (* an expression to return when there is a type error *)
     val bogusExp = AST.E_Lit(L.Int 0)
     val bogusExpTy = (bogusExp, Ty.T_Error)
@@ -254,7 +255,16 @@ structure CheckExpr : sig
                       ])
                               (* end case *))
                           | _ => err(cxt, [S "application of non-function/field ", V f])
-                        (* end case *))			     
+                           (* end case *))
+		fun checkFemConstruction cxt loadFem rngTy  domTy args argTys=
+		    (case Unify.matchArgs (domTy, args, argTys)
+		      of SOME(args) => (AST.E_LoadFem(loadFem), rngTy)
+		      | NONE => err(cxt, [
+					      S "type error in application of fem creator ",
+					      S "  expected: ", TYS domTy, S "\n",
+					      S "  found:    ", TYS argTys
+				   ])
+		    (* end case*))
                 fun checkFieldApp (e1', ty1) = (case (args, tys)
                        of ([e2'], [ty2]) => let
                             val (tyArgs, Ty.T_Fun([fldTy, domTy], rngTy)) =
@@ -306,7 +316,36 @@ structure CheckExpr : sig
                               AST.E_Var(useVar((#1 cxt, span), f')),
                               Var.monoTypeOf f')
                           | NONE => (case Env.findFunc (env, f)
-                               of Env.PrimFun[] => err(cxt, [S "unknown function ", A f])
+				      of Env.PrimFun[] => (
+				       (case Env.findTypeEnv(env, f)
+					 of NONE => err(cxt, [S "unknown function ", A f])
+					  | SOME(tenv) =>
+					    let (*args stored in args; the name f is the name of the type that we are clearing.*)
+					     val tyDf = TE.findDef tenv
+								   (*is FEM -> determine the underlying type if any that I need to match?*)
+								   (*What I need: constructor type name : f, constructor tyargs : d, acceptable constructor ty args*)
+					     (* I want to match the exact named type or the definition via the files???*)
+					     val (data, tyArgs,name) = (case tyDf
+								 of Ty.T_Fem(data,NONE) => (data, [],[])
+								  | Ty.T_Fem(data, SOME(name)) =>
+								    let
+								     val tenv' = Option.valOf (Env.findTypeEnv(env, name))
+								     val lowerTyDef = TE.findDef tenv'
+								    in
+								     (data, [Ty.T_Named(name, lowerTyDef)], [name])
+								    end
+								  | _ => raise Fail "non-FEM constructor")
+					     val namedArg = (case args
+							      of [] => NONE
+							       | a::_ => SOME(a))
+
+					     val rngTy = Ty.T_Named(f, tyDf)
+								 
+					    in
+					     checkFemConstruction cxt (data, namedArg) rngTy tyArgs args tys
+					    end
+				       (* end case *))
+			       )
                                 | Env.PrimFun[f'] => checkPrimApp f' (*NOTE: This needs to change if any more operators like tensor, dot, colon product are added.*)
                                 | Env.PrimFun ovldList => (
                                     case resolveOverload ((#1 cxt, span), f, tys, args, ovldList)
