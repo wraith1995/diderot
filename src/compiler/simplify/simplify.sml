@@ -102,7 +102,8 @@ structure Simplify : sig
                   dim = TU.monoDim dim,
                   shape = TU.monoShape shape
 					     }
-	    | Ty.T_Named(name,def) => cvtTy def
+	    | Ty.T_Named(name, def) => cvtTy def
+	    | Ty.T_Fem(femData, _) => STy.T_Fem(femData)
             | Ty.T_Fun(tys1, ty2) => raise Fail "unexpected T_Fun in Simplify"
 
             | Ty.T_Error => raise Fail "unexpected T_Error in Simplify"
@@ -115,7 +116,8 @@ structure Simplify : sig
             | cvtTy (STy.T_Sequence(ty, len)) = APITypes.SeqTy(cvtTy ty, len)
             | cvtTy (STy.T_Tensor shape) = APITypes.TensorTy shape
             | cvtTy (STy.T_Image info) =
-                APITypes.ImageTy(II.dim info, II.voxelShape info)
+              APITypes.ImageTy(II.dim info, II.voxelShape info)
+	    | cvtTy (STy.T_Fem(data)) = APITypes.FemData(data)
             | cvtTy ty = raise Fail "bogus API type"
           in
             cvtTy (SimpleVar.typeOf x)
@@ -146,6 +148,13 @@ structure Simplify : sig
       val {getFn, setFn, ...} = Var.newProp cvt
     in
     val cvtVar = getFn
+    fun newVarAsGlobal x =
+	let
+	 val x' = SimpleVar.new (Var.nameOf x, Var.GlobalVar, cvtTy(Var.monoTypeOf x))
+	in
+	 setFn (x, x');
+	 x'
+	end
     fun newVarWithType (x, ty) = let
           val x' = SimpleVar.new (Var.nameOf x, Var.kindOf x, ty)
           in
@@ -486,7 +495,18 @@ structure Simplify : sig
                           (* end case *)
                         end
                     | _ => raise Fail "bogus type for E_LoadNrrd"
-                  (* end case *))
+					       (* end case *))
+						 (*simplifyExp*)
+	      | AST.E_LoadFem(data, exprOption) => raise Fail "imposible here."
+		(* let *)
+		(*  val stmsVars = Option.map (fn x => simplifyExpToVar(cxt, x, stms)) exprOption *)
+		(* in *)
+		(*  (case stmsVars *)
+		(*    of SOME(stms', var) => (stms', S.E_LoadFem(data, SOME(var))) *)
+		(*     | NONE => (stms, S.E_LoadFem(data, NONE)) *)
+		(*  (* end case*)) *)
+
+		(* end *)
               | AST.E_Coerce{dstTy, e=AST.E_Lit(Literal.Int n), ...} => (case cvtTy dstTy
                    of SimpleTypes.T_Tensor[] => (stms, S.E_Lit(Literal.Real(RealLit.fromInt n)))
                     | _ => raise Fail "impossible: bad coercion"
@@ -702,7 +722,7 @@ structure Simplify : sig
                                      of NONE => (
                                           badImageNrrd (cxt, nrrd, nrrdInfo, dim, shape);
                                           (cvtVar x, S.Image(II.mkInfo(dim, shape))))
-                                      | SOME info =>
+                                      | SOME info => 
                                           (newVarWithType(x, STy.T_Image info), S.Proxy(nrrd, info))
                                     (* end case *))
                                 | NONE => (
@@ -723,7 +743,40 @@ structure Simplify : sig
                       }
                 in
                   inputs' := inp :: !inputs'
-                end
+            end
+	    | simplifyInputDcl ((x, SOME(AST.E_LoadFem(data, NONE))), desc) =
+	      let
+	       val x' = cvtVar x
+	       val inp = S.INP{
+                    var = x',
+                    name = Var.nameOf x,
+                    ty = apiTypeOf x',
+                    desc = desc,
+                    init = Inputs.NoDefault
+                   }
+
+	      in
+	       inputs' := inp :: !inputs'
+	      end
+	    | simplifyInputDcl ((x, SOME(AST.E_LoadFem(data, SOME(AST.E_Var((var,_)))))), desc)  =
+	      let
+	       (*TODO: Figure out if we should let this take a more sophisticated expression*)
+	       val intermediateGlobal = SimpleVar.new ("intermediateGlobal", Var.InputVar, cvtTy (Var.monoTypeOf x))
+	       val x' = newVarAsGlobal x
+	       val var' = cvtVar var
+               val inp = S.INP{
+                    var = intermediateGlobal,
+                    name = Var.nameOf x,
+                    ty = apiTypeOf intermediateGlobal,
+                    desc = desc,
+                    init = Inputs.NoDefault
+                   }
+	       val setupFem = S.S_Assign(x', S.E_LoadFem(data, intermediateGlobal, var'))
+	      in
+	       inputs' := inp :: !inputs';
+	       (* globals' := x' :: !globals'; *)
+	       globalInit := setupFem :: !globalInit
+	      end
             | simplifyInputDcl ((x, SOME e), desc) = let
                 val x' = cvtVar x
                 val (stms, e') = simplifyExp (cxt, e, [])
@@ -735,7 +788,7 @@ structure Simplify : sig
                         init = S.ConstExpr
                       }
                 in
-                  inputs' := inp :: !inputs';
+                 inputs' := inp :: !inputs';
                   constInit := S.S_Assign(x', e') :: (stms @ !constInit)
                 end
         (* simplify a global declaration *)

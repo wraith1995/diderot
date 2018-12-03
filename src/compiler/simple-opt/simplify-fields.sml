@@ -149,6 +149,7 @@ structure SimplifyFields : sig
                   (* end case *))
               | S.E_BorderCtl(_, x) => copyImg x
               | S.E_LoadSeq _ => NONE
+	      | S.E_LoadFem(_,_,_) => NONE
               | S.E_LoadImage _ => image()
               | S.E_InsideImage _ => raise Fail "premature InsideImage"
 (* QUESTION: is this a valid way to handle field functions? *)

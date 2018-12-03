@@ -419,7 +419,16 @@ print(concat["doVar (", SV.uniqueNameOf srcVar, ", ", IR.phiToString phi, ", _) 
                 end
             | S.E_LoadSeq(ty, nrrd) => [IR.ASSGN(lhs, IR.OP(Op.LoadSeq(cvtTy ty, nrrd), []))]
             | S.E_LoadImage(_, nrrd, info) =>
-                [IR.ASSGN(lhs, IR.OP(Op.LoadImage(DstTy.ImageTy info, nrrd), []))]
+              [IR.ASSGN(lhs, IR.OP(Op.LoadImage(DstTy.ImageTy info, nrrd), []))]
+	    | S.E_LoadFem(data, var1, var2) =>
+	      let
+	       val var1' = lookup env var1
+	       val var2' = lookup env var2
+	       val args = [var1',var2']
+	      in
+	       
+	       [IR.ASSGN(lhs, IR.OP(Op.LoadFem(DstTy.FemData(data)), args))]
+	      end
             | S.E_InsideImage(pos, img, s) => let
                 val Ty.T_Image info = SV.typeOf img
                 in
@@ -789,15 +798,18 @@ print(concat["doVar (", SV.uniqueNameOf srcVar, ", ", IR.phiToString phi, ", _) 
               (* we start by loading the input globals, since they may be needed to compute the
                * other globals
                *)
-                val (loadBlk, env) = loadGlobals (emptyEnv Other, globInit)
-                val (globBlk, env) = cvtBlock (([], []), env, [], globInit)
+           val (loadBlk, env) = loadGlobals (emptyEnv Other, globInit)
+				(*DEBUG*)handle ex => raise ex
+           val (globBlk, env) = cvtBlock (([], []), env, [], globInit)
+				(*DEBUG*)handle ex => raise ex
+
                 val cfg = IR.CFG.prependNode (IR.Node.mkENTRY(), loadBlk)
                 val cfg = IR.CFG.concat(cfg, globBlk)
                 val cfg = IR.CFG.appendNode (cfg, IR.Node.mkRETURN NONE)
                 in
                   cfg
                 end
-(*DEBUG*)handle ex => raise ex
+			 (*DEBUG*)handle ex => raise ex
           fun cvtStrand strand = let
                 val S.Strand{
                         name, params, spatialDim, state, stateInit, startM, updateM, stabilizeM

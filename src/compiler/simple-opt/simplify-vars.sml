@@ -248,6 +248,7 @@ structure SimplifyVars : sig
                   | S.E_LoadImage _ => exp
                   | S.E_InsideImage(pos, img, s) => S.E_InsideImage(rename pos, rename img, s)
                   | S.E_FieldFn _ => exp
+		  | S.E_LoadFem(_,_,_) => exp
                 (* end case *))
           in
             renameBlk

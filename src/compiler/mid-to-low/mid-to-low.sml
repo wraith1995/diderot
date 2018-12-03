@@ -32,6 +32,7 @@ structure MidToLow : sig
             | SrcTy.ImageTy info => DstTy.ImageTy info
             | SrcTy.StrandTy n => DstTy.StrandTy n
             | SrcTy.KernelTy => DstTy.IntTy
+	    | SrcTy.FemData(data) => DstTy.FemData(data)
           (* end case *))
 
   (* instantiate the translation environment *)

@@ -157,7 +157,8 @@ structure Unify : sig
             | (shape1, shape2) => equalShape(pl, shape2, shape1)
         (* end case *))
 
-(* QUESTION: do we need an occurs check? *)
+    (* QUESTION: do we need an occurs check? *)
+    (* QUESTION: do we need to check femData stuff here? I think the answer is no. Femdata types should not be more than tyDefs.*)
     fun unifyType (pl, ty1, ty2) = let
           fun matchVar (tv1 as Ty.TV{id=id1, bind=b1}, tv2 as Ty.TV{id=id2, bind=b2}) =
                 if Stamp.same(id1, id2)

@@ -174,6 +174,7 @@ structure AnalyzeSimple : sig
                         | S.E_BorderCtl(_, x) => [x]
                         | S.E_LoadSeq _ => []
                         | S.E_LoadImage _ => []
+			| S.E_LoadFem(_,x,y) => [x,y]
                         | S.E_InsideImage(pos, img, _) => [pos, img]
                         | S.E_FieldFn f => []
                       (* end case *))
