@@ -30,6 +30,7 @@ structure TreeTypes =
       | SeqTy of t * int option
       | ImageTy of ImageInfo.t
       | StrandIdTy of Atom.atom         (* index into strand-state array *)
+      | FemData of FemData.femType
 
     val intTy = IntTy
 
@@ -92,6 +93,7 @@ structure TreeTypes =
       | same (SeqTy(ty1, SOME n1), SeqTy(ty2, SOME n2)) = (n1 = n2) andalso same(ty1, ty2)
       | same (ImageTy info1, ImageTy info2) = ImageInfo.sameShape(info1, info2)
       | same (StrandIdTy n1, StrandIdTy n2) = Atom.same(n1, n2)
+      | same (FemData(data1), FemData(data2)) = FemData.same(data1, data2)
       | same _ = false
 
   (* is a source type compatible with the destination type? *)
@@ -109,6 +111,7 @@ structure TreeTypes =
       | hash (SeqTy(ty, SOME n)) = Word.fromInt n * hash ty + 0w29
       | hash (ImageTy info) = 0w37 * ImageInfo.hash info + 0w6
       | hash (StrandIdTy n) = 0w41 + Atom.hash n
+      | hash (FemData(data)) = 0w43 + 0w47 * (FemData.hash data)
 
     fun toString BoolTy = "bool"
       | toString StringTy = "string"
@@ -130,6 +133,7 @@ structure TreeTypes =
       | toString (SeqTy(ty, SOME n)) = concat[toString ty, "[", Int.toString n, "]"]
       | toString (ImageTy info) = concat["image(", ImageInfo.toString info, ")"]
       | toString (StrandIdTy n) = concat["id(", Atom.toString n, ")"]
+      | toString (FemData(data)) = concat["femData(", FemData.femPP(data), ")"]
 
     structure Tbl = HashTableFn (
       struct

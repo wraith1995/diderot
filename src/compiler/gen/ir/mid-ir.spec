@@ -133,6 +133,9 @@ BorderCtlWrap : ImageInfo.t : 1 : 1 :
 LoadSeq   : ty * string : 1 : 0 : load sequence from nrrd file
 LoadImage : ty * string : 1 : 0 : load image from nrrd file
 #
+# femdata loading
+LoadFem   : ty : 1 : 2 : load fem data given other fem data
+#
 # Kill all active strands
 !KillAll : : 0 : 0 :
 #

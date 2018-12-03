@@ -18,6 +18,7 @@ structure APITypes =
       | TensorTy of int list
       | StringTy
       | ImageTy of int * int list
+      | FemData of FemData.femType
       | SeqTy of t * int option
 
     val realTy = TensorTy[]
@@ -35,10 +36,12 @@ structure APITypes =
           ]
       | toString (SeqTy(ty, NONE)) = toString ty ^ "[]"
       | toString (SeqTy(ty, SOME d)) = concat[toString ty, "[", Int.toString d, "]"]
+      | toString (FemData data) = "FemData:" ^ (FemData.femPP data)
 
   (* does a type have a non-static size? *)
     fun hasDynamicSize StringTy = true
       | hasDynamicSize (ImageTy _) = true
+      | hasDynamicSize (FemData _) = true (*TODO: Clarify the use of this function for this entry.*)
       | hasDynamicSize (SeqTy(_, NONE)) = true
       | hasDynamicSize _ = false
 
