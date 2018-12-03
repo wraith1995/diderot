@@ -108,6 +108,11 @@ structure SimplePP : sig
                   | S.E_LoadImage(ty, nrrd, _) => (
                       string "loadImage<"; string(Ty.toString ty); string ">(\"";
                       string(String.toString nrrd); string "\")")
+		  | S.E_LoadFem(data, x,y) => (
+		   string "loadFem("; string ((FemData.femPP data) ^ ", "); var x; string ", "; var y;string ")"
+
+		     
+		  )
                   | S.E_InsideImage(pos, img, s) => (
                       string "insideImage("; var pos; string ","; var img;
                       string ","; string(Int.toString s); string ")")
