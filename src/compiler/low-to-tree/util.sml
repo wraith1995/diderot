@@ -55,6 +55,7 @@ structure Util : sig
             | LowTypes.SeqTy(ty, dim) => TreeTypes.SeqTy(trType ty, dim)
             | LowTypes.ImageTy info => TreeTypes.ImageTy info
             | LowTypes.StrandTy n => TreeTypes.StrandIdTy n
+	    | LowTypes.FemData(data) => TreeTypes.FemData(data)
           (* end case *))
 
   (* for local temporaries, we use tensor refs to avoid copying *)
@@ -76,7 +77,8 @@ structure Util : sig
             | LowTypes.TensorTy dd => APITypes.TensorTy dd
             | LowTypes.SeqTy(ty, dim) => APITypes.SeqTy(toAPIType ty, dim)
             | LowTypes.ImageTy info =>
-                APITypes.ImageTy(ImageInfo.dim info, ImageInfo.voxelShape info)
+              APITypes.ImageTy(ImageInfo.dim info, ImageInfo.voxelShape info)
+	    | LowTypes.FemData(data) => APITypes.FemData(data)
             | _ => raise Fail("toAPIType: unexpected " ^ LowTypes.toString ty)
           (* end case *))
 

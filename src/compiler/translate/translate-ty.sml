@@ -31,6 +31,7 @@ structure TranslateTy : sig
             | Ty.T_Image info => DstTy.ImageTy info
             | Ty.T_Field fld => DstTy.FieldTy
             | Ty.T_Kernel => DstTy.KernelTy
+	    | Ty.T_Fem(data) => DstTy.FemData(data)
           (* end case *))
 
   end

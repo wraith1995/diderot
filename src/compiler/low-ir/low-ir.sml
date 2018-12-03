@@ -124,6 +124,7 @@ structure LowOps =
       | ImageDim of ImageInfo.t * int
       | LoadSeq of ty * string
       | LoadImage of ty * string
+      | LoadFem of ty
       | KillAll
       | StabilizeAll
       | Print of tys
@@ -205,6 +206,7 @@ structure LowOps =
       | resultArity (ImageDim _) = 1
       | resultArity (LoadSeq _) = 1
       | resultArity (LoadImage _) = 1
+      | resultArity (LoadFem _) = 1
       | resultArity KillAll = 0
       | resultArity StabilizeAll = 0
       | resultArity (Print _) = 0
@@ -286,6 +288,7 @@ structure LowOps =
       | arity (ImageDim _) = 1
       | arity (LoadSeq _) = 0
       | arity (LoadImage _) = 0
+      | arity (LoadFem _) = 2
       | arity KillAll = 0
       | arity StabilizeAll = 0
       | arity (Print _) = ~1
@@ -376,6 +379,7 @@ structure LowOps =
       | same (ImageDim(a0,a1), ImageDim(b0,b1)) = ImageInfo.same(a0, b0) andalso sameint(a1, b1)
       | same (LoadSeq(a0,a1), LoadSeq(b0,b1)) = samety(a0, b0) andalso samestring(a1, b1)
       | same (LoadImage(a0,a1), LoadImage(b0,b1)) = samety(a0, b0) andalso samestring(a1, b1)
+      | same (LoadFem(a0), LoadFem(b0)) = samety(a0, b0)
       | same (KillAll, KillAll) = true
       | same (StabilizeAll, StabilizeAll) = true
       | same (Print(a0), Print(b0)) = sametys(a0, b0)
@@ -458,10 +462,11 @@ structure LowOps =
       | hash (ImageDim(a0,a1)) = 0w379 + ImageInfo.hash a0 + hashint a1
       | hash (LoadSeq(a0,a1)) = 0w383 + hashty a0 + hashstring a1
       | hash (LoadImage(a0,a1)) = 0w389 + hashty a0 + hashstring a1
-      | hash KillAll = 0w397
-      | hash StabilizeAll = 0w401
-      | hash (Print(a0)) = 0w409 + hashtys a0
-      | hash (MathFn(a0)) = 0w419 + MathFns.hash a0
+      | hash (LoadFem(a0)) = 0w397 + hashty a0
+      | hash KillAll = 0w401
+      | hash StabilizeAll = 0w409
+      | hash (Print(a0)) = 0w419 + hashtys a0
+      | hash (MathFn(a0)) = 0w421 + MathFns.hash a0
 
     fun toString IAdd = "IAdd"
       | toString ISub = "ISub"
@@ -539,6 +544,7 @@ structure LowOps =
       | toString (ImageDim(a0,a1)) = concat["ImageDim<", ImageInfo.toString a0, ",", intToString a1, ">"]
       | toString (LoadSeq(a0,a1)) = concat["LoadSeq<", tyToString a0, ",", stringToString a1, ">"]
       | toString (LoadImage(a0,a1)) = concat["LoadImage<", tyToString a0, ",", stringToString a1, ">"]
+      | toString (LoadFem(a0)) = concat["LoadFem<", tyToString a0, ">"]
       | toString KillAll = "KillAll"
       | toString StabilizeAll = "StabilizeAll"
       | toString (Print(a0)) = concat["Print<", tysToString a0, ">"]

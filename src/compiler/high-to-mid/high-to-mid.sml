@@ -54,6 +54,7 @@ structure HighToMid : sig
       | cvtTy SrcTy.KernelTy = DstTy.KernelTy
     (* we replace Field operations by 0, so the types are mapped to int *)
       | cvtTy SrcTy.FieldTy = DstTy.intTy
+      | cvtTy (SrcTy.FemData(data)) = DstTy.FemData(data)
 
   (* instantiate the translation environment *)
     structure Env = TranslateEnvFn (

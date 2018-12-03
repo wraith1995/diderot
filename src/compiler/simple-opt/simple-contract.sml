@@ -136,6 +136,7 @@ structure SimpleContract : sig
                   | S.E_BorderCtl(_, x) => markUsed x
                   | S.E_LoadSeq _ => ()
                   | S.E_LoadImage _ => ()
+		  | S.E_LoadFem(_, x,y) => (markUsed x; markUsed y) 
                   | S.E_InsideImage(pos, img, _) => (markUsed pos; markUsed img)
                   | S.E_FieldFn _ => ()
                 (* end case *))
@@ -200,6 +201,7 @@ structure SimpleContract : sig
             | S.E_LoadImage _ => ()
             | S.E_InsideImage(pos, img, _) => (unuse pos; unuse img)
             | S.E_FieldFn f => ignore(SimpleFunc.decCnt f)
+	    | S.E_LoadFem(_,x,y) => (unuse x; unuse y)
           (* end case *))
 
   (* delete a block of code and decrement use counts of the variables in it *)
