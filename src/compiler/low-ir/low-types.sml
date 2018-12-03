@@ -18,6 +18,7 @@ structure LowTypes =
       | SeqTy of ty * int option
       | ImageTy of ImageInfo.t
       | StrandTy of Atom.atom
+      | FemData of FemData.femType
 
     val intTy = IntTy
     val realTy = TensorTy[]
@@ -41,6 +42,7 @@ structure LowTypes =
       | same (SeqTy(ty1, SOME n1), SeqTy(ty2, SOME n2)) = (n1 = n2) andalso same(ty1, ty2)
       | same (ImageTy info1, ImageTy info2) = ImageInfo.sameShape(info1, info2)
       | same (StrandTy n1, StrandTy n2) = Atom.same(n1, n2)
+      | same (FemData f1, FemData f2) = FemData.same(f1, f2)
       | same _ = false
 
     fun hash BoolTy = 0w1
@@ -52,6 +54,7 @@ structure LowTypes =
       | hash (SeqTy(ty, SOME n)) = Word.fromInt n * hash ty + 0w13
       | hash (ImageTy info) = 0w5 * ImageInfo.hash info + 0w17
       | hash (StrandTy n) = Atom.hash n
+      | hash (FemData(data)) = 0w19 + 0w23 * (FemData.hash data)
 
     fun toString BoolTy = "bool"
       | toString StringTy = "string"
@@ -67,6 +70,7 @@ structure LowTypes =
       | toString (SeqTy(ty, SOME n)) = concat[toString ty, "[", Int.toString n, "]"]
       | toString (ImageTy info) = concat["image(", ImageInfo.toString info, ")"]
       | toString (StrandTy n) = Atom.toString n
+      | toString (FemData(data)) = "femData:" ^ (FemData.femPP data)
 
   end
 

@@ -17,6 +17,7 @@ structure HighTypes =
       | TupleTy of ty list              (* tuples; used for multiple return values *)
       | SeqTy of ty * int option
       | ImageTy of ImageInfo.t
+      | FemData of FemData.femType
       | StrandTy of Atom.atom
       | KernelTy
       | FieldTy
@@ -43,6 +44,7 @@ structure HighTypes =
       | same (StrandTy n1, StrandTy n2) = Atom.same(n1, n2)
       | same (KernelTy, KernelTy) = true
       | same (FieldTy, FieldTy) = true
+      | same (FemData f1, FemData f2) = FemData.same(f1, f2)
       | same _ = false
 
     fun hash BoolTy = 0w1
@@ -56,6 +58,7 @@ structure HighTypes =
       | hash KernelTy = 0w19
       | hash FieldTy = 0w23
       | hash (StrandTy n) = Atom.hash n
+      | hash (FemData(data)) = 0w29 + 0w31 * (FemData.hash data)
 
     fun toString BoolTy = "bool"
       | toString StringTy = "string"
@@ -73,5 +76,6 @@ structure HighTypes =
       | toString (StrandTy n) = Atom.toString n
       | toString KernelTy = "kernel"
       | toString FieldTy = "field"
+      | toString (FemData(data)) = "femData:" ^ (FemData.femPP data)
 
   end

@@ -148,7 +148,7 @@ ControlIndex : ImageInfo.t * idxctl * int : 1 : 2 :
 # the base address of the image `V` and `offp` is the offset (in datum-size units) of
 # the voxel to be loaded.
 LoadVoxel : ImageInfo.t : 1 : 2 : load a voxel value
-#
+
 # Inside<layout,I,s>(x,V) -- tests to see if the image-space position x is inside the volume
 # occupied by the image V.  I is the image info and s is the border width
 Inside : VectorLayout.t * ImageInfo.t * int : 1 : 2 :

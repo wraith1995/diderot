@@ -32,7 +32,8 @@ structure SimpleTypes =
           diff : diff,                  (* number of levels of differentiation supported *)
           dim : dim,                    (* dimension of domain (2D or 3D field) *)
           shape : shape                 (* shape of tensors in range; order is length of list *)
-        }
+      }
+      | T_Fem of FemData.femType
 
     withtype diff = int option
          and shape = int list
@@ -64,7 +65,8 @@ structure SimpleTypes =
             | (T_Kernel, T_Kernel) => true
             | (T_Image info1, T_Image info2) => ImageInfo.same(info1, info2)
             | (T_Field{diff=k1, dim=d1, shape=shp1}, T_Field{diff=k2, dim=d2, shape=shp2}) =>
-                (k1 = k2) andalso (d1 = d2) andalso ListPair.allEq (op =) (shp1, shp2)
+              (k1 = k2) andalso (d1 = d2) andalso ListPair.allEq (op =) (shp1, shp2)
+	    | (T_Fem(data1), T_Fem(data2)) =>  FemData.same(data1, data2)
             | _ => false
           (* end case *))
 
@@ -87,6 +89,7 @@ structure SimpleTypes =
             | T_Strand id => Atom.toString id
             | T_Kernel => "kernel"
             | T_Image info => ImageInfo.toString info
+	    | T_Fem(data) => "Femdata: " ^ (FemData.femPP(data))
             | T_Field{diff=NONE, dim, shape} => concat[
                   "field", "(", Int.toString dim, ")[", shapeToString shape, "]"
                 ]

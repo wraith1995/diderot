@@ -18,6 +18,7 @@ structure MidTypes =
       | SeqTy of ty * int option
       | ImageTy of ImageInfo.t
       | StrandTy of Atom.atom
+      | FemData of FemData.femType
       | KernelTy
 
     val intTy = IntTy
@@ -38,6 +39,7 @@ structure MidTypes =
       | same (SeqTy(ty1, NONE), SeqTy(ty2, NONE)) = same(ty1, ty2)
       | same (SeqTy(ty1, SOME n1), SeqTy(ty2, SOME n2)) = (n1 = n2) andalso same(ty1, ty2)
       | same (ImageTy info1, ImageTy info2) = ImageInfo.sameShape(info1, info2)
+      | same (FemData(f1), FemData(f2)) = FemData.same(f1, f2)
       | same (StrandTy n1, StrandTy n2) = Atom.same(n1, n2)
       | same (KernelTy, KernelTy) = true
       | same _ = false
@@ -52,6 +54,7 @@ structure MidTypes =
       | hash (ImageTy info) = 0w13 * ImageInfo.hash info + 0w6
       | hash (StrandTy n) = Atom.hash n
       | hash KernelTy = 0w17
+      | hash (FemData(data)) = 0w23 + 0w29 * (FemData.hash data)
 
     fun toString BoolTy = "bool"
       | toString StringTy = "string"
@@ -68,5 +71,7 @@ structure MidTypes =
       | toString (ImageTy info) = concat["image(", ImageInfo.toString info, ")"]
       | toString (StrandTy n) = Atom.toString n
       | toString KernelTy = "kernel"
+      | toString (FemData(data)) = "femData:" ^ (FemData.femPP data)
+
 
   end
