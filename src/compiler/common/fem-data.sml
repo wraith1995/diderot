@@ -21,16 +21,18 @@ structure FemData : sig
 			    | MeshCell of mesh
 			    | FuncCell of func
 			    | MeshPos of mesh
+
+	   val nameOf : femType -> Atom.atom
 	   val same : femType * femType -> bool
 	   val validInput : femType -> bool
 	   val extractMesh : femType -> mesh option
 	   val extractSpace : femType -> space option
 	   val femPP : femType -> string
 	   val hash : femType -> word
-	   val defaultSpace : mesh -> femType   
-	   val mkMesh : int * int -> femType
-	   val mkSpace : int * int list * mesh -> femType
-	   val mkFunc : space -> femType
+	   val defaultSpace : mesh * Atom.atom -> femType   
+	   val mkMesh : int * int * Atom.atom -> femType
+	   val mkSpace : int * int list * mesh * Atom.atom -> femType
+	   val mkFunc : space * Atom.atom -> femType
 
 	  end = struct
 
@@ -39,29 +41,32 @@ structure BD = BasisData
 datatype mesh = Mesh' of {
 	  dim : int,
 	  mappingDim : int,
-	  basis : BasisData.t list
+	  basis : BasisData.t list,
+	  name : Atom.atom
 	 }
 
-fun meshDim (Mesh'({dim, mappingDim, basis})) = dim
-fun meshMapDim (Mesh'{dim, mappingDim, basis}) = mappingDim
-fun meshBasis (Mesh'{dim, mappingDim, basis}) = basis
+fun meshDim (Mesh'({dim, mappingDim, basis, name})) = dim
+fun meshMapDim (Mesh'{dim, mappingDim, basis, name}) = mappingDim
+fun meshBasis (Mesh'{dim, mappingDim, basis, name}) = basis
 datatype space = Space' of {
 	  dim : int,
 	  shape : int list,
 	  basis : BasisData.t list,
-	  mesh : mesh
+	  mesh : mesh,
+	  name : Atom.atom
 	 }
 
-fun spaceDim (Space'{dim, shape, basis, mesh}) = dim
-fun spaceShape (Space'{dim, shape, basis, mesh}) = shape
-fun spaceBasis (Space'{dim, shape, basis, mesh}) = basis
-fun spaceMesh (Space'{dim, shape, basis, mesh}) = mesh
+fun spaceDim (Space'{dim, shape, basis, mesh, name}) = dim
+fun spaceShape (Space'{dim, shape, basis, mesh, name}) = shape
+fun spaceBasis (Space'{dim, shape, basis, mesh, name}) = basis
+fun spaceMesh (Space'{dim, shape, basis, mesh, name}) = mesh
 
 
 datatype func = Func' of {
-	  space : space
+	  space : space,
+	  name : Atom.atom
 	 }
-fun funcSpace (Func'{space}) = space
+fun funcSpace (Func'{space, name}) = space
 
 
 datatype femType = Mesh of mesh
@@ -71,6 +76,16 @@ datatype femType = Mesh of mesh
 		 | MeshCell of mesh
 		 | FuncCell of func
 		 | MeshPos of mesh
+
+
+fun nameOf data =
+    (case data
+      of Mesh(Mesh'{name,...}) => name
+       | Space(Space'{name,...}) => name
+       | Func(Func'{name,...}) => name
+       | _ => raise Fail "Asked for the name of a non data fem type" (*doesn't make sense*)
+    (* end case*)
+    )
 
 
 fun sameMesh(m1, m2)
@@ -96,11 +111,11 @@ fun same(t1, t2) =
 
 fun hash ty =
     (case ty
-      of Mesh((Mesh'{dim, mappingDim, basis}))
+      of Mesh((Mesh'{dim, mappingDim, basis, name}))
 	 => 0w1 + 0w3 * (Word.fromInt dim) + 0w5 * (Word.fromInt mappingDim) + (List.foldl (fn (d, s) => 0w11 * BD.hash d + s) 0w7 basis)
-       | Space(Space'({dim, shape, basis, mesh}))
+       | Space(Space'({dim, shape, basis, mesh, name}))
        	 => 0w13 + 0w17 * (Word.fromInt dim) + (List.foldl (fn (d, s) => 0w23 * BD.hash d + s) 0w19 basis) + (hash (Mesh(mesh)))
-       | Func(Func'{space})
+       | Func(Func'{space, name})
        	 => 0w29 + hash (Space(space))
        | RefCell(mesh)
        	 => 0w31 + (hash (Mesh(mesh)))
@@ -145,14 +160,14 @@ fun isInputFemType ty =
        | MeshPos(_) => false
        | _ => true)
 			  
-fun mkMesh(dim, mDim) = Mesh (Mesh' {dim = dim, mappingDim = mDim, basis = [BD.empty]})
+fun mkMesh(dim, mDim, name) = Mesh (Mesh' {dim = dim, mappingDim = mDim, basis = [BD.empty], name = name})
 
 
-fun defaultSpace (m as Mesh'{dim,...}) = Space (Space' {dim = dim, shape = [], basis = [], mesh = m})
+fun defaultSpace (m as Mesh'{dim,...}, name) = Space (Space' {dim = dim, shape = [], basis = [], mesh = m, name = name})
 
-fun mkSpace(dim, shape, mesh) = Space(Space' {dim = dim, shape = shape, basis=[BD.empty], mesh = mesh})
+fun mkSpace(dim, shape, mesh, name) = Space(Space' {dim = dim, shape = shape, basis=[BD.empty], mesh = mesh, name = name})
 
-fun mkFunc (space) = Func(Func' {space = space})
+fun mkFunc (space, name) = Func(Func' {space = space, name = name})
 
 end
 		  
