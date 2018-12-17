@@ -20,6 +20,7 @@ structure GenTysAndOps : sig
     structure CL = CLang
     structure RN = CxxNames
     structure Env = CodeGenEnv
+    structure FT = FemData
 
     val zero = RealLit.zero false
 
@@ -44,9 +45,86 @@ structure GenTysAndOps : sig
 
     fun genTyDecl env = let
           val (realTy, realTyName, realTySz) = if #double(Env.target env)
-                then (CL.double, "double", 8)
-                else (CL.float, "float", 4)
-        (* generate the type and member declarations for a recorded type *)
+					       then (CL.double, "double", 8)
+					       else (CL.float, "float", 4)
+	  val (intTy, intTyName, intTySize) = if #longint(Env.target env)
+					      then (CL.int64, "int64_t", 8)
+					      else (CL.int32, "int32_t", 4)
+						      
+          (* generate the type and member declarations for a recorded type *)
+
+	  fun generateFemType(ty) =
+	      let
+	       val name = Atom.toString (FT.nameOf ty)
+	       val underDim = FT.underlyingDim ty
+	      in
+	      (case ty
+		of FT.Mesh(m) => (
+		 let
+		  val indexMap = CL.D_Var([],CL.T_Ptr(intTy),[], "indexMap", NONE)
+		  val coordinatesMap = CL.D_Var([],CL.T_Ptr(realTy),[], "coordMap", NONE)
+		  val dimConst = CL.D_Var([], intTy,[], "dim", NONE)
+		  val mapDimConst = CL.D_Var([], intTy,[], "mapDim", NONE)
+		  val numCells = CL.D_Var([], intTy,[], "numCells", NONE)
+
+
+		  (* We need to add a load function via string*)
+		  (*val load = CL.D_Func([],) *)
+		  val block = CL.S_Block([CL.S_Comment(["No something with the nrrd"])])
+		  val load = CL.mkFuncDcl(CL.T_Named(name),"operator=", [CL.PARAM([],CL.T_Named("std::string"), "file")], block)
+
+
+		  val fields = [indexMap, coordinatesMap, dimConst, mapDimConst, numCells, load]
+
+		  val class = CL.D_ClassDef{name=name, args=NONE, from=NONE,public = fields , protected = [], private = []} (*add public declerations*)
+		 in
+		  (class, [])
+		 end)
+		| FT.Space(s) => (
+		 let
+		  val spaceTy = CL.T_Named(name)
+		  val indexMap = CL.D_Var([],CL.T_Ptr(intTy),[], "indexMap", NONE)
+		  val meshName = Atom.toString (FT.nameOf (FT.meshOf ty))
+		  val mesh = CL.D_Var([],CL.T_Named(meshName),[], "mesh", NONE)
+		  val block = CL.S_Block([CL.S_Comment(["No something with the nrrd"])])
+		  val load = CL.mkFuncDcl(CL.T_Named(name),"operator=", [CL.PARAM([], CL.T_Named("std::string"), "file")], block)
+
+		  val loadFemBlock = CL.S_Block([CL.S_Decl([],spaceTy, "space", SOME(CL.I_Exp (CL.E_UnOp(CL.%*, CL.E_Var("this"))))),
+						 CL.S_Exp(CL.mkAssignOp(CL.E_Select(CL.mkVar "space", "mesh"), CL.$=, CL.mkVar "mesh")),
+						 CL.mkReturn (SOME(CL.mkVar "space"))])
+		  val loadFem = CL.mkFuncDcl(CL.T_Named(name),"loadFem", [CL.PARAM([],CL.T_Named(meshName), "mesh")], loadFemBlock)
+					 
+		  val fields = [indexMap, mesh, load, loadFem]
+		  val class = CL.D_ClassDef{name=name, args=NONE, from=NONE,public = fields , protected = [], private = []}
+		 in
+		  
+		  (class, [])
+		 end
+		)
+		| FT.Func(f) => (
+		 let
+		  val funcTy = CL.T_Named(name)
+		  val coords = CL.D_Var([],CL.T_Ptr(realTy),[], "coords", NONE)
+		  val spaceName = Atom.toString (FT.nameOf (FT.spaceOf ty))
+		  val space =  CL.D_Var([],CL.T_Named(spaceName),[], "space", NONE)
+		  val block = CL.S_Block([CL.S_Comment(["No something with the nrrd"])])
+		  val load = CL.mkFuncDcl(CL.T_Named(name),"operator=", [CL.PARAM([],CL.T_Named("std::string"), "file")], block)
+		  val loadFemBlock = CL.S_Block([CL.S_Decl([],funcTy, "func", SOME(CL.I_Exp (CL.E_UnOp(CL.%*, CL.E_Var("this"))))),
+						 CL.S_Exp(CL.mkAssignOp(CL.E_Select(CL.mkVar "func", "space"), CL.$=, CL.mkVar "space")),
+						 CL.mkReturn (SOME(CL.mkVar "func"))])
+		  val loadFem = CL.mkFuncDcl(CL.T_Named(name),"loadFem", [CL.PARAM([],CL.T_Named(spaceName), "space")], loadFemBlock)
+					 
+		  val fields = [coords, space, load, loadFem]
+
+		  val class = CL.D_ClassDef{name=name, args=NONE, from=NONE,public = fields , protected = [], private = []}
+		 in
+		  (class, [])
+		 end
+		)
+		  
+		
+	      (* end case*))
+	       end
           fun genDecl (ty, (tyDcls, fnDefs)) = (case ty
                  of Ty.VecTy(w, pw) => let
                       val cTyName = RN.vecTyName w
@@ -201,7 +279,14 @@ structure GenTysAndOps : sig
                   | Ty.SeqTy(ty, NONE) =>
                   | Ty.SeqTy(ty, SOME n) =>
 *)
-                  | ty => (tyDcls, fnDefs)
+                  
+		  | Ty.FemData(data) =>
+		    let
+		     val (newTy, newFnDefs) = generateFemType data
+		    in
+		     (newTy :: tyDcls, List.@ (newFnDefs, fnDefs))
+		    end
+		  | ty => (tyDcls, fnDefs)
                 (* end case *))
           in
             genDecl

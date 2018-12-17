@@ -30,6 +30,7 @@ Library
   structure StrandUtil
   structure Timers
   structure FemData
+  structure FemOpt
   structure BasisData
 
 is
@@ -61,3 +62,4 @@ is
   timers.sml
   basis-data.sml
   fem-data.sml
+  fem-opt.sml

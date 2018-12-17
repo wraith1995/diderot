@@ -93,6 +93,8 @@ structure AST =
             e : expr
       }
       | E_LoadFem of FemData.femType * expr option
+      | E_ExtractFem of expr * FemData.femType
+      | E_ExtractFemItem of expr * Ty.ty * FemOpt.femOption
 
     withtype var_dcl = var * expr option
          and iter = var * expr

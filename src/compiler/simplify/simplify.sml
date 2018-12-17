@@ -506,7 +506,20 @@ structure Simplify : sig
 		(*     | NONE => (stms, S.E_LoadFem(data, NONE)) *)
 		(*  (* end case*)) *)
 
-		(* end *)
+	      (* end *)
+	      | AST.E_ExtractFem(expr, data) =>
+		let
+		 val (stms', var) = simplifyExpToVar(cxt, expr, stms)
+		in
+		 (stms', S.E_ExtractFem(var, data))
+		end
+	      | AST.E_ExtractFemItem(expr, ty, opt) =>
+		let
+		 val ty' =  cvtTy ty
+		 val (stms', var) = simplifyExpToVar(cxt, expr, stms)
+		in
+		 (stms', S.E_ExtractFemItem(var, ty', opt))
+		end
               | AST.E_Coerce{dstTy, e=AST.E_Lit(Literal.Int n), ...} => (case cvtTy dstTy
                    of SimpleTypes.T_Tensor[] => (stms, S.E_Lit(Literal.Real(RealLit.fromInt n)))
                     | _ => raise Fail "impossible: bad coercion"
@@ -760,9 +773,11 @@ structure Simplify : sig
 	      end
 	    | simplifyInputDcl ((x, SOME(AST.E_LoadFem(data, SOME(AST.E_Var((var,_)))))), desc)  =
 	      let
-	       (*TODO: Figure out if we should let this take a more sophisticated expression*)
-	       val intermediateGlobal = SimpleVar.new ("intermediateGlobal", Var.InputVar, cvtTy (Var.monoTypeOf x))
+	       (*TODO: Provide an actual unique name generator based on the current list of globals. *)
 	       val x' = newVarAsGlobal x
+	       val intermediateGlobalString = "0" ^ (SimpleVar.uniqueNameOf x') ^ "_intermedateGlobal" (* use stamp to ensure the global var is actually unique*)
+	       val intermediateGlobal = SimpleVar.new (intermediateGlobalString, Var.InputVar, cvtTy (Var.monoTypeOf x))
+
 	       val var' = cvtVar var
                val inp = S.INP{
                     var = intermediateGlobal,

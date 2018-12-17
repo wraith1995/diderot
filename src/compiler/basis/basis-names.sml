@@ -89,4 +89,7 @@ structure BasisNames =
     val kn_c2tent = Atom.atom "c2tent" (* for backwards compatibility to vis12 *)
     val kn_c2ctmr = Atom.atom "c2ctmr" (* for backwards compatibility to vis12 *)
 
+
+   (* hidden fem functionality -> loadCells gets translated to 0...NumCell-1*)
+
   end

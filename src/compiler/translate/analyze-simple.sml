@@ -175,6 +175,8 @@ structure AnalyzeSimple : sig
                         | S.E_LoadSeq _ => []
                         | S.E_LoadImage _ => []
 			| S.E_LoadFem(_,x,y) => [x,y]
+			| S.E_ExtractFem(v,_) => [v]
+			| S.E_ExtractFemItem(v,_,_) => [v]
                         | S.E_InsideImage(pos, img, _) => [pos, img]
                         | S.E_FieldFn f => []
                       (* end case *))

@@ -86,6 +86,9 @@ structure SimplifyVars : sig
                   | S.E_LoadImage _ => ()
                   | S.E_InsideImage(pos, img, _) => (chkVar bvs pos; chkVar bvs img)
                   | S.E_FieldFn _ => ()
+		  | S.E_LoadFem(_,v1,v2) => (chkVar bvs v1; chkVar bvs v2)
+		  | S.E_ExtractFemItem(v,_,_) => chkVar bvs v
+		  | S.E_ExtractFem(v,_) => chkVar bvs v
                 (* end case *))
           in
             fn blk => analyzeBlk (blk, VSet.empty)
@@ -248,7 +251,10 @@ structure SimplifyVars : sig
                   | S.E_LoadImage _ => exp
                   | S.E_InsideImage(pos, img, s) => S.E_InsideImage(rename pos, rename img, s)
                   | S.E_FieldFn _ => exp
+		  (* These are wrong: *)
 		  | S.E_LoadFem(_,_,_) => exp
+		  | S.E_ExtractFem(_,_) => exp
+		  | S.E_ExtractFemItem(_,_,_) => exp
                 (* end case *))
           in
             renameBlk

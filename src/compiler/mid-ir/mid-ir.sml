@@ -106,6 +106,8 @@ structure MidOps =
       | LoadSeq of ty * string
       | LoadImage of ty * string
       | LoadFem of ty
+      | ExtractFemItem of ty * FemOpt.femOption
+      | ExtractFem of ty
       | KillAll
       | StabilizeAll
       | Print of tys
@@ -169,6 +171,8 @@ structure MidOps =
       | resultArity (LoadSeq _) = 1
       | resultArity (LoadImage _) = 1
       | resultArity (LoadFem _) = 1
+      | resultArity (ExtractFemItem _) = 1
+      | resultArity (ExtractFem _) = 1
       | resultArity KillAll = 0
       | resultArity StabilizeAll = 0
       | resultArity (Print _) = 0
@@ -232,6 +236,8 @@ structure MidOps =
       | arity (LoadSeq _) = 0
       | arity (LoadImage _) = 0
       | arity (LoadFem _) = 2
+      | arity (ExtractFemItem _) = 1
+      | arity (ExtractFem _) = 1
       | arity KillAll = 0
       | arity StabilizeAll = 0
       | arity (Print _) = ~1
@@ -304,6 +310,8 @@ structure MidOps =
       | same (LoadSeq(a0,a1), LoadSeq(b0,b1)) = samety(a0, b0) andalso samestring(a1, b1)
       | same (LoadImage(a0,a1), LoadImage(b0,b1)) = samety(a0, b0) andalso samestring(a1, b1)
       | same (LoadFem(a0), LoadFem(b0)) = samety(a0, b0)
+      | same (ExtractFemItem(a0,a1), ExtractFemItem(b0,b1)) = samety(a0, b0) andalso FemOpt.same(a1, b1)
+      | same (ExtractFem(a0), ExtractFem(b0)) = samety(a0, b0)
       | same (KillAll, KillAll) = true
       | same (StabilizeAll, StabilizeAll) = true
       | same (Print(a0), Print(b0)) = sametys(a0, b0)
@@ -368,10 +376,12 @@ structure MidOps =
       | hash (LoadSeq(a0,a1)) = 0w269 + hashty a0 + hashstring a1
       | hash (LoadImage(a0,a1)) = 0w271 + hashty a0 + hashstring a1
       | hash (LoadFem(a0)) = 0w277 + hashty a0
-      | hash KillAll = 0w281
-      | hash StabilizeAll = 0w283
-      | hash (Print(a0)) = 0w293 + hashtys a0
-      | hash (MathFn(a0)) = 0w307 + MathFns.hash a0
+      | hash (ExtractFemItem(a0,a1)) = 0w281 + hashty a0 + FemOpt.hash a1
+      | hash (ExtractFem(a0)) = 0w283 + hashty a0
+      | hash KillAll = 0w293
+      | hash StabilizeAll = 0w307
+      | hash (Print(a0)) = 0w311 + hashtys a0
+      | hash (MathFn(a0)) = 0w313 + MathFns.hash a0
 
     fun toString IAdd = "IAdd"
       | toString ISub = "ISub"
@@ -431,6 +441,8 @@ structure MidOps =
       | toString (LoadSeq(a0,a1)) = concat["LoadSeq<", tyToString a0, ",", stringToString a1, ">"]
       | toString (LoadImage(a0,a1)) = concat["LoadImage<", tyToString a0, ",", stringToString a1, ">"]
       | toString (LoadFem(a0)) = concat["LoadFem<", tyToString a0, ">"]
+      | toString (ExtractFemItem(a0,a1)) = concat["ExtractFemItem<", tyToString a0, ",", FemOpt.toString a1, ">"]
+      | toString (ExtractFem(a0)) = concat["ExtractFem<", tyToString a0, ">"]
       | toString KillAll = "KillAll"
       | toString StabilizeAll = "StabilizeAll"
       | toString (Print(a0)) = concat["Print<", tysToString a0, ">"]

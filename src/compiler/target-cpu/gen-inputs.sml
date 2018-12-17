@@ -52,6 +52,7 @@ structure GenInputs : sig
     structure Env = CodeGenEnv
     structure GenAPI = GenLibraryInterface
     structure Inp = Inputs
+    structure FT = FemData
 
     type input_desc = U.input_desc
 
@@ -68,6 +69,13 @@ structure GenInputs : sig
             | Ty.ImageTy(dim, _) => CL.T_Ptr(CL.T_Named "nrrd")
             | Ty.SeqTy(ty, NONE) => CL.T_Ptr(CL.T_Named "nrrd")
             | Ty.SeqTy(ty, SOME n) => CL.T_Array(trType(env, ty), SOME n)
+	    | Ty.FemData(data) => (case data
+				    of FT.MeshCell(_) => Env.intTy env
+				     | FT.FuncCell(_) => Env.intTy env
+				     | FT.RefCell(_) => raise Fail "RefCell type is invalid for inputs"
+				     | FT.MeshPos(_) => raise Fail "MeshPos type is invalid for inputs"
+				     | _ => CL.voidPtr
+				  (* end case *))
           (* end case *))
 (* TODO dynamic sequences:
  *
@@ -114,6 +122,9 @@ the tensor type is represented as float[9] (or double[9]), so we could use somet
                   case ty
                    of Ty.SeqTy(_, NONE) => ToC.loadNrrd (global var, gv, NONE) :: stms
                     | Ty.ImageTy _ => ToC.loadNrrd (global var, gv, Inp.proxy init) :: stms
+		    (* | Ty.FemData(FT.Mesh(_)) => raise Fail "No mesh exec inputs yet" *)
+		    (* | Ty.FemData(FT.Space(_)) => raise Fail "No space exec inputs yet" *)
+		    (* | Ty.FemData(FT.Func(_)) => raise Fail "No func exec inputs yet" *)
                     | ty => U.copy{env=env, ty=ty, dst=global var, src=gv} :: stms
                   (* end case *)
                 end
@@ -230,16 +241,16 @@ the tensor type is represented as float[9] (or double[9]), so we could use somet
                                   ])
 *)
                           val func = (case ty
-                                 of Ty.BoolTy => mkFunc(CL.T_Ptr(trType(env, ty)))
-                                  | Ty.StringTy => mkFunc(CL.T_Ptr CL.charPtr)
-                                  | Ty.IntTy => mkFunc(CL.T_Ptr(trType(env, ty)))
-                                  | Ty.TensorTy[] => mkFunc(CL.T_Ptr(trType(env, ty)))
-                                  | Ty.TensorTy _ => mkFunc(trType(env, ty))
-                                  | Ty.SeqTy(_, SOME _) => mkFunc(trType(env, ty))
-                                  | Ty.SeqTy(_, NONE) => nrrdFunc ()
-                                  | Ty.ImageTy _ => nrrdFunc ()
-                                (* end case *))
-                          in
+                                       of Ty.BoolTy => mkFunc(CL.T_Ptr(trType(env, ty)))
+					| Ty.StringTy => mkFunc(CL.T_Ptr CL.charPtr)
+					| Ty.IntTy => mkFunc(CL.T_Ptr(trType(env, ty)))
+					| Ty.TensorTy[] => mkFunc(CL.T_Ptr(trType(env, ty)))
+					| Ty.TensorTy _ => mkFunc(trType(env, ty))
+					| Ty.SeqTy(_, SOME _) => mkFunc(trType(env, ty))
+					| Ty.SeqTy(_, NONE) => nrrdFunc ()
+					| Ty.ImageTy _ => nrrdFunc ()
+                                     (* end case *))
+                             in
                             [func]
                           end
                         else []

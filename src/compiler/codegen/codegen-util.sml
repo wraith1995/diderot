@@ -64,18 +64,18 @@ structure CodeGenUtil : sig
             | IR.E_Lit _ => true
             | _ => false
           (* end case *))
-
+    (* QUESTION: WHAT IS THIS SUPPOSED TO BE USED FOR?*)
   (* translate API types to C types *)
-    fun trAPIType (env, ty) = (case ty
-           of APITypes.IntTy => Env.intTy env
-            | APITypes.BoolTy => Env.boolTy env
-            | APITypes.TensorTy[] => Env.realTy env
-            | APITypes.TensorTy dd => CL.T_Array(Env.realTy env, SOME(List.foldl Int.* 1 dd))
-            | APITypes.StringTy => CL.charPtr (* const?? *)
-            | APITypes.ImageTy(dim, _) => CL.T_Ptr(CL.T_Named "nrrd")
-            | APITypes.SeqTy(ty, NONE) => CL.T_Ptr(CL.T_Named "nrrd")
-            | APITypes.SeqTy(ty, SOME n) => CL.T_Array(trAPIType(env, ty), SOME n)
-          (* end case *))
+    (* fun trAPIType (env, ty) = (case ty *)
+    (*        of APITypes.IntTy => Env.intTy env *)
+    (*         | APITypes.BoolTy => Env.boolTy env *)
+    (*         | APITypes.TensorTy[] => Env.realTy env *)
+    (*         | APITypes.TensorTy dd => CL.T_Array(Env.realTy env, SOME(List.foldl Int.* 1 dd)) *)
+    (*         | APITypes.StringTy => CL.charPtr (* const?? *) *)
+    (*         | APITypes.ImageTy(dim, _) => CL.T_Ptr(CL.T_Named "nrrd") *)
+    (*         | APITypes.SeqTy(ty, NONE) => CL.T_Ptr(CL.T_Named "nrrd") *)
+    (*         | APITypes.SeqTy(ty, SOME n) => CL.T_Array(trAPIType(env, ty), SOME n) *)
+    (*       (* end case *)) *)
 
     datatype create_loop
       = ForLoop of TreeVar.t * TreeIR.exp * TreeIR.exp  (* loop over integer range *)

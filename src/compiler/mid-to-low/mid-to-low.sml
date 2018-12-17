@@ -150,6 +150,9 @@ structure MidToLow : sig
               | SrcOp.LoadSeq(ty, nrrd) => assign (DstOp.LoadSeq(cvtTy ty, nrrd))
               | SrcOp.LoadImage(ty, nrrd) => assign (DstOp.LoadImage(cvtTy ty, nrrd))
               | SrcOp.MathFn f => assign (DstOp.MathFn f)
+	      | SrcOp.LoadFem(ty) => assign (DstOp.LoadFem(cvtTy ty))
+	      | SrcOp.ExtractFemItem(ty, opt) => assign (DstOp.ExtractFemItem(cvtTy ty, opt))
+	      | SrcOp.ExtractFem(ty) => assign (DstOp.ExtractFem(cvtTy ty))
               | rator => raise Fail("bogus operator " ^ SrcOp.toString rator)
             (* end case *)
           end

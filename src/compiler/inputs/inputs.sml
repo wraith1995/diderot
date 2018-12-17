@@ -9,7 +9,7 @@
 structure Inputs : sig
 
   (* input initialization *)
-    datatype input_init
+    datatype 'var input_init
       = NoDefault                       (* uninitialized input *)
       | ConstExpr                       (* initialized to constant.  The actual initialization
                                          * is handled in code.
@@ -17,13 +17,14 @@ structure Inputs : sig
       | LoadSeq of string               (* load a sequence from a file *)
       | Proxy of string * ImageInfo.t   (* input image specified by proxy *)
       | Image of ImageInfo.t            (* input image w/o proxy *)
+      | LoadFem of FemData.femType * ('var option)
 
     datatype 'var input = INP of {
         var : 'var,                     (* the global input variable *)
         name : string,                  (* the source-language input name *)
         ty : APITypes.t,                (* source-language type *)
         desc : string option,           (* the optional description *)
-        init : input_init               (* the default initialization (or NoDefault) *)
+        init : 'var input_init               (* the default initialization (or NoDefault) *)
       }
 
     val varOf : 'a input -> 'a
@@ -32,24 +33,24 @@ structure Inputs : sig
 
     val hash : 'a input -> word
 
-    val initToString : input_init -> string
+    val initToString : 'var input_init -> string
 
     val toString : 'a input -> string
 
     val imageInfo : 'a input -> ImageInfo.t option
 
   (* return true if the initialization specifies that there is a default value *)
-    val isDefault : input_init -> bool
+    val isDefault : 'var input_init -> bool
 
   (* return info about a proxy image (or NONE) *)
-    val proxy : input_init -> ImageInfo.t option
+    val proxy : 'var input_init -> ImageInfo.t option
 
   (* type conversion *)
     val map : ('a -> 'b) -> 'a input -> 'b input
 
   end = struct
 
-    datatype input_init
+    datatype 'var input_init
       = NoDefault                       (* uninitialized input *)
       | ConstExpr                       (* initialized to constant.  The actual initialization
                                          * is handled in the constInit block.
@@ -57,13 +58,14 @@ structure Inputs : sig
       | LoadSeq of string               (* load a sequence from a file *)
       | Proxy of string * ImageInfo.t   (* input image specified by proxy *)
       | Image of ImageInfo.t            (* input image w/o proxy *)
+      | LoadFem of FemData.femType * ('var option)
 
     datatype 'var input = INP of {
         var : 'var,                     (* the global input variable *)
         name : string,                  (* the source-language input name *)
         ty : APITypes.t,                (* source-language type *)
         desc : string option,           (* the optional description *)
-        init : input_init               (* the default initialization (or NoDefault) *)
+        init : 'var input_init               (* the default initialization (or NoDefault) *)
       }
 
     fun varOf (INP{var, ...}) = var
@@ -77,6 +79,15 @@ structure Inputs : sig
       | initToString (LoadSeq name) = String.concat["load(\"", name, "\")"]
       | initToString (Proxy(name, _)) = String.concat["image(\"", name, "\")"]
       | initToString (Image info) = ImageInfo.toString info
+      | initToString (LoadFem(data, var)) =
+	let
+	 val varStr = (case var
+			of SOME(v) => "SOME(var)"
+			 | NONE => "NONE"
+		      (* end case*))
+	in
+	 String.concat["loadFem(", (FemData.femPP data), ", ",varStr, ")" ]
+	end
 
     fun toString (INP{name, desc=NONE, init=NoDefault, ...}) = name
       | toString (INP{name, desc=SOME desc, init=NoDefault, ...}) =
@@ -93,9 +104,24 @@ structure Inputs : sig
     fun proxy (Proxy(_, info)) = SOME info
       | proxy _ = NONE
 
+    fun initConver( init : 'a input_init , f : 'a -> 'b ) : 'b input_init =
+	(case init
+	  of LoadFem(data, SOME(v)) => LoadFem(data, SOME( f v))
+	   | LoadFem(data, NONE) => LoadFem(data, NONE)
+	   | NoDefault => NoDefault
+	   | Proxy(a,b) => Proxy(a,b)
+	   | Image(a) => Image(a)
+	   | LoadSeq(s) => LoadSeq(s)
+	   | ConstExpr => ConstExpr
+	(* end case*))
+
   (* type conversion *)
     fun map f (INP{var, name, ty, desc, init}) =
-          INP{var = f var, name = name, ty = ty, desc = desc, init = init}
+	let
+	 val init' = initConver(init, f)
+	in
+         INP{var = f var, name = name, ty = ty, desc = desc, init = init'}
+	end
 
     fun isDefault NoDefault = false
       | isDefault (Image _) = false

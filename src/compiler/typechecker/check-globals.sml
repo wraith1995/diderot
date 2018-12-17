@@ -328,9 +328,9 @@ structure CheckGlobals : sig
 	       fun validateFemType femTyDef fileinfo =
 		   let
 		    (*TODO: parse the file and make these correct...*)
-		    val tempMesh = FT.mkMesh(2,2)
-		    fun tempSpace mesh shape = FT.mkSpace(2, shape, mesh)
-		    fun tempFunc space = FT.mkFunc space
+		    val tempMesh = FT.mkMesh(2,2,tyName)
+		    fun tempSpace mesh shape = FT.mkSpace(2, shape, mesh,tyName)
+		    fun tempFunc space = FT.mkFunc(space, tyName)
 		    (*TODO : check against the file in the following.*)
 
 		   in
@@ -388,17 +388,66 @@ structure CheckGlobals : sig
 		    (* end case *))
 		   end
 
+	       fun makeFemMethods femTyDef file femInfo =
+		   (case (femInfo, femTyDef)
+		     of ((FT.Func(f), n), PT.T_Func(space)) =>
+			let
+
+			 val spaceFunc = Atom.atom "space"
+			 val space' = FT.spaceOf(FT.Func(f))
+			 val spaceType = let
+			  val m = FT.meshOf(space')
+			  val meshName = FT.nameOf(m)
+			 in Ty.T_Fem(space', SOME(meshName)) end
+			 val spaceFuncTy = Ty.T_Fun([Ty.T_Named(tyName,Ty.T_Fem(femInfo))],Ty.T_Named(space, spaceType))
+			 val spaceFuncVar = Var.new (spaceFunc, span, AST.FunVar, spaceFuncTy)
+			 val param = Var.new (Atom.atom "arg0", span, AST.FunParam, Ty.T_Named(tyName,Ty.T_Fem(femInfo)))
+					     
+			 val spaceFuncBody = AST.S_Block([AST.S_Return(AST.E_ExtractFem(AST.E_Var(param,span),space'))])
+			 val spaceFun = AST.D_Func(spaceFuncVar, [param], spaceFuncBody)
+			 
+			in
+			 ([(spaceFunc, spaceFuncVar)],[spaceFun])
+			end
+		      | ((FT.Space(s), n), PT.T_Space(meshName)) =>
+			let
+			 val meshFunc = Atom.atom "domain"
+			 val mesh = FT.meshOf(FT.Space(s))
+			 val meshName = FT.nameOf(mesh)
+			 val meshType = Ty.T_Fem(mesh, SOME(meshName))
+			 val meshFuncTy = Ty.T_Fun([Ty.T_Named(tyName, Ty.T_Fem(femInfo))], Ty.T_Named(meshName, meshType))
+			 val meshFuncVar = Var.new(meshFunc, span, AST.FunVar, meshFuncTy)
+			 val param = Var.new (Atom.atom "arg0", span, AST.FunParam, Ty.T_Named(tyName,Ty.T_Fem(femInfo)))
+			 val meshFuncBody =  AST.S_Block([AST.S_Return(AST.E_ExtractFem(AST.E_Var(param,span),mesh))])
+			 val meshFun = AST.D_Func(meshFuncVar, [param], meshFuncBody)
+			in
+			 ([(meshFunc, meshFuncVar)], [meshFun])
+			end
+		      | ((FT.Mesh(m), n), PT.T_Mesh) =>
+			let
+			 val numCell = Atom.atom "numCell"
+			 val meshType = Ty.T_Fem(FT.Mesh(m), NONE)
+			 val numCellFuncTy = Ty.T_Fun([Ty.T_Named(tyName, Ty.T_Fem(femInfo))],Ty.T_Int)
+			 val numCellFuncVar = Var.new (numCell, span, AST.FunVar, numCellFuncTy)
+			 val param = Var.new (Atom.atom "arg0", span, AST.FunParam, Ty.T_Named(tyName, Ty.T_Fem(femInfo)))
+			 val numCellBody = AST.S_Block([AST.S_Return(AST.E_ExtractFemItem(AST.E_Var(param, span), Ty.T_Int, FemOpt.NumCell))])
+			 val numCellFun = AST.D_Func(numCellFuncVar, [param], numCellBody)
+			in
+			 ([(numCell, numCellFuncVar)], [numCellFun])
+			end
+		    (*end case*))
+
 
 	       fun makeFemType femTyDef =
 		   let
 		    val femType : (FT.femType * Atom.atom option) option = validateFemType femTyDef file
 		    val constants = []
-		    val methods = []
+		    val (methodRefs, methods) = Option.getOpt (Option.map (makeFemMethods femTyDef file) femType, ([],[]))
 
-		    val env' =  Option.map (fn x => Env.insertNamedType(env, cxt, tyName, Ty.T_Fem(x), constants, methods)) femType
+		    val env' =  Option.map (fn x => Env.insertNamedType(env, cxt, tyName, Ty.T_Fem(x), constants, methodRefs)) femType
 		   in
 		    (case env'
-		      of SOME(env'') => (OTHERS([]), env'')
+		      of SOME(env'') => (OTHERS(methods), env'')
 		       | NONE => (ERROR, env)
 		    (* end case *))
 		    

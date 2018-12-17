@@ -139,6 +139,9 @@ structure TreeOps =
       | Inside of VectorLayout.t * ImageInfo.t * int
       | IndexInside of ImageInfo.t * int
       | ImageDim of ImageInfo.t * int
+      | LoadFem of ty
+      | ExtractFemItem of ty * FemOpt.femOption
+      | ExtractFem of ty
       | MathFn of MathFns.t
 
     fun resultArity IAdd = 1
@@ -221,6 +224,9 @@ structure TreeOps =
       | resultArity (Inside _) = 1
       | resultArity (IndexInside _) = 1
       | resultArity (ImageDim _) = 1
+      | resultArity (LoadFem _) = 1
+      | resultArity (ExtractFemItem _) = 1
+      | resultArity (ExtractFem _) = 1
       | resultArity (MathFn _) = 1
 
     fun arity IAdd = 2
@@ -303,6 +309,9 @@ structure TreeOps =
       | arity (Inside _) = 2
       | arity (IndexInside _) = 2
       | arity (ImageDim _) = 1
+      | arity (LoadFem _) = 2
+      | arity (ExtractFemItem _) = 1
+      | arity (ExtractFem _) = 1
       | arity (MathFn _) = ~1
 
     fun isPure (MkDynamic _) = false
@@ -391,6 +400,9 @@ structure TreeOps =
       | same (Inside(a0,a1,a2), Inside(b0,b1,b2)) = VectorLayout.same(a0, b0) andalso ImageInfo.same(a1, b1) andalso sameint(a2, b2)
       | same (IndexInside(a0,a1), IndexInside(b0,b1)) = ImageInfo.same(a0, b0) andalso sameint(a1, b1)
       | same (ImageDim(a0,a1), ImageDim(b0,b1)) = ImageInfo.same(a0, b0) andalso sameint(a1, b1)
+      | same (LoadFem(a0), LoadFem(b0)) = samety(a0, b0)
+      | same (ExtractFemItem(a0,a1), ExtractFemItem(b0,b1)) = samety(a0, b0) andalso FemOpt.same(a1, b1)
+      | same (ExtractFem(a0), ExtractFem(b0)) = samety(a0, b0)
       | same (MathFn(a0), MathFn(b0)) = MathFns.same(a0, b0)
       | same _ = false
 
@@ -474,7 +486,10 @@ structure TreeOps =
       | hash (Inside(a0,a1,a2)) = 0w401 + VectorLayout.hash a0 + ImageInfo.hash a1 + hashint a2
       | hash (IndexInside(a0,a1)) = 0w409 + ImageInfo.hash a0 + hashint a1
       | hash (ImageDim(a0,a1)) = 0w419 + ImageInfo.hash a0 + hashint a1
-      | hash (MathFn(a0)) = 0w421 + MathFns.hash a0
+      | hash (LoadFem(a0)) = 0w421 + hashty a0
+      | hash (ExtractFemItem(a0,a1)) = 0w431 + hashty a0 + FemOpt.hash a1
+      | hash (ExtractFem(a0)) = 0w433 + hashty a0
+      | hash (MathFn(a0)) = 0w439 + MathFns.hash a0
 
     fun toString IAdd = "IAdd"
       | toString ISub = "ISub"
@@ -556,6 +571,9 @@ structure TreeOps =
       | toString (Inside(a0,a1,a2)) = concat["Inside<", VectorLayout.toString a0, ",", ImageInfo.toString a1, ",", intToString a2, ">"]
       | toString (IndexInside(a0,a1)) = concat["IndexInside<", ImageInfo.toString a0, ",", intToString a1, ">"]
       | toString (ImageDim(a0,a1)) = concat["ImageDim<", ImageInfo.toString a0, ",", intToString a1, ">"]
+      | toString (LoadFem(a0)) = concat["LoadFem<", tyToString a0, ">"]
+      | toString (ExtractFemItem(a0,a1)) = concat["ExtractFemItem<", tyToString a0, ",", FemOpt.toString a1, ">"]
+      | toString (ExtractFem(a0)) = concat["ExtractFem<", tyToString a0, ">"]
       | toString (MathFn(a0)) = concat["MathFn<", MathFns.toString a0, ">"]
 
   end

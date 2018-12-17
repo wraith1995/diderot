@@ -108,6 +108,8 @@ structure Simple =
       | E_LoadSeq of ty * string
       | E_LoadImage of ty * string * ImageInfo.t
       | E_LoadFem of FemData.femType * var * var
+      | E_ExtractFem of var * FemData.femType
+      | E_ExtractFemItem of var * ty * FemOpt.femOption
       | E_InsideImage of var * var * int        (* inside-image test; introduced by the
                                                  * simplify-fields pass. The third argument is
                                                  * the maximum support of the image.
@@ -142,6 +144,8 @@ structure Simple =
       | typeOf (E_LoadSeq(ty, _)) = ty
       | typeOf (E_LoadImage(ty, _, _)) = ty
       | typeOf (E_LoadFem(data, _, _)) = SimpleTypes.T_Fem(data)
+      | typeOf (E_ExtractFemItem(_,ty,_)) = ty
+      | typeOf (E_ExtractFem(_,data)) = SimpleTypes.T_Fem(data)
       | typeOf (E_InsideImage _) = SimpleTypes.T_Bool
       | typeOf (E_FieldFn f) = let
           val (dim, shp) = (case SimpleFunc.typeOf f

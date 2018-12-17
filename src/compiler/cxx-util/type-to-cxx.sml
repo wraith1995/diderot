@@ -76,6 +76,7 @@ structure TypeToCxx : sig
                     diderotTQ("array", [tr ty, CL.T_Named(Int.toString n)])
                 | (Ty.ImageTy info) => trImageTy diderotTQ (env, info)
                 | (Ty.StrandIdTy _) => programQ "strand_array::sid_t"
+		| (Ty.FemData(data)) => programQ((Atom.toString (FemData.nameOf data)))
               (* end case *))
           in
             tr ty
@@ -98,6 +99,7 @@ structure TypeToCxx : sig
                 CL.T_Template("diderot::array", [trType(env, ty), CL.T_Named(Int.toString n)])
             | (Ty.ImageTy info) => imageTy (env, info)
             | (Ty.StrandIdTy _) => CL.T_Named "strand_array::sid_t"
+	    | Ty.FemData(data) => CL.T_Named (Atom.toString (FemData.nameOf data))
           (* end case *))
 
   (* dynamic sequence of the specified element type *)
