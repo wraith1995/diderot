@@ -202,6 +202,9 @@ structure Inliner : sig
                   | S.E_LoadImage _ => exp
                   | S.E_InsideImage _ => raise Fail "unexpected InsideImage during inlining"
                   | S.E_FieldFn _ => exp
+		  | S.E_ExtractFem(v, data) => S.E_ExtractFem(rename env v, data)
+		  | S.E_ExtractFemItem(v, ty, data) => S.E_ExtractFemItem(rename env v, ty, data)
+		  | S.E_LoadFem(data, v1, v2) => S.E_LoadFem(data, rename env v1, rename env v2)
                 (* end case *))
         (* build the initial environment by mapping parameters to arguments *)
           val env = ListPair.foldlEq

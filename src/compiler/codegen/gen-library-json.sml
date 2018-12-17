@@ -145,6 +145,7 @@ structure GenLibraryJSON : sig
                                 | Ty.SeqTy(_, SOME _) => GenLib.toCType(env, ty)
                                 | Ty.SeqTy(_, NONE) => CL.T_Ptr CL.voidPtr
                                 | Ty.ImageTy _ => CL.T_Ptr CL.voidPtr
+				| Ty.FemData(_) => CL.T_Ptr CL.voidPtr
                               (* end case *))
                         val flds = if Ty.hasDynamicSize ty
                               then [("get-size", mkGetSize (spec, name, [worldParam]))]

@@ -1,3 +1,61 @@
+1. Pass by value vs. by reference - deal with the pointer issues - everything should be passed by reference here probably.
+2. Write these methods with proper C++ isms.
+----------HERE WE ARE
+4. Deal with cell issues and formalize it
+5. Think about it accordance with meshPos
+6. Implement cell stuff -> espcially transform and inverse transform
+7. IMplement meshPos after thinking and figure out details about that
+8. Implement finding MeshPos
+9. Implement the global field
+10. Mop Up.
+11. Implement cell meta data
+---Constants need to be in this
+1. Select for just values -> function(method) resolution.
+
+
+
+
+
+
+Today:
+---make functions in the ast? Nah. Probably not.
+-Add mesh select from space.
+-Add Type of
+-Add mesh numCell
+-Fix select - remember select also needs to do fields and well fields -- need to update type env fr fields?
+
+--Next step is to do cells -> cellToIndex and IndexToCell as well ass -> unique global var.
+--> Here numCell can be used implictly -> need to add LoadFemThing -> expand in like mid to low to index shit.
+
+So cells are pairings of femdata and ints ->
+How do we deal with this?
+(Mesh, int) -> int
+int * int is also an option.
+
+This gives a few optoins.
+Reflection:
+cells are effectively indicies that are given meaning on a mesh:
+look in simplify: first we preprocess and look at our various cell sequences
+
+Given a cell variable, can it uniquely be traced back to one mesh at all times? Then we can replace it with an index.
+CellToIndex(cell)
+IndexToCell(i, mesh)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 1. Clean up error messages and provide more information in them
 2. Clean up the documentation
 3. Determine if clean AST is needed.

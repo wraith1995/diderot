@@ -497,6 +497,9 @@ structure LowToTree : sig
               | Op.ImageDim(info, d) => bindTREE(TOp.ImageDim(info, d))
               | Op.MathFn f => bindTREE (TOp.MathFn f)
               | Op.IfWrap => bindTREE(TOp.IfWrap )
+	      | Op.LoadFem(ty) => bindTREE (TOp.LoadFem(U.trType ty))
+	      | Op.ExtractFemItem(ty, opt) => bindTREE (TOp.ExtractFemItem(U.trType ty, opt))
+	      | Op.ExtractFem(ty) => bindTREE (TOp.ExtractFem(U.trType ty)) 
               | rator => raise Fail("bogus operator " ^ Op.toString srcRator)
             (* end case *)
           end

@@ -160,6 +160,10 @@ IndexInside : ImageInfo.t * int : 1 : 2 :
 # ImageDim<I,i>(V) -- returns the i'th dimension of the image
 ImageDim : ImageInfo.t * int : 1 : 1 :
 #
+# Fem Stuff
+LoadFem   : ty : 1 : 2 : load fem data given other fem data
+ExtractFemItem : ty * FemOpt.femOption : 1 : 1 : extract data from fem data
+ExtractFem : ty : 1 : 1 : extract fem data from fem data
 ### other operations
 #
 # unlifted math functions

@@ -110,8 +110,13 @@ structure SimplePP : sig
                       string(String.toString nrrd); string "\")")
 		  | S.E_LoadFem(data, x,y) => (
 		   string "loadFem("; string ((FemData.femPP data) ^ ", "); var x; string ", "; var y;string ")"
-
-		     
+		  )
+		  | S.E_ExtractFem(v, data) => (
+		   string "extractFem("; var v; string ", "; string (FemData.femPP data); string ")"
+		  )
+		  | S.E_ExtractFemItem(v, ty, opt) => (
+		   string "extractFemItem("; string (FemOpt.optName opt); string ", "; string (Ty.toString ty); string ", ";
+		   var v; string ")"
 		  )
                   | S.E_InsideImage(pos, img, s) => (
                       string "insideImage("; var pos; string ","; var img;

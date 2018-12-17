@@ -184,6 +184,9 @@ structure HighToMid : sig
               | SrcOp.LoadSeq(ty, file) => assign (DstOp.LoadSeq(cvtTy ty, file))
               | SrcOp.LoadImage(ty, file) => assign (DstOp.LoadImage(cvtTy ty, file))
               | SrcOp.MathFn e => assign (DstOp.MathFn e)
+	      | SrcOp.LoadFem(ty) => assign (DstOp.LoadFem(cvtTy ty))
+	      | SrcOp.ExtractFemItem(ty, opt) => assign (DstOp.ExtractFemItem(cvtTy ty, opt))
+	      | SrcOp.ExtractFem(ty) => assign (DstOp.ExtractFem(cvtTy ty))
               | rator => raise Fail("bogus operator " ^ SrcOp.toString rator)
             (* end case *)
           end

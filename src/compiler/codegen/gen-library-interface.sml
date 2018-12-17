@@ -60,6 +60,14 @@ structure GenLibraryInterface : sig
             | Ty.TensorTy dd => CL.T_Array(Env.realTy env, SOME(List.foldl Int.* 1 dd))
             | Ty.StringTy => CL.constPtrTy CL.charTy
             | Ty.ImageTy(dim, shp) => CL.constPtrTy CL.charTy
+	    | Ty.FemData(data) => (case data
+				    of FemData.Mesh(_) => CL.voidPtr
+				     | FemData.Space(_) => CL.voidPtr
+				     | FemData.Func(_) => CL.voidPtr
+				     | FemData.RefCell(_) => raise Fail "RefCell should have disappeared"
+				     | FemData.MeshCell(_) => raise Fail "undecided"
+				     | FemData.FuncCell(_) => raise Fail "undecided"
+				     | FemData.MeshPos(_) => raise Fail "undecided")
             | Ty.SeqTy(ty, NONE) => raise Fail "unexpected dynamic SeqTy"
             | Ty.SeqTy(ty, SOME n) => CL.T_Array(toCType(env, ty), SOME n)
           (* end case *))
@@ -118,6 +126,7 @@ structure GenLibraryInterface : sig
 *)
                                 | Ty.SeqTy(_, NONE) => CL.T_Ptr CL.voidPtr
                                 | Ty.ImageTy _ => CL.T_Ptr CL.voidPtr
+				| Ty.FemData(data) => CL.T_Ptr (toCType(env, ty)) (*QUESTION: Is this even possible? Only for cells.*)
                               (* end case *))
                         val dcls = if Ty.hasDynamicSize ty
                               then [

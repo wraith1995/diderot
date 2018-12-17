@@ -115,6 +115,9 @@ structure TreeTypeOf : sig
             | Op.Inside _ => Ty.BoolTy
             | Op.ImageDim _ => Ty.IntTy
             | Op.MathFn f => Ty.realTy
+	    | Op.LoadFem(ty) => ty
+	    | Op.ExtractFemItem(ty, _) => ty
+	    | Op.ExtractFem(ty) => ty
             | _ => raise Fail("invalid operator " ^ Op.toString rator)
           (* end case *))
 

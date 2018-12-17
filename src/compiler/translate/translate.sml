@@ -429,6 +429,19 @@ print(concat["doVar (", SV.uniqueNameOf srcVar, ", ", IR.phiToString phi, ", _) 
 	       
 	       [IR.ASSGN(lhs, IR.OP(Op.LoadFem(DstTy.FemData(data)), args))]
 	      end
+	    | S.E_ExtractFem(v,data) =>
+	      let
+	       val v' = lookup env v
+	      in
+	       [IR.ASSGN(lhs, IR.OP(Op.ExtractFem(DstTy.FemData(data)), [v']))]
+	      end
+	    | S.E_ExtractFemItem(v, ty, opt) =>
+	      let
+	       val v' = lookup env v
+	       val ty' = cvtTy ty
+	      in
+	       [IR.ASSGN(lhs, IR.OP(Op.ExtractFemItem(ty', opt), [v']))]
+	      end
             | S.E_InsideImage(pos, img, s) => let
                 val Ty.T_Image info = SV.typeOf img
                 in

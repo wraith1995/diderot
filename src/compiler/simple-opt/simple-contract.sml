@@ -136,7 +136,9 @@ structure SimpleContract : sig
                   | S.E_BorderCtl(_, x) => markUsed x
                   | S.E_LoadSeq _ => ()
                   | S.E_LoadImage _ => ()
-		  | S.E_LoadFem(_, x,y) => (markUsed x; markUsed y) 
+		  | S.E_LoadFem(_, x,y) => (markUsed x; markUsed y)
+		  | S.E_ExtractFemItem(x,_,_) => markUsed x
+		  | S.E_ExtractFem(x,_) => markUsed x
                   | S.E_InsideImage(pos, img, _) => (markUsed pos; markUsed img)
                   | S.E_FieldFn _ => ()
                 (* end case *))

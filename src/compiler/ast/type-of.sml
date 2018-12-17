@@ -32,6 +32,8 @@ structure TypeOf : sig
 
     fun kernel h = Ty.T_Kernel(Ty.DiffConst(SOME(Kernel.continuity h)))
 
+    (*NOTE: I've not updated to this deal with fem expressions because those are never passed to this expression in the ast/const-expr code*)
+    (*If the use of this function expands, this may need to change.*)
     fun expr e = (case e
            of AST.E_Var x => varUse x
             | AST.E_Lit lit => literal lit
@@ -49,6 +51,7 @@ structure TypeOf : sig
             | AST.E_Andalso _ => Ty.T_Bool
             | AST.E_LoadNrrd(_, _, ty) => ty
             | AST.E_Coerce{dstTy, ...} => dstTy
-          (* end case *))
+		 (* end case *))
+
 
   end

@@ -71,6 +71,7 @@ structure GenInputsUtil : sig
     structure Env = CodeGenEnv
     structure Inp = Inputs
     structure RN = CxxNames
+    structure FT = FemData
 
     type input_desc = GVar.t Inp.input
 
@@ -84,8 +85,12 @@ structure GenInputsUtil : sig
    *)
     local
       fun nrrdTy env = if #exec(Env.target env)
-            then CL.T_Named "std::string"
-            else CL.T_Ptr(CL.T_Named "Nrrd")
+		       then CL.T_Named "std::string"
+		       else CL.T_Ptr(CL.T_Named "Nrrd")
+
+      fun bigFemTy env data = if #exec(Env.target env)
+			      then CL.T_Named "std::string"
+			      else CL.T_Named(Atom.toString (FT.nameOf data))
     in
     fun trType (env, ty) = (case ty
            of Ty.IntTy => Env.intTy env
@@ -96,6 +101,12 @@ structure GenInputsUtil : sig
             | Ty.ImageTy(dim, shp) => nrrdTy env
             | Ty.SeqTy(ty, NONE) => nrrdTy env
             | Ty.SeqTy(ty, SOME n) => CL.T_Array(trType(env, ty), SOME n)
+	    | Ty.FemData(data) => (case data
+				    of FemData.RefCell(_) => raise Fail "RefCell should have disappeared"
+				     | FemData.MeshCell(_) => raise Fail "undecided"
+				     | FemData.FuncCell(_) => raise Fail "undecided"
+				     | FemData.MeshPos(_) => raise Fail "undecided"
+				     | _ => bigFemTy env data)
           (* end case *))
     end (* local *)
 
@@ -231,6 +242,13 @@ structure GenInputsUtil : sig
             | Ty.ImageTy _ => raise Fail "cast for ImageTy"
             | Ty.SeqTy(ty, SOME _) => castAPIPtr {env=env, ty=ty, src=src}
             | Ty.SeqTy(_, NONE) => raise Fail "cast for dynamic SeqTy"
+	    | Ty.FemData(data) => (case data
+				    of FT.RefCell(_) => raise Fail "RefCell should have disappeared"
+				     | FT.MeshCell(_) => raise Fail "undecided"
+				     | FT.FuncCell(_) => raise Fail "undecided"
+				     | FT.MeshPos(_) => raise Fail "undecided"
+				     | _ =>  CL.mkStaticCast(CL.T_Ptr(CL.T_Named(Atom.toString (FT.nameOf data))), src)
+				  (*end case*))
           (* end case *))
 
   (* generate code to copy from a C++ global variable to a C reference *)
@@ -252,6 +270,7 @@ structure GenInputsUtil : sig
               | Ty.ImageTy _ => raise Fail "unexpected image copy"
               | Ty.SeqTy(_, SOME _) => memcpy(addrOf src)
               | Ty.SeqTy(_, NONE) => raise Fail "unexpected dynamic sequence copy"
+	      | Ty.FemData(data) => raise Fail "not implemented yet" (* if things are just ints, we know what do with our outputs; same with meshPos*)
             (* end case *)
           end
 
@@ -261,7 +280,10 @@ structure GenInputsUtil : sig
           fun addrOf (CL.E_UnOp(CL.%*, x)) = x
             | addrOf x = CL.mkUnOp(CL.%&, x)
           fun memcpy () =
-                CL.mkCall("std::memcpy", [addrOf dst, addrOf src, CL.mkSizeof(trType(env, ty))])
+              CL.mkCall("std::memcpy", [addrOf dst, addrOf src, CL.mkSizeof(trType(env, ty))])
+	  fun memcpySrcPtr () =
+              CL.mkCall("std::memcpy", [addrOf dst,src, CL.mkSizeof(trType(env, ty))])
+
           in
             case ty
              of Ty.IntTy => assign ()
@@ -272,6 +294,12 @@ structure GenInputsUtil : sig
               | Ty.ImageTy _ => raise Fail "unexpected image copy"
               | Ty.SeqTy(_, SOME _) => memcpy()
               | Ty.SeqTy(_, NONE) => raise Fail "unexpected dynamic sequence copy"
+	      | Ty.FemData(data) => (case data
+				      of FT.RefCell(_) => raise Fail "unexpected refCell"
+				       | FT.MeshCell(_) => raise Fail "not implemented yet"
+				       | FT.FuncCell(_) => raise Fail "not implemented yet"
+				       | FT.MeshPos(_) => raise Fail "unexpected meshPos"
+				       | _ => memcpySrcPtr())
             (* end case *)
           end
 
@@ -281,7 +309,7 @@ structure GenInputsUtil : sig
           fun addrOf (CL.E_UnOp(CL.%*, x)) = x
             | addrOf x = CL.mkUnOp(CL.%&, x)
           fun memcpy () =
-                CL.mkCall("std::memcpy", [addrOf dst, addrOf src, CL.mkSizeof(trType(env, ty))])
+              CL.mkCall("std::memcpy", [addrOf dst, addrOf src, CL.mkSizeof(trType(env, ty))])
           in
             case ty
              of Ty.IntTy => assign ()
@@ -292,6 +320,13 @@ structure GenInputsUtil : sig
               | Ty.ImageTy _ => raise Fail "unexpected image copy"
               | Ty.SeqTy(_, SOME _) => memcpy()
               | Ty.SeqTy(_, NONE) => raise Fail "unexpected dynamic sequence copy"
+	      | Ty.FemData(data) => (case data
+				      of FT.RefCell(_) => raise Fail "unexpected refCell"
+				       | FT.MeshCell(_) => assign ()
+				       | FT.FuncCell(_) => assign ()
+				       | FT.MeshPos(_) => assign ()
+				       | _ => assign () (* check me*)
+				    (* end case*))
             (* end case *)
           end
 

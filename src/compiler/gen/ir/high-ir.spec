@@ -95,8 +95,10 @@ LoadSeq   : ty * string : 1 : 0 : load sequence from nrrd file
 LoadImage : ty * string : 1 : 0 : load image from nrrd file
 
 #
-# femdata loading
+# femdata loading and other fem ops
 LoadFem   : ty : 1 : 2 : load fem data given other fem data
+ExtractFemItem : ty * FemOpt.femOption : 1 : 1 : extract data from fem data
+ExtractFem : ty : 1 : 1 : extract fem data from fem data 
 #
 # Kill all active strands
 !KillAll : : 0 : 0 :

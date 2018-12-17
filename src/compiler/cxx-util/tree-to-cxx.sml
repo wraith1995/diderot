@@ -145,7 +145,8 @@ structure TreeToCxx : sig
                     ]),
                   CL.mkReturn(SOME(CL.mkVar "true")))
               ]
-          end
+      end
+
 
   (* Translate a TreeIR operator application to a CLang expression *)
     fun trOp (env, rator, cxxArgs) = (case (rator, cxxArgs)
@@ -288,6 +289,11 @@ structure TreeToCxx : sig
             | (Op.ImageDim(info, i), [img]) => CL.mkDispatch(img, "size", [mkInt i])
             | (Op.MathFn f, args) => mkStdApply(MathFns.toString f, args)
             | (Op.IfWrap, [a, b, c])    => CL.mkApply("IfWrap", [a,b,c])
+	    | (Op.LoadFem(ty), [a,b]) => CL.mkDispatch(a, "loadFem", [b])
+	    | (Op.ExtractFem(ty), [a]) => (case ty
+					    of Ty.FemData(FemData.Mesh(_)) => CL.E_Select(a, "mesh")
+					     | Ty.FemData(FemData.Space(_)) => CL.E_Select(a, "space"))
+	    | (Op.ExtractFemItem(ty,FemOpt.NumCell), [a]) => CL.E_Select(a, "numCells")
             | _ => raise Fail(concat[
                    "unknown or incorrect operator ", Op.toString rator
                  ])

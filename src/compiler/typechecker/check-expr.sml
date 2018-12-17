@@ -20,7 +20,7 @@ structure CheckExpr : sig
    * and the environment extended with a binding for x.
    *)
     val checkIter : Env.t * Env.context * ParseTree.iterator -> ((AST.var * AST.expr) * Env.t)
-
+								  
   (* type check a dimension that is given by a constant expression *)
     val checkDim : Env.t * Env.context * ParseTree.expr -> IntLit.t option
 
@@ -658,6 +658,7 @@ structure CheckExpr : sig
                   | NONE => err(cxt, [S "unknown strand ", A strand])
                 (* end case *))
             | (_, Ty.T_Error) => bogusExpTy
+	    (* regular select goes here.*)
             | (_, ty) => err (cxt, [
                   S "expected strand type, but found ", TY ty,
                   S " in selection of ", A field
