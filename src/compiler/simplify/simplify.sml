@@ -497,16 +497,14 @@ structure Simplify : sig
                     | _ => raise Fail "bogus type for E_LoadNrrd"
 					       (* end case *))
 						 (*simplifyExp*)
-	      | AST.E_LoadFem(data, exprOption) => raise Fail "imposible here."
-		(* let *)
-		(*  val stmsVars = Option.map (fn x => simplifyExpToVar(cxt, x, stms)) exprOption *)
-		(* in *)
-		(*  (case stmsVars *)
-		(*    of SOME(stms', var) => (stms', S.E_LoadFem(data, SOME(var))) *)
-		(*     | NONE => (stms, S.E_LoadFem(data, NONE)) *)
-		(*  (* end case*)) *)
-
-	      (* end *)
+	      | AST.E_LoadFem(data, SOME(expr1), SOME(expr2)) =>
+		let
+		 val (stms1, var) =  simplifyExpToVar(cxt, expr1, stms)
+		 val (stms2, var') =  simplifyExpToVar(cxt, expr2, stms)
+		 val stms' = List.@(List.@(stms1,stms2), stms)
+		in
+		 (stms', S.E_LoadFem(data, var, var'))
+		end
 	      | AST.E_ExtractFem(expr, data) =>
 		let
 		 val (stms', var) = simplifyExpToVar(cxt, expr, stms)
@@ -757,7 +755,7 @@ structure Simplify : sig
                 in
                   inputs' := inp :: !inputs'
             end
-	    | simplifyInputDcl ((x, SOME(AST.E_LoadFem(data, NONE))), desc) =
+	    | simplifyInputDcl ((x, SOME(AST.E_LoadFem(data, NONE, NONE))), desc) =
 	      let
 	       val x' = cvtVar x
 	       val inp = S.INP{
@@ -771,7 +769,7 @@ structure Simplify : sig
 	      in
 	       inputs' := inp :: !inputs'
 	      end
-	    | simplifyInputDcl ((x, SOME(AST.E_LoadFem(data, SOME(AST.E_Var((var,_)))))), desc)  =
+	    | simplifyInputDcl ((x, SOME(AST.E_LoadFem(data, SOME(AST.E_Var((var,_))), NONE))), desc)  =
 	      let
 	       (*TODO: Provide an actual unique name generator based on the current list of globals. *)
 	       val x' = newVarAsGlobal x

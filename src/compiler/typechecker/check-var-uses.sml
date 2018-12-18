@@ -108,9 +108,11 @@ structure CheckVarUses : sig
                   | AST.E_LoadNrrd _ => unused
                   | AST.E_Coerce{e, ...} => chk (e, unused)
 		  (* NOTE: I'm not sure if this is correct:*)
-		  | AST.E_LoadFem(fem, optionalExp) => (case optionalExp
+		  | AST.E_LoadFem(fem, optionalExp, optionalExp') => ((case optionalExp
 							 of SOME(e) => chk(e, unused)
-							  | NONE => unused)
+							  | NONE => unused); (case optionalExp'
+									       of SOME(e) => chk(e, unused)
+										| NONE => unused))
 		  | AST.E_ExtractFem(e, _) => chk (e, unused)
 		  | AST.E_ExtractFemItem(e,_,_) => chk (e, unused)
                 (* end case *))
