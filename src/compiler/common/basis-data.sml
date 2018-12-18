@@ -14,7 +14,6 @@ structure BasisData : sig
 
 	   val empty : t
 	   val same : t * t -> bool
-
 	   val hash : t -> word
 			 
 	  end = struct

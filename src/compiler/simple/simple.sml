@@ -107,9 +107,9 @@ structure Simple =
       | E_BorderCtl of var BorderCtl.t * var    (* border-control wrapper for image *)
       | E_LoadSeq of ty * string
       | E_LoadImage of ty * string * ImageInfo.t
-      | E_LoadFem of FemData.femType * var * var
-      | E_ExtractFem of var * FemData.femType
-      | E_ExtractFemItem of var * ty * FemOpt.femOption
+      | E_LoadFem of FemData.femType * var * var (* Creation of femdata from femdata; the femtype argument is the result type.*)
+      | E_ExtractFem of var * FemData.femType    (*Extracting femdata of type femType from femdata*)
+      | E_ExtractFemItem of var * ty * FemOpt.femOption (* var.femOption : ty*)
       | E_InsideImage of var * var * int        (* inside-image test; introduced by the
                                                  * simplify-fields pass. The third argument is
                                                  * the maximum support of the image.

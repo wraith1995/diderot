@@ -204,6 +204,8 @@ structure SimpleContract : sig
             | S.E_InsideImage(pos, img, _) => (unuse pos; unuse img)
             | S.E_FieldFn f => ignore(SimpleFunc.decCnt f)
 	    | S.E_LoadFem(_,x,y) => (unuse x; unuse y)
+	    | S.E_ExtractFemItem(x,_,_) => unuse x
+	    | S.E_ExtractFem(x,_) => unuse x
           (* end case *))
 
   (* delete a block of code and decrement use counts of the variables in it *)

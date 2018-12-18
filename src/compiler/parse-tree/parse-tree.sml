@@ -83,7 +83,7 @@ structure ParseTree =
       | T_Seq of ty * expr
       | T_DynSeq of ty
       | T_Mesh  (*Fem types --- used for type definitions and so forth*)
-      | T_Space of var * expr list
+      | T_Space of var * expr list (* expr list is a shape *)
       | T_Func of var
       | T_RefCell of var
       | T_Cell of var

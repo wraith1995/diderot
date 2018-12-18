@@ -220,6 +220,7 @@ structure TypeUtil : sig
             | Ty.T_Tensor _ => true
             | Ty.T_Error => true
 	    | Ty.T_Named(_, def) => isFixedSize (allowStrand, def)
+	    | Ty.T_Fem(_,_) => true
             | _ => false
           (* end case *))
 
@@ -235,6 +236,7 @@ structure TypeUtil : sig
             | Ty.T_Tensor _ => true
             | Ty.T_Error => true
 	    | Ty.T_Named(_, ty') => isValueType ty'
+	    | Ty.T_Fem(data,_) => FemData.isValue data
             | _ => false
           (* end case *))
 
@@ -442,6 +444,7 @@ structure TypeUtil : sig
                 Ty.T_Field{diff=iDiff diff, dim=iDim dim, shape=iShape shape}
             | ity (Ty.T_Fun(dom, rng)) = Ty.T_Fun(List.map ity dom, ity rng)
 	    | ity (ty as Ty.T_Named(_)) = ty
+	    | ity (ty as Ty.T_Fem(_)) = ty
             | ity Ty.T_Error = Ty.T_Error
           in
             (mvs, ity ty)

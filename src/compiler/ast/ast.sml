@@ -92,9 +92,9 @@ structure AST =
             dstTy : Ty.ty,
             e : expr
       }
-      | E_LoadFem of FemData.femType * expr option * expr option
-      | E_ExtractFem of expr * FemData.femType
-      | E_ExtractFemItem of expr * Ty.ty * FemOpt.femOption
+      | E_LoadFem of FemData.femType * expr option * expr option (* creates new femdata given a femdata type, some expression of that fem data, and some other arg*)
+      | E_ExtractFem of expr * FemData.femType                   (* extract femdata from an expression of the given femdata type*)
+      | E_ExtractFemItem of expr * Ty.ty * FemOpt.femOption      (* extract a member from femdata *)
 
     withtype var_dcl = var * expr option
          and iter = var * expr
