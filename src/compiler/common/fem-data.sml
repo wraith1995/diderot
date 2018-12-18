@@ -22,18 +22,30 @@ structure FemData : sig
 			    | FuncCell of func
 			    | MeshPos of mesh
 
-(*valid input apply - valid output apply -> use these for all the damn utils*)
+	   (* Extract the name of a type of fem data as provided by the surface *)
 	   val nameOf : femType -> Atom.atom
+
+	   (* Extract femData that helps to define other fem data *)
 	   val meshOf : femType -> femType
 	   val spaceOf : femType -> femType
-	   val underlyingDim : femType -> int
-	   val meshMapDim : mesh -> int
-	   val same : femType * femType -> bool
-	   val validInput : femType -> bool
 	   val extractMesh : femType -> mesh option
 	   val extractSpace : femType -> space option
+
+	   (* Extract dimensional constants*)
+				      
+	   val underlyingDim : femType -> int
+	   val meshMapDim : mesh -> int
+
+	   (* various utilities for type checking, printing, value numbering. *)
+	   val same : femType * femType -> bool
 	   val femPP : femType -> string
 	   val hash : femType -> word
+
+	   (* various utilities for figuring out when we can use some sort of fem data*)
+	   val validInput : femType -> bool
+	   val isValue : femType -> bool
+
+	   (* placeholders for creating fem data *)
 	   val defaultSpace : mesh * Atom.atom -> femType   
 	   val mkMesh : int * int * Atom.atom -> femType
 	   val mkSpace : int * int list * mesh * Atom.atom -> femType
@@ -100,7 +112,7 @@ fun spaceOf f =
        | Func(Func'{space, ...}) => Space(space)
        | FuncCell(Func'{space, ...}) => Space(space)
        | _ => raise Fail "No space."
-	 (* end case*))
+    (* end case*))
 
 fun nameOf data =
     (case data
@@ -134,8 +146,8 @@ fun sameSpace(s1, s2)
     = (spaceDim(s1) = spaceDim(s2)) andalso (ListPair.all BD.same (spaceBasis s1, spaceBasis s2)) andalso sameMesh((spaceMesh s1), spaceMesh(s2))
       andalso ((List.length (spaceShape s1)) = (List.length (spaceShape s2))) andalso (ListPair.all (fn (x,y) => x=y) ((spaceShape s1), (spaceShape s2)))
 fun sameFunc(f1, f2) = sameSpace(funcSpace f1, funcSpace f2)
-							      
-	      
+				
+				
 
 fun same(t1, t2) =
     (case (t1,t2)
@@ -160,14 +172,19 @@ fun hash ty =
        | FuncCell(func)  => 0w37 + (hash (Func(func)))
        | MeshPos(mesh) => 0w41 + (hash (Mesh(mesh)))
        | MeshCell(mesh) => 0w43 + (hash (Mesh(mesh)))
-     (* end case*))
-	
-				
+    (* end case*))
+      
+      
 fun validInput ty =
     (case ty
       of Mesh(_) => true
        | Space(_) => true
        | Func(_) => true
+       | _ => false)
+fun isValue ty =
+    (case ty
+      of MeshCell(_) => true
+       | FuncCell(_) => true
        | _ => false)
 fun femPP ty =
     (case ty
@@ -196,7 +213,7 @@ fun isInputFemType ty =
       of RefCell(_) => false
        | MeshPos(_) => false
        | _ => true)
-			  
+      
 fun mkMesh(dim, mDim, name) = Mesh (Mesh' {dim = dim, mappingDim = mDim, basis = [BD.empty], name = name})
 
 

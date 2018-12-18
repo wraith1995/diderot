@@ -228,7 +228,7 @@ structure SimplifyVars : sig
                               }
                       in
                         S.S_MapReduce(List.map renameMR mrs)
-                      end
+                  end
                 (* end case *))
           and renameExp exp = (case exp
                  of S.E_Var x => S.E_Var(rename x)
@@ -251,10 +251,9 @@ structure SimplifyVars : sig
                   | S.E_LoadImage _ => exp
                   | S.E_InsideImage(pos, img, s) => S.E_InsideImage(rename pos, rename img, s)
                   | S.E_FieldFn _ => exp
-		  (* These are wrong: *)
-		  | S.E_LoadFem(_,_,_) => exp
-		  | S.E_ExtractFem(_,_) => exp
-		  | S.E_ExtractFemItem(_,_,_) => exp
+		  | S.E_LoadFem(a,v1,v2) => S.E_LoadFem(a,rename v1,rename v2)
+		  | S.E_ExtractFemItem(v,a,b) => S.E_ExtractFemItem(rename v,a,b)
+		  | S.E_ExtractFem(v,a) => S.E_ExtractFem(rename v,a)
                 (* end case *))
           in
             renameBlk
