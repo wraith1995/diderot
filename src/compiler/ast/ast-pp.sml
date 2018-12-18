@@ -94,7 +94,7 @@ structure ASTPP : sig
                       (* end case *);
                       ppTyArgs (ppStrm, mvs); sp();
                       string(concat["(\"", name, "\")"]))
-		  | AST.E_LoadFem(fem, optionalExp) => string ("loadFem(" ^ (FemData.femPP fem) ^ ")")
+		  | AST.E_LoadFem(fem, optionalExp, optionalExp') => string ("loadFem(" ^ (FemData.femPP fem) ^ ")")
 		  | AST.E_ExtractFem(e, fem) => (string ("extractFem(" ^ (FemData.femPP fem) ^ ","); pp e; string " )")
 		  | AST.E_ExtractFemItem(e, ty, femOpt) => (string "extractFemItem("; pp e; string ", "; string(TU.toString ty);
 		      string ", "; string (FemOpt.optName femOpt); string ")")

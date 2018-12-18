@@ -92,7 +92,7 @@ structure AST =
             dstTy : Ty.ty,
             e : expr
       }
-      | E_LoadFem of FemData.femType * expr option
+      | E_LoadFem of FemData.femType * expr option * expr option
       | E_ExtractFem of expr * FemData.femType
       | E_ExtractFemItem of expr * Ty.ty * FemOpt.femOption
 

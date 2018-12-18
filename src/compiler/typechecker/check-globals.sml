@@ -324,7 +324,6 @@ structure CheckGlobals : sig
 	       (* TODO: Add file parsing; for now, we do dummy info.*)
 	       (* This needs to be moved somewhere else... I think we need it in the type utilities*)
 	       (* At the least, we need to isolate the key functionality *)
-	       fun zF(f) = (fn (x,y) => (f x, y) )
 	       fun validateFemType femTyDef fileinfo =
 		   let
 		    (*TODO: parse the file and make these correct...*)
@@ -425,15 +424,38 @@ structure CheckGlobals : sig
 			end
 		      | ((FT.Mesh(m), n), PT.T_Mesh) =>
 			let
+			 val meshArgTy = Ty.T_Named(tyName, Ty.T_Fem(femInfo))
 			 val numCell = Atom.atom "numCell"
-			 val meshType = Ty.T_Fem(FT.Mesh(m), NONE)
-			 val numCellFuncTy = Ty.T_Fun([Ty.T_Named(tyName, Ty.T_Fem(femInfo))],Ty.T_Int)
+			 val meshType = Ty.T_Fem(FT.Mesh(m), SOME(tyName))
+			 val numCellFuncTy = Ty.T_Fun([meshArgTy],Ty.T_Int)
 			 val numCellFuncVar = Var.new (numCell, span, AST.FunVar, numCellFuncTy)
-			 val param = Var.new (Atom.atom "arg0", span, AST.FunParam, Ty.T_Named(tyName, Ty.T_Fem(femInfo)))
+			 val param = Var.new (Atom.atom "arg0", span, AST.FunParam, meshArgTy)
 			 val numCellBody = AST.S_Block([AST.S_Return(AST.E_ExtractFemItem(AST.E_Var(param, span), Ty.T_Int, FemOpt.NumCell))])
 			 val numCellFun = AST.D_Func(numCellFuncVar, [param], numCellBody)
+
+
+			 (*get list of cells -> we are going to use a extract*)
+			 val cells = Atom.atom "cells"
+			 val cellType = Ty.T_Fem(FT.MeshCell(m), NONE)
+			 val cellSeqType = Ty.T_Sequence(cellType, NONE)
+			 val cellTypeFuncTy = Ty.T_Fun([meshArgTy], cellSeqType)
+			 val cellFuncVar = Var.new (cells, span, AST.FunVar, cellTypeFuncTy)
+			 val param' = Var.new (Atom.atom "arg0", span, AST.FunParam, meshArgTy)
+					     (* (*add a global...???*) -> YES...define via Comprhension, range*)
+			 val itterVar = Var.new (Atom.atom "i", span, AST.IterVar, Ty.T_Int)
+			 val iter = (itterVar, AST.E_Prim(BasisVars.range, [],
+							  [AST.E_Lit(Literal.Int(IntLit.fromInt 0)),
+							   AST.E_ExtractFemItem(AST.E_Var(param', span), Ty.T_Int, FemOpt.NumCell)],
+							  Ty.T_Sequence(Ty.T_Int, NONE)))
+			 val comp  = AST.E_Comprehension(AST.E_LoadFem(FT.MeshCell(m), SOME(AST.E_Var(param', span)), SOME(AST.E_Var(itterVar, span))), iter, cellSeqType)
+			 val cellsBody = AST.S_Block([AST.S_Return(comp)])
+			 val cellsFun =  AST.D_Func(cellFuncVar, [param'], cellsBody)
+
+					     
+
+						    
 			in
-			 ([(numCell, numCellFuncVar)], [numCellFun])
+			 ([(numCell, numCellFuncVar), (cells, cellFuncVar)], [numCellFun,cellsFun])
 			end
 		    (*end case*))
 

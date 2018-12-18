@@ -191,7 +191,8 @@ structure Unify : sig
             | match (Ty.T_Field{diff=k1, dim=d1, shape=s1}, Ty.T_Field{diff=k2, dim=d2, shape=s2}) =
                 equalDiff (pl, k1, k2) andalso equalDim (pl, d1, d2) andalso equalShape(pl, s1, s2)
             | match (Ty.T_Fun(tys11, ty12), Ty.T_Fun(tys21, ty22)) =
-                ListPair.allEq match (tys11, tys21) andalso match (ty12, ty22)
+              ListPair.allEq match (tys11, tys21) andalso match (ty12, ty22)
+	    | match (Ty.T_Fem(data, name), Ty.T_Fem(data', name')) = FemData.same(data, data')
             | match (Ty.T_Error, _) = true
             | match (_, Ty.T_Error) = true
             | match _ = false

@@ -109,7 +109,7 @@ fun cleanAST (AST.Program({props, const_dcls,
 	      )
 
 	     end
-	   | AST.E_LoadFem(data,someExp) => AST.E_LoadFem(data, Option.map cleanExp someExp)
+	   | AST.E_LoadFem(data,someExp, someExp') => AST.E_LoadFem(data, Option.map cleanExp someExp, Option.map cleanExp someExp')
 	   | AST.E_ExtractFem(e,data) => AST.E_ExtractFem(cleanExp e, data)
 	   | AST.E_ExtractFemItem(e,ty,opt) => AST.E_ExtractFemItem(cleanExp e, ty, opt)
 	   | _ => exp

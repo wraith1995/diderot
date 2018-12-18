@@ -256,14 +256,14 @@ structure CheckExpr : sig
                               (* end case *))
                           | _ => err(cxt, [S "application of non-function/field ", V f])
                            (* end case *))
-		fun checkFemConstruction cxt loadFem rngTy  domTy args argTys=
+		fun checkFemConstruction cxt loadFem rngTy domTy args argTys=
 		    (case Unify.matchArgs (domTy, args, argTys)
 		      of SOME(args) => (AST.E_LoadFem(loadFem), rngTy)
-		      | NONE => err(cxt, [
-					      S "type error in application of fem creator ",
-					      S "  expected: ", TYS domTy, S "\n",
-					      S "  found:    ", TYS argTys
-				   ])
+		       | NONE => err(cxt, [
+				     S "type error in application of fem creator ",
+				     S "  expected: ", TYS domTy, S "\n",
+				     S "  found:    ", TYS argTys
+				    ])
 		    (* end case*))
                 fun checkFieldApp (e1', ty1) = (case (args, tys)
                        of ([e2'], [ty2]) => let
@@ -335,14 +335,18 @@ structure CheckExpr : sig
 								     (data, [Ty.T_Named(name, lowerTyDef)], [name])
 								    end
 								  | _ => raise Fail "non-FEM constructor")
-					     val namedArg = (case args
+					     val namedArg1 = (case args
 							      of [] => NONE
 							       | a::_ => SOME(a))
+					     val namedArg2 = (case args
+							      of [] => NONE
+							       | [a,b] => SOME(b)
+							       | _ => NONE)
 
 					     val rngTy = Ty.T_Named(f, tyDf)
 								 
 					    in
-					     checkFemConstruction cxt (data, namedArg) rngTy tyArgs args tys
+					     checkFemConstruction cxt (data, namedArg1, namedArg2) rngTy tyArgs args tys
 					    end
 				       (* end case *))
 			       )
