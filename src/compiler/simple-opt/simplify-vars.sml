@@ -88,6 +88,7 @@ structure SimplifyVars : sig
                   | S.E_FieldFn _ => ()
 		  | S.E_LoadFem(_,v1,v2) => (chkVar bvs v1; chkVar bvs v2)
 		  | S.E_ExtractFemItem(v,_,_) => chkVar bvs v
+		  | S.E_ExtractFemItem2(v1, v2,_,_,_) => (chkVar bvs v1; chkVar bvs v2)
 		  | S.E_ExtractFem(v,_) => chkVar bvs v
                 (* end case *))
           in
@@ -253,6 +254,7 @@ structure SimplifyVars : sig
                   | S.E_FieldFn _ => exp
 		  | S.E_LoadFem(a,v1,v2) => S.E_LoadFem(a,rename v1,rename v2)
 		  | S.E_ExtractFemItem(v,a,b) => S.E_ExtractFemItem(rename v,a,b)
+		  | S.E_ExtractFemItem2(v1,v2,a,b, c) => S.E_ExtractFemItem2(rename v1, rename v2, a,b, c)
 		  | S.E_ExtractFem(v,a) => S.E_ExtractFem(rename v,a)
                 (* end case *))
           in

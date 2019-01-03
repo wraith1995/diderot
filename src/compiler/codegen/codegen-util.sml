@@ -93,7 +93,7 @@ structure CodeGenUtil : sig
                 else raise Fail "ill-formed create"
             | getPrefix (stm::stms, prefix) = (case stm
                  of IR.S_Assign _ => getPrefix (stms, stm::prefix)
-                  | _ => raise Fail "ill-formed create"
+                  | _ => ((TreePP.statement(TextIO.stdOut, stm)); raise Fail ("ill-formed create"))
                 (* end case *))
           fun splitBody (TreeIR.Block{locals, body}) = let
                 fun split ([], stms) = raise Fail "ill-formed create loop body"

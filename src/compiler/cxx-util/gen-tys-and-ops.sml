@@ -104,7 +104,7 @@ structure GenTysAndOps : sig
 		| FT.Func(f) => (
 		 let
 		  val funcTy = CL.T_Named(name)
-		  val coords = CL.D_Var([],CL.T_Ptr(realTy),[], "coords", NONE)
+		  val coords = CL.D_Var([],CL.T_Ptr(realTy),[], "coordMap", NONE)
 		  val spaceName = Atom.toString (FT.nameOf (FT.spaceOf ty))
 		  val space =  CL.D_Var([],CL.T_Named(spaceName),[], "space", NONE)
 		  val block = CL.S_Block([CL.S_Comment(["No something with the nrrd"])])
@@ -121,6 +121,39 @@ structure GenTysAndOps : sig
 		  (class, [])
 		 end
 		)
+		| FT.MeshCell(mesh) => (
+		 let
+		  val meshCellTy = CL.T_Named(name)
+		  val meshCellRefTy = CL.T_Named(name ^ " & ")
+		  val int = CL.D_Var([], intTy ,[], "cell", NONE)
+		  val meshName = Atom.toString (FT.nameOf (FT.meshOf ty))
+		  val meshTy = CL.T_Named(meshName)
+		  val meshPtr =  CL.D_Var([],CL.T_Ptr(meshTy),[], "mesh", NONE)
+		  val osty = CL.T_Named("std::ostream &") (*attr doesn't support ty & *)
+		  val printer = CL.mkFuncDcl(osty, "operator<<", [CL.PARAM([], osty, "os"),
+								  CL.PARAM([], meshCellRefTy, "cell")], CL.S_Block([CL.S_Return(SOME(CL.E_BinOp(CL.E_Var("os"),
+																		CL.#<<,
+																		   CL.E_Select(CL.E_Var("cell"),"cell"))))]))
+
+		  val builder = CL.mkFuncDcl(meshCellTy, "makeFem",
+					     [CL.PARAM([], meshTy, "mesh"),
+					      CL.PARAM([], intTy, "cellInt")],
+					     CL.S_Block([
+							CL.S_Decl([], meshCellTy, "cell", NONE),
+							CL.S_Exp(
+							 CL.E_AssignOp(CL.E_Select(CL.E_Var("cell"), "cell"), CL.$=, CL.E_Var("cellInt"))),
+							CL.S_Exp(CL.E_AssignOp(CL.E_Select(CL.E_Var("cell"), "mesh"), CL.$=,
+															 CL.E_UnOp(CL.%&, CL.E_Var("mesh")))),
+							CL.S_Return(SOME(CL.E_Var("cell")))
+					    ]))
+
+		  val fields = [int, meshPtr]
+		  val class = CL.D_ClassDef{name=name, args=NONE, from=NONE,public = fields , protected = [], private = []}
+		 in
+		  (class, [printer, builder])
+		 end
+		)
+		
 		  
 		
 	      (* end case*))
@@ -381,6 +414,7 @@ structure GenTysAndOps : sig
                           | ty as Ty.VecTy(1, 1) => scalarSeqTrait ty
 (* QUESTION: strands map to uint32_t and do not support loading; do we need a trait? *)
                           | ty as Ty.StrandIdTy _ => dcls
+			  | ty as Ty.FemData(_) => dcls
                           | ty => raise Fail("unexpected dynamic sequence of " ^ Ty.toString ty)
                         (* end case *)
                       end

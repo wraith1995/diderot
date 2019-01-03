@@ -138,6 +138,7 @@ structure SimpleContract : sig
                   | S.E_LoadImage _ => ()
 		  | S.E_LoadFem(_, x,y) => (markUsed x; markUsed y)
 		  | S.E_ExtractFemItem(x,_,_) => markUsed x
+		  | S.E_ExtractFemItem2(x,y, _,_, _) => (markUsed x; markUsed y)
 		  | S.E_ExtractFem(x,_) => markUsed x
                   | S.E_InsideImage(pos, img, _) => (markUsed pos; markUsed img)
                   | S.E_FieldFn _ => ()
@@ -205,6 +206,7 @@ structure SimpleContract : sig
             | S.E_FieldFn f => ignore(SimpleFunc.decCnt f)
 	    | S.E_LoadFem(_,x,y) => (unuse x; unuse y)
 	    | S.E_ExtractFemItem(x,_,_) => unuse x
+	    | S.E_ExtractFemItem2(x,y, _,_, _) => (unuse x; unuse y)
 	    | S.E_ExtractFem(x,_) => unuse x
           (* end case *))
 

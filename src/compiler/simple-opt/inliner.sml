@@ -204,6 +204,7 @@ structure Inliner : sig
                   | S.E_FieldFn _ => exp
 		  | S.E_ExtractFem(v, data) => S.E_ExtractFem(rename env v, data)
 		  | S.E_ExtractFemItem(v, ty, data) => S.E_ExtractFemItem(rename env v, ty, data)
+		  | S.E_ExtractFemItem2(v1, v2, ty, outTy, data) => S.E_ExtractFemItem2(rename env v1, rename env v2, ty, outTy, data)
 		  | S.E_LoadFem(data, v1, v2) => S.E_LoadFem(data, rename env v1, rename env v2)
                 (* end case *))
         (* build the initial environment by mapping parameters to arguments *)

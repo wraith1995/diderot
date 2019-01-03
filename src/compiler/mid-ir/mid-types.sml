@@ -71,7 +71,7 @@ structure MidTypes =
       | toString (ImageTy info) = concat["image(", ImageInfo.toString info, ")"]
       | toString (StrandTy n) = Atom.toString n
       | toString KernelTy = "kernel"
-      | toString (FemData(data)) = "femData:" ^ (FemData.femPP data)
+      | toString (FemData(data)) = "femData:" ^ (FemData.toString data)
 
 
   end

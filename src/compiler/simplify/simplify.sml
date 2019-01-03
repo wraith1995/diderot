@@ -126,6 +126,22 @@ structure Simplify : sig
     fun newTemp (ty as STy.T_Image _) = SimpleVar.new ("img", SimpleVar.LocalVar, ty)
       | newTemp ty = SimpleVar.new ("_t", SimpleVar.LocalVar, ty)
 
+    fun iterVar var = SimpleVar.new (SimpleVar.nameOf var, SimpleVar.IterVar, SimpleVar.typeOf var)
+
+				   
+    (* (* make a property to find cells lists associated *) *)
+    fun makeCellType ty =
+    	(case ty
+    	  of STy.T_Fem(data) => STy.T_Fem(FemData.cellOf data)
+    	   | _ => raise Fail "impossible")
+    fun makeCellVar f = SimpleVar.new ("0cell_" ^ (SimpleVar.nameOf f), SimpleVar.GlobalVar, STy.T_Sequence(makeCellType (SimpleVar.typeOf f), NONE))
+    local
+     fun cvt f = makeCellVar f
+    in
+    val {getFn = getCellFn, peekFn = peekCellFn, setFn = setCellFn ,...} = SimpleVar.newProp cvt
+    end
+
+
   (* a property to map AST function variables to SimpleAST functions *)
     local
       fun cvt f = (case Var.monoTypeOf f
@@ -164,6 +180,8 @@ structure Simplify : sig
     end
 
     fun cvtVars xs = List.map cvtVar xs
+
+    (* a property to map fem data to global femdata that it uses*)
 
   (* make a block out of a list of statements that are in reverse order *)
     fun mkBlock stms = S.Block{props = PropList.newHolder(), code = List.rev stms}
@@ -500,8 +518,8 @@ structure Simplify : sig
 	      | AST.E_LoadFem(data, SOME(expr1), SOME(expr2)) =>
 		let
 		 val (stms1, var) =  simplifyExpToVar(cxt, expr1, stms)
-		 val (stms2, var') =  simplifyExpToVar(cxt, expr2, stms)
-		 val stms' = List.@(List.@(stms1,stms2), stms)
+		 val (stms2, var') =  simplifyExpToVar(cxt, expr2, stms1)
+		 val stms' = stms2
 		in
 		 (stms', S.E_LoadFem(data, var, var'))
 		end
@@ -516,8 +534,26 @@ structure Simplify : sig
 		 val ty' =  cvtTy ty
 		 val (stms', var) = simplifyExpToVar(cxt, expr, stms)
 		in
-		 (stms', S.E_ExtractFemItem(var, ty', opt))
+		 (case opt
+		   of (FemOpt.Cells, d) => (case peekCellFn var
+					of SOME(v) => (stms', S.E_Var(v))
+					 | _ => ((stms', S.E_ExtractFemItem(var, ty', opt))))
+		    | _ => (stms', S.E_ExtractFemItem(var, ty', opt)))
+		   
+		 
 		end
+	      | AST.E_ExtractFemItem2(expr1, expr2, ty, outTy, opt) =>
+		let
+		 val ty' =  cvtTy ty
+		 val outTy' = cvtTy outTy 
+		 val (stms1, var1) = simplifyExpToVar(cxt, expr1, stms)
+		 val (stms2, var2) = simplifyExpToVar(cxt, expr2, stms1)
+		in
+		 (stms2, S.E_ExtractFemItem2(var1, var2, ty', outTy', opt))
+		   
+		 
+		end
+
               | AST.E_Coerce{dstTy, e=AST.E_Lit(Literal.Int n), ...} => (case cvtTy dstTy
                    of SimpleTypes.T_Tensor[] => (stms, S.E_Lit(Literal.Real(RealLit.fromInt n)))
                     | _ => raise Fail "impossible: bad coercion"
@@ -758,16 +794,49 @@ structure Simplify : sig
 	    | simplifyInputDcl ((x, SOME(AST.E_LoadFem(data, NONE, NONE))), desc) =
 	      let
 	       val x' = cvtVar x
+	       val xname = Var.nameOf x
+	       val STy.T_Fem(data) = SimpleVar.typeOf x'
 	       val inp = S.INP{
                     var = x',
-                    name = Var.nameOf x,
+                    name = xname,
                     ty = apiTypeOf x',
                     desc = desc,
                     init = Inputs.NoDefault
                    }
+			      (* get the type env and get out cell0 -> new global*)
+			      (* set a property to retrieve *)
+
+	       val a = setCellFn(x', makeCellVar x')
+	       val cellGlobal = getCellFn x'
+				    (*make the init in simple*)
+	       val femTy = STy.T_Fem(data)
+	       val femCellTySeq = SimpleVar.typeOf cellGlobal
+	       val _ = print(STy.toString femCellTySeq)
+	       val STy.T_Sequence(cellTy, NONE) = femCellTySeq
+	       val STy.T_Fem(data') = cellTy
+	       val itterStart = newTemp STy.T_Int
+	       val itterEnd = newTemp STy.T_Int
+	       val itterIn = iterVar (newTemp STy.T_Int)
+	       val intSeqTy =  (STy.T_Sequence(STy.T_Int, NONE))
+	       val acc = newTemp intSeqTy
+	       val accp = newTemp femCellTySeq
+	       val tempAcc = newTemp cellTy
+	       val makeCell' = S.S_Var(tempAcc, SOME(S.E_LoadFem(data', x', itterIn)))
+	       val appendCell = S.S_Assign(accp, S.E_Prim(BasisVars.at_dT, [S.TY cellTy], [accp, tempAcc], femCellTySeq))
+
+	       val block = List.rev [
+		S.S_Var(itterStart, SOME(S.E_Lit(Literal.Int(IntLit.fromInt 0)))),
+		S.S_Var(itterEnd, SOME(S.E_ExtractFemItem(x', STy.T_Int, (FemOpt.NumCell, data)))),
+		S.S_Var(acc, SOME(S.E_Prim(BasisVars.range, [], [itterStart, itterEnd], intSeqTy))),
+		S.S_Var(accp, SOME(S.E_Seq([], femCellTySeq))),
+		S.S_Foreach(itterIn, acc, S.Block{props = PropList.newHolder(),code = [makeCell', appendCell]}),
+		S.S_Assign(cellGlobal, S.E_Var(accp))
+	       ]
 
 	      in
-	       inputs' := inp :: !inputs'
+	       inputs' := inp :: !inputs';
+	       globals' := cellGlobal :: !globals';
+	       globalInit := List.@(block, !globalInit)
 	      end
 	    | simplifyInputDcl ((x, SOME(AST.E_LoadFem(data, SOME(AST.E_Var((var,_))), NONE))), desc)  =
 	      let

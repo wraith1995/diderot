@@ -38,8 +38,8 @@ structure Simple =
         create : block Create.t,        (* initial strand creation *)
         start : block option,           (* global start block *)
         update : block option           (* global update block *)
-      }
-
+	     }
+				    
   (* user-function definition and differentiable functions *)
     and func_def = Func of {
         f : func,
@@ -107,9 +107,11 @@ structure Simple =
       | E_BorderCtl of var BorderCtl.t * var    (* border-control wrapper for image *)
       | E_LoadSeq of ty * string
       | E_LoadImage of ty * string * ImageInfo.t
-      | E_LoadFem of FemData.femType * var * var (* Creation of femdata from femdata; the femtype argument is the result type.*)
+      | E_LoadFem of FemData.femType * var * var
+      (* Creation of femdata from femdata; the femtype argument is the result type*)
       | E_ExtractFem of var * FemData.femType    (*Extracting femdata of type femType from femdata*)
       | E_ExtractFemItem of var * ty * FemOpt.femOption (* var.femOption : ty*)
+      | E_ExtractFemItem2 of var * var * ty * ty * FemOpt.femOption (* var.femOption : ty*)
       | E_InsideImage of var * var * int        (* inside-image test; introduced by the
                                                  * simplify-fields pass. The third argument is
                                                  * the maximum support of the image.
@@ -143,8 +145,9 @@ structure Simple =
       | typeOf (E_BorderCtl(_, x)) = SimpleVar.typeOf x
       | typeOf (E_LoadSeq(ty, _)) = ty
       | typeOf (E_LoadImage(ty, _, _)) = ty
-      | typeOf (E_LoadFem(data, _, _)) = SimpleTypes.T_Fem(data)
+      | typeOf (E_LoadFem(data, _, _)) = SimpleTypes.T_Fem(data) 
       | typeOf (E_ExtractFemItem(_,ty,_)) = ty
+      | typeOf (E_ExtractFemItem2(_,_,ty, outTy,_)) = outTy
       | typeOf (E_ExtractFem(_,data)) = SimpleTypes.T_Fem(data)
       | typeOf (E_InsideImage _) = SimpleTypes.T_Bool
       | typeOf (E_FieldFn f) = let

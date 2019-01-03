@@ -141,7 +141,8 @@ structure TreeOps =
       | ImageDim of ImageInfo.t * int
       | LoadFem of ty
       | ExtractFemItem of ty * FemOpt.femOption
-      | ExtractFem of ty
+      | ExtractFemItem2 of ty * ty * FemOpt.femOption
+      | ExtractFem of ty * ty
       | MathFn of MathFns.t
 
     fun resultArity IAdd = 1
@@ -226,6 +227,7 @@ structure TreeOps =
       | resultArity (ImageDim _) = 1
       | resultArity (LoadFem _) = 1
       | resultArity (ExtractFemItem _) = 1
+      | resultArity (ExtractFemItem2 _) = 1
       | resultArity (ExtractFem _) = 1
       | resultArity (MathFn _) = 1
 
@@ -311,6 +313,7 @@ structure TreeOps =
       | arity (ImageDim _) = 1
       | arity (LoadFem _) = 2
       | arity (ExtractFemItem _) = 1
+      | arity (ExtractFemItem2 _) = 2
       | arity (ExtractFem _) = 1
       | arity (MathFn _) = ~1
 
@@ -402,7 +405,8 @@ structure TreeOps =
       | same (ImageDim(a0,a1), ImageDim(b0,b1)) = ImageInfo.same(a0, b0) andalso sameint(a1, b1)
       | same (LoadFem(a0), LoadFem(b0)) = samety(a0, b0)
       | same (ExtractFemItem(a0,a1), ExtractFemItem(b0,b1)) = samety(a0, b0) andalso FemOpt.same(a1, b1)
-      | same (ExtractFem(a0), ExtractFem(b0)) = samety(a0, b0)
+      | same (ExtractFemItem2(a0,a1,a2), ExtractFemItem2(b0,b1,b2)) = samety(a0, b0) andalso samety(a1, b1) andalso FemOpt.same(a2, b2)
+      | same (ExtractFem(a0,a1), ExtractFem(b0,b1)) = samety(a0, b0) andalso samety(a1, b1)
       | same (MathFn(a0), MathFn(b0)) = MathFns.same(a0, b0)
       | same _ = false
 
@@ -488,8 +492,9 @@ structure TreeOps =
       | hash (ImageDim(a0,a1)) = 0w419 + ImageInfo.hash a0 + hashint a1
       | hash (LoadFem(a0)) = 0w421 + hashty a0
       | hash (ExtractFemItem(a0,a1)) = 0w431 + hashty a0 + FemOpt.hash a1
-      | hash (ExtractFem(a0)) = 0w433 + hashty a0
-      | hash (MathFn(a0)) = 0w439 + MathFns.hash a0
+      | hash (ExtractFemItem2(a0,a1,a2)) = 0w433 + hashty a0 + hashty a1 + FemOpt.hash a2
+      | hash (ExtractFem(a0,a1)) = 0w439 + hashty a0 + hashty a1
+      | hash (MathFn(a0)) = 0w443 + MathFns.hash a0
 
     fun toString IAdd = "IAdd"
       | toString ISub = "ISub"
@@ -573,7 +578,8 @@ structure TreeOps =
       | toString (ImageDim(a0,a1)) = concat["ImageDim<", ImageInfo.toString a0, ",", intToString a1, ">"]
       | toString (LoadFem(a0)) = concat["LoadFem<", tyToString a0, ">"]
       | toString (ExtractFemItem(a0,a1)) = concat["ExtractFemItem<", tyToString a0, ",", FemOpt.toString a1, ">"]
-      | toString (ExtractFem(a0)) = concat["ExtractFem<", tyToString a0, ">"]
+      | toString (ExtractFemItem2(a0,a1,a2)) = concat["ExtractFemItem2<", tyToString a0, ",", tyToString a1, ",", FemOpt.toString a2, ">"]
+      | toString (ExtractFem(a0,a1)) = concat["ExtractFem<", tyToString a0, ",", tyToString a1, ">"]
       | toString (MathFn(a0)) = concat["MathFn<", MathFns.toString a0, ">"]
 
   end

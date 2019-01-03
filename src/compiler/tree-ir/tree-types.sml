@@ -133,7 +133,7 @@ structure TreeTypes =
       | toString (SeqTy(ty, SOME n)) = concat[toString ty, "[", Int.toString n, "]"]
       | toString (ImageTy info) = concat["image(", ImageInfo.toString info, ")"]
       | toString (StrandIdTy n) = concat["id(", Atom.toString n, ")"]
-      | toString (FemData(data)) = concat["femData(", FemData.femPP(data), ")"]
+      | toString (FemData(data)) = concat["femData(", FemData.toString(data), ")"]
 
     structure Tbl = HashTableFn (
       struct

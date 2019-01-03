@@ -163,7 +163,8 @@ ImageDim : ImageInfo.t * int : 1 : 1 :
 # Fem Stuff
 LoadFem   : ty : 1 : 2 : load fem data given other fem data
 ExtractFemItem : ty * FemOpt.femOption : 1 : 1 : extract data from fem data
-ExtractFem : ty : 1 : 1 : extract fem data from fem data
+ExtractFemItem2 : ty * ty * FemOpt.femOption : 1 : 2 : extract data from fem data given param
+ExtractFem : ty * ty : 1 : 1 : extract fem data from fem data
 ### other operations
 #
 # unlifted math functions

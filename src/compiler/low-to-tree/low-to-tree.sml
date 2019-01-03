@@ -499,7 +499,8 @@ structure LowToTree : sig
               | Op.IfWrap => bindTREE(TOp.IfWrap )
 	      | Op.LoadFem(ty) => bindTREE (TOp.LoadFem(U.trType ty))
 	      | Op.ExtractFemItem(ty, opt) => bindTREE (TOp.ExtractFemItem(U.trType ty, opt))
-	      | Op.ExtractFem(ty) => bindTREE (TOp.ExtractFem(U.trType ty)) 
+	      | Op.ExtractFem(ty, inTy) => bindTREE (TOp.ExtractFem (U.trType ty, U.trType inTy))
+	      | Op.ExtractFemItem2(ty, outTy, opt) => bindTREE (TOp.ExtractFemItem2(U.trType ty, U.trType outTy, opt))
               | rator => raise Fail("bogus operator " ^ Op.toString srcRator)
             (* end case *)
           end

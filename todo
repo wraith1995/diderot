@@ -1,3 +1,85 @@
+Ongoing issue:
+-allow translation of DOF in two ways.
+-Pointer issue of when things should be pointers
+-Loading in NRRDS
+-Loading of files, constants, etc
+-Inserting of strings
+-Use of that libindex
+-CheckIR
+-Email Kirby
+
+
+
+-1.
+0. Pointer issues - globals and internals are values - we need maps
+1. Equality testing of all of these things
+2. Load in via nrrd
+3. Loading of files
+4. Inserting of strings
+5. Check High -> need to make opts more useful 
+Email Kirby with functionality
+
+Next steps:
+Add ooptiona indexMap', vertMap to msh -> Later for verticies
+Figure out transformDofs dimensions again
+Deploy transformDofs as opt Dofs -> translates into getIndicies (seq) and get vals (tensor)
+
+Transate:
+Clarify FemOpt -> kind of like EIN almost
+High (Big selectors)
+Mid (Index/Other)
+Low (scalars)
+tree
+
+
+Get Mesh
+Get Index
+Grab Indecies
+Grab Tensors 
+
+To do it:
+add removal of () in select
+Select continuations from hadown env -> insert code from new env
+NOT EINMK op, but rather use Ops -> loadIndex -> for vertMap if not there, just be done
+Push towards full meshCell functionarl:
+
+immediate: transformDofs, isValid (think about layout of data for transformDofs)
+Next: verticies, isInside (require the loaded file)
+Next: transform, invTransform
+
+Data:
+natural iso -> properties we put on our functors -> so what does \alpha actually do -> equivelance in the category of functors: all maps that I want in the past can be rebuilt. There exist G' so that I can go backwards -> I can use alpha to build that G
+
+We ought to be able to invert:
+--with truly right software, you just pick categories and generate maps between them
+--or auto-check methods between them
+
+------
+Final: meshPos stuff after meshPos
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 1. Pass by value vs. by reference - deal with the pointer issues - everything should be passed by reference here probably.
 2. Write these methods with proper C++ isms.
 ----------HERE WE ARE

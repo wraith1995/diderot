@@ -87,10 +87,10 @@ structure SimplePP : sig
                   | S.E_Lit lit => string (Literal.toString lit)
                   | S.E_Kernel k => string (Kernel.name k)
                   | S.E_Select(x, fld) => (var x; string "."; var fld)
-                  | S.E_Apply(f, args) => (ppFunc (ppStrm, f); sp(); ppArgs (ppStrm, args))
-                  | S.E_Prim(f, [], args, _) => (ppASTVar(ppStrm, f); sp(); ppArgs (ppStrm, args))
+                  | S.E_Apply(f, args) => (string "func ";ppFunc (ppStrm, f); sp(); ppArgs (ppStrm, args))
+                  | S.E_Prim(f, [], args, _) => (string "prim "; ppASTVar(ppStrm, f); sp(); ppArgs (ppStrm, args))
                   | S.E_Prim(f, mvs, args, _) => (
-                      ppASTVar(ppStrm, f); ppTyArgs (ppStrm, mvs); sp(); ppArgs (ppStrm, args))
+                      string "prim ";ppASTVar(ppStrm, f); ppTyArgs (ppStrm, mvs); sp(); ppArgs (ppStrm, args))
                   | S.E_Tensor(es, _) => ppList ppVar ("[", ",", "]") (ppStrm, es)
                   | S.E_Seq(es, _) => ppList ppVar ("{", ",", "}") (ppStrm, es)
                   | S.E_Tuple es => ppList ppVar ("(", ",", ")") (ppStrm, es)
@@ -109,15 +109,20 @@ structure SimplePP : sig
                       string "loadImage<"; string(Ty.toString ty); string ">(\"";
                       string(String.toString nrrd); string "\")")
 		  | S.E_LoadFem(data, x,y) => (
-		   string "loadFem("; string ((FemData.femPP data) ^ ", "); var x; string ", "; var y;string ")"
+		   string "loadFem("; string ((FemData.toString data) ^ ", "); var x; string ", "; var y;string ")"
 		  )
 		  | S.E_ExtractFem(v, data) => (
-		   string "extractFem("; var v; string ", "; string (FemData.femPP data); string ")"
+		   string "extractFem("; var v; string ", "; string (FemData.toString data); string ")"
 		  )
 		  | S.E_ExtractFemItem(v, ty, opt) => (
-		   string "extractFemItem("; string (FemOpt.optName opt); string ", "; string (Ty.toString ty); string ", ";
+		   string "extractFemItem("; string (FemOpt.toString opt); string ", "; string (Ty.toString ty); string ", ";
 		   var v; string ")"
 		  )
+		  | S.E_ExtractFemItem2(v1, v2, ty, outTy, opt) => (
+		   string "extractFemItem2("; string (FemOpt.toString opt); string ", "; string (Ty.toString ty); string ", ";
+		   var v1; string", "; var v2; string " : ";string (Ty.toString ty);  string ")"
+		  )
+
                   | S.E_InsideImage(pos, img, s) => (
                       string "insideImage("; var pos; string ","; var img;
                       string ","; string(Int.toString s); string ")")
