@@ -115,6 +115,7 @@ structure CheckVarUses : sig
 										| NONE => unused))
 		  | AST.E_ExtractFem(e, _) => chk (e, unused)
 		  | AST.E_ExtractFemItem(e,_,_) => chk (e, unused)
+		  | AST.E_ExtractFemItem2(e1, e2, _, _,_) => (chk (e1, unused); chk(e2, unused))
                 (* end case *))
           and chk' (es, unused) = List.foldl chk unused es
           in

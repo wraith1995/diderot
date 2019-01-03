@@ -114,9 +114,15 @@ structure CheckGlobals : sig
             | PT.GD_Input(ty, {span, tree=x}, optDesc, optDefn) => let
                 val ty = CheckType.check (env, cxt, ty)
                 val x' = Var.new(x, span, Var.InputVar, ty)
+		val _ = print(Var.nameOf x')
                 val rhs = (case optDefn
-                       of NONE => NONE
-                        | SOME e => SOME(#2 (chkRHS (env, cxt, true, x', e)))
+			    of NONE => (case ty
+					 of Ty.T_Named(_,Ty.T_Fem(data, _)) =>
+					    (case data
+					      of FemData.Mesh(_) => (print("agg!\n");SOME(AST.E_LoadFem(data, NONE, NONE)))
+					       | _ => (print("agg\n");NONE))
+					  | _ => (print("smesh\n");NONE))
+                             | SOME e => (print("aha!"); SOME(#2 (chkRHS (env, cxt, true, x', e))))
                       (* end case *))
                 in
                 (* check that input variables have valid types *)
@@ -327,7 +333,7 @@ structure CheckGlobals : sig
 	       fun validateFemType femTyDef fileinfo =
 		   let
 		    (*TODO: parse the file and make these correct...*)
-		    val tempMesh = FT.mkMesh(2,2,tyName)
+		    val tempMesh = FT.mkMesh(2, 5,tyName)
 		    fun tempSpace mesh shape = FT.mkSpace(2, shape, mesh,tyName)
 		    fun tempFunc space = FT.mkFunc(space, tyName)
 		    (*TODO : check against the file in the following.*)
@@ -406,7 +412,7 @@ structure CheckGlobals : sig
 			 val spaceFun = AST.D_Func(spaceFuncVar, [param], spaceFuncBody)
 			 
 			in
-			 ([(spaceFunc, spaceFuncVar)],[spaceFun])
+			 ([(spaceFunc, spaceFuncVar)],[spaceFun],[])
 			end
 		      | ((FT.Space(s), n), PT.T_Space(meshName)) =>
 			let
@@ -420,7 +426,7 @@ structure CheckGlobals : sig
 			 val meshFuncBody =  AST.S_Block([AST.S_Return(AST.E_ExtractFem(AST.E_Var(param,span),mesh))])
 			 val meshFun = AST.D_Func(meshFuncVar, [param], meshFuncBody)
 			in
-			 ([(meshFunc, meshFuncVar)], [meshFun])
+			 ([(meshFunc, meshFuncVar)], [meshFun],[])
 			end
 		      | ((FT.Mesh(m), n), PT.T_Mesh) =>
 			let
@@ -430,43 +436,102 @@ structure CheckGlobals : sig
 			 val numCellFuncTy = Ty.T_Fun([meshArgTy],Ty.T_Int)
 			 val numCellFuncVar = Var.new (numCell, span, AST.FunVar, numCellFuncTy)
 			 val param = Var.new (Atom.atom "arg0", span, AST.FunParam, meshArgTy)
-			 val numCellBody = AST.S_Block([AST.S_Return(AST.E_ExtractFemItem(AST.E_Var(param, span), Ty.T_Int, FemOpt.NumCell))])
+			 val numCellBody = AST.S_Block([AST.S_Return(AST.E_ExtractFemItem(AST.E_Var(param, span), Ty.T_Int, (FemOpt.NumCell, FT.Mesh(m))))])
 			 val numCellFun = AST.D_Func(numCellFuncVar, [param], numCellBody)
 
 
 			 (*get list of cells -> we are going to use a extract*)
+			 val cells' = Atom.atom "0cells"
 			 val cells = Atom.atom "cells"
 			 val cellType = Ty.T_Fem(FT.MeshCell(m), NONE)
 			 val cellSeqType = Ty.T_Sequence(cellType, NONE)
 			 val cellTypeFuncTy = Ty.T_Fun([meshArgTy], cellSeqType)
-			 val cellFuncVar = Var.new (cells, span, AST.FunVar, cellTypeFuncTy)
+			 val cellFuncVar' = Var.new (cells, span, AST.FunVar, cellTypeFuncTy)
 			 val param' = Var.new (Atom.atom "arg0", span, AST.FunParam, meshArgTy)
-					     (* (*add a global...???*) -> YES...define via Comprhension, range*)
+
 			 val itterVar = Var.new (Atom.atom "i", span, AST.IterVar, Ty.T_Int)
 			 val iter = (itterVar, AST.E_Prim(BasisVars.range, [],
-							  [AST.E_Lit(Literal.Int(IntLit.fromInt 0)),
-							   AST.E_ExtractFemItem(AST.E_Var(param', span), Ty.T_Int, FemOpt.NumCell)],
-							  Ty.T_Sequence(Ty.T_Int, NONE)))
+			 				  [AST.E_Lit(Literal.Int(IntLit.fromInt 0)),
+			 				   AST.E_ExtractFemItem(AST.E_Var(param', span), Ty.T_Int, (FemOpt.NumCell, FT.Mesh(m)))],
+			 				  Ty.T_Sequence(Ty.T_Int, NONE)))
 			 val comp  = AST.E_Comprehension(AST.E_LoadFem(FT.MeshCell(m), SOME(AST.E_Var(param', span)), SOME(AST.E_Var(itterVar, span))), iter, cellSeqType)
+			 				(*AST.E_ExtractFemItem(AST.E_Var(param', span)*)
 			 val cellsBody = AST.S_Block([AST.S_Return(comp)])
-			 val cellsFun =  AST.D_Func(cellFuncVar, [param'], cellsBody)
+			 val cellsFun' =  AST.D_Func(cellFuncVar', [param'], cellsBody)
 
-					     
+			 val cellFuncVar = Var.new (cells, span, AST.FunVar, cellTypeFuncTy)
+			 val cellsFun = AST.D_Func(cellFuncVar, [param'],
+						   AST.S_Block([AST.S_Return(AST.E_ExtractFemItem(AST.E_Var(param',span), cellSeqType, ( FemOpt.Cells, FT.Mesh(m))))]))
 
-						    
+
+			 fun makeCells vars = (case vars
+						of [v] => AST.E_ExtractFemItem(v, cellSeqType, (FemOpt.Cells, FT.Mesh(m)))
+						 | _ => raise Fail "impossible argument to method got pass type checking")
 			in
-			 ([(numCell, numCellFuncVar), (cells, cellFuncVar)], [numCellFun,cellsFun])
+			 ([(numCell, numCellFuncVar), (cells', cellFuncVar')], [numCellFun, cellsFun', cellsFun], [(cells, makeCells, cellTypeFuncTy)])
 			end
-		    (*end case*))
+		   (*end case*))
+
+	       fun makeDescendentFemTypes(env, femType) =
+		   let
+		    val constants = []
+		    val methods = []
+		    val methodRefs = []
+		    val name = FT.nameOf femType
+
+
+		   in
+		    (case femType
+		      of FT.Mesh(m) =>
+			 let
+			  val mapDim = FT.meshDim m
+			  val meshMapDim = FT.meshMapDim m
+			  val shape = FT.dataShapeOf femType
+			  
+			  val cellName = Atom.atom ("cell(" ^ (Atom.toString name) ^ ")" )
+						   (*pos name*)
+			  val cellData = FT.cellOf femType
+			  val cellTy = Ty.T_Fem(cellData, NONE) (* no name*)
+
+			  val transformDofs = Atom.atom "transformDofs"
+			  val transformDofsTy = Ty.T_Tensor(Ty.Shape((List.map Ty.DimConst shape))) (*careful*)
+			  val transformsDofsFunTy = Ty.T_Fun([cellTy], transformDofsTy)
+			  fun makeTransformDofs vars = (case vars
+							 of [v] =>
+							    let
+							     val getMesh =  AST.E_ExtractFem(v, femType)
+							     val getCellInt= AST.E_ExtractFemItem(v, Ty.T_Int, (FemOpt.CellIndex, FT.MeshCell(m)))
+							     val getTensor = AST.E_ExtractFemItem2(getMesh, getCellInt, Ty.T_Int, transformDofsTy, (FemOpt.ExtractDofs, FT.Mesh(m)))
+							    in
+							     getTensor
+							    end
+							  | _ => raise Fail "impossible argument to method got passed type checking")
+
+
+			  val transformFuncs = [(transformDofs, makeTransformDofs, transformsDofsFunTy)]
+
+			  val env' = Env.insertNamedType(env, cxt, cellName, cellTy, constants, methods, transformFuncs)
+							 
+			 in
+			  env'
+			 end
+		       | _ => env
+		    (* end case *))
+		   end
 
 
 	       fun makeFemType femTyDef =
 		   let
 		    val femType : (FT.femType * Atom.atom option) option = validateFemType femTyDef file
 		    val constants = []
-		    val (methodRefs, methods) = Option.getOpt (Option.map (makeFemMethods femTyDef file) femType, ([],[]))
+		    val (methodRefs, methods, newVars) = Option.getOpt (Option.map (makeFemMethods femTyDef file) femType, ([],[],[]))
 
-		    val env' =  Option.map (fn x => Env.insertNamedType(env, cxt, tyName, Ty.T_Fem(x), constants, methodRefs)) femType
+		    val envI =  Option.map (fn x => Env.insertNamedType(env, cxt, tyName, Ty.T_Fem(x), constants, methodRefs, newVars)) femType
+
+		    val argsOption = (case (envI, femType)
+				       of (SOME(envI'), SOME((femTy', _))) => SOME((envI', femTy'))
+					| _ => NONE)
+		    val env' = Option.map makeDescendentFemTypes argsOption
 		   in
 		    (case env'
 		      of SOME(env'') => (OTHERS(methods), env'')
@@ -512,7 +577,7 @@ structure CheckGlobals : sig
 		(*Step 4: Add constants: TBD after file formats*)
 		val constants = []
 
-		val env' = Env.insertNamedType(env, cxt, tyName, thisTy, constants, methods)
+		val env' = Env.insertNamedType(env, cxt, tyName, thisTy, constants, methods, [])
 	       in
 		if isValType
 		then (OTHERS(funDcls), env')
