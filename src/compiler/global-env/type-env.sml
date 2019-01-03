@@ -18,6 +18,10 @@ structure TypeEnv : sig
 	   (* Inserts a new constant into a type env*)							   
 	   val insertConstant : t * Atom.atom * ConstExpr.t -> unit
 
+	   val insertHiddenVar : t * Atom.atom * ((AST.expr list) -> (AST.expr )) * Types.ty -> unit
+							   
+	   val findHiddenVar : t * Atom.atom -> (((AST.expr list) -> AST.expr ) * Types.ty) option
+
 	   (* Finds the name of a type associated to an env*)
 	   val findName : t -> Atom.atom
 
@@ -40,17 +44,20 @@ end =  struct
 	      name : Atom.atom,
 	      def : Ty.ty,
 	      methods: AST.var ATbl.hash_table,
+	      vars : (((AST.expr list)-> AST.expr ) * Types.ty) ATbl.hash_table,
 	      constants: ConstExpr.t ATbl.hash_table
 	     }
     fun new (name, def) = TE {
 	 name = name,
 	 def = def,
 	 methods = ATbl.mkTable(16, Fail ("Method env for " ^ Atom.toString name)),
+	 vars = ATbl.mkTable(16, Fail ("Var env for " ^ Atom.toString name)),
 	 constants = ATbl.mkTable(16, Fail ("Constant env for " ^ Atom.toString name))
 	}
 			     
     fun insertMethod (TE{methods, ...}, name, var) = ATbl.insert methods (name, var)
     fun insertConstant (TE{constants, ...}, name, var) = ATbl.insert constants (name, var)
+    fun insertHiddenVar (TE{vars, ...}, name, var, ty) = ATbl.insert vars (name, (var, ty))
 
     fun findName (TE{name, ...}) = name
 				   
@@ -58,6 +65,7 @@ end =  struct
 				 
     fun findMethod (TE{methods, ...}, name) = ATbl.find methods name
     fun findConstant (TE{constants, ...}, name) = ATbl.find constants name
+    fun findHiddenVar (TE{vars, ...}, name) = ATbl.find vars name
 					
 			 
 			

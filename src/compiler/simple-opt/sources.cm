@@ -30,3 +30,4 @@ is
   simple-opt.sml
   simplify-fields.sml
   simplify-vars.sml
+  simplify-fem.sml

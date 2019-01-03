@@ -86,7 +86,7 @@ structure Inputs : sig
 			 | NONE => "NONE"
 		      (* end case*))
 	in
-	 String.concat["loadFem(", (FemData.femPP data), ", ",varStr, ")" ]
+	 String.concat["loadFem(", (FemData.toString data), ", ",varStr, ")" ]
 	end
 
     fun toString (INP{name, desc=NONE, init=NoDefault, ...}) = name

@@ -59,6 +59,8 @@ structure TreeToCxx : sig
     structure TSV = TreeStateVar
     structure Env = CodeGenEnv
     structure RN = CxxNames
+    structure FO = FemOpt
+    structure FT = FemData
 
     val trType = TypeToCxx.trType
     val dynseqTy = TypeToCxx.dynseqTy
@@ -289,11 +291,25 @@ structure TreeToCxx : sig
             | (Op.ImageDim(info, i), [img]) => CL.mkDispatch(img, "size", [mkInt i])
             | (Op.MathFn f, args) => mkStdApply(MathFns.toString f, args)
             | (Op.IfWrap, [a, b, c])    => CL.mkApply("IfWrap", [a,b,c])
-	    | (Op.LoadFem(ty), [a,b]) => CL.mkDispatch(a, "loadFem", [b])
-	    | (Op.ExtractFem(ty), [a]) => (case ty
-					    of Ty.FemData(FemData.Mesh(_)) => CL.E_Select(a, "mesh")
+	    | (Op.LoadFem(Ty.FemData(data)), [a,b]) =>
+	      if FemData.baseFem(data)
+	      then CL.mkDispatch(a, "loadFem", [b]) 
+	      else CL.mkApply("makeFem", [a,b])
+	    | (Op.ExtractFem(ty, ty'), [a]) => (case ty
+					    of Ty.FemData(FemData.Mesh(_)) => (case ty'
+										of Ty.FemData(FT.MeshCell(_)) => CL.mkUnOp(CL.%*, CL.E_Select(a, "mesh"))
+										 | _ => CL.E_Select(a, "mesh")
+									      (* end case*)) 
 					     | Ty.FemData(FemData.Space(_)) => CL.E_Select(a, "space"))
-	    | (Op.ExtractFemItem(ty,FemOpt.NumCell), [a]) => CL.E_Select(a, "numCells")
+	    | (Op.ExtractFemItem(ty, (FemOpt.NumCell, _)), [a]) => CL.E_Select(a, "numCells")
+	    | (Op.ExtractFemItem(ty, (FemOpt.Cells, _)), [a]) => CL.E_Select(a, "cells")
+	    | (Op.ExtractFemItem(ty, (FemOpt.CellIndex, _)), [a]) => CL.E_Select(a, "cell")
+	    | (Op.ExtractFemItem2(ty,ty', (FemOpt.ExtractDof, _)), [a,b]) => (case ty'
+									       of Ty.TensorTy([]) => CL.E_Subscript(CL.E_Select(a, "coordMap"), b)
+										| _ => CL.mkUnOp(CL.%&, CL.E_Subscript(CL.E_Select(a, "coordMap"), b))
+									     (* end case*))
+	    
+	    | (Op.ExtractFemItem2(ty,ty', (FemOpt.ExtractIndex, _)), [a,b]) => CL.E_Subscript(CL.E_Select(a, "indexMap"), b)
             | _ => raise Fail(concat[
                    "unknown or incorrect operator ", Op.toString rator
                  ])
@@ -492,7 +508,7 @@ structure TreeToCxx : sig
                             [CL.mkUnOp(CL.%++, CL.mkVar x')],
                             trBlock (env', blk))
                       in
-                        (env, hiInit @ loop :: stms)
+                        (env,  (loop :: hiInit) @ stms)
                       end
                   | IR.S_Foreach(x, e, blk) => let
                       val seq = trExp(env, e)

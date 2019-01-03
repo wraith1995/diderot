@@ -94,10 +94,13 @@ structure ASTPP : sig
                       (* end case *);
                       ppTyArgs (ppStrm, mvs); sp();
                       string(concat["(\"", name, "\")"]))
-		  | AST.E_LoadFem(fem, optionalExp, optionalExp') => string ("loadFem(" ^ (FemData.femPP fem) ^ ")")
-		  | AST.E_ExtractFem(e, fem) => (string ("extractFem(" ^ (FemData.femPP fem) ^ ","); pp e; string " )")
+		  | AST.E_LoadFem(fem, optionalExp, optionalExp') => string ("loadFem(" ^ (FemData.toString fem) ^ ")")
+		  | AST.E_ExtractFem(e, fem) => (string ("extractFem(" ^ (FemData.toString fem) ^ ","); pp e; string " )")
 		  | AST.E_ExtractFemItem(e, ty, femOpt) => (string "extractFemItem("; pp e; string ", "; string(TU.toString ty);
-		      string ", "; string (FemOpt.optName femOpt); string ")")
+							    string ", "; string (FemOpt.toString femOpt); string ")")
+		  | AST.E_ExtractFemItem2(e1,e2, ty, outTy, femOpt) => (string "extractFemItem("; pp e1; string ", "; pp e2; string " : "; string(TU.toString ty); string ", "; string(TU.toString outTy);
+		      string ", "; string (FemOpt.toString femOpt); string ")")
+														     
                   | AST.E_Coerce{dstTy, e, ...} => (
                       PP.openHBox ppStrm;
                         string "("; string(TU.toString dstTy); string ")";

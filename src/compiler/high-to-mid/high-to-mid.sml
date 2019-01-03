@@ -186,7 +186,13 @@ structure HighToMid : sig
               | SrcOp.MathFn e => assign (DstOp.MathFn e)
 	      | SrcOp.LoadFem(ty) => assign (DstOp.LoadFem(cvtTy ty))
 	      | SrcOp.ExtractFemItem(ty, opt) => assign (DstOp.ExtractFemItem(cvtTy ty, opt))
-	      | SrcOp.ExtractFem(ty) => assign (DstOp.ExtractFem(cvtTy ty))
+	      | SrcOp.ExtractFem(ty, inTy) => assign (DstOp.ExtractFem(cvtTy ty, cvtTy inTy))
+	      | SrcOp.ExtractFemItem2(ty, ty', opt) =>
+		(case FemOpt.splitDataOpt opt
+		  of SOME(_) => let val [arg1,arg2] = Env.renameList(env, args) in FemOptSplit.indexedDataLowering(y, opt, arg1, arg2) end
+		   | NONE => assign (DstOp.ExtractFemItem2(cvtTy ty, cvtTy ty', opt))
+		(* end case *))
+
               | rator => raise Fail("bogus operator " ^ SrcOp.toString rator)
             (* end case *)
           end
@@ -226,7 +232,9 @@ raise ex)
                   assign (DstIR.APPLY(Env.renameFV(env, f), Env.renameList(env, args)))
               | _ => raise Fail("bogus rhs for ASSIGN: " ^ SrcIR.RHS.toString rhs)
             (* end case *)
-          end
+    end
+
+
 
   (* expand a SrcIR multi-assignment to a DstIR CFG *)
     fun mexpand (env, (ys, rhs)) = let

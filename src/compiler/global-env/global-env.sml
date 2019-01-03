@@ -51,7 +51,7 @@ structure GlobalEnv : sig
     val insertKernel : t * Atom.atom * Kernel.t -> unit
 
     (* insert a named type into the environment with a collection of constant expressions and method functions*)
-    val insertNamedType : t * Atom.atom * Types.ty * (Atom.atom * ConstExpr.t ) list  * (Atom.atom * AST.var ) list -> unit
+    val insertNamedType : t * Atom.atom * Types.ty * (Atom.atom * ConstExpr.t ) list  * (Atom.atom * AST.var ) list * (Atom.atom * ((AST.expr list) -> (AST.expr )) * Types.ty ) list -> unit
 
   (* tracking program features *)
     val recordProp : t * Properties.t -> unit
@@ -107,11 +107,12 @@ structure GlobalEnv : sig
 
     fun insertKernel (GE{kEnv, ...}, k, k') = ATbl.insert kEnv (k, k')
 
-    fun insertNamedType (GE{tEnv, ...}, name, def, constants, methods) =
+    fun insertNamedType (GE{tEnv, ...}, name, def, constants, methods, funcs) =
 	let
 	 val newType = TE.new(name, def)
 	 val _ = List.app (fn (n,c) => TE.insertConstant(newType,n,c)) constants
 	 val _ = List.app (fn (n,c) => TE.insertMethod(newType,n,c)) methods
+	 val _ = List.app (fn (n,c, d) => TE.insertHiddenVar(newType,n,c, d)) funcs
 				
 	in
 	 (ATbl.insert tEnv (name, newType))

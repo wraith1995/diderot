@@ -89,7 +89,7 @@ structure SimpleTypes =
             | T_Strand id => Atom.toString id
             | T_Kernel => "kernel"
             | T_Image info => ImageInfo.toString info
-	    | T_Fem(data) => "Femdata: " ^ (FemData.femPP(data))
+	    | T_Fem(data) => "Femdata: " ^ (FemData.toString(data))
             | T_Field{diff=NONE, dim, shape} => concat[
                   "field", "(", Int.toString dim, ")[", shapeToString shape, "]"
                 ]

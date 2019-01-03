@@ -36,7 +36,7 @@ structure APITypes =
           ]
       | toString (SeqTy(ty, NONE)) = toString ty ^ "[]"
       | toString (SeqTy(ty, SOME d)) = concat[toString ty, "[", Int.toString d, "]"]
-      | toString (FemData data) = "FemData:" ^ (FemData.femPP data)
+      | toString (FemData data) = "FemData:" ^ (FemData.toString data)
 
   (* does a type have a non-static size? *)
     fun hasDynamicSize StringTy = true

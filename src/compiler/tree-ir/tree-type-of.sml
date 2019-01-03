@@ -117,7 +117,8 @@ structure TreeTypeOf : sig
             | Op.MathFn f => Ty.realTy
 	    | Op.LoadFem(ty) => ty
 	    | Op.ExtractFemItem(ty, _) => ty
-	    | Op.ExtractFem(ty) => ty
+	    | Op.ExtractFemItem2(ty ,outTy, _) => outTy
+	    | Op.ExtractFem(ty,_) => ty
             | _ => raise Fail("invalid operator " ^ Op.toString rator)
           (* end case *))
 

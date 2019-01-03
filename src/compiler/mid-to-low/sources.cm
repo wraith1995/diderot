@@ -31,3 +31,4 @@ is
   load-voxels.sml
   mid-to-low.sml
   mk-low-ir.sml
+  fem-to-low.sml

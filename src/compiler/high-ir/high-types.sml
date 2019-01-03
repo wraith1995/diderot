@@ -76,6 +76,6 @@ structure HighTypes =
       | toString (StrandTy n) = Atom.toString n
       | toString KernelTy = "kernel"
       | toString FieldTy = "field"
-      | toString (FemData(data)) = "femData:" ^ (FemData.femPP data)
+      | toString (FemData(data)) = "femData:" ^ (FemData.toString data)
 
   end

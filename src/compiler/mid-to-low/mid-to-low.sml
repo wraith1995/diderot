@@ -21,6 +21,7 @@ structure MidToLow : sig
     structure DstIR = LowIR
     structure DstTy = LowTypes
     structure DstOp = LowOps
+    structure FO = FemOpt
 
     fun cvtTy ty = (case ty
            of SrcTy.BoolTy => DstTy.BoolTy
@@ -152,7 +153,28 @@ structure MidToLow : sig
               | SrcOp.MathFn f => assign (DstOp.MathFn f)
 	      | SrcOp.LoadFem(ty) => assign (DstOp.LoadFem(cvtTy ty))
 	      | SrcOp.ExtractFemItem(ty, opt) => assign (DstOp.ExtractFemItem(cvtTy ty, opt))
-	      | SrcOp.ExtractFem(ty) => assign (DstOp.ExtractFem(cvtTy ty))
+	      | SrcOp.ExtractFem(ty, inTy) => assign (DstOp.ExtractFem(cvtTy ty, cvtTy inTy))
+	      | SrcOp.ExtractFemItem2(inTy, outTy, opt) =>
+		let
+		 val [dataArg, indexArg] = args'
+		 val inTy' = cvtTy inTy
+		 val outTy' = cvtTy outTy
+		in
+		 (case FO.lowerDataOpt(opt)
+		   of SOME(opt') => FemToLow.expandOp(y, dataArg, indexArg, inTy', outTy', opt')
+		    | NONE => assign (DstOp.ExtractFemItem2(inTy', outTy', opt))
+		 (* end case *))
+		end
+
+
+		
+		(* let *)
+		(*  val [dataArg, indexArg] = args' (* it should alwalys be 2*) *)
+		(* in *)
+	      	(* (case opt *)
+	      	(*   of (FemOpt.ExtractDofs, _) => FemToLow.indexedDataLowering(y, opt, dataArg, indexArg) *)
+	      	(* (* end case *)) *)
+		(* end *)
               | rator => raise Fail("bogus operator " ^ SrcOp.toString rator)
             (* end case *)
           end

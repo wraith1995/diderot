@@ -92,9 +92,12 @@ structure AST =
             dstTy : Ty.ty,
             e : expr
       }
-      | E_LoadFem of FemData.femType * expr option * expr option (* creates new femdata given a femdata type, some expression of that fem data, and some other arg*)
+      | E_LoadFem of FemData.femType * expr option * expr option (*Given FemData of type femType and a dependency of it, makes femData of femType; used to glue inputs togeather. For meshes, both are NONE. For direct inputs, the second is NONE. When comining them, both are there. If femData is a cell, then the first is the dependent data nad the second is an int*)
+     
       | E_ExtractFem of expr * FemData.femType                   (* extract femdata from an expression of the given femdata type*)
       | E_ExtractFemItem of expr * Ty.ty * FemOpt.femOption      (* extract a member from femdata *)
+      | E_ExtractFemItem2 of expr * expr * Ty.ty * Ty.ty * FemOpt.femOption      (* extract a member from femdata *)
+
 
     withtype var_dcl = var * expr option
          and iter = var * expr

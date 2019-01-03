@@ -362,7 +362,7 @@ structure TypeUtil : sig
 			   of SOME(atom) => Atom.toString atom
 			    | NONE => "NONE")
 	    in
-	     "FemType: "^ (FemData.femPP data) ^ " with type var:" ^ tyDep
+	     "FemType: "^ (FemData.toString data) ^ " with type var:" ^ tyDep
 	    end
           (* end case *))
 

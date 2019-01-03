@@ -70,7 +70,7 @@ structure LowTypes =
       | toString (SeqTy(ty, SOME n)) = concat[toString ty, "[", Int.toString n, "]"]
       | toString (ImageTy info) = concat["image(", ImageInfo.toString info, ")"]
       | toString (StrandTy n) = Atom.toString n
-      | toString (FemData(data)) = "femData:" ^ (FemData.femPP data)
+      | toString (FemData(data)) = "femData:" ^ (FemData.toString data)
 
   end
 
