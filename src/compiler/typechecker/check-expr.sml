@@ -44,6 +44,7 @@ structure CheckExpr : sig
     structure TU = TypeUtil
     structure CO = CheckOverload
     structure TE = TypeEnv
+    structure FT = FemData
   (* an expression to return when there is a type error *)
     val bogusExp = AST.E_Lit(L.Int 0)
     val bogusExpTy = (bogusExp, Ty.T_Error)
@@ -256,6 +257,18 @@ structure CheckExpr : sig
                               (* end case *))
                           | _ => err(cxt, [S "application of non-function/field ", V f])
                            (* end case *))
+		fun checkFunTyMatchSingle cxt field funTy args argTys funcApp =
+		    let
+		     val Ty.T_Fun(domTys, rngTy) = funTy
+		    in
+		     case Unify.matchArgs (domTys, args, argTys)
+		      of SOME(args) => (funcApp args, rngTy)
+		       | NONE => err(cxt, [
+				     S "type error in application of method ", A field,
+				     S "  expected: ", TYS domTys, S "\n",
+				     S "  found:    ", TYS argTys
+				    ])
+		    end
 		fun checkFemConstruction cxt loadFem rngTy domTy args argTys=
 		    (case Unify.matchArgs (domTy, args, argTys)
 		      of SOME(args) => (AST.E_LoadFem(loadFem), rngTy)
@@ -292,6 +305,7 @@ structure CheckExpr : sig
 			val (astExp, astTy) = check (env, cxt, exp)
 			val tyName = (case astTy
 				       of Ty.T_Named(tyName, tyDef) => SOME(tyName)
+					| Ty.T_Fem(FT.MeshCell(m), _) => SOME(Atom.atom ("cell(" ^ (Atom.toString (FT.nameOf (FT.Mesh(m)))) ^ ")" ))
 					| _ => (err (cxt, [TY(astTy), S " is not a named type and so has no members."]); NONE)
 				     (*end case*))
 
@@ -299,15 +313,20 @@ structure CheckExpr : sig
 								    of SOME(s) => SOME(s)
 								     | NONE =>  (err (cxt, [S "There is no type named", A(name)]); NONE) )
 						       tyName)
-			val method : AST.var option = Option.mapPartial (fn env => case TypeEnv.findMethod(env, field)
-										    of SOME(s) => SOME(s)
-										     | NONE => ( (err (cxt, [S"The type named", A (TypeEnv.findName env),
-													     S " does not have a member named",
-													     A(field)])); NONE)) tyEnv
+			val method : ((AST.var option) * ( (((AST.expr list) -> (AST.expr) ) * Ty.ty) option)) option
+			    = Option.mapPartial (fn env => case TypeEnv.findMethod(env, field)
+							    of SOME(s) => SOME ((SOME(s), NONE))
+							     | NONE =>
+							       (case TypeEnv.findHiddenVar(env, field)
+								 of SOME(s) => SOME(NONE, SOME(s))
+								  | NONE => ( (err (cxt, [S"The type named", A (TypeEnv.findName env),
+										     S " does not have a member named",
+										     A(field)])); NONE))) tyEnv
 									
 		       in
 			case method 
-			 of SOME(s) => checkMethodApp((#1 cxt, span), s) (args) astExp ( tys) astTy (*Note: This could result in a cryptic error message*)
+			 of SOME(SOME(s), _) => checkMethodApp((#1 cxt, span), s) (args) astExp ( tys) astTy (*Note: This could result in a cryptic error message*)
+			  | SOME(NONE, SOME(f, funTy)) => checkFunTyMatchSingle cxt field funTy (astExp :: args) (astTy :: tys) f
 			 | NONE => bogusExpTy
 		       end
 		     )

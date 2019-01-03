@@ -102,7 +102,7 @@ structure Env : sig
     val insertLocal : t * context * Atom.atom * AST.var -> t
 
   (* insert a new named type into the environment with a list of constants and methods *)
-    val insertNamedType : t * context * Atom.atom * Types.ty * (Atom.atom * ConstExpr.t ) list  * (Atom.atom * AST.var ) list -> t
+    val insertNamedType : t * context * Atom.atom * Types.ty * (Atom.atom * ConstExpr.t ) list  * (Atom.atom * AST.var ) list * (Atom.atom * ((AST.expr list) -> (AST.expr )) * Types.ty ) list -> t
 
 															 
     val findStrand : t* Atom.atom -> StrandEnv.t option
@@ -341,8 +341,8 @@ structure Env : sig
               vEnv = AMap.insert(vEnv, x, x')
             }
     end
-    fun insertNamedType (E{scope, inLoop, bindings, gEnv, vEnv}, cxt, name, def, consts, methods) = let
-     val _ = GE.insertNamedType(gEnv, name, def, consts, methods)
+    fun insertNamedType (E{scope, inLoop, bindings, gEnv, vEnv}, cxt, name, def, consts, methods, funcs) = let
+     val _ = GE.insertNamedType(gEnv, name, def, consts, methods, funcs)
      val loc = Error.location cxt
     in
      E{scope = scope, inLoop = inLoop,
