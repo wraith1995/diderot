@@ -11,6 +11,8 @@
 structure FemData : sig
 
 	   type mesh
+	   val meshDim : mesh -> int
+		  
 	   type space
 	   type func
 
@@ -30,20 +32,27 @@ structure FemData : sig
 	   val spaceOf : femType -> femType
 	   val extractMesh : femType -> mesh option
 	   val extractSpace : femType -> space option
+	   val dependencyOf : femType -> femType option
+	   val cellOf : femType -> femType
 
 	   (* Extract dimensional constants*)
 				      
 	   val underlyingDim : femType -> int
+	   val dataShapeOf : femType -> int list
 	   val meshMapDim : mesh -> int
+	   val spaceDim : space -> int
+
 
 	   (* various utilities for type checking, printing, value numbering. *)
 	   val same : femType * femType -> bool
-	   val femPP : femType -> string
+	   val toString : femType -> string
 	   val hash : femType -> word
 
 	   (* various utilities for figuring out when we can use some sort of fem data*)
 	   val validInput : femType -> bool
 	   val isValue : femType -> bool
+	   val baseFem : femType -> bool
+
 
 	   (* placeholders for creating fem data *)
 	   val defaultSpace : mesh * Atom.atom -> femType   
@@ -119,10 +128,18 @@ fun nameOf data =
       of Mesh(Mesh'{name,...}) => name
        | Space(Space'{name,...}) => name
        | Func(Func'{name,...}) => name
-       | _ => raise Fail "Asked for the name of a non data fem type" (*doesn't make sense*)
+       | MeshCell(Mesh'{name, ...}) => Atom.atom ("mesh_cell_"^(Atom.toString name))
+       | FuncCell(Func'{name, ...}) => Atom.atom ("func_cell_"^(Atom.toString name))
+       | MeshPos(Mesh'{name, ...}) => Atom.atom ("mesh_pos_" ^(Atom.toString name))
+       | _ => raise Fail "Asked for the name of ref cell fem type" (*doesn't make sense*)
     (* end case*)
     )
 
+fun cellOf data =
+    (case data
+      of Mesh(m) => MeshCell(m)
+       | Func(f) => FuncCell(f)
+       | _ => raise Fail "impossible to turn this femdata into a cell type")
 (* fun trueNameOf data = *)
 (*     (case data *)
 (*       of Mesh(m) => Atom.atom (String.concat(["mesh_", Int.toString (meshDim(m)), "_", Int.toString (meshMapDim(m)),]))) *)
@@ -137,7 +154,14 @@ fun underlyingDim data =
        | FuncCell(f) => underlyingDim (Func(f))
        | MeshPos(m) => meshDim m
     (* end case*)
-    )      
+    )
+fun dataShapeOf data =
+    (case data
+      of Mesh(m) => [meshMapDim m, meshDim m]
+       | MeshCell(m) => [meshMapDim m, meshDim m] 
+       | MeshPos(m) => [meshMapDim m, meshDim m]
+
+    (*end case*))
 
 
 fun sameMesh(m1, m2)
@@ -186,7 +210,8 @@ fun isValue ty =
       of MeshCell(_) => true
        | FuncCell(_) => true
        | _ => false)
-fun femPP ty =
+
+fun toString ty =
     (case ty
       of Mesh(_) => "Mesh"
        | Space(_) => "Space"
@@ -196,6 +221,16 @@ fun femPP ty =
        | FuncCell(_) => "FuncCell"
        | MeshPos(_) => "MeshPos"
     (* end case*))
+fun baseFem ty =
+    let
+     val _ = print((toString ty) ^ "\n");
+    in
+    (case ty
+      of Mesh(_) => true
+       | Space(_) => true
+       | Func(_) => true
+       | _ => false)
+    end      
 
 fun extractMesh ty =
     (case ty
@@ -206,6 +241,17 @@ fun extractSpace ty =
     (case ty
       of Space(s) => SOME(s)
        | _ => NONE)
+
+fun dependencyOf ty =
+    (case ty
+      of Mesh(_) => NONE
+       | Space(Space'{mesh, ...}) => SOME(Mesh(mesh))
+       | Func(Func'{space,...}) => SOME(Space(space))
+       | RefCell(m) => SOME(Mesh(m))
+       | MeshCell(m) => SOME(Mesh(m))
+       | FuncCell(f) => SOME(Func(f))
+       | MeshPos(m) => SOME(Mesh(m))
+    (* end case *))
 
 (* fem types that are valid inputs.*)
 fun isInputFemType ty =
