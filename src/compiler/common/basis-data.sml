@@ -16,7 +16,9 @@ structure BasisData : sig
 	   val same : t * t -> bool
 	   val hash : t -> word
 
-	   val makeBasis : real Array.array * int *int -> t
+	   val makeBasis : real Array.array * int * int -> t
+
+	   val dx : t * int -> t
 			     
 			 
 	  end = struct
@@ -29,7 +31,7 @@ datatype t = BasisFunc of {
 	  dim : int,
 	  degree : int,
 	  strForm : Atom.atom,
-	  coeffs : r Array.array
+	  coeffs : r Array.array 
 	 }
 val empty = BasisFunc {dim = 0, degree = 0, coeffs = A.fromList [], strForm = Atom.atom "0.0"}
 
@@ -37,6 +39,9 @@ fun toString(BasisFunc{strForm, ...}) = strForm
 
 fun same(b1,b2) = Atom.same(toString(b1), toString(b2))
 fun hash(BasisFunc{strForm,  ...}) = Atom.hash(strForm)
+
+
+					      
 
 (* we use an index scheme for our polynomials*)
 (* We store them in the monomial basis where our array is degree^dim and indexed as such*)
@@ -56,6 +61,7 @@ fun indexScheme(index, dim, degree) =
     in
      index
     end
+
 
       
 fun makeIndexes(dim, degree) =
@@ -78,8 +84,16 @@ fun makeMonoTerms(reals, dim, degree) =
 	 in
 	  product
 	 end
-     fun getIndex idx = Real.toString(A.sub(reals, indexScheme(idx, dim, degree))) ^ makePowers(idx)
-     val monoTerms = List.map getIndex idxes
+     fun getIndex idx =
+	 let
+	  val test = A.sub(reals, indexScheme(idx, dim, degree))
+			  
+	 in
+	  if Real.==(test, 0.0)
+	  then ""
+	  else Real.toString(test) ^ "*" ^ makePowers(idx)
+	 end
+     val monoTerms = List.filter (fn x => x <> "") (List.map getIndex idxes)
      val string = String.concatWith "+" monoTerms
      
     in
@@ -96,8 +110,36 @@ fun makeBasis(reals, dim, degree) =
      BasisFunc({dim = dim, degree = degree, coeffs = reals, strForm = monoRep})
     end
 
+fun zero dim = BasisFunc({dim = dim, degree = 0, coeffs = A.fromList [0.0], strForm = Atom.atom "0.0"})
+      
+fun dx(BasisFunc({dim, degree, coeffs, strForm}), varIndex) =
+    let
+     val len = A.length coeffs
+     val len' = power(Int.min(degree - 1, 0), dim)
+     (* val primeArray = A.array(, real) *)
+     (* val newArray = A.copy({src = coeffs, dst = primeArray, di = 0 }) *)
+     val modIndexes = List.rev (List.tabulate(degree, fn x => power(degree, x)))
+     fun idxes x = Array.fromList (List.map (fn d => Int.mod(x, d))  modIndexes)
+     fun getVarIdx(idx : int A.array) : int = A.sub( idx, varIndex)
+     fun setIdx idx =
+	 let
+	  val index = idxes idx (* translate array index to triplet index*)
+	  val power : int = getVarIdx index
+				      (* get power required *)
+				      (*create the lower index*)
+				      (* set *)
+	 in
 
-
+	  ()
+	 end
+    in
+     if dim - varIndex < 0
+     then raise Fail "impossible derivative"
+     else if degree = 1
+     then zero dim
+     else 
+      BasisFunc({dim = dim, degree = degree - 1, coeffs = coeffs, strForm = strForm })
+    end
 
 
     

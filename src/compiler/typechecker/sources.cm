@@ -14,6 +14,8 @@ is
 
   $/basis.cm
   $/smlnj-lib.cm
+  $/json-lib.cm
+  $/regexp-lib.cm
 
   ../common/sources.cm
   ../ast/sources.cm
@@ -38,3 +40,4 @@ is
   type-error.sml
   unify.sml
   util.sml
+  check-type-file.sml
