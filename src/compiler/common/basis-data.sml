@@ -12,11 +12,11 @@
 structure BasisData : sig
 	   type t
 
-	   val empty : t
+	   val empty : int * int -> t
 	   val same : t * t -> bool
 	   val hash : t -> word
 
-	   val makeBasis : real Array.array * int * int -> t
+	   val makeBasis : real Array.array * int * int -> t option
 
 	   val dx : t * int -> t
 			     
@@ -26,6 +26,9 @@ structure R = Real
 type r = Real.real
 structure A = Array
 
+(* why I can't find this in the interger spec is beyond me *)
+fun power (x, 0) = 1  
+  | power (x, n) = x * power(x, n-1)		
 
 datatype t = BasisFunc of {
 	  dim : int,
@@ -33,7 +36,10 @@ datatype t = BasisFunc of {
 	  strForm : Atom.atom,
 	  coeffs : r Array.array 
 	 }
-val empty = BasisFunc {dim = 0, degree = 0, coeffs = A.fromList [], strForm = Atom.atom "0.0"}
+fun empty(dim, degree) = BasisFunc {dim = dim,
+				    degree = degree,
+				    coeffs = A.tabulate(power(degree, dim), fn x => 0.0),
+				    strForm = Atom.atom "0.0"}
 
 fun toString(BasisFunc{strForm, ...}) = strForm
 
@@ -48,9 +54,7 @@ fun hash(BasisFunc{strForm,  ...}) = Atom.hash(strForm)
 
 
 (* translates an index x^a y^b z^c -> index: recall how multi-dimensional indeicies work: https://eli.thegreenplace.net/2015/memory-layout-of-multi-dimensional-arrays/*)
-(* why I can't find this in the interger spec is beyond me *)
-fun power (x, 0) = 1  
-  | power (x, n) = x * power(x, n-1)
+
 fun indexScheme(index, dim, degree) =
     let
 
@@ -107,7 +111,8 @@ fun makeBasis(reals, dim, degree) =
     let
      val monoRep = Atom.atom (makeMonoTerms(reals, dim, degree))
     in
-     BasisFunc({dim = dim, degree = degree, coeffs = reals, strForm = monoRep})
+     SOME(BasisFunc({dim = dim, degree = degree, coeffs = reals, strForm = monoRep}))
+     handle exn => NONE
     end
 
 fun zero dim = BasisFunc({dim = dim, degree = 0, coeffs = A.fromList [0.0], strForm = Atom.atom "0.0"})

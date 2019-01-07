@@ -333,7 +333,7 @@ structure CheckGlobals : sig
 	       fun validateFemType femTyDef fileinfo =
 		   let
 		    (*TODO: parse the file and make these correct...*)
-		    val tempMesh = FT.mkMesh(2, 5,tyName)
+		    val tempMesh = FT.mkMesh(2, 5, [], tyName)
 		    fun tempSpace mesh shape = FT.mkSpace(2, shape, mesh,tyName)
 		    fun tempFunc space = FT.mkFunc(space, tyName)
 		    (*TODO : check against the file in the following.*)

@@ -56,7 +56,7 @@ structure FemData : sig
 
 	   (* placeholders for creating fem data *)
 	   val defaultSpace : mesh * Atom.atom -> femType   
-	   val mkMesh : int * int * Atom.atom -> femType
+	   val mkMesh : int * int * BasisData.t list * Atom.atom -> femType
 	   val mkSpace : int * int list * mesh * Atom.atom -> femType
 	   val mkFunc : space * Atom.atom -> femType
 
@@ -71,9 +71,9 @@ datatype mesh = Mesh' of {
 	  name : Atom.atom
 	 }
 
-fun meshDim (Mesh'({dim, mappingDim, basis, name})) = dim
-fun meshMapDim (Mesh'{dim, mappingDim, basis, name}) = mappingDim
-fun meshBasis (Mesh'{dim, mappingDim, basis, name}) = basis
+fun meshDim (Mesh'({dim, mappingDim, basis, name, ...})) = dim
+fun meshMapDim (Mesh'{dim, mappingDim, basis, name,...}) = mappingDim
+fun meshBasis (Mesh'{dim, mappingDim, basis, name, ...}) = basis
 datatype space = Space' of {
 	  dim : int,
 	  shape : int list,
@@ -82,17 +82,17 @@ datatype space = Space' of {
 	  name : Atom.atom
 	 }
 
-fun spaceDim (Space'{dim, shape, basis, mesh, name}) = dim
-fun spaceShape (Space'{dim, shape, basis, mesh, name}) = shape
-fun spaceBasis (Space'{dim, shape, basis, mesh, name}) = basis
-fun spaceMesh (Space'{dim, shape, basis, mesh, name}) = mesh
+fun spaceDim (Space'{dim, shape, basis, mesh, name, ...}) = dim
+fun spaceShape (Space'{dim, shape, basis, mesh, name, ...}) = shape
+fun spaceBasis (Space'{dim, shape, basis, mesh, name, ...}) = basis
+fun spaceMesh (Space'{dim, shape, basis, mesh, name, ...}) = mesh
 
 
 datatype func = Func' of {
 	  space : space,
 	  name : Atom.atom
 	 }
-fun funcSpace (Func'{space, name}) = space
+fun funcSpace (Func'{space, name, ...}) = space
 
 
 datatype femType = Mesh of mesh
@@ -260,12 +260,12 @@ fun isInputFemType ty =
        | MeshPos(_) => false
        | _ => true)
       
-fun mkMesh(dim, mDim, name) = Mesh (Mesh' {dim = dim, mappingDim = mDim, basis = [BD.empty], name = name})
+fun mkMesh(dim, mDim, basis, name) = Mesh (Mesh' {dim = dim, mappingDim = mDim, basis = basis, name = name})
 
 
 fun defaultSpace (m as Mesh'{dim,...}, name) = Space (Space' {dim = dim, shape = [], basis = [], mesh = m, name = name})
 
-fun mkSpace(dim, shape, mesh, name) = Space(Space' {dim = dim, shape = shape, basis=[BD.empty], mesh = mesh, name = name})
+fun mkSpace(dim, shape, mesh, name) = Space(Space' {dim = dim, shape = shape, basis=[], mesh = mesh, name = name})
 
 fun mkFunc (space, name) = Func(Func' {space = space, name = name})
 
