@@ -316,6 +316,7 @@ structure CheckGlobals : sig
 	       (*Note: I'm going to reuse the span here a lot in places where it hopefully shouldn't matter.*)
 	       (*The zeroeth step is to determine if we are building an fem or non-fem based type.*)
 	       (*FIX ME: reorganize this code*)
+	       fun reformatConstants cs =  List.map (fn (x,y,z) => (Atom.atom z,y)) cs
 	       val tyDef = (case tyDefBind
 			     of PT.T_Mark({span, tree}) => tree
 			      | _ => tyDefBind
@@ -531,7 +532,7 @@ structure CheckGlobals : sig
 		   let
 		    val (femType, constants) : (FT.femType * Atom.atom option) option *  (Types.ty * ConstExpr.t * string) list = validateFemType femTyDef file
 		    val (methodRefs, methods, newVars) = Option.getOpt (Option.map (makeFemMethods femTyDef file) femType, ([],[],[]))
-		    val constants' = List.map (fn (x,y,z) => (Atom.atom z,y)) constants
+		    val constants' = reformatConstants constants
 		    val envI =  Option.map (fn x => Env.insertNamedType(env, cxt, tyName, Ty.T_Fem(x), constants', methodRefs, newVars)) femType
 
 		    val argsOption = (case (envI, femType)
@@ -546,7 +547,7 @@ structure CheckGlobals : sig
 		    
 		   end
 
-	       fun makeBasicNamedType astTyDef = let
+	       fun makeBasicNamedType astTyDef file = let
 		(*NOTE: error handling here is borked*)
 		(*Step 1: Check the type definition*)
 		val _ = print("ummm 1\n");
@@ -580,9 +581,8 @@ structure CheckGlobals : sig
 		val methods = [(unpack, unpackVar)]
 		val funDcls = [astConFun, astDeConFun]
 
-		(*Step 4: Add constants: TBD after file formats*)
-		val constants = []
-
+		(*Step 4: Add constants*)
+		val constants = reformatConstants (Option.valOf ((Option.map (fn x => CF.parseConstants(env, cxt, tyName, x))) (Option.mapPartial (fn x => CF.loadJson(x, cxt)) file)))
 		val env' = Env.insertNamedType(env, cxt, tyName, thisTy, constants, methods, [])
 	       in
 		if isValType
@@ -595,7 +595,7 @@ structure CheckGlobals : sig
 	       then (case file
 		      of SOME(file') => makeFemType tyDef file'
 		       | _ => (err (cxt, [S "FemType declared without file"]); (ERROR, env)))
-	       else makeBasicNamedType tyDef
+	       else makeBasicNamedType tyDef file
 
 					  
 	      end
