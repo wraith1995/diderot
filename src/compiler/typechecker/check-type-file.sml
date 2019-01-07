@@ -6,14 +6,18 @@
  * All rights reserved.
  *)
 structure CheckTypeFile  : sig
-	   type constants = (string * Types.ty * AST.expr ) list
-	   datatype other = M of FT.mesh | S of FT.space | F of FT.func
-	   datatype result = C of constants | Fem of constants * other
+
 
 	   val matchType : string -> (Types.ty * int list) option
-	   val parseConstant : JSON.value -> Types.ty * ParseTree.expr
-	   val parseConstants : JSON.value -> Types.ty * ParseTree.expr list
-									(* step 1: send env, error context, and remake parse constant*)
+	   val parseConstant : Env.t * Env.context * Atom.atom * JSON.value * Types.ty option -> Types.ty * ConstExpr.t * string
+	   val parseConstants : Env.t * Env.context * Atom.atom * JSON.value -> (Types.ty * ConstExpr.t * string) list
+												      
+	   val parseMesh : Env.t * Env.context * Atom.atom * JSON.value -> (FemData.mesh option * (Types.ty * ConstExpr.t * string) list)
+															 (* grab specific constants; parse basis can be general*)
+	   (* val parseSpace : Env.t * Env.context * Atom.atom * FemData.space * JSON.value -> FemData.space *)
+	   (* val parseFunc : Env.t * Env.context * Atom.atom * FemData.space * JSON.value -> FemData.func *)
+											    
+
 									(* step 2: make fem spec, and parse to femData *)
 									(* step 3: drop idea of result, Other, etc -> just make parseX where X=mesh,...,..,..*)
 									(* step 4: reviese type checker to handle constants, checking of fem data against file info*)
@@ -23,8 +27,11 @@ structure CheckTypeFile  : sig
 
 structure PT = ParseTree
 structure FT = FemData
+structure FN = FemName
+structure BD = BasisData
 structure Ty = Types
 structure L = Literal
+structure CE = ConstExpr
 structure J = JSON
 structure JP = JSONParser
 structure JPP = JSONPrinter
@@ -157,38 +164,156 @@ fun handleArray [] (x::xs) valueWrap json =
      PT.E_Sequence(arrayToList values)
     end
   | handleArray [] [] valueWrap json = valueWrap json
-fun makeString x = SOME(PT.E_Lit (Literal.String (JU.asString x))) handle exn => NONE
-fun makeBool x = SOME(PT.E_Lit (Literal.Bool (JU.asBool x))) handle exn => NONE
-fun makeInt x = SOME(PT.E_Lit (Literal.Int (JU.asIntInf x))) handle exn => NONE
-fun makeReal x = SOME(PT.E_Lit (Literal.Real (JU.asNumber x))) handle exn => NONE
+
+fun oE f x = SOME(f x) handle exn => NONE
+fun makeString x = PT.E_Lit (Literal.String (oE JU.asString x))
+fun makeBool x = PT.E_Lit (Literal.Bool (oE JU.asBool x))
+fun makeInt x = PT.E_Lit (Literal.Int (oE JU.asIntInf x))
+fun makeReal x = PT.E_Lit (Literal.Real (oE JU.asNumber x))
 fun tryAll x = (Option.valof o Option.valof) (List.find Option.isSome (List.map (fn g => g x) [makeString, makeBool, makeInt, makeReal]))
-			    
-(*real, int, string, bool to ast*)
-fun parseConstant json =
+					     
+val bogusExp = AST.E_Lit(L.Int 0)
+val bogusExpTy = (Ty.T_Error, bogusExp)
+val bogusExpTy' = (Ty.T_Error, bogusExp, "")
+		   
+fun err arg = (TypeError.error arg; bogusExpTy)
+
+fun typeEquality ty ty' =
+    (case Unify.matchType(ty, ty')
+      of Unify.EQ => true
+       | _ => false
+    (* end case *))
+
+fun mkConstExpr cxt expr = CheckConst.CheckConst(cxt, false, expr)
+fun extractIntConst cxt expr =
+    (case mkConstExpr cxt expr
+      of SOME(ConstExpr.Int(i)) => SOME(IntInf.toInt i)
+       | NONE => NONE)
+
+
+
+		
+(* todo: this function needs to be refactored to provide better errors *)
+fun parseConstant(env, cxt, tyName, optionalSpecTy, json) =
     let
      val findField = JU.findField json
-     val name = findField "name"
-     val tyString = findField "type"
-     val value = findField "value"
-
+     val name = JU.asString (findField "name")
+     val tyString = JU.asString (findField "type")
+     val value = JU.asString (findField "value")
      val typeVal = matchType tyString
     in
      (case typeVal
-       of SOME(ty, seqInts, tensorInts) => SOME(ty, handleArray seqInts tensorInts tryAll json) 
-	| NONE => NONE
-		  handle exn => NONE
-     (* end case *) )
+       of SOME(ty, seqInts, tensorInts) =>
+	  let
+	   val resultExpr = handleArray seqInts tensorInts tryAll json
+	   val (astExpr, ty') = CheckExpr.check(env, cxt, resultExpr)
+	   val result = (case optionalSpecTy
+			  of NONE => (mkConstExpr astExpr, ty)
+			   | SOME(ty'') => (case Unify.matchType(ty, ty'')
+					     of Unify.EQ => (ty, astExpr, name)
+					      | _ => (err (cxt, [S "declared type of constant", S name, S ", in definition of",
+									A tyName, S ", has type of ", TY(ty), S "but it is contrained to have type ",
+									TY ty'', S"."]) ;bogusExpTy')
+					   (*end case*))
+			(*end case *))
+	  in
+	   (case Unify.matchType(ty, ty')
+	     of Unify.EQ => result
+	      | _ => (err (cxt, [S "declared type of constant", S name, S ", in definition of",
+				 A tyName, S ", has type of ", TY(ty), S "but the actual type is ",
+				 TY ty', S"."]) ;bogusExpTy')
+	   (* end case*))
+	  end 
+	| NONE => (err (cxt, [S "declared type of constant", S name, S ", in definition of",
+			      A tyName, S " could not be parsed!"
+		       ]) ;bogusExpTy')
+		  handle exn => (err (cxt, [S "declared type of constant", S name, S ", in definition of",
+					    A tyName, S " could not be parsed!"
+				     ]) ;bogusExpTy')
+     (*end case*))
+    end
+
+fun parseConstants(env, cxt, tyName, json) =
+    let
+     val findField = oE JU.findField json
+     val constants = findField "constants"
      
+    in
+     (case constants
+       of SOME(a) =>  JU.arrayMap (fn x => parseConstant(env, cxt, tyName, NONE, x) ) a
+	| NONE => (err (cxt, [S ", In  the definition of", A tyName, S "there is no constants object"
+				     ]) ;bogusExpTy)
+				      (* end case *))
+
+    end
+fun findField x y = SOME(JU.findField y x) handle exn => NONE
+fun optionList list = SOME(List.map Option.valOf list) handle exn => NONE
+fun optionTuple (x,y) = SOME((Option.valOf x, Option.valOf y)) handle exn => NONE
+							   
+fun constantExists(name, ty) =
+    let
+     fun finder (ty', expr, name') = name = name' andalso
+				     (case ty
+				       of  NONE => true
+					| SOME(ty'') => typeEquality(ty'', ty'))
+	 
+    in
+     List.find finder
+    end
+
+fun parseScalarBasis(env, cxt, tyName, json, dim, degree, spaceDim) =
+    let
+     fun maker x =  BD.makeBasis(x, dim, degree)
+     fun realArray x = JU.arrayMap (JU.asNumber) x
+     fun f = maker o realArray
+    in
+     JU.arrayMap f json
+     handle exn => (err (cxt, [S"Unable to parse polynomial basis for type ", A tyName, S"."]);
+		   [BD.empty(dim, degree)])
+    end
+fun parseMesh(env, cxt, tyName, json) =
+    let
+     val mesh = findField "mesh" json
+     val constantsField = Option.mapPartial (findField "constants") mesh
+     val constant = Option.map (fn x => parseConstants(env, cxt, tyName, x)) constantsField
+			       
+     val dimConstCheck = (Option.join o Option.map) (constantExists(FN.dim, Ty.T_Int)) constant
+     val meshMapConstCheck = (Option.join o Option.map) (constantExists(FN.meshMapDim, Ty.T_Int)) constant
+     val degreeConstCheck = (Option.join o Option.map) (constantExists(FN.maxDegree, Ty.T_Int)) constant
+					  
+     val dim = extractIntConst cxt dimConstCheck
+     val spaceDim = extractIntConst cxt meshMapConstCheck
+     val degree = degreeConstCheck cxt degreeConstCheck
+				   
+     val combined = optionList [dimConstCheck, meshMapConstCheck]
+     val transformShapeConst = Option.map (fn ([(ty, expr, name), (ty', expr', name')])
+					      =>
+						let
+						 val ty'' = (Ty.T_Sequence(Ty.T_Int, 2))
+						in
+						 [(ty'', CE.Seq([expr', expr], ty''), FN.tds)]
+						end
+					  ) combined
+     val newConstants = Option.map (List.@) (optionTuple(constants, transformShapeConst))
+
+     (* now we get the polynomial are we get ints...*)
+     val scalarBasis = findField "poly" json
+     val parsedBasis = Option.map
+			 (fn [json, dim, degree, spaceDim] =>
+			     parseScalarBasis(env, cxt, tyName, json, dim, degree, spaceDim))
+			 (optionList ([scalarBasis, dim, degree, spaceDim]))
+
+     val meshVal = Option.map (fn [x,y,basis] => FD.mkMesh(x,y,basis)) (optionList ([dim, spaceDim,parsedBasis]))
+     val newConstants' = Option.getOpt(newConstants, [])
+			      
+
+
+    in
+     (meshVal, newConstants')
     end
     
       
     
 
-		 (*figure out depth and build parser*)
-		 (*check-expr*)
-		 (*do this in a list*)
-		 (* check for mesh key*)
-type constants = (string * Ty.ty * AST.expr ) list
-datatype other = M of FT.mesh | S of FT.space | F of FT.func
-datatype result = C of constants | Fem of constants * other
+
 end

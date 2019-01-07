@@ -7,8 +7,9 @@ Ongoing issue:
 -Use of that libindex
 -CheckIR
 -Email Kirby
-
-
+-Misuse of degree vs spaceDim -> ops
+---USE AST THING TO PARSE CONSTANTS??? - NO BECAUSE JSON
+Continue MeshCell: Transformsm
 
 -1.
 0. Pointer issues - globals and internals are values - we need maps

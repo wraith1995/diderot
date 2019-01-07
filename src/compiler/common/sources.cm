@@ -32,6 +32,7 @@ Library
   structure FemData
   structure FemOpt
   structure BasisData
+  structure FemName
 
 is
   $/basis.cm
@@ -63,4 +64,4 @@ is
   basis-data.sml
   fem-data.sml
   fem-opt.sml
-
+  fem-name.sml
