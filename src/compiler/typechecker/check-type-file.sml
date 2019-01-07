@@ -287,7 +287,7 @@ fun parseConstants(env, cxt, tyName, json) =
      (case constants
        of SOME(a) =>  JU.arrayMap (fn x => parseConstant(env, cxt, tyName, NONE, x) ) a
 	| NONE => (err (cxt, [S ", In  the definition of", A tyName, S "there is no constants object"
-				     ]) ;[bogusExpTy' cxt])
+				     ]) ;[])
 				      (* end case *))
 
     end
