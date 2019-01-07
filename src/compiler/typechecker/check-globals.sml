@@ -30,6 +30,7 @@ structure CheckGlobals : sig
     structure CO = CheckOverload
     structure FT = FemData
     structure N = BasisNames
+    structure CF = CheckTypeFile
 
 		     
     val err = TypeError.error
@@ -326,22 +327,27 @@ structure CheckGlobals : sig
 				  | PT.T_Func(_) =>  true 
 				  (*TODO: Add Sequences if you want???*)
 				  | _ =>   false)
-	       val _ = print((Bool.toString isFemType) ^ "\n");
 	       (* TODO: Add file parsing; for now, we do dummy info.*)
 	       (* This needs to be moved somewhere else... I think we need it in the type utilities*)
 	       (* At the least, we need to isolate the key functionality *)
 	       fun validateFemType femTyDef fileinfo =
 		   let
 		    (*TODO: parse the file and make these correct...*)
+		    val parsedJson = CF.loadJson(fileinfo, cxt)
 		    val tempMesh = FT.mkMesh(2, 5, [], tyName)
 		    fun tempSpace mesh shape = FT.mkSpace(2, shape, mesh,tyName)
 		    fun tempFunc space = FT.mkFunc(space, tyName)
 		    (*TODO : check against the file in the following.*)
 
 		   in
-		    (case femTyDef
-		      of PT.T_Mesh => SOME(tempMesh, NONE)
-		       | PT.T_Space(mesh, shape) =>
+		    (case (femTyDef, parsedJson)
+		      of (PT.T_Mesh, SOME(parsed)) =>
+			 let
+			  val _ = ()
+			 in
+			   (SOME(tempMesh, NONE), [])
+			 end
+		       | (PT.T_Space(mesh, shape), SOME(parsed)) =>
 			 let
 			  (*validate shape*)
 			  val shapeTy = CheckExpr.checkShape(env, cxt, shape)
@@ -365,30 +371,31 @@ structure CheckGlobals : sig
 							   
 			 in
 			  (case (shape', meshType)
-			    of (SOME(lShape), SOME(meshType')) => SOME(tempSpace meshType' lShape, SOME(mesh))
+			    of (SOME(lShape), SOME(meshType')) => (SOME(tempSpace meshType' lShape, SOME(mesh)), [])
 			     (*NOTE: these errors could be improved.*)
 			     | (NONE, SOME(_)) => ((err (cxt, [
 				S "Declared a function space type ",
-				A(tyName), S" with an invalid underlying shape type"])); NONE)
+				A(tyName), S" with an invalid underlying shape type"])); (NONE, []))
 			    | (_, NONE) => ((err (cxt, [
 				S "Declared a function space type ",
-				A(tyName), S" with an underlying type that is not a mesh or not defined", A(mesh)])); NONE)
+				A(tyName), S" with an underlying type that is not a mesh or not defined", A(mesh)])); (NONE, []))
 			  (*end case*))
 			 end
 
-		       | PT.T_Func(space) =>
+		       | (PT.T_Func(space), SOME(parsed)) =>
 			 let
 			  val spaceType = Option.mapPartial (FT.extractSpace) (Option.map (fn (x,y) => x) (Option.mapPartial TU.extractFemType (Option.mapPartial
 												(fn x => SOME(TypeEnv.findDef x))
 												(E.findTypeEnv(env, space)))))
 			 in
 			  (case spaceType
-			    of SOME(space') => SOME(tempFunc space', SOME(space))
+			    of SOME(space') => (SOME(tempFunc space', SOME(space)), [])
 			    |  NONE =>  ((err (cxt, [
 				S "Declared a femFunction type ",
-				A(tyName), S" with an underlying type that is not a space or not defined", A(space)])); NONE)
+				A(tyName), S" with an underlying type that is not a space or not defined", A(space)])); (NONE, []))
 			  (* end case *))
 			 end
+		       | (_, NONE) => (err (cxt, [S "Unable to parse file for declared fem type:", A(tyName) ]); (NONE, []))
 		       | _ => raise Fail ("Non fem type passed to validateFemType: " ^ Atom.toString(tyName))
 		    (* end case *))
 		   end
@@ -520,13 +527,12 @@ structure CheckGlobals : sig
 		   end
 
 
-	       fun makeFemType femTyDef =
+	       fun makeFemType femTyDef file =
 		   let
-		    val femType : (FT.femType * Atom.atom option) option = validateFemType femTyDef file
-		    val constants = []
+		    val (femType, constants) : (FT.femType * Atom.atom option) option *  (Types.ty * ConstExpr.t * string) list = validateFemType femTyDef file
 		    val (methodRefs, methods, newVars) = Option.getOpt (Option.map (makeFemMethods femTyDef file) femType, ([],[],[]))
-
-		    val envI =  Option.map (fn x => Env.insertNamedType(env, cxt, tyName, Ty.T_Fem(x), constants, methodRefs, newVars)) femType
+		    val constants' = List.map (fn (x,y,z) => (Atom.atom z,y)) constants
+		    val envI =  Option.map (fn x => Env.insertNamedType(env, cxt, tyName, Ty.T_Fem(x), constants', methodRefs, newVars)) femType
 
 		    val argsOption = (case (envI, femType)
 				       of (SOME(envI'), SOME((femTy', _))) => SOME((envI', femTy'))
@@ -586,7 +592,9 @@ structure CheckGlobals : sig
 
 	      in
 	       if isFemType
-	       then makeFemType tyDef
+	       then (case file
+		      of SOME(file') => makeFemType tyDef file'
+		       | _ => (err (cxt, [S "FemType declared without file"]); (ERROR, env)))
 	       else makeBasicNamedType tyDef
 
 					  

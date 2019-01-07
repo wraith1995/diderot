@@ -12,6 +12,8 @@ structure FemName  = struct
 (*mesh:*)
 
 val dim = "dim"
+val maxDegree = "degree"
 val meshMapDim = "meshMapDim"
-val transformDofShape = "transformDofShape"
+val tds = "transformDofShape"
+
 end
