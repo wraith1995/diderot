@@ -582,7 +582,9 @@ structure CheckGlobals : sig
 		val funDcls = [astConFun, astDeConFun]
 
 		(*Step 4: Add constants*)
-		val constants = reformatConstants (Option.valOf ((Option.map (fn x => CF.parseConstants(env, cxt, tyName, x))) (Option.mapPartial (fn x => CF.loadJson(x, cxt)) file)))
+		val _ = print("Hummm!\n")
+		val constants = reformatConstants (Option.valOf ((Option.map (fn x => CF.parseConstants(env, cxt, tyName, x))) (Option.mapPartial (fn x => CF.loadJson(x, cxt)) file)) handle exn => [])
+		val _ = print("Hummm1!\n")
 		val env' = Env.insertNamedType(env, cxt, tyName, thisTy, constants, methods, [])
 	       in
 		if isValType
