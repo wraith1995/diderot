@@ -237,13 +237,13 @@ fun parseConstant(env, cxt, tyName, optionalSpecTy, json) =
      val findField = JU.findField json
      val name = Option.valOf (Option.map JU.asString (findField "name"))
      val tyString = Option.map JU.asString (findField "type")
-     val value = Option.map JU.asString (findField "value")
+     val value = Option.valOf (findField "value")
      val typeVal = Option.map matchType tyString
     in
      (case Option.join typeVal
        of SOME(ty, seqInts, tensorInts) =>
 	  let
-	   val resultExpr = handleArray seqInts tensorInts tryAll json
+	   val resultExpr = handleArray seqInts tensorInts tryAll value
 	   val (astExpr, ty') = CheckExpr.check(env, cxt, resultExpr)
 	   val result = (case optionalSpecTy
 			  of NONE => (ty, mkConstExpr cxt astExpr, name)
@@ -266,7 +266,7 @@ fun parseConstant(env, cxt, tyName, optionalSpecTy, json) =
 			      A tyName, S " could not be parsed!"
 		       ]) ;bogusExpTy' cxt)
 		  handle exn => (err (cxt, [S "declared type of constant", S name, S ", in definition of",
-					    A tyName, S " could not be parsed!"
+					    A tyName, S " could not be parsed as an exception occured!"
 				     ]) ;bogusExpTy' cxt)
      (*end case*))
     end
