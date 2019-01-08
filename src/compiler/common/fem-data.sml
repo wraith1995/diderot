@@ -56,7 +56,7 @@ structure FemData : sig
 
 	   (* placeholders for creating fem data *)
 	   val defaultSpace : mesh * Atom.atom -> femType   
-	   val mkMesh : int * int * BasisData.t list * Atom.atom -> femType
+	   val mkMesh : int * int * int  * BasisData.t list * Atom.atom -> femType
 	   val mkSpace : int * int list * mesh * Atom.atom -> femType
 	   val mkFunc : space * Atom.atom -> femType
 
@@ -67,6 +67,7 @@ structure BD = BasisData
 datatype mesh = Mesh' of {
 	  dim : int,
 	  mappingDim : int,
+	  degree : int,
 	  basis : BasisData.t list,
 	  name : Atom.atom
 	 }
@@ -187,7 +188,7 @@ fun same(t1, t2) =
 
 fun hash ty =
     (case ty
-      of Mesh((Mesh'{dim, mappingDim, basis, name}))
+      of Mesh((Mesh'{dim, degree, mappingDim, basis, name}))
 	 => 0w1 + 0w3 * (Word.fromInt dim) + 0w5 * (Word.fromInt mappingDim) + (List.foldl (fn (d, s) => 0w11 * BD.hash d + s) 0w7 basis)
        | Space(Space'({dim, shape, basis, mesh, name}))
        	 => 0w13 + 0w17 * (Word.fromInt dim) + (List.foldl (fn (d, s) => 0w23 * BD.hash d + s) 0w19 basis) + (hash (Mesh(mesh)))
@@ -260,7 +261,7 @@ fun isInputFemType ty =
        | MeshPos(_) => false
        | _ => true)
       
-fun mkMesh(dim, mDim, basis, name) = Mesh (Mesh' {dim = dim, mappingDim = mDim, basis = basis, name = name})
+fun mkMesh(dim, mDim, maxDegree, basis, name) = Mesh (Mesh' {dim = dim, mappingDim = mDim, degree = maxDegree, basis = basis, name = name})
 
 
 fun defaultSpace (m as Mesh'{dim,...}, name) = Space (Space' {dim = dim, shape = [], basis = [], mesh = m, name = name})

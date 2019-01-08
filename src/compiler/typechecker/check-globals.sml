@@ -335,7 +335,6 @@ structure CheckGlobals : sig
 		   let
 		    (*TODO: parse the file and make these correct...*)
 		    val parsedJson = CF.loadJson(fileinfo, cxt)
-		    val tempMesh = FT.mkMesh(2, 5, [], tyName)
 		    fun tempSpace mesh shape = FT.mkSpace(2, shape, mesh,tyName)
 		    fun tempFunc space = FT.mkFunc(space, tyName)
 		    (*TODO : check against the file in the following.*)
@@ -344,9 +343,9 @@ structure CheckGlobals : sig
 		    (case (femTyDef, parsedJson)
 		      of (PT.T_Mesh, SOME(parsed)) =>
 			 let
-			  val _ = ()
+			  val (tempMesh, consts) = CheckTypeFile.parseMesh(env, cxt, tyName, parsed)
 			 in
-			   (SOME(tempMesh, NONE), [])
+			   (Option.mapPartial (fn x => SOME(x, NONE)) tempMesh, consts)
 			 end
 		       | (PT.T_Space(mesh, shape), SOME(parsed)) =>
 			 let
