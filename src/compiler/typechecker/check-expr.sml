@@ -823,10 +823,23 @@ structure CheckExpr : sig
                           ])
                         else ();
                       Ty.DimConst(IntInf.toInt d))
-                  | NONE => Ty.DimConst ~1
-                (* end case *))
+                  | NONE => Ty.DimConst ~1 
+			    (* end case *))
+	  fun normalizeShape(x::xs) =
+	      (case checkAndPrune (env, cxt, x)
+		of (e', Ty.T_Int) => x :: normalizeShape(xs)
+		 | (e', Ty.T_Sequence(Ty.T_Int, SOME(Ty.DimConst(n)))) =>
+		   let
+		    val newDims = List.tabulate(n, fn y=> PT.E_Subscript(x, ([SOME(PT.E_Lit(Literal.intLit y))])))
+		   in
+		    List.@(newDims,normalizeShape(xs))
+		   end
+		 | _ => x::normalizeShape(xs)
+	      (* end case*))
+	    | normalizeShape [] = []
+
           in
-            Ty.Shape(List.map checkDim' shape)
+            Ty.Shape(List.map checkDim' (normalizeShape(shape)))
           end
 
   end

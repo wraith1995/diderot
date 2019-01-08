@@ -1,3 +1,10 @@
+Tomorrow:
+-Fix const missing other things -> subscript
+-Fix sequences not giving us types for tensors or maybe the other way???
+-Load mesh
+-Transforms down the way!
+
+
 Ongoing issue:
 -allow translation of DOF in two ways.
 -Pointer issue of when things should be pointers
