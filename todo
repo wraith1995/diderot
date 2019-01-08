@@ -1,6 +1,4 @@
 Tomorrow:
--Fix const missing other things -> subscript
--Fix sequences not giving us types for tensors or maybe the other way???
 -Load mesh
 -Transforms down the way!
 

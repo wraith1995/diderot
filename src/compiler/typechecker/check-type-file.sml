@@ -218,8 +218,8 @@ datatype token = datatype TypeError.token
 fun loadJson(fileName, cxt) = SOME(JP.parseFile fileName)
 			      handle exn =>
 				     (TypeError.error (cxt,
-						       [S "When parsing file,", S fileName, S ", an exception was raised:", S(exnName exn),
-							S"with message", S(exnMessage exn)]); NONE)
+						       [S "When parsing file, ", S fileName, S ", an exception was raised: ", S(exnName exn),
+							S" with a message: ", S(exnMessage exn)]); NONE)
 
 fun typeEquality(ty, ty') =
     (case Unify.matchType(ty, ty')
@@ -284,7 +284,7 @@ fun parseConstants(env, cxt, tyName, json) =
 				      (* end case *))
 
     end
-fun findField x y = SOME(JU.findField y x) handle exn => NONE
+fun findField x y = (JU.findField y x) handle exn => NONE
 fun optionList list = SOME(List.map Option.valOf list) handle exn => NONE
 fun optionTuple (x,y) = SOME((Option.valOf x, Option.valOf y)) handle exn => NONE
 							   
@@ -301,7 +301,7 @@ fun constantExists(name, ty) =
 
 fun parseScalarBasis(env, cxt, tyName, json, dim, degree, spaceDim) =
     let
-     fun maker(x : real Array.array ) : BD.t =  Option.valOf (BD.makeBasis(x, dim, degree))
+     fun maker(x : real Array.array ) : BD.t =  Option.valOf (BD.makeBasis(x, dim,spaceDim, degree))
      fun realArray(x : JSON.value) : real Array.array = Array.fromList (JU.arrayMap (JU.asNumber) x)
      val f = maker o realArray
     in
@@ -313,9 +313,11 @@ fun parseScalarBasis(env, cxt, tyName, json, dim, degree, spaceDim) =
 fun parseMesh(env, cxt, tyName, json) =
     let
      val mesh = findField "mesh" json
-     val constantsField = Option.mapPartial (findField "constants")  ( Option.join mesh)
-     val constant = Option.map (fn x => parseConstants(env, cxt, tyName, x)) (Option.join constantsField)
-			       
+
+     val constantsField = Option.mapPartial (findField "constants") mesh
+
+     val constant = Option.map (fn x => parseConstants(env, cxt, tyName, x)) (mesh)
+
      val dimConstCheck = Option.valOf (Option.map (constantExists(FN.dim, SOME(Ty.T_Int))) constant)
      val meshMapConstCheck = Option.valOf (Option.map (constantExists(FN.meshMapDim, SOME(Ty.T_Int))) constant)
      val degreeConstCheck = Option.valOf (Option.map (constantExists(FN.maxDegree, SOME(Ty.T_Int))) constant)
@@ -335,7 +337,7 @@ fun parseMesh(env, cxt, tyName, json) =
      val newConstants = Option.map (List.@) (optionTuple(constant, transformShapeConst))
 
 
-     val scalarBasis = Option.valOf (findField "poly" json)
+     val scalarBasis = Option.mapPartial (findField "poly") mesh 
      val parsedBasis = Option.map
 			 (fn (json', dim', degree', spaceDim') =>
 			     parseScalarBasis(env, cxt, tyName, json', dim', degree', spaceDim'))
@@ -343,8 +345,8 @@ fun parseMesh(env, cxt, tyName, json) =
 			   of (SOME(a), SOME(b), SOME(c), SOME(d)) => SOME((a,b,c,d))
 			    | _ => NONE (*end case *))
 
-     val meshVal = Option.map (fn (x,y,basis) => FT.mkMesh(x,y,basis, tyName)) (case (dim, spaceDim,parsedBasis)
-										 of (SOME(a), SOME(b), SOME(c)) => SOME((a,b,c))
+     val meshVal = Option.map (fn (x,y,z,basis) => FT.mkMesh(x,y,z,basis, tyName)) (case (dim, spaceDim, degree, parsedBasis)
+										 of (SOME(a), SOME(b), SOME(c), SOME(d)) => SOME((a,b,c,d))
 										  | _ => NONE (* end case*))
      val newConstants' = Option.getOpt(newConstants, [])
     in
