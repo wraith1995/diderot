@@ -238,7 +238,8 @@ structure Basis : sig
               BV.fn_sin_r,
               BV.fn_sqrt_r,
               BV.fn_tan_r,
-              BV.fn_trunc_r
+              BV.fn_trunc_r,
+	      BV.subscript
             ]
     in
     fun allowedInConstExp x = Var.Set.member (allowed, x)

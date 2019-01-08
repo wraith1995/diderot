@@ -9,7 +9,7 @@ ff[jam] a3 = {ff(0),ff(1)};
 ff[l] a4 = {ff(0),ff(1)};
 ff[2] a5 = {ff(0),ff(1)};
 real[] a2 = {k + 2.0 | k in {1.0+j | j in 0..10}};
-tensor[ll] gad = [[0.0,0.0],[0.0,0.0]];
+tensor[2,ll] gad = [[[0.0,0.0],[0.0,0.0]],[[0.0,0.0],[0.0,0.0]]];
 tensor[ll[0],ll[1]] gad1 = [[0.0,0.0],[0.0,0.0]];
 
 function real f(real g, int j){

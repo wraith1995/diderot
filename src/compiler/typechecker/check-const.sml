@@ -63,7 +63,9 @@ structure CheckConst : sig
                 (BV.gt_ii, fn (C.Int a, C.Int b) => C.Bool(a > b) | _ => raise Arg),
                 (BV.gte_ii, fn (C.Int a, C.Int b) => C.Bool(a >= b) | _ => raise Arg),
                 (BV.equ_ii, fn (C.Int a, C.Int b) => C.Bool(a = b) | _ => raise Arg),
-                (BV.neq_ii, fn (C.Int a, C.Int b) => C.Bool(a <> b) | _ => raise Arg)
+                (BV.neq_ii, fn (C.Int a, C.Int b) => C.Bool(a <> b) | _ => raise Arg),
+		(BV.subscript, fn (C.Seq(a, ty), C.Int b) =>  List.nth(a, IntInf.toInt b)  
+			     | _ => raise Arg)
               ];
             tbl
           end
