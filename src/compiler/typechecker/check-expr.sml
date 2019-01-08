@@ -481,7 +481,20 @@ structure CheckExpr : sig
                                 S "illegal strand set specification in ",
                                 S(E.scopeToString(E.currentScope env))
                               ])
-                        | _ => checkSelect (env, cxt, e, field)
+                        | _ => (case Env.findTypeEnv(env, x)
+				 of SOME(tyEnv) =>
+				    let
+				     val const = TypeEnv.findConstant(tyEnv, field)
+				    in
+				     (case const
+				       of SOME(const') => (ConstExpr.valueToExpr const', ConstExpr.typeOfConst const')
+					| NONE => (err (cxt, [
+							S "Type Enviroment, ", A x, S ", does not have a type const", A field, S "."
+						       ]);bogusExpTy)
+				     (* end case *))
+				    end
+				   | _ => checkSelect (env, cxt, e, field)
+			       (* end case*))
                       (* end case *))
                   | _ => checkSelect (env, cxt, e, field)
                 (* end case *))
@@ -679,11 +692,25 @@ structure CheckExpr : sig
                             ])
                       (* end case *))
                   | NONE => err(cxt, [S "unknown strand ", A strand])
-                (* end case *))
+					  (* end case *))
+	    (* | (e', Ty.T_Named(name, ty')) => *)
+	    (*   let *)
+	    (*    (* There in one case here: 1 argument functions s*) *)
+	    (*    (* NOTE TO SELF: THIS checks a named type value*) *)
+	    (*    (* I'm only implementing constants for now.*) *)
+	    (*    val tyEnv = Env.findTypeEnv(env, name) *)
+	    (*    val const = TypeEnv.findConstant(env, field) *)
+	    (*    val method =  TypeEnv.findMethod(env, field) *)
+	    (*    val func = TypeEnv.findHiddenVar(env, field) *)
+	    (*   in *)
+	    (*    (case (const, method, func) *)
+	    (* 	 of (SOME(const), _, _) *)
+	    (* 	  | _ => err(cxt, [S "In selection of ", A field, S " from "]) *)
+	    (*    (* end case*)) *)
+	    (*   end *)
             | (_, Ty.T_Error) => bogusExpTy
-	    (* regular select goes here.*)
             | (_, ty) => err (cxt, [
-                  S "expected strand type, but found ", TY ty,
+                  S "expected strand type or named type, but found ", TY ty,
                   S " in selection of ", A field
                 ])
           (* end case *))

@@ -6,24 +6,23 @@
  * All rights reserved.
  *)
 structure CheckTypeFile  : sig
-
+	   type constant = (Types.ty * ConstExpr.t * string)
 	   val loadJson : string *  Env.context -> JSON.value option
 	   val matchType : string -> (Types.ty * int list * int list) option
-	   val parseConstant : Env.t * Env.context * Atom.atom * Types.ty option *  JSON.value  -> Types.ty * ConstExpr.t * string
-	   val parseConstants : Env.t * Env.context * Atom.atom * JSON.value -> (Types.ty * ConstExpr.t * string) list
+	   val parseConstant : Env.t * Env.context * Atom.atom * Types.ty option *  JSON.value  -> constant
+	   val parseConstants : Env.t * Env.context * Atom.atom * JSON.value -> constant list
 												      
-	   val parseMesh : Env.t * Env.context * Atom.atom * JSON.value -> (FemData.femType option * (Types.ty * ConstExpr.t * string) list)
-															 (* grab specific constants; parse basis can be general*)
-	   (* val parseSpace : Env.t * Env.context * Atom.atom * FemData.space * JSON.value -> FemData.space *)
-	   (* val parseFunc : Env.t * Env.context * Atom.atom * FemData.space * JSON.value -> FemData.func *)
+	   val parseMesh : Env.t * Env.context * Atom.atom * JSON.value -> (FemData.femType option * constant list)
+												
+           (* val parseSpace : Env.t * Env.context * Atom.atom * FemData.space * JSON.value -> FemData.space * constant list *)
+	   (* val parseFunc : Env.t * Env.context * Atom.atom * FemData.space * JSON.value -> FemData.func   * constant list *)
 											    
 
-									(* step 2: make fem spec, and parse to femData *)
-									(* step 3: drop idea of result, Other, etc -> just make parseX where X=mesh,...,..,..*)
-									(* step 4: reviese type checker to handle constants, checking of fem data against file info*)
-									(* step 5: infustructure for transform sampling*)
+
 
 	  end = struct
+type constant = (Types.ty * ConstExpr.t * string)
+
 
 structure PT = ParseTree
 structure FT = FemData
@@ -53,12 +52,6 @@ val tensor = RE.compileString tensorTy
 val otherBase = RE.compileString otherbase
 val sequenceDim = RE.compileString seqDims
 
-(* fun extractMatchFromTree(string, idx, tree, upOffset : int, downOffset : int) = *)
-(*     (case MatchTree.nth(tree, idx) *)
-(*      of NONE => NONE *)
-(*       | SOME{pos, len} => SOME(String.substring(string, pos + upOffset, len - downOffset), *)
-(* 			     pos + upOffset + len - downOffset) *)
-(*     (* end case*)) *)
 
 fun tryTensor string =
     let
@@ -257,8 +250,8 @@ fun parseConstant(env, cxt, tyName, optionalSpecTy, json) =
 			   | SOME(ty'') => (case Unify.matchType(ty, ty'')
 					     of Unify.EQ => (ty, mkConstExpr cxt astExpr, name)
 					      | _ => (err (cxt, [S "declared type of constant", S name, S ", in definition of",
-									A tyName, S ", has type of ", TY(ty), S "but it is contrained to have type ",
-									TY ty'', S"."]) ;bogusExpTy' cxt)
+								 A tyName, S ", has type of ", TY(ty), S "but it is contrained to have type ",
+								 TY ty'', S"."]) ;bogusExpTy' cxt)
 					   (*end case*))
 			(*end case *))
 	  in
@@ -286,7 +279,7 @@ fun parseConstants(env, cxt, tyName, json) =
     in
      (case constants
        of SOME(a) =>  JU.arrayMap (fn x => parseConstant(env, cxt, tyName, NONE, x) ) a
-	| NONE => (err (cxt, [S ", In  the definition of", A tyName, S "there is no constants object"
+	| NONE => (err (cxt, [S ", In the definition of", A tyName, S "there is no constants object"
 				     ]) ;[])
 				      (* end case *))
 
@@ -316,15 +309,16 @@ fun parseScalarBasis(env, cxt, tyName, json, dim, degree, spaceDim) =
      handle exn => (err (cxt, [S"Unable to parse polynomial basis for type ", A tyName, S"."]);
      		   [BD.empty(dim, degree)])
     end
+(* I don't like this.... maybe turn it into specs and process this.*)
 fun parseMesh(env, cxt, tyName, json) =
     let
      val mesh = findField "mesh" json
      val constantsField = Option.mapPartial (findField "constants")  ( Option.join mesh)
      val constant = Option.map (fn x => parseConstants(env, cxt, tyName, x)) (Option.join constantsField)
 			       
-     val dimConstCheck = Option.valOf ((Option.map) (constantExists(FN.dim, SOME(Ty.T_Int))) constant)
-     val meshMapConstCheck = Option.valOf (( Option.map) (constantExists(FN.meshMapDim, SOME(Ty.T_Int))) constant)
-     val degreeConstCheck = Option.valOf (( Option.map) (constantExists(FN.maxDegree, SOME(Ty.T_Int))) constant)
+     val dimConstCheck = Option.valOf (Option.map (constantExists(FN.dim, SOME(Ty.T_Int))) constant)
+     val meshMapConstCheck = Option.valOf (Option.map (constantExists(FN.meshMapDim, SOME(Ty.T_Int))) constant)
+     val degreeConstCheck = Option.valOf (Option.map (constantExists(FN.maxDegree, SOME(Ty.T_Int))) constant)
      val dim : int option = Option.mapPartial (extractIntConst cxt) dimConstCheck
      val spaceDim : int option = Option.mapPartial (extractIntConst cxt) meshMapConstCheck
      val degree : int option = Option.mapPartial (extractIntConst cxt) degreeConstCheck
@@ -353,15 +347,7 @@ fun parseMesh(env, cxt, tyName, json) =
 										 of (SOME(a), SOME(b), SOME(c)) => SOME((a,b,c))
 										  | _ => NONE (* end case*))
      val newConstants' = Option.getOpt(newConstants, [])
-			      
-
-
     in
      (meshVal, newConstants')
     end
-    
-      
-    
-
-
 end
