@@ -56,15 +56,15 @@ structure EinSums : sig
               | E.Field(_, shape)         => findIndex (c, shape)
               | E.Lift e1                 => findSx (c, e1)
               | E.Conv(v, [], h, [])      => NONE
-	      | E.Fem(_,_,_, [], [])      => NONE
+	      | E.Fem(_,_,_,_, [], [])      => NONE
               | E.Conv(_ , alpha, _ , dx) => findIndex (c, alpha@dx)
-	      | E.Fem(_,_,_, alpha, dx)   => findIndex (c, alpha@dx)
+	      | E.Fem(_,_,_,_, alpha, dx)   => findIndex (c, alpha@dx)
               | E.Partial (shape)         => findIndex (c, shape)
               | E.Apply(e1, e2)           => sort [e1, e2]
               | E.Comp(e1, _)             => findSx(c, e1)
               | E.Probe(E.Conv(_, [], _, []), E.Tensor(_, []))
                                           => NONE
-	      | E.Probe(E.Fem(_,_,_, [], []), E.Tensor(_, []))
+	      | E.Probe(E.Fem(_,_,_,_, [], []), E.Tensor(_, []))
 		                          => NONE
               | E.Probe(e1, e2)           => sort [e1, e2]
               | E.Value _                 => NONE

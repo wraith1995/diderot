@@ -14,6 +14,8 @@ structure Ein =
       | FLD of int
       | KRN
       | IMG of int * int list
+      | FEM of FemData.femType
+      | INT
 			 
 
     (* placement in argument list *)
@@ -85,7 +87,7 @@ structure Ein =
       | Field of param_id * alpha
       | Lift of ein_exp
       | Conv of param_id * alpha * param_id * alpha
-      | Fem of femEin *  param_id * param_id * alpha * alpha (* basis information, index source, dofs source, shape of result, dxes*)
+      | Fem of femEin * param_id * param_id * param_id * alpha * alpha (* basis information, index, index source, dofs source, shape of result, dxes*)
       | Partial of alpha
       | Apply of ein_exp * ein_exp
       | Comp of ein_exp * subEIN list
