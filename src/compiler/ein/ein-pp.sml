@@ -54,7 +54,7 @@ structure EinPP : sig
                 in
                   concat ["V", i2s img, alpha, "⊛", beta, "H", i2s kern]
             end
-	    | E.Fem(E.Plain(basis,len), index, dofs, coeffShape, dxes) =>
+	    | E.Fem(E.Plain(basis,len), cell, index, dofs, coeffShape, dxes) =>
 	      let
 	       val basisStrings = List.map BasisData.toString basis
 	       val basisLength = Int.toString len
@@ -62,7 +62,7 @@ structure EinPP : sig
 	       val alpha = if null coeffShape then "" else multiIndex2s coeffShape
                val beta = if null dxes then "" else "dx" ^ multiIndex2s dxes
 	      in
-	       concat ["femV", i2s index,"^", i2s dofs, alpha,  "⊛", basisString, beta]
+	       concat ["femV", i2s cell, i2s index,"^", i2s dofs, alpha,  "⊛", basisString, beta]
 	      end
             | E.Partial alpha => "∂/∂x" ^ multiIndex2s alpha
             | E.Apply(e1, e2) => concat [ expToString e1, "@(", expToString e2, ")"]
@@ -141,6 +141,8 @@ structure EinPP : sig
             | paramToString (i, E.FLD d) = concat["F", i2s i, "[", i2s d, "]"]
             | paramToString (i, E.KRN) = "H" ^ i2s i
             | paramToString (i, E.IMG(d, shp)) = concat["V", i2s i, "(", i2s d, ")[", shp2s shp, "]"]
+	    | paramToString (i, E.INT) = "INT"^ i2s i
+	    | paramToString (i, E.FEM(d)) = "FEM(" ^ (Atom.toString( FemData.nameOf d)) ^ ")" ^ i2s i
           val params = String.concatWith "," (List.mapi paramToString params)
           val index = if null index then "" else concat["_{", shp2s index, "}"]
           in

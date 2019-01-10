@@ -64,9 +64,9 @@ structure EinUtil : sig
                 | (E.Conv(fid1, alpha1, tid1, ix1), E.Conv(fid2, alpha2, tid2, ix2)) =>
                     (fid1 = fid2) andalso (tid1 = tid2) andalso
                     sameIndex (alpha1, alpha2) andalso sameIndex (ix1, ix2)
-		| (E.Fem(E.Plain(basis1,n1), index1, dof1, shape1, dxes1),E.Fem(E.Plain(basis2,n2), index2, dof2, shape2, dxes2)) =>
+		| (E.Fem(E.Plain(basis1,n1), cell1, index1, dof1, shape1, dxes1),E.Fem(E.Plain(basis2,n2), cell2, index2, dof2, shape2, dxes2)) =>
 		  (n1=n2) andalso (ListPair.all BasisData.same (basis1, basis2))
-		  andalso index1=index2 andalso dof1=dof2
+		  andalso cell1=cell2 andalso index1=index2 andalso dof1=dof2
 		  andalso sameIndex(shape1,shape2) andalso sameIndex(dxes1,dxes2)
 		| (E.Partial ix, E.Partial jx) => sameIndex(ix, jx)
                 | (E.Apply(e11, e12), E.Apply(e21, e22)) => same(e11, e21) andalso same(e12, e22)
@@ -108,7 +108,9 @@ structure EinUtil : sig
             | sameParam (E.FLD i1, E.FLD i2) = (i1 = i2)
             | sameParam (E.KRN, E.KRN) = true
             | sameParam (E.IMG(i1, shp1), E.IMG(i2, shp2)) =
-                (i1 = i2) andalso ListPair.allEq (op =) (shp1, shp2)
+              (i1 = i2) andalso ListPair.allEq (op =) (shp1, shp2)
+	    | sameParam (E.INT, E.INT) = true
+	    | sameParam (E.FEM(d1), E.FEM(d2)) = FemData.same(d1,d2)
             | sameParam _ = false
           in
             ListPair.allEq sameParam (p1, p2) andalso
@@ -174,7 +176,7 @@ structure EinUtil : sig
                 | E.Op3(E.Clamp, e1, e2, e3) => 0w173 + hash' e1 + hash' e2 + hash' e3
                 | E.Opn(E.Add, es) => 0w179 + iter es
                 | E.Opn(E.Prod, es) => 0w181 + iter es
-		| E.Fem(E.Plain(basis1,n1),_,_,shape1,dxes1) =>
+		| E.Fem(E.Plain(basis1,n1),_,_,_,shape1,dxes1) =>
 		  0w191 + (List.foldl (fn (d, s) => 0w199 * BasisData.hash d + s) 0w197 basis1)
 		  + hashAlpha shape1 + hashAlpha dxes1
               (* end case *)
