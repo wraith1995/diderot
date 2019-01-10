@@ -80,17 +80,17 @@ structure Normalize : sig
     *    newArgs        -- Arguments for the new replaced argument
     *)
     fun rewriteEin (changed,  origParams, origEinOp, origArgs, place, newLHS, newEinOp, newArgs) = (
-          case List.nth(origParams, place)
-           of Ein.TEN(false, _) => (
-                (changed, origEinOp, place+1, origArgs@[newLHS]))
-            | _ => (case Apply.apply (origEinOp, place, newEinOp, newArgs, origArgs)
-                 of SOME einOp => ( (* einOp is the result of the beta-reduction *)
-                      decUse newLHS; List.app incUse newArgs;
-                      (true, einOp, place + length newArgs, origArgs @ newArgs))
-                  | NONE => ((* arg was unused in origEinOp so we can get rid of it *)
-                      decUse newLHS;
-                      (true, origEinOp, place, origArgs))
-                (* end case *))
+     case List.nth(origParams, place)
+      of Ein.TEN(false, _) => (
+       (changed, origEinOp, place+1, origArgs@[newLHS]))
+       | _ => (case Apply.apply (origEinOp, place, newEinOp, newArgs, origArgs)
+                of SOME einOp => ( (* einOp is the result of the beta-reduction *)
+                 decUse newLHS; List.app incUse newArgs;
+                 (true, einOp, place + length newArgs, origArgs @ newArgs))
+                 | NONE => ((* arg was unused in origEinOp so we can get rid of it *)
+                  decUse newLHS;
+                  (true, origEinOp, place, origArgs))
+              (* end case *))
           (* end case *))
 
 (* FIXME: it would be much more efficient to do all of the substitutions in one go,

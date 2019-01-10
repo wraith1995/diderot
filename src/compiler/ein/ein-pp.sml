@@ -53,7 +53,17 @@ structure EinPP : sig
                 val beta = if null beta then "" else "dx" ^ multiIndex2s beta
                 in
                   concat ["V", i2s img, alpha, "⊛", beta, "H", i2s kern]
-                end
+            end
+	    | E.Fem(E.Plain(basis,len), index, dofs, coeffShape, dxes) =>
+	      let
+	       val basisStrings = List.map BasisData.toString basis
+	       val basisLength = Int.toString len
+	       val basisString = "Basis(" ^ basisLength ^ ")"
+	       val alpha = if null coeffShape then "" else multiIndex2s coeffShape
+               val beta = if null dxes then "" else "dx" ^ multiIndex2s dxes
+	      in
+	       concat ["femV", i2s index,"^", i2s dofs, alpha,  "⊛", basisString, beta]
+	      end
             | E.Partial alpha => "∂/∂x" ^ multiIndex2s alpha
             | E.Apply(e1, e2) => concat [ expToString e1, "@(", expToString e2, ")"]
             | E.Probe(e1, e2) => concat ["Probe(", expToString e1, ",", expToString e2, ")"]

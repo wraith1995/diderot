@@ -239,6 +239,7 @@ fun parseConstant(env, cxt, tyName, optionalSpecTy, json) =
      val tyString = Option.map JU.asString (findField "type")
      val value = Option.valOf (findField "value")
      val typeVal = Option.map matchType tyString
+			      
     in
      (case Option.join typeVal
        of SOME(ty, seqInts, tensorInts) =>
@@ -301,12 +302,13 @@ fun constantExists(name, ty) =
 
 fun parseScalarBasis(env, cxt, tyName, json, dim, degree, spaceDim) =
     let
-     fun maker(x : real Array.array ) : BD.t =  Option.valOf (BD.makeBasis(x, dim,spaceDim, degree))
+     fun maker(x : real Array.array ) : BD.t =  Option.valOf (BD.makeBasis(x, dim, degree, spaceDim))
      fun realArray(x : JSON.value) : real Array.array = Array.fromList (JU.arrayMap (JU.asNumber) x)
      val f = maker o realArray
     in
      JU.arrayMap f json
-     handle exn => (err (cxt, [S"Unable to parse polynomial basis for type ", A tyName, S"."]);
+     handle exn => (err (cxt, [S"Unable to parse polynomial basis for type ", A tyName, S".",
+			S"An exception occured in the parsing:",S (exnMessage(exn)), S"."]);
      		   [BD.empty(dim, degree)])
     end
 (* I don't like this.... maybe turn it into specs and process this.*)
