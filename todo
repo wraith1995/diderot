@@ -1,6 +1,53 @@
+meeting:
+FIX HIS BUGS -> You should learn SML
+MeshCell -> why use the dependent types (in addition to constants!)
+Otherwise/case syntax -> SMT solvers
+\hat or overline -> annotating fields with domains/ranges
+Semantics of inputs and all of that is huge fucking mess -> that code is really ugly.
+Against structured programming/non-embed -> if you do embded as a class or something, you can do structed and non-embeded as trivial corollaries.
+Manipulation of fem element types (see two papers about vectorization in FEM)
+Notification of FEM
+Critcism of our design process:??
+ODE solving for scale space?
+Category theory
+WE SHOULD BEGIN WRITING -> I've not done much yet and no data and Kirby Email
+
+
+
+
+
 Tomorrow:
--Load mesh
--Transforms down the way!
+-Load mesh (Works for now)
+---Load others?
+-Transforms down the way:
+
+EIN mods
+FieldSampling
+trans, field, inverseTrans, refTrans, field:
+
+
+
+EIN transformations:
+(mesh, int, vec) -> (tensor, vec)
+(func, int, vec) -> (tensor, vec)
+(mesh, int, vec) -> (tensor, vec)
+(func, space, mesh, int, vec) -> (tensor, tensor, vec)
+(func, space, mesh, vec) -> (tensor, tensor, vec)
+
+
+
+
+
+
+
+
+
+John stays home on Tuesday -> just focus on work
+10 hours of work blocked off
+
+
+
+
 
 
 Ongoing issue:

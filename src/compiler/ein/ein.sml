@@ -14,6 +14,7 @@ structure Ein =
       | FLD of int
       | KRN
       | IMG of int * int list
+			 
 
     (* placement in argument list *)
     type param_id= int
@@ -68,6 +69,8 @@ structure Ein =
     
     and conditional = Compare of compare * ein_exp * ein_exp | Var of param_id
 
+    and femEin = Plain of BasisData.t list * int
+
     and ein_exp
     (* Basic terms *)
       = Const of int
@@ -82,6 +85,7 @@ structure Ein =
       | Field of param_id * alpha
       | Lift of ein_exp
       | Conv of param_id * alpha * param_id * alpha
+      | Fem of femEin *  param_id * param_id * alpha * alpha (* basis information, index source, dofs source, shape of result, dxes*)
       | Partial of alpha
       | Apply of ein_exp * ein_exp
       | Comp of ein_exp * subEIN list

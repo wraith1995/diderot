@@ -15,6 +15,7 @@ structure BasisData : sig
 	   val empty : int * int -> t
 	   val same : t * t -> bool
 	   val hash : t -> word
+	   val toString : t -> string
 
 	   val makeBasis : real Array.array * int * int * int -> t option
 
@@ -43,8 +44,9 @@ fun empty(dim, degree) = BasisFunc {dim = dim,
 				    mapDim = 0,
 				    coeffs = A.tabulate(power(degree, dim), fn x => 0.0),
 				    strForm = Atom.atom "0.0"}
-fun toString(BasisFunc{strForm, ...}) = strForm
-fun same(b1,b2) = Atom.same(toString(b1), toString(b2))
+fun toString(BasisFunc{strForm, ...}) = Atom.toString strForm
+fun getString(BasisFunc{strForm, ...}) = strForm
+fun same(b1,b2) = Atom.same(getString(b1), getString(b2))
 fun hash(BasisFunc{strForm,  ...}) = Atom.hash(strForm)
 
 (* The following bits of code are all dedicated to our storage and manipulation of polynomials.
@@ -54,13 +56,13 @@ fun hash(BasisFunc{strForm,  ...}) = Atom.hash(strForm)
    degree -> the maximal power that any variable might be taken too
    mapDim -> the exact number of coefficients needed to specify a polynomial.
 
-  With this, we can store the whole thing in an array of size (degree + 1 )^dim; we treat this an array of size [degree][degree]...
+  With this, we can store the whole thing in an array of size (degree +1 )^dim; we treat this an array of size [degree][degree]...
   Thus, for a polynomial, coeff * x^a * y^b * z^c -> array[a][b][c] = coeff.
   We observe that this will allow us to do things like use a basis of only quadratic terms or other weird shit like that.
   There is some waste, but we are going to keep things clean.
   To see how C-style N-d arrays work, refer to: https://eli.thegreenplace.net/2015/memory-layout-of-multi-dimensional-arrays/
 
-  Based on this sytem, we will take derivatives, products, sums, and produce string representations. This is all that we need to do. 
+  Based on this sytem, we will take derivatives, tensor products, sums, direct sums, and produce string representations. This is all that we need to do. 
 
 *)
 
@@ -76,6 +78,9 @@ fun indexScheme(index, dim, degree) =
     in
      index'
     end
+(* fun printIdxes([]) = "" *)
+(*   | printIdxes (x::xs) = "["^ (String.concatWith "," (List.map (Int.toString) x)) ^"] " ^ printIdxes(xs) *)
+      
 (* Given a single integer index, idx, to an N-d array of size (degree+1)^dim, we wish to compute the index [a,b,c,d,...] so indexScheme([a,b,c,d,...], dim, degree)=idx *)
 (* This function builds a list so that list[idx] = [a,b,c,d,...]*)
 (* We do this in the following manner: 
@@ -85,12 +90,15 @@ fun indexScheme(index, dim, degree) =
  *)
 fun makeIndexes(dim, degree) =
     let
-     val modIndexes = List.rev (List.tabulate(degree, fn x => power(degree + 1, x)))
+     val modIndexes = List.rev (List.tabulate(dim, fn x => power(degree + 1, x)))
+
      fun modDiv(num, divider) = (Int.mod(num,divider), Int.div(num, divider))
-     fun invert'(num, x::xs, ys) = let val (mod',div') = modDiv(num, x)
-				   in invert'(mod', xs, div'::ys) end
-       | invert'(num, [], ys) = num::ys
-     fun idxes x =invert'(x, modIndexes, [])
+     fun invert'(num, x::xs, ys) = if x = 1
+				   then num::ys
+				   else let val (mod',div') = modDiv(num, x)
+					in invert'(mod', xs, div'::ys) end
+
+     fun idxes x = invert'(x, modIndexes, [])
      val tab = List.tabulate(power(degree + 1, dim), fn x => idxes x)
     in
      tab
@@ -102,13 +110,15 @@ fun makeIndexes(dim, degree) =
   Vars are of the form x0, x1, ... x(dim-1)
   Terms are printed coeff * (x0)^a * (x1)^b * ... 
   The poly is printed term + term + term.
+  The exception is the zero poly, which is just "0.0".
  *)
 
 fun makeMonoTerms(reals, dim, degree) =
     let
      val vars = List.tabulate(dim, (fn x => "(x"^Int.toString(x)^")"))
      val idxes = makeIndexes(dim, degree)
-     fun makePowers idx =
+
+     fun makePowers idx = 
 	 let
 	  val powers = List.map (fn (x,y) => x ^ "^" ^ (Int.toString(y))) (ListPair.zip (vars, idx))
 	  val product = String.concatWith " * " powers
@@ -118,6 +128,7 @@ fun makeMonoTerms(reals, dim, degree) =
      fun getIndex idx =
 	 let
 	  val test = A.sub(reals, indexScheme(idx, dim, degree))
+		     handle exn => raise exn
 	 in
 	  if Real.==(test, 0.0)
 	  then NONE
@@ -128,6 +139,7 @@ fun makeMonoTerms(reals, dim, degree) =
     in
      string
     end
+      
 fun makeBasis(reals, dim, degree, mapDim) =
     let
      val monoRep = Atom.atom (makeMonoTerms(reals, dim, degree))
@@ -139,7 +151,7 @@ fun makeBasis(reals, dim, degree, mapDim) =
 
 fun zero dim mapDim = BasisFunc({dim = dim, degree = 0,mapDim = mapDim, coeffs = A.fromList [0.0], strForm = Atom.atom "0.0"})
       
-fun dx(BasisFunc({dim, degree, coeffs, strForm, mapDim}), varIndex) =
+fun dx(BasisFunc({dim, degree, coeffs, strForm, mapDim,...}), varIndex) =
     let
      val len = A.length coeffs
      val len' = power(Int.min(degree - 1, 0), dim)
