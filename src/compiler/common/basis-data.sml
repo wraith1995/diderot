@@ -17,32 +17,42 @@ structure BasisData : sig
 	   val hash : t -> word
 	   val toString : t -> string
 
+
 	   val makeBasis : real Array.array * int * int * int -> t option
 
 	   val dx : t * int -> t
+	   val D : t ArrayNd.ArrayNd -> t ArrayNd.ArrayNd
+	   val scale : t * real -> t
+	   val sum : t * t -> t
+	   val cast : t * int -> t
+	   val product : t* t -> t
 			     
 			 
 	  end = struct
 
 structure R = Real
 type r = Real.real
-structure A = Array
+structure A = ArrayNd
+
 
 (* why I can't find this in the interger spec is beyond me *)
 fun power (x, 0) = 1  
   | power (x, n) = x * power(x, n-1)		
 
+fun arrayToList arr = Array.foldr (op ::) [] arr
+fun dimDegreeShape(dim, degree) = List.tabulate(dim, fn _ => degree + 1)
 datatype t = BasisFunc of {
 	  dim : int,
 	  degree : int,
 	  mapDim : int,
 	  strForm : Atom.atom,
-	  coeffs : r Array.array 
+	  coeffs : r ArrayNd.ArrayNd
 	 }
+fun dimDomain(BasisFunc{dim,...}) = dim
 fun empty(dim, degree) = BasisFunc {dim = dim,
 				    degree = degree,
 				    mapDim = 0,
-				    coeffs = A.tabulate(power(degree, dim), fn x => 0.0),
+				    coeffs = A.fromArray'(Array.tabulate(power(degree, dim), fn x => 0.0), dimDegreeShape(dim,degree)),
 				    strForm = Atom.atom "0.0"}
 fun toString(BasisFunc{strForm, ...}) = Atom.toString strForm
 fun getString(BasisFunc{strForm, ...}) = strForm
@@ -116,7 +126,7 @@ fun makeIndexes(dim, degree) =
 fun makeMonoTerms(reals, dim, degree) =
     let
      val vars = List.tabulate(dim, (fn x => "(x"^Int.toString(x)^")"))
-     val idxes = makeIndexes(dim, degree)
+     val idxes = arrayToList(A.getInverseIndex(reals))
 
      fun makePowers idx = 
 	 let
@@ -127,7 +137,7 @@ fun makeMonoTerms(reals, dim, degree) =
 	 end
      fun getIndex idx =
 	 let
-	  val test = A.sub(reals, indexScheme(idx, dim, degree))
+	  val test = A.sub'(reals, idx)
 		     handle exn => raise exn
 	 in
 	  if Real.==(test, 0.0)
@@ -142,43 +152,102 @@ fun makeMonoTerms(reals, dim, degree) =
       
 fun makeBasis(reals, dim, degree, mapDim) =
     let
-     val monoRep = Atom.atom (makeMonoTerms(reals, dim, degree))
+     val shape = dimDegreeShape(dim, degree)
+     val reals' = A.fromArray'(reals, shape)
+     val monoRep = Atom.atom (makeMonoTerms(reals', dim, degree))
      val _ = print("Imported basis func with mono: " ^ (Atom.toString monoRep) ^ "\n")
     in
-     SOME(BasisFunc({dim = dim, degree = degree, mapDim = mapDim, coeffs = reals, strForm = monoRep}))
+     SOME(BasisFunc({dim = dim, degree = degree, mapDim = mapDim, coeffs = reals', strForm = monoRep}))
      handle exn => (print(exnMessage(exn)); NONE)
     end
 
 fun zero dim mapDim = BasisFunc({dim = dim, degree = 0,mapDim = mapDim, coeffs = A.fromList [0.0], strForm = Atom.atom "0.0"})
       
-fun dx(BasisFunc({dim, degree, coeffs, strForm, mapDim,...}), varIndex) =
+fun dx(t as BasisFunc({dim, degree, coeffs, strForm, mapDim,...}), varIndex) =
     let
-     val len = A.length coeffs
-     val len' = power(Int.min(degree - 1, 0), dim)
-     (* val primeArray = A.array(, real) *)
-     (* val newArray = A.copy({src = coeffs, dst = primeArray, di = 0 }) *)
-     val modIndexes = List.rev (List.tabulate(degree, fn x => power(degree + 1, x)))
-     fun idxes x = Array.fromList (List.map (fn d => Int.mod(x, d))  modIndexes)
-     fun getVarIdx(idx : int A.array) : int = A.sub( idx, varIndex)
-     fun setIdx idx =
-	 let
-	  val index = idxes idx (* translate array index to triplet index*)
-	  val power : int = getVarIdx index
-				      (* get power required *)
-				      (*create the lower index*)
-				      (* set *)
-	 in
+     val _ = ()
+     (* val temp = ArrayNd.duplicate(coeffs) *)
+     (* fun modNew(idx, a) = *)
+     (* 	 let *)
+     (* 	  val power = List.nth(idx, varIndex) *)
+     (* 	  (* grab everyone with idx_{varIndex} = power*) *)
+     (* 	 in *)
+	  
+     (* 	 end *)
 
-	  ()
+     val degree' = Int.min(degree - 1, 0)
+     val newShape = dimDegreeShape(dim, degree')
+     val start = List.tabulate(dim, fn _ => 0)
+     val newArray = ArrayNd.subregion(coeffs, start, newShape)
+     fun modNew(idx, a) =
+	 let
+	  val power = List.nth(idx, varIndex) + 1
+	  fun foldrFunc(index, a', b') = if List.nth(index, varIndex) = power
+				       then a'+b'
+				       else b'
+	  (* grab everyone with idx_{varIndex} = power*)
+	 in
+	  ArrayNd.foldri' foldrFunc 0.0 coeffs
 	 end
+     val _ = ArrayNd.modifyi' modNew newArray
+     val strForm' = Atom.atom (makeMonoTerms(newArray, dim, degree'))
+
     in
-     if dim - varIndex < 0
-     then raise Fail "impossible derivative"
-     else if degree = 1
-     then zero dim 1
-     else 
-      BasisFunc({dim = dim, degree = degree - 1,mapDim = mapDim, coeffs = coeffs, strForm = strForm })
+     BasisFunc{dim = dim, degree = degree', coeffs = newArray, mapDim = mapDim, strForm = strForm'}
     end
+
+fun D(basisArray) =
+    let
+     val first = ArrayNd.sub(basisArray,0)
+     val dim = dimDomain(first)
+     val preConcat = List.tabulate(dim, fn _ => basisArray)
+     val new = ArrayNd.concat(preConcat)
+     fun modFunc(idx, a) = dx(a, List.nth(idx, 0))
+     val _   = ArrayNd.modifyi' modFunc new
+    in
+     new
+    end
+(*Take the dim out*)
+(*Concat that many*)
+(*modifyI where we seperate out last one*)
+    (* let *)
+    (*  (*copy subregion; use modify*) *)
+    (*  val coeffsCopy = Arraynd.duplicate  *)
+    (* in *)
+    (* end *)
+    (* let *)
+    (*  val len = A.length coeffs *)
+    (*  val len' = power(Int.min(degree - 1, 0), dim) *)
+    (*  (* val primeArray = A.array(, real) *) *)
+    (*  (* val newArray = A.copy({src = coeffs, dst = primeArray, di = 0 }) *) *)
+    (*  val modIndexes = List.rev (List.tabulate(degree, fn x => power(degree + 1, x))) *)
+    (*  fun idxes x = Array.fromList (List.map (fn d => Int.mod(x, d))  modIndexes) *)
+    (*  fun getVarIdx(idx : int A.array) : int = A.sub( idx, varIndex) *)
+    (*  fun setIdx idx = *)
+    (* 	 let *)
+    (* 	  val index = idxes idx (* translate array index to triplet index*) *)
+    (* 	  val power : int = getVarIdx index *)
+    (* 				      (* get power required *) *)
+    (* 				      (*create the lower index*) *)
+    (* 				      (* set *) *)
+    (* 	 in *)
+
+    (* 	  () *)
+    (* 	 end *)
+    (* in *)
+    (*  if dim - varIndex < 0 *)
+    (*  then raise Fail "impossible derivative" *)
+    (*  else if degree = 1 *)
+    (*  then zero dim 1 *)
+    (*  else  *)
+    (*   BasisFunc({dim = dim, degree = degree - 1,mapDim = mapDim, coeffs = coeffs, strForm = strForm }) *)
+    (* end *)
+
+
+fun scale(t,s) = t
+fun sum(t1,t2) = t1
+fun cast(t, i) = t
+fun product(t1,t2) = t1
 
 
     

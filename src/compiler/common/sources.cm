@@ -7,7 +7,7 @@
  *)
 
 Library
-
+  structure ArrayNd
   structure APITypes
   structure BorderCtl
   structure Create
@@ -40,6 +40,7 @@ is
   $/controls-lib.cm
   $/ml-lpt-lib.cm       (* required by error.sml *)
 
+  array-nd.sml
   api-types.sml
   border-ctl.sml
   create.sml

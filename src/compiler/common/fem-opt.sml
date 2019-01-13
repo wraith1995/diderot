@@ -12,6 +12,7 @@
 structure FemOpt : sig
 
 	   datatype femOpts = NumCell | ExtractDofs | ExtractDofsSeq | ExtractIndices |  ExtractIndex  | ExtractDof | Cells | CellIndex
+
 	   type femOption = femOpts * FemData.femType
 					    
 	   val same : femOption * femOption -> bool
@@ -22,6 +23,9 @@ structure FemOpt : sig
 	   val splitDataOpt : femOption -> (femOption * femOption) option
 	   val lowerDataOpt : femOption -> femOption option
 	   val findTargetShape : femOption -> int list
+
+	   datatype femField =  Transform | RefField | InvTransform | TRefField | Field						  
+	   val fieldString : femField -> string
 									     
 	  end = struct
 datatype femOpts = Cells
@@ -30,7 +34,14 @@ datatype femOpts = Cells
 		 | NumCell  | ExtractIndex | ExtractDof (* primitize all*)
        | CellIndex (* primitize, cells*)
 
+datatype femField =  Transform | RefField | InvTransform | TRefField | Field
 
+
+fun fieldString (Transform) = "Transform"
+  | fieldString (RefField) = "refField"
+  | fieldString (InvTransform) = "InvTransform"
+  | fieldString (TRefField) = "TRefField"
+  | fieldString (Field) = "Field"
 
 type femOption = femOpts * FemData.femType
 structure FT = FemData
