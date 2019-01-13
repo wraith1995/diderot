@@ -57,7 +57,8 @@ structure Apply : sig
                 end
           fun mapSum l = List.map (fn (a, b, c) => (mapSingle a, b, c)) l
           fun mapParam id = let
-                val vA = List.nth(newArgs, id)
+           val vA = List.nth(newArgs, id)
+						      
                 fun iter ([], _) = mapId2(id, subId, 0)
                   | iter (e1::es, n) = if (HighIR.Var.same(e1, vA)) then n else iter(es, n+1)
                 in
@@ -74,6 +75,10 @@ structure Apply : sig
                   | E.Field(id, mx) => E.Field(mapParam id, mapAlpha mx)
                   | E.Lift e1 => E.Lift(apply e1)
                   | E.Conv (v, mx, h, ux) => E.Conv(mapParam v, mapAlpha mx, mapParam h, mapAlpha ux)
+		  | E.Fem(femEin, param1, param2, param3, alpha1, alpha2) => E.Fem(femEin,
+										   mapParam param1, mapParam param2, mapParam param3,
+										   mapAlpha alpha1, mapAlpha alpha2)
+									     
                   | E.Partial mx => E.Partial (mapAlpha mx)
                   | E.Apply(e1, e2) => E.Apply(apply e1, apply e2)
                   | E.Probe(f, pos) => E.Probe(apply f, apply pos)
@@ -100,6 +105,7 @@ structure Apply : sig
                   | E.Op2(op2, e1, e2) => E.Op2(op2, apply e1, apply e2)
                   | E.Op3(op3, e1, e2, e3) => E.Op3(op3, apply e1, apply e2, apply e3)
                   | E.Opn(opn, e1) => E.Opn(opn, List.map apply e1)
+
                 (* end case *))
           in
             apply e
@@ -154,6 +160,10 @@ structure Apply : sig
                   | E.Zero(mx) => b
                   | E.Lift e1 => E.Lift(apply (e1, shape))
                   | E.Conv(v, mx, h, ux) => E.Conv(mapId(v, origId, 0), mx, mapId(h, origId, 0), ux)
+		  | E.Fem(femEin, index, indexS, dofS, shape, dx) => E.Fem(femEin,
+									   mapId(index, origId,0),
+									   mapId(indexS, origId,0),
+									   mapId(dofS, origId,0), shape, dx)
                   | E.Apply(e1, e2) => E.Apply(apply (e1, shape), apply (e2, shape))
                   | E.Probe(f, pos) => E.Probe(apply (f, shape), apply (pos, shape))
                   | E.Value _ => raise Fail "expression before expand"
@@ -192,7 +202,8 @@ structure Apply : sig
           in
             if (! changed)
               then SOME(E.EIN{params=params', index=index, body=body''})
-              else NONE
+            else NONE
+		   
           end
 
     end

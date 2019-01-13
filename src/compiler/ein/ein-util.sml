@@ -65,7 +65,7 @@ structure EinUtil : sig
                     (fid1 = fid2) andalso (tid1 = tid2) andalso
                     sameIndex (alpha1, alpha2) andalso sameIndex (ix1, ix2)
 		| (E.Fem(E.Plain(basis1,n1), cell1, index1, dof1, shape1, dxes1),E.Fem(E.Plain(basis2,n2), cell2, index2, dof2, shape2, dxes2)) =>
-		  (n1=n2) andalso (ListPair.all BasisData.same (basis1, basis2))
+		  (n1=n2) andalso (ListPair.all BasisData.same (ArrayNd.toList basis1, ArrayNd.toList basis2))
 		  andalso cell1=cell2 andalso index1=index2 andalso dof1=dof2
 		  andalso sameIndex(shape1,shape2) andalso sameIndex(dxes1,dxes2)
 		| (E.Partial ix, E.Partial jx) => sameIndex(ix, jx)
@@ -177,7 +177,7 @@ structure EinUtil : sig
                 | E.Opn(E.Add, es) => 0w179 + iter es
                 | E.Opn(E.Prod, es) => 0w181 + iter es
 		| E.Fem(E.Plain(basis1,n1),_,_,_,shape1,dxes1) =>
-		  0w191 + (List.foldl (fn (d, s) => 0w199 * BasisData.hash d + s) 0w197 basis1)
+		  0w191 + (ArrayNd.foldr (fn (d, s) => 0w199 * BasisData.hash d + s) 0w197 basis1)
 		  + hashAlpha shape1 + hashAlpha dxes1
               (* end case *)
             end

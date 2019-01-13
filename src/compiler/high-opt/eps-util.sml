@@ -136,13 +136,29 @@ structure EpsUtil : sig
                       val (changed, dx_betas, nu2) = appDel(changed, dx, [], nu1, [])
                       in
                         distribute(changed, ps, E.Conv(v,alpha_betas, h ,dx_betas)::rest, nu2)
-                      end
-                  | E.Probe(E.Conv(v, alpha, h, dx), t) => let
-                      val (changed, alpha_betas, nu1) = appDel(changed, alpha, [], mu, [])
-                      val (changed, dx_betas, nu2) = appDel(changed, dx, [], nu1, [])
-                      in
-                        distribute(changed, ps, E.Probe(E.Conv(v,alpha_betas, h ,dx_betas),t)::rest, nu2)
-                      end
+                  end
+		  | E.Fem(femEin, index, indexS, dofS, shape, dx) => let
+		   val (changed, shape_betas, nu1) = appDel(changed, shape, [], mu, [])
+		   val (changed, dx_betas, nu2) = appDel(changed, dx, [], nu1, [])
+		  in
+		   distribute(changed, ps, E.Fem(femEin, index, indexS, dofS, shape_betas, dx_betas)::rest, nu2)
+		  end
+		     
+                  | E.Probe(probe, t) => let
+		   val (alpha, dx, new) = (case probe
+					    of E.Conv(v, alpha, h, dx) => (alpha, dx, SOME(fn (x,y) => E.Conv(v, x, h, y)))
+					     | E.Fem(femEin, index, indexS, dofS, shape, dx) => (shape, dx, SOME(fn (x,y) => E.Fem(femEin, index, indexS, dofS, x, y)))
+					     | _ => ([], [], NONE)
+					  (* end case*))
+                   val (changed, alpha_betas, nu1) = appDel(changed, alpha, [], mu, [])
+                   val (changed, dx_betas, nu2) = appDel(changed, dx, [], nu1, [])
+                  in
+		   (case new
+		     of  SOME(f) => distribute(changed, ps, E.Probe(f (alpha_betas, dx_betas),t)::rest, nu2)
+		       | NONE => distribute(changed, ps, p1::rest, mu)
+		   (*end case*))
+                   
+                  end
                   | E.Apply(E.Partial d, e) => let
                       val (changed, d_betas, nu) = appDel(changed,d,[],mu,[])
                       in

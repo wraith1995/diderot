@@ -550,10 +550,20 @@ structure Simplify : sig
 		 val (stms2, var2) = simplifyExpToVar(cxt, expr2, stms1)
 		in
 		 (stms2, S.E_ExtractFemItem2(var1, var2, ty', outTy', opt))
-		   
-		 
 		end
+		| AST.E_FemField(v1, v2, ty, field, func) =>
+		  let
+		   val ty' = cvtTy ty
+		   val func' = Option.map (fn (x,y) => SimpleFunc.use(cvtFunc x)) func
+		   val (stms1, var1) = simplifyExpToVar(cxt, v1, stms)
+		   val (stms', var2) = (case (Option.map (fn x => simplifyExpToVar(cxt, x, stms1)) v2)
+					 of SOME(s,v) => (s,SOME(v))
+					  | _ => (stms1, NONE))
 
+		  in
+		   (stms', S.E_FemField(var1, var2, ty', field, func'))
+		  end
+		   
               | AST.E_Coerce{dstTy, e=AST.E_Lit(Literal.Int n), ...} => (case cvtTy dstTy
                    of SimpleTypes.T_Tensor[] => (stms, S.E_Lit(Literal.Real(RealLit.fromInt n)))
                     | _ => raise Fail "impossible: bad coercion"

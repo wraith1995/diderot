@@ -162,6 +162,7 @@ structure NormalizeEin : sig
                   | E.Field _ => body
                   | E.Lift e1 => E.Lift(rewrite e1)
                   | E.Conv _ => body
+		  | E.Fem _ => body
                   | E.Partial _ => body
                   | E.Apply(E.Partial [], e1) => e1
                   | E.Apply(E.Partial d1, e1) => let
@@ -266,6 +267,17 @@ structure NormalizeEin : sig
                               | _ => (case rewrite (mkProd(p1 :: es))
                                    of E.Opn(E.Prod, es') => filterProd (eps1 :: es')
                                     | e => filterProd [eps1, e]
+                                  (* end case *))
+                        (* end case *))
+			(* Recreation of convo rule but for Fem's convo
+			 TODO: shouldn't the idea of Convo as simply a wrapper for special computations be implemented? *)		
+			| ((p1 as E.Fem(_, _, _,_,_, (d as (_::_::_)))) :: es) => (
+                         case (EpsUtil.matchEps ([i,j,k], d), es)
+                          of (true, _) => (ST.tick cntEpsElim; E.Lift zero)
+                           | (_, []) => mkProd[eps1, p1]
+                           | _ => (case rewrite (mkProd(p1 :: es))
+                                    of E.Opn(E.Prod, es') => filterProd (eps1 :: es')
+                                     | e => filterProd [eps1, e]
                                   (* end case *))
                             (* end case *))
                         | [E.Tensor(_, [i1, i2])] =>

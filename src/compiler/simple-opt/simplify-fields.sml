@@ -7,6 +7,8 @@
  *      * replace "inside" tests on fields with tests on images; including turning tests
  *        that derive from multiple fields (e.g., because of field-field operations)
  *        into the conjunction of multiple tests.
+ *      
+ * 
  *
  * TODO:
  *
@@ -153,6 +155,7 @@ structure SimplifyFields : sig
 	      | S.E_ExtractFem(_,_) => NONE
 	      | S.E_ExtractFemItem(_,_,_) => NONE
 	      | S.E_ExtractFemItem2(_,_,_,_, _) => NONE
+	      | S.E_FemField(_,_,_,_,_) => (bindImages(lhs, VMap.empty); NONE) (* THIS IS NOT THE RIGHT WAY TO DO femFields -> we should be tracking mesh, spaces, etc like images*)
               | S.E_LoadImage _ => image()
               | S.E_InsideImage _ => raise Fail "premature InsideImage"
 (* QUESTION: is this a valid way to handle field functions? *)
