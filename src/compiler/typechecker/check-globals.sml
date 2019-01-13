@@ -474,6 +474,9 @@ structure CheckGlobals : sig
 			 fun makeCells vars = (case vars
 						of [v] => AST.E_ExtractFemItem(v, cellSeqType, (FemOpt.Cells, FT.Mesh(m)))
 						 | _ => raise Fail "impossible argument to method got pass type checking")
+
+
+
 			in
 			 ([(numCell, numCellFuncVar), (cells', cellFuncVar')], [numCellFun, cellsFun', cellsFun], [(cells, makeCells, cellTypeFuncTy)])
 			end
@@ -512,10 +515,28 @@ structure CheckGlobals : sig
 							    in
 							     getTensor
 							    end
-							  | _ => raise Fail "impossible argument to method got passed type checking")
+							  | _ => raise Fail "impossible argument to method got passed type checking"
+						       (* end case*))
+
+			  val transform = Atom.atom FemName.transform
+			  val dimConst = Ty.DimConst(mapDim)
+			  val inf = Ty.DiffConst(NONE)
+			  val transformFieldTy = Ty.T_Field({diff=inf, dim = dimConst, shape=Ty.Shape([dimConst])})
+			  val transformFieldFunc = Ty.T_Fun([cellTy],transformFieldTy)
+			  fun makeTransformFieldFunc vars = (case vars
+							      of [v] =>
+								 let
+								  val getMesh = AST.E_ExtractFem(v, femType)
+								  val getCellInt= AST.E_ExtractFemItem(v, Ty.T_Int, (FemOpt.CellIndex, FT.MeshCell(m)))
+								 in
+								  AST.E_FemField(getMesh, SOME(getCellInt), transformFieldTy, FemOpt.Transform, NONE)
+								 end
+							       | _ => raise Fail "impossible argument to method got passed type checking"
+							    (* end case*))
 
 
-			  val transformFuncs = [(transformDofs, makeTransformDofs, transformsDofsFunTy)]
+			  val transformFuncs = [(transformDofs, makeTransformDofs, transformsDofsFunTy), (transform, makeTransformFieldFunc, transformFieldFunc)]
+			  (* TODO: The naming in this area of the compiler is really inconsistent*)
 
 			  val env' = Env.insertNamedType(env, cxt, cellName, cellTy, constants, methods, transformFuncs)
 							 

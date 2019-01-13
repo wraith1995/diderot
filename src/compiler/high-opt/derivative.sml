@@ -174,6 +174,7 @@ structure Derivative : sig
 	    (* or a scalar field formed as say the trace of a jacobian: Sum_{i} F_{i}_dx_{i}, which would require us to rewrite both i-s! *)
 	    (* The actual bug that made me see this was the case of a gradient of a scalar field: Dx_{i}, where the previous version ignored the i*)
 	    | E.Conv(id2, alpha, h2, dxes) => E.Conv(id2, List.map (fn e => change(e)) alpha, h2, List.map (fn e => change(e)) dxes)
+	    | E.Fem(fem, id1, id2, id3, alpha, dxes) => E.Fem(fem, id1, id2, id3, List.map (fn e => change(e)) alpha, List.map (fn e => change(e)) dxes)
             | E.Partial(alpha) => E.Partial (List.map (fn e => change(e)) alpha)
 	    (* FIX ME:  I'm not sure about these 3: Comeback to check later.*)
 	    (* I guess the main issue is: are the indicies of e1,e2 disjoint in these cases?*)
@@ -201,11 +202,21 @@ structure Derivative : sig
             | E.Eps2 _ => NONE
             | E.Lift _ => NONE
             | E.Field(id, _) => let
-                val E.IMG(d, _) = List.nth(params, id)
-                in SOME(d) end
+             val E.IMG(d, _) = List.nth(params, id) 
+            in SOME(d) end
+				
             | E.Conv(id, _, _, _) => let
                 val E.IMG(d, _) = List.nth(params, id)
-                in SOME(d) end
+            in SOME(d) end
+	    | E.Fem(_,_, fem, _, _, _) =>
+	      let
+	       val E.FEM(data) = List.nth(params, fem)
+
+
+	       val d = FemData.underlyingDim data
+	      in
+	       SOME(d)
+	      end
             | E.Partial _ => NONE
             | E.Apply(e1, e2) => findDim(e2, params)
             | E.Probe(e1, e2) => findDim(e1, params)
@@ -224,6 +235,8 @@ structure Derivative : sig
                     (*end case *))
                 in iter(es) end
             |  _ => raise Fail(String.concat["find Dim does not handle: ", EinPP.expToString(e)])
+		    
+							 
         (* end case*))
         
   (* rewrite Apply nodes *)
@@ -238,6 +251,7 @@ structure Derivative : sig
             | E.Field _ => NONE
             | E.Lift _ => SOME zero
             | E.Conv(v, alpha, h, d2) => SOME(E.Conv(v, alpha, h, d2@dx))
+	    | E.Fem((E.Plain(bda, n)), id1, id2, id3, alpha, dxes)  => SOME(E.Fem(E.Plain( BasisData.D(bda), n), id1, id2, id3, alpha, dxes@dx))
             | E.Partial _ => err("Apply of Partial")
             | E.Apply(E.Partial d2, e2) => SOME(E.Apply(E.Partial(dx@d2), e2))
             | E.Apply _ => err "Apply of non-Partial expression"

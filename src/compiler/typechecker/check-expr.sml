@@ -260,6 +260,7 @@ structure CheckExpr : sig
 		fun checkFunTyMatchSingle cxt field funTy args argTys funcApp =
 		    let
 		     val Ty.T_Fun(domTys, rngTy) = funTy
+		     (* check if this is a field*)
 		    in
 		     case Unify.matchArgs (domTys, args, argTys)
 		      of SOME(args) => (funcApp args, rngTy)
@@ -326,6 +327,15 @@ structure CheckExpr : sig
 		       in
 			case method 
 			 of SOME(SOME(s), _) => checkMethodApp((#1 cxt, span), s) (args) astExp ( tys) astTy (*Note: This could result in a cryptic error message*)
+			  | SOME(NONE, SOME(f, Ty.T_Fun([v], Ty.T_Field(fieldParams)))) => (*This is the fields case*)
+			    let
+			     (*Then we check if this is a valid application of the field.*)
+			     val fieldExp = f [astExp]
+			    in
+			     (case tyName
+			       of NONE => bogusExpTy (* THIS IS REDUNDANT*)
+				| SOME(_) => checkFieldApp(fieldExp,Ty.T_Field(fieldParams)))
+			    end
 			  | SOME(NONE, SOME(f, funTy)) => checkFunTyMatchSingle cxt field funTy (astExp :: args) (astTy :: tys) f
 			 | NONE => bogusExpTy
 		       end
@@ -485,6 +495,7 @@ structure CheckExpr : sig
 				 of SOME(tyEnv) =>
 				    let
 				     val const = TypeEnv.findConstant(tyEnv, field)
+				     (*Add all the other possible options here*)
 				    in
 				     (case const
 				       of SOME(const') => (ConstExpr.valueToExpr const', ConstExpr.typeOfConst const')
@@ -693,6 +704,34 @@ structure CheckExpr : sig
                       (* end case *))
                   | NONE => err(cxt, [S "unknown strand ", A strand])
 					  (* end case *))
+	    | (e' , Ty.T_Fem(data, _)) =>
+	      let
+	       val tyName = (case data
+			    of FT.MeshCell(m) => SOME(Atom.atom ("cell(" ^ (Atom.toString (FT.nameOf (FT.Mesh(m)))) ^ ")"))
+			     | _ => NONE
+			  (* end case *))
+	       val tyEnv = (Option.mapPartial (fn name => case Env.findTypeEnv(env, name)
+								    of SOME(s) => SOME(s)
+								     | NONE =>  (err (cxt, [S "There is no type named", A(name)]); NONE) ) tyName)
+	       val method = Option.mapPartial (fn env => (case TypeEnv.findHiddenVar(env, field)
+								 of SOME(s) => SOME(s)
+								  | NONE => ( (err (cxt, [S"The type named", A (TypeEnv.findName env),
+										     S " does not have a member named",
+										     A(field)])); NONE))) tyEnv
+			    
+	      in
+	       (case method (*I think that any aditional typechecking here is redundant*)
+		 of SOME(f, Ty.T_Fun([v], a)) =>
+		    let
+		     val fieldExpr = f [e']
+				       
+		    in
+		     (fieldExpr, a)
+		    end
+		    
+		  | NONE => bogusExpTy
+	       (* end case *))
+	      end
 	    (* | (e', Ty.T_Named(name, ty')) => *)
 	    (*   let *)
 	    (*    (* There in one case here: 1 argument functions s*) *)

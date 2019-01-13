@@ -29,6 +29,7 @@ structure Translate : sig
     structure DstTy = HighTypes
     structure Census = HighCensus
     structure Inp = Inputs
+    structure E = Ein
 
     val cvtTy = TranslateTy.tr
 
@@ -456,7 +457,23 @@ print(concat["doVar (", SV.uniqueNameOf srcVar, ", ", IR.phiToString phi, ", _) 
                 val Ty.T_Image info = SV.typeOf img
                 in
                   [IR.ASSGN(lhs, IR.OP(Op.Inside(info, s), [lookup env pos, lookup env img]))]
-                end
+            end
+	    | S.E_FemField(mesh,SOME(index), ty, FemOpt.Transform, NONE)=>
+	      let
+	       val Ty.T_Fem(FemData.Mesh(m)) = SimpleVar.typeOf(mesh)
+	       val data = FemData.Mesh(m)
+	       val dim = FemData.meshDim m
+	       val spaceDim = FemData.meshMapDim m 
+	       val femEin = E.Plain(ArrayNd.fromList [], spaceDim)
+	       val rator = E.EIN{
+		    params = [E.INT, E.FEM(data), E.FEM(data)],
+		    index = [dim],
+		    body = E.Fem(femEin,0,1,2,[E.V(0)],[])
+		   }
+	       val mesh' = lookup env mesh
+	      in
+	       [IR.ASSGN(lhs, IR.EINAPP(rator, [lookup env index, mesh', mesh']))]
+	      end
             | S.E_FieldFn f => let
               (* Variable convention used
                *   - "alphas" tensor size

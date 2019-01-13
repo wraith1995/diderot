@@ -48,9 +48,12 @@ structure HighOptimizer : sig
             else prog
 
     fun optimize prog = let
-          val prog = transform (Controls.get Ctl.highVN, Timers.timeHighVN, "value numbering", VN.transform, prog)
+
+     val prog = transform (Controls.get Ctl.highVN, Timers.timeHighVN, "value numbering", VN.transform, prog)
+
           val prog = noCheckAfter ("normalization rewriting",
-                PhaseTimer.withTimer Timers.timeHighNorm Normalize.rewrite prog)
+				   PhaseTimer.withTimer Timers.timeHighNorm Normalize.rewrite prog)
+
           val prog = transform (true, Timers.timeHighNorm, "normalization promotion", Normalize.promote, prog)
           in
             prog
