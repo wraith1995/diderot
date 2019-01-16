@@ -61,7 +61,7 @@ structure EinPP : sig
 	       val alpha = if null coeffShape then "" else multiIndex2s coeffShape
                val beta = if null dxes then "" else "dx" ^ multiIndex2s dxes
 	      in
-	       concat ["femV", i2s cell, i2s index,"^", i2s dofs, alpha,  "⊛", basisString, beta]
+	       concat ["femV(", i2s cell,", ", i2s index,", ", i2s dofs,")", alpha,  "⊛", basisString, beta]
 	      end
             | E.Partial alpha => "∂/∂x" ^ multiIndex2s alpha
             | E.Apply(e1, e2) => concat [ expToString e1, "@(", expToString e2, ")"]

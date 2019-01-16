@@ -1,19 +1,10 @@
-meeting:
-FIX HIS BUGS -> You should learn SML
-MeshCell -> why use the dependent types (in addition to constants!)
-Otherwise/case syntax -> SMT solvers
-\hat or overline -> annotating fields with domains/ranges
-Semantics of inputs and all of that is huge fucking mess -> that code is really ugly.
-Against structured programming/non-embed -> if you do embded as a class or something, you can do structed and non-embeded as trivial corollaries.
-Manipulation of fem element types (see two papers about vectorization in FEM)
-Notification of FEM
-Critcism of our design process:??
-ODE solving for scale space?
-Category theory
-WE SHOULD BEGIN WRITING -> I've not done much yet and no data and Kirby Email
-
-
-
+--Cleanup check-expr (many redudant comps) and make check-global more precise
+-
+--Individual cell loading needs to be made
+--cell sequence loading
+--Other todo
+--Clean up print statements
+--expansion to the other types
 
 
 Tomorrow:
@@ -158,7 +149,15 @@ Today:
 -Add Type of
 -Add mesh numCell
 -Fix select - remember select also needs to do fields and well fields -- need to update type env fr fields?
-
+1. Clean up error messages and provide more information in them
+2. Clean up the documentation
+3. Determine if clean AST is needed.
+4. Fix the for loop issues.
+5. Load constants via files and use them
+6. Determine any default constants.
+7. Make sure named types can't occupy names of old types?
+8. Make fields possible arguments to functions
+9. Deal with inputs of named types
 --Next step is to do cells -> cellToIndex and IndexToCell as well ass -> unique global var.
 --> Here numCell can be used implictly -> need to add LoadFemThing -> expand in like mid to low to index shit.
 
@@ -191,12 +190,3 @@ IndexToCell(i, mesh)
 
 
 
-1. Clean up error messages and provide more information in them
-2. Clean up the documentation
-3. Determine if clean AST is needed.
-4. Fix the for loop issues.
-5. Load constants via files and use them
-6. Determine any default constants.
-7. Make sure named types can't occupy names of old types?
-8. Make fields possible arguments to functions
-9. Deal with inputs of named types
