@@ -94,6 +94,7 @@ structure CleanIndex : sig
                   | E.Field(_, alpha) => addMus(ixs, alpha)
                   | E.Lift e => shape(e, ixs)
                   | E.Conv(_, alpha, _, dx) => addMus(addMus(ixs, alpha), dx)
+		  | E.Fem(_,_,_, alpha, dx) => addMus(addMus(ixs, alpha), dx)
                   | E.Partial alpha => addMus(ixs, alpha)
                   | E.Apply(E.Partial alpha, e1) => shape (e1, addMus(ixs, alpha))
                   | E.Probe(e, _) => shape (e, ixs)
@@ -139,6 +140,7 @@ structure CleanIndex : sig
                   | E.Field(_, alpha) => alpha @ ixs
                   | E.Lift e => shape (e, ixs)
                   | E.Conv(_, alpha, _, dx) => alpha @ dx @ ixs
+		  | E.Fem(_,_,_,_, alpha, dx) => alpha @ dx @ ixs
                   | E.Partial alpha => alpha @ ixs
                   | E.Apply(E.Partial dx, e) => shape (e, dx@ixs)
                   | E.Comp(e1, _) => shape(e1, ixs)
@@ -257,10 +259,13 @@ structure CleanIndex : sig
                   | E.Field(id, alpha) => E.Field(id, getAlpha alpha)
                   | E.Lift e1 => E.Lift(rewrite e1)
                   | E.Conv(v, alpha, h, dx) => E.Conv (v, getAlpha alpha, h, getAlpha dx)
+		  | E.Fem(fem, v1, v2, v3, alpha, dx) => E.Fem(fem, v1, v2, v3, getAlpha alpha, getAlpha dx)
                   | E.Partial dx => E.Partial (getAlpha dx)
                   | E.Apply (e1, e2) => E.Apply(rewrite e1, rewrite e2)
                   | E.Probe(E.Conv(v, alpha, h,dx), t) =>
-                      E.Probe(E.Conv(v, getAlpha alpha, h, getAlpha dx), rewrite t)
+                    E.Probe(E.Conv(v, getAlpha alpha, h, getAlpha dx), rewrite t)
+		  | E.Probe(E.Fem(fem, v1, v2, v3, alpha, dx), t) =>
+		    E.Probe(E.Fem(fem, v1, v2, v3, getAlpha alpha, getAlpha dx), rewrite t)
                   | E.Probe (e1, e2) => E.Probe(rewrite e1, rewrite e2)
                   | E.Comp(e1, es) => E.Comp(rewrite e1, es)
                   | E.OField (opn, e1, E.Partial dx) =>
