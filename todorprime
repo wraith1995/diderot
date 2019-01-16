@@ -1,0 +1,50 @@
+Current error:
+uncaught exception Fail [Fail: impossible]
+  raised at common/phase-timer.sml:99.57-99.59
+  raised at high-to-mid/high-to-mid.sml:212.7-212.9
+  raised at high-to-mid/clean-index.sml:114.32-114.49
+
+List of todo:
+-Cleanup check-expr
+-loading of individual cells and single cell sequences
+-clean up print statements in other code
+-expand ideas to other types
+-pointer issue
+-loading nrrds
+-insert C cde srtings, use lib index, check ir
+-misue of degree/dim
+-special transforms
+-equality testing
+-checking ir/check femOpt
+-removing () in select
+-verticies, inside, etc
+
+
+Notes:
+
+Map of current things to mod:
+clean-index.sml:96:                  | E.Conv(_, alpha, _, dx) => addMus(addMus(ixs, alpha), dx)
+clean-index.sml:141:                  | E.Conv(_, alpha, _, dx) => alpha @ dx @ ixs
+clean-index.sml:259:                  | E.Conv(v, alpha, h, dx) => E.Conv (v, getAlpha alpha, h, getAlpha dx)
+clean-index.sml:262:                  | E.Probe(E.Conv(v, alpha, h,dx), t) =>
+clean-index.sml:263:                      E.Probe(E.Conv(v, getAlpha alpha, h, getAlpha dx), rewrite t)
+clean-params.sml:41:                  | E.Conv(v, _, h, _) => ISet.add(ISet.add(mapp, h), v)
+clean-params.sml:93:                  | E.Conv(v, alpha, h, dx) =>
+clean-params.sml:94:                      E.Conv(getId v, alpha, getId h, dx)
+probe-ein.sml:284:          val E.Probe(E.Conv(Vid, alpha, hid, dx), E.Tensor(tid, _)) = probe
+probe-ein.sml:330:                of [] => ([], index, E.Conv(0, alpha, 1, dx'))
+probe-ein.sml:331:                | _ => CleanIndex.clean(E.Conv(0, alpha, 1, dx'), index, sxx)
+probe-ein.sml:336:          val E.Conv(_, alpha', _, dx) = ec
+probe-ein.sml:343:          val E.Probe(E.Conv(Vid, alpha, hid, dx), E.Tensor(tid, _)) = probe
+probe-ein.sml:374:           of (E.Probe(E.Conv(_, _, _, []) ,_)) =>
+probe-ein.sml:376:            | (E.Probe(E.Conv(_, alpha, _, dx) ,_)) =>
+probe-ein.sml:378:            | (E.Sum(sx, p as E.Probe(E.Conv(_, _, _, []), _))) =>
+probe-ein.sml:380:            | (E.Sum(sx, p as E.Probe(E.Conv(_, [], _, dx), _))) =>
+float-ein.sml:30:                    body = E.Probe(E.Conv(V, [c1], h, dx), pos),
+float-ein.sml:37:          val unshiftedBody = E.Probe(E.Conv(V, [E.V newvx], h, dx), pos)
+float-ein.sml:171:    fun transform (y, ein as Ein.EIN{body=E.Probe (E.Conv _, _), ...}, args) =
+float-ein.sml:173:      | transform (y, ein as Ein.EIN{body=E.Sum(_, E.Probe (E.Conv _, _)), ...}, args) =
+float-ein.sml:190:                 of E.Probe(E.Conv(_, [E.C _], _, []), _) =>
+float-ein.sml:192:                  | E.Probe(E.Conv(_, [E.C _ ], _, [E.V 0]), _) =>
+float-ein.sml:194:                  | E.Probe(E.Conv(_, [E.C _ ], _, [E.V 0, E.V 1]), _) =>
+float-ein.sml:196:                  | E.Probe(E.Conv(_, [E.C _ ], _, [E.V 0, E.V 1, E.V 2]), _) =>
