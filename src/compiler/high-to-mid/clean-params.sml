@@ -39,6 +39,7 @@ structure CleanParams : sig
           fun walk (b, mapp) = (case b
                  of E.Tensor(id, _) => ISet.add(mapp, id)
                   | E.Conv(v, _, h, _) => ISet.add(ISet.add(mapp, h), v)
+		  | E.Fem(_, v1, v2, v3, _, _) => ISet.add(ISet.add(ISet.add(mapp, v1), v2), v3)
                   | E.Probe(e1, e2) => walk (e2, walk (e1, mapp))
                   | E.OField(E.CFExp es, e2, dx) => let
                       val es = List.map (fn (id, _) => E.Tensor(id, [])) es
@@ -91,7 +92,9 @@ structure CleanParams : sig
           fun rewrite b = (case b
                  of E.Tensor(id, alpha) => E.Tensor(getId id, alpha)
                   | E.Conv(v, alpha, h, dx) =>
-                      E.Conv(getId v, alpha, getId h, dx)
+                    E.Conv(getId v, alpha, getId h, dx)
+		  | E.Fem(fem, v1, v2, v3, alpha, dx) =>
+		    E.Fem(fem, getId v1, getId v2, getId v3, alpha, dx)
                   | E.Probe(f, t) => E.Probe(rewrite f, rewrite t)
                   | E.OField(E.CFExp es, e2, dx) => E.OField(
                       E.CFExp(List.map (fn (id, inputTy) => (getId id, inputTy)) es),
