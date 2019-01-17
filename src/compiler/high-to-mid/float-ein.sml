@@ -18,13 +18,14 @@ structure FloatEin : sig
     structure E = Ein
 
     fun cut (name, origProbe, params, index, sx, argsOrig, avail, newvx) = let
+     val _ = print("CUT CALLED" ^ (Int.toString newvx))
         (* clean and rewrite current body *)
 (* DEBUG val _ = print(String.concat["\n\n impact cut"]) *)
           val (tshape1, sizes1, body1) = CleanIndex.clean (origProbe, index, sx)
           val id = length params
-          val Rparams = params@[E.TEN(true, sizes1)]
+          val Rparams = params@[E.TEN(true, sizes1)] (*adding another tensor paramter corresponding to the shape of the application *)
           val y = V.new (concat[name, "_l_", Int.toString id], Ty.tensorTy sizes1)
-          val IR.EINAPP(ein, args) = CleanParams.clean (body1, Rparams, sizes1, argsOrig@[y])
+          val IR.EINAPP(ein, args) = CleanParams.clean (body1, Rparams, sizes1, argsOrig@[y]) (* add the new paramter and a vew variable to the ein app and getting the applicatin out*)
         (* shift indices in probe body from constant to variable *)
           val Ein.EIN{
                     body = E.Probe(E.Conv(V, [c1], h, dx), pos),
@@ -33,7 +34,7 @@ structure FloatEin : sig
                 } = ein
         (* only called with vector fields*)
           val E.IMG(dim,[i]) = List.nth(params0,V)
-          val index1 = index0@[i]
+          val index1 = index0@[i] 
           val unshiftedBody = E.Probe(E.Conv(V, [E.V newvx], h, dx), pos)
         (* clean to get body indices in order *)
           val (_ , sizes2, body2) = CleanIndex.clean (unshiftedBody, index1, [])
@@ -42,12 +43,42 @@ structure FloatEin : sig
           val lhs = AvailRHS.addAssign (avail, "L", Ty.tensorTy sizes2, IR.EINAPP(ein2, args))
           val Rargs = argsOrig @ [lhs]
         (*Probe that tensor at a constant position  c1*)
-          val nx = List.mapi (fn (i, _) => E.V i) dx
+          val nx = List.mapi (fn (i, _) => E.V i) dx (*QUESTION: is this line supposed to do anything?*)
           val Re = E.Tensor(id, c1 :: tshape1)
           val Rparams = params @ [E.TEN(true, sizes2)]
           in
             (Re, Rparams, Rargs)
-          end
+    end
+    (*We are not sure this is even needed or why, but we can replicate the above.*)
+    fun cutFem(name, origProbe, params, index, sx, argsOrig, avail, newvx) =
+	let
+          val (tshape1, sizes1, body1) = CleanIndex.clean (origProbe, index, sx)
+          val id = length params
+          val Rparams = params@[E.TEN(true, sizes1)] (*adding another tensor paramter corresponding to the shape of the application *)
+          val y = V.new (concat[name, "_l_", Int.toString id], Ty.tensorTy sizes1)
+          val IR.EINAPP(ein, args) = CleanParams.clean (body1, Rparams, sizes1, argsOrig@[y])
+
+	  val Ein.EIN{
+	   body = E.Probe(E.Fem(femEin,v1,v2,v3, [c1], dx), pos),
+	   index = index0,
+	   params = params0
+	  } = ein
+	  val E.FEM(data) = List.nth(params0, v3)
+	  val [i] = FemData.dataRangeShapeOf(data) (* only can be called on vector fields*)
+	  val index1 = index0@[i]
+          val unshiftedBody = E.Probe(E.Fem(femEin,v1,v2,v3, [E.V newvx], dx), pos)
+	  val (_ , sizes2, body2) = CleanIndex.clean (unshiftedBody, index1, [])
+          val ein2 = E.EIN{params = params0, index =  sizes2, body = body2}
+	  (* DEBUG val _ = print(String.concat["\n\n  ein2:",EinPP.toString(ein2)]) *)
+          val lhs = AvailRHS.addAssign (avail, "L", Ty.tensorTy sizes2, IR.EINAPP(ein2, args))
+          val Rargs = argsOrig @ [lhs]
+          (*Probe that tensor at a constant position  c1*)
+          val nx = List.mapi (fn (i, _) => E.V i) dx (*QUESTION: is this line supposed to do anything?*)
+          val Re = E.Tensor(id, c1 :: tshape1)
+          val Rparams = params @ [E.TEN(true, sizes2)]
+	in
+	 (Re, Rparams, Rargs)
+	end
           
     fun err str = raise Fail(String.concat["Ill-formed EIN Operator", str])
     
@@ -167,11 +198,15 @@ structure FloatEin : sig
            | E.Probe _  => true
            | _          => false
          (* end case *))
-        
+
     fun transform (y, ein as Ein.EIN{body=E.Probe (E.Conv _, _), ...}, args) =
-          [(y, IR.EINAPP(ein, args))]
+        [(y, IR.EINAPP(ein, args))]
+      | transform (y, ein as Ein.EIN{body=E.Probe (E.Fem(E.Plain(_,_), _, _, _, _, _), _), ...}, args) =
+	[(y, IR.EINAPP(ein, args))]
       | transform (y, ein as Ein.EIN{body=E.Sum(_, E.Probe (E.Conv _, _)), ...}, args) =
-          [(y, IR.EINAPP(ein, args))]
+        [(y, IR.EINAPP(ein, args))]
+      | transform (y, ein as Ein.EIN{body=E.Sum(_, E.Probe (E.Fem(E.Plain _, _, _, _, _, _), _)), ...}, args) =
+	[(y, IR.EINAPP(ein, args))]
       | transform (y, Ein.EIN{params, index, body}, args) = let
           val avail = AvailRHS.new()
           fun filterOps (es, params, args, index, sx) = let
@@ -185,16 +220,26 @@ structure FloatEin : sig
                       else filter (es, e::es', params, args)
                 in
                   filter (es, [], params, args)
-                end
-          fun rewrite (sx, exp, params, args) = (case exp
-                 of E.Probe(E.Conv(_, [E.C _], _, []), _) =>
-                      cut ("cut", exp, params, index, sx, args, avail, 0)
-                  | E.Probe(E.Conv(_, [E.C _ ], _, [E.V 0]), _) =>
-                      cut ("cut", exp, params, index, sx, args, avail, 1)
-                  | E.Probe(E.Conv(_, [E.C _ ], _, [E.V 0, E.V 1]), _) =>
-                      cut ("cut", exp, params, index, sx, args, avail, 2)
-                  | E.Probe(E.Conv(_, [E.C _ ], _, [E.V 0, E.V 1, E.V 2]), _) =>
-                      cut ("cut", exp, params, index, sx, args, avail, 3)
+          end
+
+          fun rewrite (sx, exp, params, args) =
+	      (case exp
+		of  E.Probe(E.Conv(_, [E.C _], _, dxes),_) =>
+		    (case dxes
+		      of [] => cut ("cut", exp, params, index, sx, args, avail, 0)
+		       | [E.V 0] =>  cut ("cut", exp, params, index, sx, args, avail, 1)
+		       | [E.V 0, E.V 1] =>  cut ("cut", exp, params, index, sx, args, avail, 2)
+		       | [E.V 0, E.V 1, E.V 2] => cut ("cut", exp, params, index, sx, args, avail, 3)
+		       | _ => lift ("probe", exp, params, index, sx, args, avail)
+		    (* end case*))
+		  | E.Probe(E.Fem(_,_,_,_, [E.C _], dxes), _) =>
+		    (case dxes
+		      of [] => cutFem ("cut", exp, params, index, sx, args, avail, 0)
+		       | [E.V 0] =>  cutFem ("cut", exp, params, index, sx, args, avail, 1)
+		       | [E.V 0, E.V 1] => cutFem ("cut", exp, params, index, sx, args, avail, 2)
+		       | [E.V 0, E.V 1, E.V 2] => cutFem ("cut", exp, params, index, sx, args, avail, 3)
+		       | _ => lift ("probe", exp, params, index, sx, args, avail)
+		    (* end case*))
                   | E.Probe(E.Comp(_, es), _)
                     => compn("composition", exp, params, index, sx, [], args, avail)
                   | E.Probe _ => lift ("probe", exp, params, index, sx, args, avail)

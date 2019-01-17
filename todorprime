@@ -1,8 +1,9 @@
-Current error:
-uncaught exception Fail [Fail: impossible]
+Current error: Got too far:
+uncaught exception Fail [Fail: probe ein-exp: Probe(femV(0, 1, 1)_{i0}⊛Basis(4),T2)]
   raised at common/phase-timer.sml:99.57-99.59
-  raised at high-to-mid/high-to-mid.sml:212.7-212.9
-  raised at high-to-mid/clean-index.sml:114.32-114.49
+  raised at mid-to-low/mid-to-low.sml:204.29-204.31
+  raised at mid-to-low/ein-to-scalar.sml:169.42-169.90
+
 
 List of todo:
 -Cleanup check-expr
@@ -24,9 +25,7 @@ Notes:
 
 Map of current things to mod:
 
-clean-params.sml:41:                  | E.Conv(v, _, h, _) => ISet.add(ISet.add(mapp, h), v)
-clean-params.sml:93:                  | E.Conv(v, alpha, h, dx) =>
-clean-params.sml:94:                      E.Conv(getId v, alpha, getId h, dx)
+
 probe-ein.sml:284:          val E.Probe(E.Conv(Vid, alpha, hid, dx), E.Tensor(tid, _)) = probe
 probe-ein.sml:330:                of [] => ([], index, E.Conv(0, alpha, 1, dx'))
 probe-ein.sml:331:                | _ => CleanIndex.clean(E.Conv(0, alpha, 1, dx'), index, sxx)
@@ -36,6 +35,7 @@ probe-ein.sml:374:           of (E.Probe(E.Conv(_, _, _, []) ,_)) =>
 probe-ein.sml:376:            | (E.Probe(E.Conv(_, alpha, _, dx) ,_)) =>
 probe-ein.sml:378:            | (E.Sum(sx, p as E.Probe(E.Conv(_, _, _, []), _))) =>
 probe-ein.sml:380:            | (E.Sum(sx, p as E.Probe(E.Conv(_, [], _, dx), _))) =>
+
 float-ein.sml:30:                    body = E.Probe(E.Conv(V, [c1], h, dx), pos),
 float-ein.sml:37:          val unshiftedBody = E.Probe(E.Conv(V, [E.V newvx], h, dx), pos)
 float-ein.sml:171:    fun transform (y, ein as Ein.EIN{body=E.Probe (E.Conv _, _), ...}, args) =

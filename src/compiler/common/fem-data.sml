@@ -39,6 +39,7 @@ structure FemData : sig
 				      
 	   val underlyingDim : femType -> int
 	   val dataShapeOf : femType -> int list
+	   val dataRangeShapeOf : femType -> int list
 	   val meshMapDim : mesh -> int
 	   val spaceDim : space -> int
 
@@ -94,6 +95,7 @@ datatype func = Func' of {
 	  name : Atom.atom
 	 }
 fun funcSpace (Func'{space, name, ...}) = space
+
 
 
 datatype femType = Mesh of mesh
@@ -163,6 +165,12 @@ fun dataShapeOf data =
        | MeshPos(m) => [meshMapDim m, meshDim m]
 
     (*end case*))
+
+fun dataRangeShapeOf data =
+    (case data
+      of Mesh(m) => [meshDim m]
+       | Func(Func'{space,...}) => spaceShape space
+       | _ => raise Fail "impossible")
 
 
 fun sameMesh(m1, m2)
