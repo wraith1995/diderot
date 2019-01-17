@@ -94,7 +94,7 @@ structure CleanIndex : sig
                   | E.Field(_, alpha) => addMus(ixs, alpha)
                   | E.Lift e => shape(e, ixs)
                   | E.Conv(_, alpha, _, dx) => addMus(addMus(ixs, alpha), dx)
-		  | E.Fem(_,_,_, alpha, dx) => addMus(addMus(ixs, alpha), dx)
+		  | E.Fem(_,_,_,_, alpha, dx) => addMus(addMus(ixs, alpha), dx)
                   | E.Partial alpha => addMus(ixs, alpha)
                   | E.Apply(E.Partial alpha, e1) => shape (e1, addMus(ixs, alpha))
                   | E.Probe(e, _) => shape (e, ixs)
