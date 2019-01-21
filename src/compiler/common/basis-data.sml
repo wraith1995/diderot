@@ -21,6 +21,7 @@ structure BasisData : sig
 	   val makeBasis : real Array.array * int * int * int -> t option
 
 	   val dx : t * int -> t
+	   val d : t ArrayNd.ArrayNd -> t ArrayNd.ArrayNd
 	   val D : t ArrayNd.ArrayNd -> t ArrayNd.ArrayNd
 	   val scale : t * real -> t
 	   val sum : t * t -> t
@@ -195,7 +196,16 @@ fun dx(t as BasisFunc({dim, degree, coeffs, strForm, mapDim,...}), varIndex) =
     in
      BasisFunc{dim = dim, degree = degree', coeffs = newArray, mapDim = mapDim, strForm = strForm'}
     end
-
+fun d(basisArray) =
+    let
+     val first = ArrayNd.sub(basisArray,0)
+     val dim = dimDomain(first)
+     val funcs = (List.tabulate(dim, fn z => (fn y => dx(y, z))))
+     fun expandMap a = Array.fromList (List.map (fn y => y a) funcs)
+     val new = ArrayNd.expandMap expandMap dim basisArray
+    in
+     new
+    end
 fun D(basisArray) =
     let
      val first = ArrayNd.sub(basisArray,0)

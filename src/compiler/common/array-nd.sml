@@ -35,6 +35,9 @@ structure ArrayNd : sig
 	   (* get meta data*)
 	   val length : 'a ArrayNd -> int
 	   val compatibleMeta : 'a ArrayNd * 'b ArrayNd -> bool
+	   val sameData : 'a ArrayNd * 'a ArrayNd -> bool
+	   val same : 'a ArrayNd * 'a ArrayNd -> bool
+	   val shape : 'a ArrayNd -> int list
 	   (* the usual*)
 	   val sub : ('a ArrayNd * int) -> 'a
 	   val sub' : ('a ArrayNd * int list) -> 'a
@@ -47,6 +50,9 @@ structure ArrayNd : sig
 	   val modify : ('a -> 'a) -> 'a ArrayNd -> unit
 	   val modifyi : (int * 'a -> 'a) -> 'a ArrayNd -> unit
 	   val modifyi' : (int list * 'a -> 'a) -> 'a ArrayNd -> unit
+
+	   val expandMap : ('a -> 'a Array.array) -> int -> 'a ArrayNd -> 'a ArrayNd
+	   val reshape: 'a ArrayNd * int list -> 'a ArrayNd
 
 								  
 	   val all : ('a -> bool) -> 'a ArrayNd -> bool
@@ -179,7 +185,9 @@ fun duplicate (t as AND{dims, shape, elems, index, inverseIndex}) =
 fun compatibleMeta((AND({dims=dims1, shape=shape1, ...})),
 		   (AND({dims=dims2, shape=shape2, ...}))) =
     dims1=dims2 andalso (ListPair.all op= (shape1,shape2))
-
+fun sameData (AND{elems=elems1,...}, AND{elems=elems2, ...}) = elems1 = elems2
+fun same(t1,t2) = compatibleMeta(t1, t2) andalso sameData(t1, t2)
+fun shape(AND{shape,...}) = shape
 fun zip(t1 as AND{dims,shape, elems=elems1, index=index1, inverseIndex=inverseIndex1},
 	t2 as AND{elems=elems2,index=index2, inverseIndex=inverseIndex2,...}) =
     let
@@ -226,6 +234,8 @@ fun foldri' f s (t as AND{elems, ...}) = let val inverseIndex = getInverseIndex 
 (*      val subDim =  *)
 (*     in *)
 (*     end *)
+
+(* ListOfArrays.*)
 
 fun array'(a, shape) =
     let
@@ -275,6 +285,42 @@ fun concat(arrays) =
      val result = AND{dims=startDim+1, shape=len::startShape, elems=newArray, index = ref NONE, inverseIndex = ref NONE}
     in
      (computeIndex o computeInverseIndex) result
+    end
+(*do a list version, then reshape*)
+fun expandMap f size (t as AND{dims, shape, elems, ...}) =
+    let
+     val newShape = List.@(shape, [size])
+     val newSize = (length t) * size
+     val newDims = dims + 1
+     val newArray = Array.array(newSize, Array.sub(elems, 0))
+     val newT = AND{dims = newDims, shape = newShape, elems = newArray, index = ref NONE, inverseIndex = ref NONE}
+			    
+     (* val indexArray = getInverseIndex t *)
+     (* val indexFunc = (fn i => Array.sub(indexArray, i)) *)
+     val inverseIndex = Option.valOf o (getIndex newT)
+
+
+     fun appMap(idx, a) =
+	 let
+	  val newIndex = List.@(idx, [0])
+	  val offset = inverseIndex newIndex
+	  val newArray = f a
+	 in
+	  Array.copy({src=elems, dst = newArray, di = offset})
+	 end
+			    
+	       (* expand the array *)
+	       (* copy each one over...*)
+	       (* send result*)
+    in
+     (appi' appMap t; newT)
+    end
+fun reshape(AND{dims, shape, elems, ...}, shape') = (computeIndex o computeInverseIndex) (AND{dims=List.length shape', shape=shape', elems = elems, index = ref NONE, inverseIndex = ref NONE})
+fun toArrayMap expandMap insertShape (t as AND{dims, shape, elems, ...}) =
+    let
+     val a = ()
+    in
+     ()
     end
 
 					  

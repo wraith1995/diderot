@@ -32,7 +32,9 @@ Library
   structure FemData
   structure FemOpt
   structure BasisData
+  structure BasisDataArray
   structure FemName
+
 
 is
   $/basis.cm
@@ -63,6 +65,7 @@ is
   strand-util.sml
   timers.sml
   basis-data.sml
+  basis-data-array.sml
   fem-data.sml
   fem-opt.sml
   fem-name.sml
