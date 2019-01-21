@@ -1,3 +1,5 @@
+
+
 Current error: Got too far:
 uncaught exception Fail [Fail: probe ein-exp: Probe(femV(0, 1, 1)_{i0}⊛Basis(4),T2)]
   raised at common/phase-timer.sml:99.57-99.59
@@ -6,11 +8,18 @@ uncaught exception Fail [Fail: probe ein-exp: Probe(femV(0, 1, 1)_{i0}⊛Basis(4
 
 
 List of todo:
+-Okay there is a confusion aboout indexDatalower and so forth -> main issue is confusion of when things are loaded
+-arrayNd cyclying them
+-how to evaluate kernal -> Op
+---vectorization -> what the fuck is going on here
+---Remove potential for dim=1 things to exists.
 -Cleanup check-expr
 -loading of individual cells and single cell sequences
 -clean up print statements in other code
+---- still missing consisten finding of things and making sure things are gotten
 -expand ideas to other types
 -pointer issue
+-bordercontrol in FemItem
 -loading nrrds
 -insert C cde srtings, use lib index, check ir
 -misue of degree/dim
@@ -44,3 +53,62 @@ float-ein.sml:190:                 of E.Probe(E.Conv(_, [E.C _], _, []), _) =>
 float-ein.sml:192:                  | E.Probe(E.Conv(_, [E.C _ ], _, [E.V 0]), _) =>
 float-ein.sml:194:                  | E.Probe(E.Conv(_, [E.C _ ], _, [E.V 0, E.V 1]), _) =>
 float-ein.sml:196:                  | E.Probe(E.Conv(_, [E.C _ ], _, [E.V 0, E.V 1, E.V 2]), _) =>
+
+
+
+Notes on evaluation:
+Issues:
+Vecortization
+redudant work between polys of the same basis
+redudant work between derivatives of the same polynomial
+redudant work given structure
+Evaluation scheme for an a polynomial
+organization of basis functions evaluations into a tensor
+
+Choices group of things togeather:
+Global level: CSE
+Zero choose: how we evaluate the basis and store it in a tensor -- for the basis, doing Dof at the end means we can exclude some of them
+First Choose: keeping of home basis function and stuff togeather
+Second choose: write of the main coeff convolution -- we use the structure here - dsum and oprod - 
+Third choice: evaluation of basis values as a group and possible rediction into another basis
+
+Note: kernel case is 
+
+
+Changes:
+1.
+-Ask for more information when parsing in the basis functoins
+coeffs, vars, degree, minCoeeffs
+Ask for prod and sum
+Fix hashing problem?
+
+2.
+in basis infustructure, reprsent as a sum, product, or regular thing
+fix hashing problem
+offer analyzer
+build a collection reprsentation
+
+Analyze this in femfieldreconstruction
+Pass into evaluations of 1,2,3d collections of things by derivative level with original thing attached
+
+3.
+Pass basis evaluation (so a collection of basis at a particular derivative level with the original attached)
+--Use common information to do vectorization to evaluate basis functoins (coeeffs are vector)
+--do horner rules for each basis function -- no vectorization
+--vectorize hornre rule over the coefficients?
+--include a string form that mandates evaluation
+
+
+For now, we will just forward groups by deriative with the original
+--do mononomial basic with vectorization or horner rule with vectorizatoin over coeffs or detecth monominal
+--go back and figure shit out
+--attach the evaluated variables and build into mono rep
+--horner's rule for mults can be vectorized via Vscale and vAdd
+
+By degree evaluation of polys at the same point:
+vscale(coeeffs, x^n y^n) -- ones of the same adgree
+vadd(coeffs, vscape(,..,))
+--organize things and coeff vectors by degree.
+--sum along the needed scalings
+
+==================WHICH REGRESSION TEST?

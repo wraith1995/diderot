@@ -23,6 +23,13 @@
  * nid: integer position param_id
  * fid :fractional position param_id
  * img-imginfo about V
+
+ * This file is being expanded to handle probed fem fields too; basically, a new type of convo needs to be located. 
+ * For a fem thing, we have the following components:
+ * We expect plain transform and field.
+ * We expand them to be - extract index, extract dof -> use fem-opt-split if needed
+ * Pass these to an ein sum of the required form. 
+ * Done
  *)
 
 structure ProbeEin : sig
@@ -230,6 +237,55 @@ structure ProbeEin : sig
            (vLd::vKs, vP,  exp)
           end
 
+    (*
+    avail -- the avail
+    sumId - the largest unused index 
+    dofParamId - the param id for the dofs tensor
+    basisParamId - the param id for the basis evaluations
+    posVar - the variable for the evaluation position
+    alpha - the index attached to E.Fem
+    dx - the dx attaached to E.Fem
+    indexVar - the variable associated to the index we evaluate at
+    indexSrcVar - the variable that we get indecies from (mesh, space)
+    dofSrcVar - the variable that we get dofs from (function, mesh)
+    basisArray - the array of basis functions - formated num of basisfunc : dx
+    dofCount - num of basisFunc 
+    dofData - the femdata corresponding to the dofSrcVar (redudant)
+     *)
+    fun femFieldReconstruction (avail, sumId, dofParamId, basisParamId, posVar, alpha, dx, indexVar, indexSrcVar, dofSrcVar,  basisArray, dofCount, dofData) =
+	let
+	 (*First build dofs opt*)
+	 (*expand them opt -> this is maybe evidence that we should be grabbing stuff*)
+	 val sumIndexVar = E.V(sumId)
+			      
+	 val intOpt = (FemOpt.ExtractDofs, dofData)
+	 val dofShape = FemOpt.findTargetShape(intOpt)
+	 val dofTensorTy = Ty.TensorTy(dofShape)
+	 val dofVar = IR.Var.new("dofs", dofTensorTy)
+	 val dofParam = E.TEN(true, dofShape)
+	 val dofAlpha = sumIndexVar :: alpha
+	 val dofExpression = E.Tensor(dofParamId, dofAlpha)
+	 val _ = FemOptSplit.indexedDataLoweringAvail(avail, dofVar, intOpt, dofSrcVar, indexSrcVar, indexVar)
+						     
+	 val basisShape = ArrayNd.shape basisArray
+	 val basisOpt = IR.OP(Op.EvaluateBasis(BasisDataArray.Array(basisArray)), [posVar])
+	 val basisTensorTy = Ty.TensorTy(basisShape)
+	 val basisVar = IR.Var.new("basisResult", basisTensorTy)
+	 val _ =  AvailRHS.addAssignToList (avail, (basisVar, basisOpt))
+	 val basisParam = E.TEN(true, basisShape)
+	 val basisAlpha = sumIndexVar :: dx
+	 (* List.@(dx, [sumIndexVar]) if we went the other way *)
+	 val basisExpression = E.Tensor(basisParamId, basisAlpha)
+
+	 val args = [dofVar, basisVar]
+	 val params = [dofParam, basisParam]
+			
+	 val summationRange = (sumId,0, dofCount)
+	 val exp = E.Sum([summationRange], E.Opn(E.Prod, [dofExpression, basisExpression]))
+	in
+	 (args, params, exp)
+	end
+	
    (* getsumshift:sum_indexid list* int list-> int
     * get fresh/unused index_id, returns int
     *)
@@ -266,16 +322,27 @@ structure ProbeEin : sig
                 (false, E.Sum(sx, E.Opn(E.Prod, [eps0, multiPs(Ps, newsx,exp)])))
             | E.Probe _ => (true, multiPs(Ps, newsx, exp))
             | _ => raise Fail "impossible"
-          (* end case *))
+					     (* end case *))
+    fun substituteProbe(body, exp) =
+	(case body
+	  of E.Sum(sx, E.Probe _) => (true, E.Sum(sx, exp))
+           | E.Sum(sx, E.Opn(E.Prod,[eps0, E.Probe _ ])) =>
+             (false, E.Sum(sx, E.Opn(E.Prod, [eps0, exp])))
+	   | E.Probe _ => (true, exp) 
+	   | _ => raise Fail "impossible"
+	(* end case*) )
 
-    (* replaceProbe:ein_exp* params *midIR.var list * int list* sum_id list
+
+					       
+
+    (* replaceImgProbe:ein_exp* params *midIR.var list * int list* sum_id list
             -> ein_exp* *code
     * Transforms position to world space
     * transforms result back to index_space
     * rewrites body
     * replace probe with expanded version
     *)
-    fun replaceProbe (avail, (y, IR.EINAPP(Ein.EIN{params, index, body}, args)), probe, sx) = let
+    fun replaceImgProbe (avail, (y, IR.EINAPP(Ein.EIN{params, index, body}, args)), probe, sx) = let
         (* tensor ids for position, transform matrix P, and kernel terms*)
 
           val pid = length params
@@ -297,9 +364,52 @@ structure ProbeEin : sig
           val einapp = (y, IR.EINAPP(mkEin(params', index, body'), args @ (vP::args')))
           in
             AvailRHS.addAssignToList (avail, einapp)
-          end
+    end
 
-    (* multply probe by transformation matrix and split product operation
+    fun replaceFemProbe(avail, (y, IR.EINAPP(Ein.EIN{params, index, body}, args)), probe, sx) =
+	let
+	 val E.Probe(E.Fem(femEin, indexVarId, indexSrcId, dofSrcId, alpha, dx), E.Tensor(tid, _)) = probe
+	 val prePosVar = List.nth(args, tid)
+	 val (basisArray, dofCount : int, posVar) =
+	     (case femEin
+	       of E.Plain(a,b) => (a,b, prePosVar))
+	 val indexInt = List.nth(params, indexVarId)
+	 val indexSrc = List.nth(params, indexSrcId)
+	 val dofSrc =   List.nth(params, dofSrcId)
+	 (* Remove all of these - get newParamIds*)
+	 val E.FEM(dofData) = dofSrc
+	 val indexVar = List.nth(args, indexVarId)
+	 val indexSrcVar = List.nth(args, indexSrcId)
+	 val dofSrcVar = List.nth(args, dofSrcId)
+
+			      
+	 val freshIndex = getsumshift (sx, length index) + length dx
+	 val newParamLen = List.length params
+	 val basisId = newParamLen + 1
+	 val dofId = basisId + 1
+	 val (args', params', probe') = femFieldReconstruction(
+	      avail, freshIndex, dofId, basisId, posVar, alpha,
+	      dx, indexVar, indexSrcVar, dofSrcVar, basisArray, dofCount, dofData)
+
+	 val args'' = args @ args'
+	 val params'' = params @ params'
+	 val (_, body') = substituteProbe(body, probe')
+					 
+	 val einapp = (y, IR.EINAPP(mkEin(params'', index, body'), args''))
+	in
+	 AvailRHS.addAssignToList (avail, einapp)
+	end
+	  
+    fun replaceProbe (arg as (avail, (y, IR.EINAPP(Ein.EIN{params, index, body}, args)), probe, sx)) =
+	let
+	 val E.Probe(f, _) = probe
+	in
+	 (case f
+	   of E.Conv(_,_,_,_) => replaceImgProbe arg
+	    | E.Fem _ => replaceFemProbe arg
+	 (* end case*))
+	end
+    (* multiply probe by transformation matrix and split product operation
     input is a differentiated field of the form
     eF = ∇_dx F_α
     variable differentiation indices are transformed
@@ -310,7 +420,7 @@ structure ProbeEin : sig
     multply probe (et) by transformation matrix (Ps)
     eout = et *Ps
     ein0 = λ(T,P)⟨eout⟩ij(Tx,P)
-    The next part of the compler reconstructs probed field ec to lower IR
+    The next part of the compiler reconstructs probed field ec to lower IR
     ec = Clean(∇dx′Fα)−→∇dx′′Fα′′
     Tx = λ(F,x)⟨ec(x)⟩ij(F,x)
     *)
@@ -338,7 +448,10 @@ structure ProbeEin : sig
             (splitvar, ein0, sizes, dx, alpha')
           end
 
-  (* floats the reconstructed field term *)
+  (* floats the reconstructed field term
+  The main point of this function is to compute hte probes and transforms seperately
+  And then combine then in a second ein app
+   *)
     fun liftProbe (avail, (y, IR.EINAPP(Ein.EIN{params, index, body}, args)), probe, sx) = let
           val E.Probe(E.Conv(Vid, alpha, hid, dx), E.Tensor(tid, _)) = probe
           val freshIndex = getsumshift(sx, length(index))
@@ -357,7 +470,6 @@ structure ProbeEin : sig
           val (args', vP, probe') =
                 fieldReconstruction (avail, sxn, alpha', shape, dx,  Vid, Vidnew, kid, hid, tid, args)
           val einApp1 = IR.EINAPP(mkEin(params', sizes, probe'), args')
-          val einr= mkEin(params', sizes, probe')
         (* transform T*P*P..Ps *)
           val rtn0 = if splitvar
                 then FloatEin.transform(y, EinSums.transform ein0, [vP, vT])
@@ -374,9 +486,11 @@ structure ProbeEin : sig
            of (E.Probe(E.Conv(_, _, _, []) ,_)) =>
                 replaceProbe (avail, e, body, [])
             | (E.Probe(E.Conv(_, alpha, _, dx) ,_)) =>
-                liftProbe (avail, e, body, []) (*scans dx for contant*)
+              liftProbe (avail, e, body, []) (*scans dx for contant*)
+	    | (p as E.Probe(E.Fem _, _)) =>
+	      replaceProbe (avail, e, p, [])
             | (E.Sum(sx, p as E.Probe(E.Conv(_, _, _, []), _))) =>
-                replaceProbe (avail, e, p, sx)  (*no dx*)
+                replaceProbe (avail, e, p, sx)   (*no dx*)
             | (E.Sum(sx, p as E.Probe(E.Conv(_, [], _, dx), _))) =>
                 liftProbe (avail, e, p, sx) (*scalar field*)
             | (E.Sum(sx, E.Probe p)) =>

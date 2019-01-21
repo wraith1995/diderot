@@ -10,6 +10,7 @@
 
 structure FemOptSplit : sig
 	   val indexedDataLowering : MidIR.var * FemOpt.femOption * MidIR.var * MidIR.var -> MidIR.assign list
+	   val indexedDataLoweringAvail : AvailRHS.t * MidIR.var * FemOpt.femOption * MidIR.var * MidIR.var * MidIR.var -> unit
 	  end = struct
 
 
@@ -62,7 +63,20 @@ structure FemOptSplit : sig
 	in
 	 result
 	end
-
+    fun indexedDataLoweringAvail(avail, lhs, opt, dataArg, indexSrcVar, indexVar) =
+	let
+	 val SOME(indexingOpt, dataGetOpt) = FO.splitDataOpt opt
+	 val (_, data) = opt
+	 val (dataSource, indexSource) = (dataArg, indexSrcVar) 
+	 val len = FO.findIndexLength indexingOpt
+	 val shapeRest = FO.findTargetShape dataGetOpt
+	 val resultShape = len :: shapeRest
+	 (*Factor this out to determine types via another function*)
+	 val (indexTy, indexLoad) = indexArrayLoad(avail, len, indexingOpt, indexSource, indexVar)
+	 val result = dofLoad(avail, resultShape, dataGetOpt, dataSource, indexLoad, indexTy)
+	in
+	 AvailRHS.addAssignToList (avail, (lhs, IR.VAR result))
+	end
 
     fun indexedDataLowering (lhs, opt, dataArg, indexVar) =
 	let
