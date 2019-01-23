@@ -125,7 +125,8 @@ structure EinToVector : sig
           val u = paramToVar (avail, mapp, u)
           val v = paramToVar (avail, mapp, v)
           in
-            AvailRHS.addAssign (avail, "binopV", Ty.TensorTy[dim], IR.OP(rator, [u, v]))
+           AvailRHS.addAssign (avail, "binopV", Ty.TensorTy[dim], IR.OP(rator, [u, v]))
+	   handle exn => raise exn
           end
 
   end

@@ -8,7 +8,7 @@
 
 structure EvalBasis : sig
 
-	   val expand : LowIR.var * BasisDataArray.t * LowIR.var -> LowIR.var * LowIR.rhs list
+	   val expand : LowIR.var * BasisDataArray.t * LowIR.var -> (LowIR.var * LowIR.rhs) list
 	  end  = struct
 
 structure IR = LowIR
@@ -19,6 +19,20 @@ structure Ty = LowTypes
 structure BDA = BasisDataArray
 
 datatype EvalMethod = Mono
+
+fun consFunc(vars, ty) = (case ty
+			   of Ty.TensorTy[] => (case vars
+					      of [v] => IR.VAR(v)
+					       | _ => raise Fail "impossible")
+			    | Ty.TensorTy[_] => IR.CONS(vars, ty)
+			    | _ => raise Fail "impossible")
+fun multFunc(v1, v2) = (case (IR.Var.ty(v1), IR.Var.ty(v1))
+			 of (Ty.TensorTy[], Ty.TensorTy[]) =>  IR.OP(Op.RMul, [v1,v2])
+			  | (Ty.TensorTy[d1], Ty.TensorTy[d2]) => if d1=d2
+								  then IR.OP(Op.VMul(d1), [v1,v2])
+								  else raise Fail "impossible"
+			  | _ => raise Fail "impossible"
+		       )
 
 
 fun power(avail, var, 0) =
@@ -46,13 +60,13 @@ fun multList(avail, [x]) = x
     end
 fun extractVars(avail, var, idxes) =
     let
-     val access = List.map ( fn x => IR.LIT(Literal.intLit x)) idxes
-     val accessVars = List.map (fn x => AvailRHS.addAssign(avail, "accIndex", Ty.intTy, x)) access
+     val d = List.length idxes
+     val accessOp = List.map ( fn x => Op.VIndex(d,x)) idxes
     in
      (*need to use TensorIndex or something else like that*)
      List.map
-       (fn x => AvailRHS.addAssign(avail, "varAcc", Ty.realTy, IR.OP(Op.VIndex(), [var,x])))
-       accessVars
+       (fn x => AvailRHS.addAssign(avail, "varAcc", Ty.realTy, IR.OP(x, [var])))
+       accessOp
     end
 
       
@@ -109,10 +123,11 @@ fun evalFunctionDumb(avail, basisFunc, vars) =
 	  (assign ::lst1, pow :: lst2)
 	 end
 
-     val (coeffs, pows) = List.foldr foldrFunc ([],[]) nonZero nonZeroTerms
-     val coeffVar = AvailRHS.addAssign(avail, "coeffs", Ty.vecTy(count), IR.CONS(coeffs))
-     val powVar = AvailRHS.addAssign(avail, "powers", Ty.vecTy(count), IR.CONS(pows))
-     val resultOP = IR.OP(OP.VMul, coeffVar, powVar) (*vectorization*)
+     val (coeffs, pows) = List.foldr foldrFunc ([],[]) nonZeroTerms
+
+     val coeffVar = AvailRHS.addAssign(avail, "coeffs", Ty.vecTy(count), consFunc(coeffs, Ty.vecTy(count)))
+     val powVar = AvailRHS.addAssign(avail, "powers", Ty.vecTy(count), consFunc(pows, Ty.vecTy(count)))
+     val resultOP = multFunc(coeffVar, powVar) (*vectorization*)
 
     in
      AvailRHS.addAssign(avail, "basisEval", Ty.realTy, resultOP)
@@ -127,8 +142,8 @@ fun evalBasisDumb(avail, basisArray, pos) =
 	 let
 	  val v::vs = vars
 	  val ty = IR.Var.ty(v)
-	  val TY.TensorTy(shape) = ty
-	  val cons = IR.CONS(vars, ty)
+	  val Ty.TensorTy(shape) = ty
+	  val cons = consFunc(vars, Ty.TensorTy(n::shape))
 	  
 			    
 	 in
@@ -136,7 +151,7 @@ fun evalBasisDumb(avail, basisArray, pos) =
 	 end
 
     in
-     AN.convertToTree(basisArrayData, cnvert, group)
+     AN.convertToTree(basisArrayData, convert, group)
     end
 
 

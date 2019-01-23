@@ -280,7 +280,7 @@ structure ProbeEin : sig
 	 val args = [dofVar, basisVar]
 	 val params = [dofParam, basisParam]
 			
-	 val summationRange = (sumId,0, dofCount)
+	 val summationRange = (sumId,0, dofCount - 1)
 	 val exp = E.Sum([summationRange], E.Opn(E.Prod, [dofExpression, basisExpression]))
 	in
 	 (args, params, exp)
@@ -381,12 +381,12 @@ structure ProbeEin : sig
 	 val indexVar = List.nth(args, indexVarId)
 	 val indexSrcVar = List.nth(args, indexSrcId)
 	 val dofSrcVar = List.nth(args, dofSrcId)
-
 			      
 	 val freshIndex = getsumshift (sx, length index) + length dx
 	 val newParamLen = List.length params
-	 val basisId = newParamLen + 1
-	 val dofId = basisId + 1
+	 val dofId = newParamLen
+	 val basisId = dofId + 1 
+
 	 val (args', params', probe') = femFieldReconstruction(
 	      avail, freshIndex, dofId, basisId, posVar, alpha,
 	      dx, indexVar, indexSrcVar, dofSrcVar, basisArray, dofCount, dofData)
@@ -449,7 +449,7 @@ structure ProbeEin : sig
           end
 
   (* floats the reconstructed field term
-  The main point of this function is to compute hte probes and transforms seperately
+  The main point of this function is to compute the probes and transforms seperately
   And then combine then in a second ein app
    *)
     fun liftProbe (avail, (y, IR.EINAPP(Ein.EIN{params, index, body}, args)), probe, sx) = let

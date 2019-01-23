@@ -336,12 +336,15 @@ fun convertToTree(t as AND{dims, shape, elems, ...}, convert, convertFunc) =
      fun groupLists(n, [], lists) = lists
        | groupLists (n, list, lists) =
 	 groupLists(n, List.drop(list, n), convertFunc(List.take(list,n), n)::lists)
+	 handle exn => raise exn
 
      fun doDims([d], list) =
 	 let
 	  val int = groupLists(d, list, [])
 	 in
-	  convertFunc(int, d)
+	  (case int
+	    of [x] => x
+	     | _ => raise Fail "impossible")
 	 end
        | doDims(d::ds, list ) =
 	 let

@@ -24,19 +24,20 @@ structure LowOptimizer : sig
             checkCtl = Ctl.checkLowIR,
             output = LowPP.output,
             checkIR = PhaseTimer.withTimer Timers.timeLowCheck (fn arg => CheckLow.check arg)
-          }
+        }
 
     fun transform (ctl, timer, phase, transform, prog) =
           if Controls.get ctl
-            then checkAfter (phase, PhaseTimer.withTimer timer transform prog)
-            else prog
+            then checkAfter (phase, PhaseTimer.withTimer timer transform prog)             
+          else prog
+	       
 
     fun optimize prog = let
-          val prog = transform (Ctl.lowContract, Timers.timeLowContract, "contraction(1)", LowContract.transform, prog)
-          val prog = transform (Ctl.lowVN, Timers.timeLowVN, "value numbering", VN.transform, prog)
-          val prog = transform (Ctl.lowContract, Timers.timeLowContract, "contraction(2)", LowContract.transform, prog)
+          val prog = transform (Ctl.lowContract, Timers.timeLowContract, "contraction(1)", LowContract.transform, prog) handle exn => raise exn
+          val prog = transform (Ctl.lowVN, Timers.timeLowVN, "value numbering", VN.transform, prog) handle exn => raise exn
+          val prog = transform (Ctl.lowContract, Timers.timeLowContract, "contraction(2)", LowContract.transform, prog) handle exn => raise exn
           in
-            prog
+           prog 
           end
 
   end

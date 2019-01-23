@@ -117,14 +117,14 @@ structure Main : sig
           val _ = verbosePrint["done\n"];
         (***** TRANSLATION TO LOW IR *****)
           val _ = verbosePrint["translating to LowIR ... "]
-          val low = PhaseTimer.withTimer Timers.timeMidToLow MidToLow.translate mid
+          val low = PhaseTimer.withTimer Timers.timeMidToLow MidToLow.translate mid handle exn => raise exn
           val _ = verbosePrint["done\n"]
           val _ = verbosePrint["checking LowIR ... "]
-          val low = LowOptimizer.checkAfter ("mid-to-low translation", low)
+          val low = LowOptimizer.checkAfter ("mid-to-low translation", low) handle exn => raise exn
           val _ = verbosePrint["done\n"]
         (***** LOW-IR OPTIMIZATION *****)
           val _ = verbosePrint["optimizing LowIR ... "]
-          val low = PhaseTimer.withTimer Timers.timeLow LowOptimizer.optimize low
+          val low = PhaseTimer.withTimer Timers.timeLow LowOptimizer.optimize low handle exn => raise exn
           val _ = verbosePrint["done\n"]
         (***** TRANSLATION TO TREE IR *****)
           val _ = verbosePrint["translating to TreeIR ... "]
