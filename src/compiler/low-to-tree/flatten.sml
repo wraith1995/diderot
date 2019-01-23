@@ -207,7 +207,8 @@ raise ex)
                                 end
                             | _ => ()
                           (* end case *))
-                        else ()
+                      else ()
+		  | IR.ASSIGN{stm=(y, IR.CONS(xs, ty as Ty.TensorTy(shape))), ...}=> raise Fail ("odd bogus node; probably a malformed CONS:" ^ (String.concatWith "," (List.map Int.toString shape)))
                   | _ => raise Fail "bogus node"
                 (* end case *))
           in

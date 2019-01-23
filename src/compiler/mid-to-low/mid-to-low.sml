@@ -122,7 +122,7 @@ structure MidToLow : sig
               | SrcOp.Strands(ty, set) => assign (DstOp.Strands(cvtTy ty, set))
               | SrcOp.BuildPos s => expandBuildPos (y, s, args')
               | SrcOp.EvalKernel(d, h, k) => EvalKern.expand(y, d, h, k, args')
-	      | ScrOp.EvaluateBasis(data) => (case args'
+	      | SrcOp.EvaluateBasis(data) => (case args'
 					       of [x] => EvalBasis.expand(y, data, x)
 						| _ => raise Fail("bogus operator " ^ SrcOp.toString rator)
 					     (* end case*))
@@ -203,7 +203,8 @@ structure MidToLow : sig
                     handle ex => (
                       print (concat [
                           "MidToLow.expand: error converting ", EinPP.toString rator, "(",
-                          String.concatWithMap "," SrcIR.Var.name args, ")\n"
+                          String.concatWithMap "," SrcIR.Var.name args, ")\n", "raised exception: ",
+			  exnMessage ex, "\n"
                         ]);
                       raise ex))
               | SrcIR.APPLY(f, args) =>

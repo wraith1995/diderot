@@ -110,13 +110,16 @@ structure EinToLow : sig
             index, index,
             fn (avail, mapp) => EinToScalar.expand {
                 avail=avail, mapp=mapp, body=body, lowArgs=lowArgs
-              })
+          })
+	  handle exn => raise exn
 
     fun createP (args, vecIndex, id, ix) =
-          ToVec.Param{id = id, arg = List.nth(args, id), ix = ix, kind = ToVec.Proj vecIndex}
+        ToVec.Param{id = id, arg = List.nth(args, id), ix = ix, kind = ToVec.Proj vecIndex}
+	handle exn => (print "creapteP";raise exn)
     fun createI (args, id, ix) =
           ToVec.Param{id = id, arg = List.nth(args, id), ix = ix, kind = ToVec.Indx}
-
+	  handle exn => raise exn
+			
   (* generate low-IL code for scaling a non-scalar tensor; `sId` is the scalar
    * parameter's ID and `vId` is the tensor parameter's ID.
    *)
@@ -203,9 +206,10 @@ structure EinToLow : sig
                         val binop = ToVec.binopV (Op.VSub vecIX, vecIX)
                         in
                           unroll (
-                            index, index',
+                           index, index',
                             fn (avail, mapp) => binop (avail, mapp, vecA, vecB))
-                        end
+                   end
+							      
                     | _  => scalarExpand (params, body, index, args)
                   (* end case *)
                 end
@@ -275,21 +279,31 @@ structure EinToLow : sig
                   (* end case *)
                 end
             |  _ => expandInner (params, body, index, args)
-          (* end case *))
+					      (* end case *))
+					      handle exn => raise exn
 
   (* scan:var*E.Ein*Var list * Var list-> Var*LowIR.Assgn list
    * scans body  for vectorization potential
    *)
     fun expand (y, ein as Ein.EIN{params, index, body}, args) = let
           val avail = (case (List.rev index)
-                 of _::_ => nonScalar (params, body, index, args)
+                 of _::_ => nonScalar (params, body, index, args) 
                   | _ => expandInner (params, body, index, args)
                 (* end case *))
           in
             case AvailRHS.getAssignments avail
-             of [] => [LowIR.ASSGN(y, LowIR.VAR(List.nth (args, 0)))]
-                | (_, asgn)::rest => List.revMap LowIR.ASSGN ((y, asgn)::rest)
+             of [] =>
+		let
+		 val z = LowIR.VAR(List.nth (args, 0))
+			 handle exn =>(print "start";  raise exn)
+		in
+		 [LowIR.ASSGN(y, z)]
+		end
+	      | (_, asgn)::rest => List.revMap LowIR.ASSGN ((y, asgn)::rest)
+				   handle exn => raise exn
+				   
             (* end case *)
-          end
+    end
+								handle exn => raise exn
 
     end

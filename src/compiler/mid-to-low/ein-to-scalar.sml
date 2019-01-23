@@ -108,7 +108,7 @@ structure EinToScalar : sig
                     | E.Delta(i, j) => Mk.delta (avail, mapp, i, j)
                     | E.Epsilon(i, j, k) => Mk.epsilon3 (avail, mapp, i, j, k)
                     | E.Eps2(i, j) => Mk.epsilon2 (avail, mapp, i, j)
-                    | E.Tensor(id, ix) => Mk.tensorIndex (avail, mapp, List.nth(lowArgs, id), ix)
+                    | E.Tensor(id, ix) => let val temp =  List.nth(lowArgs, id) handle exn => (print((Int.toString id) ^"\n");raise exn) in Mk.tensorIndex (avail, mapp, temp, ix) end
                     | E.Zero _ => Mk.intToRealLit (avail, 0)
                     | E.Poly _ => gen(mapp, unwrapPoly(mapp, body))
                     | E.If(E.Compare(op1, e1, e2), e3, e4) => let
@@ -172,7 +172,7 @@ structure EinToScalar : sig
                   (*end case*)
                 end
           in
-            gen (mapp, body)
+            gen (mapp, body) handle exn => raise exn
           end
 
     end

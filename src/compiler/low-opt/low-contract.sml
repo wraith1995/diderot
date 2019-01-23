@@ -61,7 +61,7 @@ structure LowContract : sig
                 (* end case *))
             | _ => IR.VAR x
           (* end case *))
-
+    fun errorNth(list, n, msg) = List.nth(list,n) handle exn => (print(msg); raise exn)
 (* TODO: tensor selection operations *)
     fun doAssign (lhs, IR.OP rhs) = (case rhs
            of (Op.IAdd, [a, b]) => (case (V.getDef a, V.getDef b)
@@ -119,8 +119,9 @@ structure LowContract : sig
             | (Op.TensorIndex(Ty.TensorTy dims, idxs), [t]) => let
                 fun get ([], [], x) = (
                       SOME[(lhs, IR.VAR(use x))])
-                  | get (ix::ixs, d::ds, x) = (case getLocalDef x
-                       of IR.CONS(ys, _) => get(ixs, ds, List.nth(ys, ix))
+                  | get (ix::ixs, d::ds, x) =
+		    (case getLocalDef x
+		      of IR.CONS(ys, _) => get(ixs, ds, errorNth(ys, ix, "tensorIndex")) 
                         | _ => let
                             val rator = if List.null ds
                                   then Op.VIndex(d, ix)
@@ -140,7 +141,7 @@ structure LowContract : sig
                 fun get ([], [_], x) = (
                       SOME[(lhs, IR.VAR(use x))])
                   | get (ix::ixs, d::ds, x) = (case getLocalDef x
-                       of IR.CONS(ys, _) => get(ixs, ds, List.nth(ys, ix))
+                       of IR.CONS(ys, _) => get(ixs, ds, errorNth(ys, ix, "projectLast"))
                         | _ => SOME[
                               (lhs, IR.OP(Op.ProjectLast(Ty.tensorTy(d::ds), ix::ixs), [use x]))
                             ]
@@ -155,9 +156,10 @@ structure LowContract : sig
             | (Op.Subscript ty, [seq, idx]) => (case (getLocalDef seq, V.getDef idx)
                  of (IR.SEQ(vs, _), IR.LIT(Literal.Int i)) => (
                       ST.tick cntSubscript; decUse seq; decUse idx;
-                      SOME[(lhs, IR.VAR(use (List.nth(vs, Int.fromLarge i))))])
+                      SOME[(lhs, IR.VAR(use (errorNth(vs, Int.fromLarge i, "subscript"))))])
+							      
                   | _ => NONE
-                (* end case *))
+					       (* end case *))
             | _ => NONE
           (* end case *))
       | doAssign _ = NONE
