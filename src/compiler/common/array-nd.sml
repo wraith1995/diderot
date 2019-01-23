@@ -14,6 +14,7 @@ structure ArrayNd : sig
 		     inverseIndex : ((int list) Array.array) option ref
 		    }
 
+
 	   (* Key indexing features*)
 	   val computeIndex : 'a ArrayNd -> 'a ArrayNd
 	   val getIndex : 'a ArrayNd -> (int list -> int option)
@@ -35,6 +36,7 @@ structure ArrayNd : sig
 	   (* get meta data*)
 	   val length : 'a ArrayNd -> int
 	   val compatibleMeta : 'a ArrayNd * 'b ArrayNd -> bool
+	   val indexInside : 'a ArrayNd * int list -> bool
 	   val sameData : 'a ArrayNd * 'a ArrayNd -> bool
 	   val same : 'a ArrayNd * 'a ArrayNd -> bool
 	   val shape : 'a ArrayNd -> int list
@@ -58,6 +60,7 @@ structure ArrayNd : sig
 	   val all : ('a -> bool) -> 'a ArrayNd -> bool
 	   (*discouraged misc*)
 	   val toList : 'a ArrayNd -> 'a list
+	   val convertToTree : 'b ArrayNd * ('b -> 'a) * ('a list * int -> 'a) -> 'a
 
 	  end = struct
 datatype 'a ArrayNd = AND of {
@@ -67,6 +70,7 @@ datatype 'a ArrayNd = AND of {
 	  index : ((int list -> int option) option) ref,
 	  inverseIndex : (((int list) Array.array) option) ref
 	 }
+(* datatype 'a TreeRep = Val of 'a 1| Tree of 'a TreeRep list *)
 (*use "a.sml"; structure A = ArrayNd; val aaaa = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23]; val z = A.fromList'(aaaa, [2,3,4]); val i = A.getIndex z; val ii = A.getInverseIndex z; val i' = Option.valOf o i; fun ii' j = Array.sub(ii,j);
 use "a.sml"; structure A = ArrayNd; val aaaa = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23]; val z = A.fromList'(aaaa, [2,3,4]); val i = A.getIndex z; val ii = A.getInverseIndex z; val i' = Option.valOf o i; fun ii' j = Array.sub(ii,j); val test = i' o ii'; val test' = ii' o i';*)
 fun getShape(AND{shape,...}) = shape
@@ -188,6 +192,8 @@ fun compatibleMeta((AND({dims=dims1, shape=shape1, ...})),
 fun sameData (AND{elems=elems1,...}, AND{elems=elems2, ...}) = elems1 = elems2
 fun same(t1,t2) = compatibleMeta(t1, t2) andalso sameData(t1, t2)
 fun shape(AND{shape,...}) = shape
+fun indexInside(AND{shape,...}, idx) = List.all (fn x => x > 0) (ListPair.map op- (shape, idx))
+				       handle exn => false
 fun zip(t1 as AND{dims,shape, elems=elems1, index=index1, inverseIndex=inverseIndex1},
 	t2 as AND{elems=elems2,index=index2, inverseIndex=inverseIndex2,...}) =
     let
@@ -235,7 +241,7 @@ fun foldri' f s (t as AND{elems, ...}) = let val inverseIndex = getInverseIndex 
 (*     in *)
 (*     end *)
 
-(* ListOfArrays.*)
+(* ListOfArrays*)
 
 fun array'(a, shape) =
     let
@@ -321,6 +327,30 @@ fun toArrayMap expandMap insertShape (t as AND{dims, shape, elems, ...}) =
      val a = ()
     in
      ()
+    end
+(* n array grab at a time*)
+fun convertToTree(t as AND{dims, shape, elems, ...}, convert, convertFunc) =
+    let
+     val listRep = List.map convert (toList t)
+     val parseOrder = List.rev shape
+     fun groupLists(n, [], lists) = lists
+       | groupLists (n, list, lists) =
+	 groupLists(n, List.drop(list, n), convertFunc(List.take(list,n), n)::lists)
+
+     fun doDims([d], list) =
+	 let
+	  val int = groupLists(d, list, [])
+	 in
+	  convertFunc(int, d)
+	 end
+       | doDims(d::ds, list ) =
+	 let
+	  val int = groupLists(d, list, [])
+	 in
+	  doDims(ds, int)
+	 end
+    in
+     doDims(parseOrder, listRep)
     end
 
 					  

@@ -57,7 +57,7 @@ structure EinPP : sig
 	    | E.Fem(E.Plain(basis,len), cell, index, dofs, coeffShape, dxes) =>
 	      let
 	       val basisLength = Int.toString len
-	       val basisString = "Basis(" ^ basisLength ^ ")"
+	       val basisString = "Basis(" ^ ")"
 	       val alpha = if null coeffShape then "" else multiIndex2s coeffShape
                val beta = if null dxes then "" else "dx" ^ multiIndex2s dxes
 	      in

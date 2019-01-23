@@ -72,7 +72,7 @@ structure Ein =
     
     and conditional = Compare of compare * ein_exp * ein_exp | Var of param_id
 
-    and femEin = Plain of BasisData.t ArrayNd.ArrayNd * int
+    and femEin = Plain of BasisDataArray.t * int
 
     and ein_exp
     (* Basic terms *)

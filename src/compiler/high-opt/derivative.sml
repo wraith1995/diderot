@@ -251,7 +251,7 @@ structure Derivative : sig
             | E.Field _ => NONE
             | E.Lift _ => SOME zero
             | E.Conv(v, alpha, h, d2) => SOME(E.Conv(v, alpha, h, d2@dx))
-	    | E.Fem((E.Plain(bda, n)), id1, id2, id3, alpha, dxes)  => SOME(E.Fem(E.Plain( BasisData.D(bda), n), id1, id2, id3, alpha, dxes@dx))
+	    | E.Fem((E.Plain(bda, n)), id1, id2, id3, alpha, dxes)  => SOME(E.Fem(E.Plain( BasisDataArray.D(bda), n), id1, id2, id3, alpha, dxes@dx))
             | E.Partial _ => err("Apply of Partial")
             | E.Apply(E.Partial d2, e2) => SOME(E.Apply(E.Partial(dx@d2), e2))
             | E.Apply _ => err "Apply of non-Partial expression"

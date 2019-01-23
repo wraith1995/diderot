@@ -302,7 +302,7 @@ fun constantExists(name, ty) =
 
 fun parseScalarBasis(env, cxt, tyName, json, dim, degree, spaceDim) =
     let
-     fun maker(x : real Array.array ) : BD.t =  Option.valOf (BD.makeBasis(x, dim, degree, spaceDim))
+     fun maker(x : real Array.array ) : BD.t =  Option.valOf (BD.makeBasisFunc(x, dim, degree))
      fun realArray(x : JSON.value) : real Array.array = Array.fromList (JU.arrayMap (JU.asNumber) x)
      val f = maker o realArray
     in
@@ -339,17 +339,20 @@ fun parseMesh(env, cxt, tyName, json) =
      val newConstants = Option.map (List.@) (optionTuple(constant, transformShapeConst))
 
 
-     val scalarBasis = Option.mapPartial (findField "poly") mesh 
+     val scalarBasis = Option.mapPartial (findField "basis") mesh 
      val parsedBasis = Option.map
 			 (fn (json', dim', degree', spaceDim') =>
-			     parseScalarBasis(env, cxt, tyName, json', dim', degree', spaceDim'))
+			     ArrayNd.fromList(parseScalarBasis(env, cxt, tyName, json', dim', degree', spaceDim')))
 			 (case (scalarBasis, dim, degree, spaceDim)
 			   of (SOME(a), SOME(b), SOME(c), SOME(d)) => SOME((a,b,c,d))
 			    | _ => NONE (*end case *))
 
-     val meshVal = Option.map (fn (x,y,z,basis) => FT.mkMesh(x,y,z,basis, tyName)) (case (dim, spaceDim, degree, parsedBasis)
-										 of (SOME(a), SOME(b), SOME(c), SOME(d)) => SOME((a,b,c,d))
-										  | _ => NONE (* end case*))
+     val meshVal = Option.map (fn (x,y,z,basis) => FT.mkMesh(x,y,z,
+							     BasisDataArray.makeUniform(basis,x),
+							     tyName))
+			      (case (dim, spaceDim, degree, parsedBasis)
+				of (SOME(a), SOME(b), SOME(c), SOME(d)) => SOME((a,b,c,d))
+				 | _ => NONE (* end case*))
      val newConstants' = Option.getOpt(newConstants, [])
     in
      (meshVal, newConstants')

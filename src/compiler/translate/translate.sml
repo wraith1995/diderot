@@ -464,7 +464,7 @@ print(concat["doVar (", SV.uniqueNameOf srcVar, ", ", IR.phiToString phi, ", _) 
 	       val data = FemData.Mesh(m)
 	       val dim = FemData.meshDim m
 	       val spaceDim = FemData.meshMapDim m 
-	       val femEin = E.Plain(ArrayNd.fromList [], spaceDim)
+	       val femEin = E.Plain((FemData.meshBasis m), spaceDim)
 	       val rator = E.EIN{
 		    params = [E.INT, E.FEM(data), E.FEM(data)],
 		    index = [dim],

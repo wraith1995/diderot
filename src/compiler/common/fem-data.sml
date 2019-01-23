@@ -12,6 +12,7 @@ structure FemData : sig
 
 	   type mesh
 	   val meshDim : mesh -> int
+	   val meshBasis : mesh -> BasisDataArray.t 
 		  
 	   type space
 	   type func
@@ -57,7 +58,7 @@ structure FemData : sig
 
 	   (* placeholders for creating fem data *)
 	   val defaultSpace : mesh * Atom.atom -> femType   
-	   val mkMesh : int * int * int  * BasisData.t list * Atom.atom -> femType
+	   val mkMesh : int * int * int  * BasisDataArray.t * Atom.atom -> femType
 	   val mkSpace : int * int list * mesh * Atom.atom -> femType
 	   val mkFunc : space * Atom.atom -> femType
 
@@ -69,13 +70,14 @@ datatype mesh = Mesh' of {
 	  dim : int,
 	  mappingDim : int,
 	  degree : int,
-	  basis : BasisData.t list,
+	  basis : BasisDataArray.t,
 	  name : Atom.atom
 	 }
 
 fun meshDim (Mesh'({dim, mappingDim, basis, name, ...})) = dim
 fun meshMapDim (Mesh'{dim, mappingDim, basis, name,...}) = mappingDim
 fun meshBasis (Mesh'{dim, mappingDim, basis, name, ...}) = basis
+							     
 datatype space = Space' of {
 	  dim : int,
 	  shape : int list,
@@ -174,7 +176,7 @@ fun dataRangeShapeOf data =
 
 
 fun sameMesh(m1, m2)
-    = ((meshDim m1) = meshDim(m2)) andalso (meshMapDim(m1) = meshMapDim(m2)) andalso (ListPair.all BD.same ((meshBasis m1), (meshBasis m2)))
+    = ((meshDim m1) = meshDim(m2)) andalso (meshMapDim(m1) = meshMapDim(m2)) andalso (BasisDataArray.same ((meshBasis m1), (meshBasis m2)))
 fun sameSpace(s1, s2)
     = (spaceDim(s1) = spaceDim(s2)) andalso (ListPair.all BD.same (spaceBasis s1, spaceBasis s2)) andalso sameMesh((spaceMesh s1), spaceMesh(s2))
       andalso ((List.length (spaceShape s1)) = (List.length (spaceShape s2))) andalso (ListPair.all (fn (x,y) => x=y) ((spaceShape s1), (spaceShape s2)))
@@ -197,7 +199,7 @@ fun same(t1, t2) =
 fun hash ty =
     (case ty
       of Mesh((Mesh'{dim, degree, mappingDim, basis, name}))
-	 => 0w1 + 0w3 * (Word.fromInt dim) + 0w5 * (Word.fromInt mappingDim) + (List.foldl (fn (d, s) => 0w11 * BD.hash d + s) 0w7 basis)
+	 => 0w1 + 0w3 * (Word.fromInt dim) + 0w5 * (Word.fromInt mappingDim) + BasisDataArray.hash basis
        | Space(Space'({dim, shape, basis, mesh, name}))
        	 => 0w13 + 0w17 * (Word.fromInt dim) + (List.foldl (fn (d, s) => 0w23 * BD.hash d + s) 0w19 basis) + (hash (Mesh(mesh)))
        | Func(Func'{space, name}) => 0w29 + hash (Space(space))
