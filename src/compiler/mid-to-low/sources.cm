@@ -27,8 +27,10 @@ is
   ein-to-scalar.sml
   ein-to-vector.sml
   eval-kern.sml
+  eval-basis.sml
   field-to-low.sml
   load-voxels.sml
   mid-to-low.sml
   mk-low-ir.sml
   fem-to-low.sml
+

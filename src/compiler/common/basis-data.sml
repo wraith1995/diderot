@@ -17,16 +17,23 @@ structure BasisData : sig
 	   val hash : t -> word
 	   val toString : t -> string
 
+	   val isMono : t -> bool
+	   val extractMonoTerm : t * int list -> real
+	   val nonZeroTerms : t -> (real * int list) list
+	   val dim : t -> int
+	   val degree : t -> int
 
-	   val makeBasis : real Array.array * int * int * int -> t option
+
+	   val makeBasisFunc : real Array.array * int * int -> t option
+	   val zero : int -> t
 
 	   val dx : t * int -> t
-	   val d : t ArrayNd.ArrayNd -> t ArrayNd.ArrayNd
-	   val D : t ArrayNd.ArrayNd -> t ArrayNd.ArrayNd
+		  
 	   val scale : t * real -> t
 	   val sum : t * t -> t
 	   val cast : t * int -> t
 	   val product : t* t -> t
+
 			     
 			 
 	  end = struct
@@ -35,6 +42,7 @@ structure R = Real
 type r = Real.real
 structure A = ArrayNd
 
+datatype Rep = Array of r A.ArrayNd (*to add sparse representation later*)
 
 (* why I can't find this in the interger spec is beyond me *)
 fun power (x, 0) = 1  
@@ -42,30 +50,66 @@ fun power (x, 0) = 1
 
 fun arrayToList arr = Array.foldr (op ::) [] arr
 fun dimDegreeShape(dim, degree) = List.tabulate(dim, fn _ => degree + 1)
+					       
 datatype t = BasisFunc of {
-	  dim : int,
-	  degree : int,
-	  mapDim : int,
-	  strForm : Atom.atom,
-	  coeffs : r ArrayNd.ArrayNd
+	  dim : int, (* number of vars*)
+	  degree : int, (*height sum of powers*)
+	  mapDim : int, (* number of coefficiens used*)
+	  strForm : Atom.atom, (* string representation used*)
+	  coeffs : Rep (*storage of coefficients*)
 	 }
 fun dimDomain(BasisFunc{dim,...}) = dim
 fun empty(dim, degree) = BasisFunc {dim = dim,
 				    degree = degree,
 				    mapDim = 0,
-				    coeffs = A.fromArray'(Array.tabulate(power(degree, dim), fn x => 0.0), dimDegreeShape(dim,degree)),
+				    coeffs = Array (A.fromArray'(Array.tabulate(power(degree, dim), fn x => 0.0), dimDegreeShape(dim,degree))),
 				    strForm = Atom.atom "0.0"}
 fun toString(BasisFunc{strForm, ...}) = Atom.toString strForm
 fun getString(BasisFunc{strForm, ...}) = strForm
 fun same(b1,b2) = Atom.same(getString(b1), getString(b2))
 fun hash(BasisFunc{strForm,  ...}) = Atom.hash(strForm)
 
+
+fun numNonZero(Array(coeffs')) = let
+ fun nonZero x = if Real.==(x, 0.0)
+		 then 0
+		 else 1 
+			
+in
+ (ArrayNd.foldr (fn (x,y) => y + (nonZero x)) 0 coeffs')
+end
+					      
+fun isMono(BasisFunc{coeffs=Array(coeffs'),...}) = let
+ fun nonZero x = if Real.==(x, 0.0)
+		 then 0
+		 else 1 
+			
+in
+ (ArrayNd.foldr (fn (x,y) => y + (nonZero x)) 0 coeffs') <= 1
+end
+
+
+fun extractMonoTerm(BasisFunc{coeffs=Array(coeffs'),...}, idx) = if A.indexInside(coeffs', idx)
+								 then A.sub'(coeffs', idx)
+								 else 0.0
+fun nonZeroTerms(BasisFunc{coeffs=Array(coeffs'),...}) =
+    let
+     fun foldrFunc(inlist, a, lst) =
+	 if Real.==(a,0.0)
+	 then lst
+	 else (a,inlist) :: lst
+    in
+     ArrayNd.foldri' foldrFunc [] coeffs'
+    end
+fun dim(BasisFunc{dim,...}) = dim
+fun degree(BasisFunc{degree,...}) = degree
+
 (* The following bits of code are all dedicated to our storage and manipulation of polynomials.
    The idea is that we will store them in the simplest possible way, easily extensible to all dimensions and degrees and so on.
    If you, have three paramters: 
    dim -> the number of variables
    degree -> the maximal power that any variable might be taken too
-   mapDim -> the exact number of coefficients needed to specify a polynomial.
+   mapDim -> the exact number of coefficients needed to specify the polynomial.
 
   With this, we can store the whole thing in an array of size (degree +1 )^dim; we treat this an array of size [degree][degree]...
   Thus, for a polynomial, coeff * x^a * y^b * z^c -> array[a][b][c] = coeff.
@@ -80,15 +124,6 @@ fun hash(BasisFunc{strForm,  ...}) = Atom.hash(strForm)
 
 					      
 (*Given an index [a,b,c,d,..] of length dim, we translate to a single integer index so that array[idx] = array[a][b]...*)
-fun indexScheme(index, dim, degree) =
-    let
-
-     val degreePowers = List.tabulate(dim, (fn x => power(degree + 1, x))) (* compute (degree+1)^0,..., (degree + 1)^(dim - 1)*)
-     val intemediate = ListPair.zip (index, degreePowers) (*pair these with a member of the index*)
-     val index' = List.foldr (fn ((a,b),y) => a*b+y) 0 intemediate (* compute the desired sum ... *)
-    in
-     index'
-    end
 (* fun printIdxes([]) = "" *)
 (*   | printIdxes (x::xs) = "["^ (String.concatWith "," (List.map (Int.toString) x)) ^"] " ^ printIdxes(xs) *)
       
@@ -99,21 +134,6 @@ fun indexScheme(index, dim, degree) =
    If I take the mod and div of idx by (degree+1)^(dim - 1), we get a*(degree+1)^(dim - 1) + rem = idx.
    If we apply the same to rem, we can get b. So we just continue on like this.
  *)
-fun makeIndexes(dim, degree) =
-    let
-     val modIndexes = List.rev (List.tabulate(dim, fn x => power(degree + 1, x)))
-
-     fun modDiv(num, divider) = (Int.mod(num,divider), Int.div(num, divider))
-     fun invert'(num, x::xs, ys) = if x = 1
-				   then num::ys
-				   else let val (mod',div') = modDiv(num, x)
-					in invert'(mod', xs, div'::ys) end
-
-     fun idxes x = invert'(x, modIndexes, [])
-     val tab = List.tabulate(power(degree + 1, dim), fn x => idxes x)
-    in
-     tab
-    end
 
 (*In order to hash these, we need a consistent string rep of basis functions. 
   This function creates the monomial form of an arbitrary basis function.
@@ -151,35 +171,25 @@ fun makeMonoTerms(reals, dim, degree) =
      string
     end
       
-fun makeBasis(reals, dim, degree, mapDim) =
+fun makeBasisFunc(reals, dim, degree) =
     let
      val shape = dimDegreeShape(dim, degree)
      val reals' = A.fromArray'(reals, shape)
      val monoRep = Atom.atom (makeMonoTerms(reals', dim, degree))
      val _ = print("Imported basis func with mono: " ^ (Atom.toString monoRep) ^ "\n")
     in
-     SOME(BasisFunc({dim = dim, degree = degree, mapDim = mapDim, coeffs = reals', strForm = monoRep}))
+     SOME(BasisFunc({dim = dim, degree = degree, mapDim = numNonZero(Array(reals')), coeffs = Array(reals'), strForm = monoRep}))
      handle exn => (print(exnMessage(exn)); NONE)
     end
 
-fun zero dim mapDim = BasisFunc({dim = dim, degree = 0,mapDim = mapDim, coeffs = A.fromList [0.0], strForm = Atom.atom "0.0"})
+fun zero dim = BasisFunc({dim = dim, degree = 0,mapDim = 1, coeffs = Array(A.fromList [0.0]), strForm = Atom.atom "0.0"})
       
-fun dx(t as BasisFunc({dim, degree, coeffs, strForm, mapDim,...}), varIndex) =
+fun dx(t as BasisFunc({dim, degree, coeffs=Array(coeffs'), strForm, mapDim,...}), varIndex) =
     let
-     val _ = ()
-     (* val temp = ArrayNd.duplicate(coeffs) *)
-     (* fun modNew(idx, a) = *)
-     (* 	 let *)
-     (* 	  val power = List.nth(idx, varIndex) *)
-     (* 	  (* grab everyone with idx_{varIndex} = power*) *)
-     (* 	 in *)
-	  
-     (* 	 end *)
-
      val degree' = Int.min(degree - 1, 0)
      val newShape = dimDegreeShape(dim, degree')
      val start = List.tabulate(dim, fn _ => 0)
-     val newArray = ArrayNd.subregion(coeffs, start, newShape)
+     val newArray = ArrayNd.subregion(coeffs', start, newShape)
      fun modNew(idx, a) =
 	 let
 	  val power = List.nth(idx, varIndex) + 1
@@ -188,70 +198,16 @@ fun dx(t as BasisFunc({dim, degree, coeffs, strForm, mapDim,...}), varIndex) =
 				       else b'
 	  (* grab everyone with idx_{varIndex} = power*)
 	 in
-	  ArrayNd.foldri' foldrFunc 0.0 coeffs
+	  ArrayNd.foldri' foldrFunc 0.0 coeffs'
 	 end
      val _ = ArrayNd.modifyi' modNew newArray
      val strForm' = Atom.atom (makeMonoTerms(newArray, dim, degree'))
+     val mapDim' = numNonZero(Array(newArray))
 
     in
-     BasisFunc{dim = dim, degree = degree', coeffs = newArray, mapDim = mapDim, strForm = strForm'}
+     BasisFunc{dim = dim, degree = degree', coeffs = Array(newArray), mapDim = mapDim', strForm = strForm'}
     end
-fun d(basisArray) =
-    let
-     val first = ArrayNd.sub(basisArray,0)
-     val dim = dimDomain(first)
-     val funcs = (List.tabulate(dim, fn z => (fn y => dx(y, z))))
-     fun expandMap a = Array.fromList (List.map (fn y => y a) funcs)
-     val new = ArrayNd.expandMap expandMap dim basisArray
-    in
-     new
-    end
-fun D(basisArray) =
-    let
-     val first = ArrayNd.sub(basisArray,0)
-     val dim = dimDomain(first)
-     val preConcat = List.tabulate(dim, fn _ => basisArray)
-     val new = ArrayNd.concat(preConcat)
-     fun modFunc(idx, a) = dx(a, List.nth(idx, 0))
-     val _   = ArrayNd.modifyi' modFunc new
-    in
-     new
-    end
-(*Take the dim out*)
-(*Concat that many*)
-(*modifyI where we seperate out last one*)
-    (* let *)
-    (*  (*copy subregion; use modify*) *)
-    (*  val coeffsCopy = Arraynd.duplicate  *)
-    (* in *)
-    (* end *)
-    (* let *)
-    (*  val len = A.length coeffs *)
-    (*  val len' = power(Int.min(degree - 1, 0), dim) *)
-    (*  (* val primeArray = A.array(, real) *) *)
-    (*  (* val newArray = A.copy({src = coeffs, dst = primeArray, di = 0 }) *) *)
-    (*  val modIndexes = List.rev (List.tabulate(degree, fn x => power(degree + 1, x))) *)
-    (*  fun idxes x = Array.fromList (List.map (fn d => Int.mod(x, d))  modIndexes) *)
-    (*  fun getVarIdx(idx : int A.array) : int = A.sub( idx, varIndex) *)
-    (*  fun setIdx idx = *)
-    (* 	 let *)
-    (* 	  val index = idxes idx (* translate array index to triplet index*) *)
-    (* 	  val power : int = getVarIdx index *)
-    (* 				      (* get power required *) *)
-    (* 				      (*create the lower index*) *)
-    (* 				      (* set *) *)
-    (* 	 in *)
 
-    (* 	  () *)
-    (* 	 end *)
-    (* in *)
-    (*  if dim - varIndex < 0 *)
-    (*  then raise Fail "impossible derivative" *)
-    (*  else if degree = 1 *)
-    (*  then zero dim 1 *)
-    (*  else  *)
-    (*   BasisFunc({dim = dim, degree = degree - 1,mapDim = mapDim, coeffs = coeffs, strForm = strForm }) *)
-    (* end *)
 
 
 fun scale(t,s) = t

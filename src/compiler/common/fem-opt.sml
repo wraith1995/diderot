@@ -18,10 +18,13 @@ structure FemOpt : sig
 	   val same : femOption * femOption -> bool
 	   val hash : femOption -> word
 	   val toString : femOption -> string
-
+	   (*Finds the number of dofs an operator might be extracting*)
 	   val findIndexLength : femOption -> int
+	   (*Takes an operator and splits it into two (high-to-mid)*)
 	   val splitDataOpt : femOption -> (femOption * femOption) option
+	   (*Takes an operator and lowers it down from the mid-ir to the low-ir*)
 	   val lowerDataOpt : femOption -> femOption option
+	   (*Find the shape of a tensor that is the result a fem opt*)
 	   val findTargetShape : femOption -> int list
 
 	   datatype femField =  Transform | RefField | InvTransform | TRefField | Field						  
@@ -95,9 +98,6 @@ fun same ((v1, d1),(v2, d2)) = FT.same(d1,d2) andalso
 
 
 fun findIndexLength (opt, data) =
-    let
-     val _ = print((toString (opt, data)) ^"\n")
-    in
     (case (opt, data)
       of (ExtractDofs, FT.Mesh(m)) => FT.meshMapDim m
        | (ExtractDof, FT.Mesh(m)) => FT.meshMapDim m
@@ -108,16 +108,17 @@ fun findIndexLength (opt, data) =
        | (ExtractIndex, FT.Space(s)) => FT.spaceDim s
        | _ => raise Fail "impossible optiion and data combination"
     (* end case *) )
-    end
 
 
 fun findTargetShape (opt, data) =
      (case (opt, data)
        of (ExtractDofs, FT.Mesh(m)) => FT.dataShapeOf data
 	| (ExtractDofsSeq, FT.Mesh(m)) => FT.dataShapeOf data
-       | (ExtractDofs, FT.Space(s)) => FT.dataShapeOf data
-       | (ExtractDof, FT.Mesh(m)) => [FT.meshDim m]
-       | _ => raise Fail "impossible optiion and data combination"
+	| (ExtractDofs, FT.Space(s)) => FT.dataShapeOf data
+	| (ExtractDofsSeq, FT.Space(s)) => FT.dataShapeOf data
+	| (ExtractDof, FT.Mesh(m)) => [FT.meshDim m]
+	| (ExtractDof, FT.Space(s)) => FT.dataRangeShapeOf data
+	| _ => raise Fail "impossible optiion and data combination"
     (* end case *) )
 
 
@@ -127,14 +128,12 @@ fun splitDataOpt (opt, data) =
        | _ => raise Fail "impossible optiion and data combination"
     (* end case *))
 
-
-
-
       
 fun lowerDataOpt (v,d) = (case v
 			   of ExtractIndices => SOME(ExtractIndex, d)
 			    | ExtractDofsSeq => SOME(ExtractDof, d)
-			    | _ => NONE)
+			    | _ => NONE
+			 (* end case *))
 
 
       

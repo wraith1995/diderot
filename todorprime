@@ -1,11 +1,17 @@
+current todo:
+Basis -- FIX THIS REPRESENATION - clear up organiation, use realLit.t, figure out storage -- just do everything
+---Basis - make interface so you only ever -> that is the thing we forget -> so get coefficient and get nonzero coeffs
+---map out and do
+Normalize fem interface (mesh, space, func)
+Deal with more fiedlds and more files to prase
+--parsing files
+--add more fields from it
+advance basis function types (basis info)
 
-
-Current error: Got too far:
-uncaught exception Fail [Fail: probe ein-exp: Probe(femV(0, 1, 1)_{i0}⊛Basis(4),T2)]
+Current error: translate basis
+uncaught exception Fail [Fail: bogus operator EvaluateBasis<BasisArray>]
   raised at common/phase-timer.sml:99.57-99.59
-  raised at mid-to-low/mid-to-low.sml:204.29-204.31
-  raised at mid-to-low/ein-to-scalar.sml:169.42-169.90
-
+  raised at mid-to-low/mid-to-low.sml:178.32-178.78
 
 List of todo:
 -Okay there is a confusion aboout indexDatalower and so forth -> main issue is confusion of when things are loaded

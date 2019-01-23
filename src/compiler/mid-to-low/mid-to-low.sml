@@ -122,6 +122,10 @@ structure MidToLow : sig
               | SrcOp.Strands(ty, set) => assign (DstOp.Strands(cvtTy ty, set))
               | SrcOp.BuildPos s => expandBuildPos (y, s, args')
               | SrcOp.EvalKernel(d, h, k) => EvalKern.expand(y, d, h, k, args')
+	      | ScrOp.EvaluateBasis(data) => (case args'
+					       of [x] => EvalBasis.expand(y, data, x)
+						| _ => raise Fail("bogus operator " ^ SrcOp.toString rator)
+					     (* end case*))
               | SrcOp.Kernel _ => dummy()
               | SrcOp.Transform img => assign (DstOp.Transform img)
               | SrcOp.Translate img => assign (DstOp.Translate img)

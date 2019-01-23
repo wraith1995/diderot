@@ -267,8 +267,8 @@ structure ProbeEin : sig
 	 val dofExpression = E.Tensor(dofParamId, dofAlpha)
 	 val _ = FemOptSplit.indexedDataLoweringAvail(avail, dofVar, intOpt, dofSrcVar, indexSrcVar, indexVar)
 						     
-	 val basisShape = ArrayNd.shape basisArray
-	 val basisOpt = IR.OP(Op.EvaluateBasis(BasisDataArray.Array(basisArray)), [posVar])
+	 val basisShape = BasisDataArray.shape basisArray
+	 val basisOpt = IR.OP(Op.EvaluateBasis(basisArray), [posVar])
 	 val basisTensorTy = Ty.TensorTy(basisShape)
 	 val basisVar = IR.Var.new("basisResult", basisTensorTy)
 	 val _ =  AvailRHS.addAssignToList (avail, (basisVar, basisOpt))
