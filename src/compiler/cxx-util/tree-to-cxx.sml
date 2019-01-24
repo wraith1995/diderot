@@ -304,11 +304,11 @@ structure TreeToCxx : sig
 	    | (Op.ExtractFemItem(ty, (FemOpt.NumCell, _)), [a]) => CL.E_Select(a, "numCells")
 	    | (Op.ExtractFemItem(ty, (FemOpt.Cells, _)), [a]) => CL.E_Select(a, "cells")
 	    | (Op.ExtractFemItem(ty, (FemOpt.CellIndex, _)), [a]) => CL.E_Select(a, "cell")
-	    | (Op.ExtractFemItem2(ty,ty', (FemOpt.ExtractDof, _)), [a,b]) => (case ty'
-									       of Ty.TensorTy([]) => CL.E_Subscript(CL.E_Select(a, "coordMap"), b)
-										| _ => CL.mkUnOp(CL.%&, CL.E_Subscript(CL.E_Select(a, "coordMap"), b))
-									     (* end case*))
-	    
+	    | (Op.ExtractFemItem2(ty,ty', (FemOpt.ExtractDof, _)), [a,b]) =>
+	      (case ty'
+		of Ty.VecTy(1,1) => CL.E_Subscript(CL.E_Select(a, "coordMap"), b)
+		 | Ty.TensorTy(_) => CL.mkUnOp(CL.%&, CL.E_Subscript(CL.E_Select(a, "coordMap"), b))
+	      (* end case*))
 	    | (Op.ExtractFemItem2(ty,ty', (FemOpt.ExtractIndex, _)), [a,b]) => CL.E_Subscript(CL.E_Select(a, "indexMap"), b)
             | _ => raise Fail(concat[
                    "unknown or incorrect operator ", Op.toString rator

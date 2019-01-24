@@ -352,6 +352,7 @@ fun convertToTree(t as AND{dims, shape, elems, ...}, convert, convertFunc) =
 	 in
 	  doDims(ds, int)
 	 end
+
     in
      doDims(parseOrder, listRep)
     end

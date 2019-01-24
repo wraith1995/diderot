@@ -41,8 +41,15 @@ structure FemToLow : sig
     fun iadd (avail, a, b) = iadd' (avail, "addRes", a, b)
     fun ilit (avail, n) = ilit' (avail, "ilit", n)
 
-
-						  
+    fun consFunc(vars, ty) = (case ty
+			       of Ty.TensorTy[] => (case vars
+						     of [v] => IR.VAR(v)
+						      | _ => raise Fail "impossible")
+				| Ty.TensorTy[_] => IR.CONS(vars, ty)
+				| _ => raise Fail "impossible")
+    (*Note: it might be better to not lower the index transfer and make it a mem copy:
+     1. Avail rewrites the indexing to occur when we access tensors, which is bad for locality
+     2. It might sometimes be more efficient to memcpy*)			  
     fun expandExtractIndex(lhs, seqTy, seqOpt, indexSource, indexStart) =
 	let
 	 val avail = AvailRHS.new ()
@@ -56,7 +63,56 @@ structure FemToLow : sig
 	 List.rev (AvailRHS.getAssignments avail)
 	end
 
-    fun expandDofs(lhs, seqTy, loadOpt, loadSource, indexSeq ) =
+    fun expandDofsChoice(lhs, seqTy, loadOpt, loadSource, indexSeq, loadDims ) =
+	let
+	 val avail = AvailRHS.new ()
+	 val perDofShape = FO.findTargetShape loadOpt
+	 val _ = print ("[" ^ (String.concatWith ", " (List.map Int.toString perDofShape)) ^ "]\n")
+	 val perDofShapeRev = List.rev perDofShape
+	 val dim = List.length perDofShapeRev
+	 val _ = if dim >= loadDims
+		 then ()
+		 else raise Fail "trying to load portions of a dof that are large than the dof"
+	 val loadingShape = List.rev(List.take(perDofShapeRev, loadDims))
+	 val loadTensorTy = Ty.TensorTy( loadingShape)
+	 val accessShape = List.rev(List.drop(perDofShapeRev, loadDims))
+	 val accessTensorTy = Ty.TensorTy( accessShape)
+	 val Ty.SeqTy(Ty.IntTy, SOME numDofs ) = seqTy
+	 val shift = List.foldr (fn (x,y) => x*y) 1 loadingShape (*size of the tensors that we are loading*)
+	 val count = List.foldr (fn (x,y) => x*y) 1  accessShape (*size of the tensor that we load into*)
+
+	 val newOpt = Op.ExtractFemItem2(Ty.IntTy, loadTensorTy, loadOpt)
+	 fun loadTensor index = assignOp(avail, "dof_load", loadTensorTy, newOpt, [loadSource, index])
+	 (*build an array of ops, get cons out, argument via index*)
+	 fun buildDof idx =
+	     let
+	      fun getIndex index =  iadd(avail, ilit(avail, index), imul(avail, ilit(avail,  shift), assignOp (avail, "idx", Ty.IntTy, Op.Subscript Ty.IntTy, [indexSeq, ilit (avail, idx)])))
+
+	      val indicies = List.tabulate(count, getIndex)
+	      val accessArray = ArrayNd.fromList'(indicies, accessShape)
+	      val convert = loadTensor 
+	      fun group(vars, n) =
+		  let
+		   val v::vs = vars
+		   val ty = IR.Var.ty(v)
+		   val Ty.TensorTy(shape') = ty
+
+		  in
+		   assignCons(avail, "interCons", vars)
+		  end
+
+	     in
+	      ArrayNd.convertToTree(accessArray, convert, group)
+	     end
+
+	 val result = assignCons(avail, "dofs", List.tabulate(numDofs, buildDof))
+	in
+	 AvailRHS.addAssignToList (avail, (lhs, IR.VAR result));
+	 List.rev (AvailRHS.getAssignments avail)
+	end
+
+
+    fun expandDofsMemCpy(lhs, seqTy, loadOpt, loadSource, indexSeq ) =
 	let
 	 val avail = AvailRHS.new ()
 	 val perDofShape = FO.findTargetShape loadOpt
@@ -72,6 +128,9 @@ structure FemToLow : sig
 	 AvailRHS.addAssignToList (avail, (lhs, IR.VAR result));
 	 List.rev (AvailRHS.getAssignments avail)
 	end
+
+    fun expandDofs(lhs, seqTy, loadOpt, loadSource, indexSeq) = expandDofsChoice(lhs, seqTy, loadOpt, loadSource, indexSeq, 0) (*loads scalars one by one*)
+
 
     fun expandOp(lhs, arg1, arg2, inputTy, outputTy, (opt, d)) =
 	(case opt
