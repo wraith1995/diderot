@@ -24,7 +24,7 @@ fun consFunc(vars, ty) = (case ty
 			   of Ty.TensorTy[] => (case vars
 					      of [v] => IR.VAR(v)
 					       | _ => raise Fail "impossible")
-			    | Ty.TensorTy[_] => IR.CONS(vars, ty)
+			    | Ty.TensorTy(_) => IR.CONS(vars, ty)
 			    | _ => raise Fail "impossible")
 fun multFunc(v1, v2) = (case (IR.Var.ty(v1), IR.Var.ty(v1))
 			 of (Ty.TensorTy[], Ty.TensorTy[]) =>  IR.OP(Op.RMul, [v1,v2])
@@ -122,15 +122,23 @@ fun evalFunctionDumb(avail, basisFunc, vars) =
 	 in
 	  (assign ::lst1, pow :: lst2)
 	 end
-
-     val (coeffs, pows) = List.foldr foldrFunc ([],[]) nonZeroTerms
-
-     val coeffVar = AvailRHS.addAssign(avail, "coeffs", Ty.vecTy(count), consFunc(coeffs, Ty.vecTy(count)))
-     val powVar = AvailRHS.addAssign(avail, "powers", Ty.vecTy(count), consFunc(pows, Ty.vecTy(count)))
-     val resultOP = multFunc(coeffVar, powVar) (*vectorization*)
-
+     val result =
+	 if count = 0
+	 then AvailRHS.addAssign(avail, "basisEval", Ty.realTy, IR.LIT(Literal.Real(RealLit.zero(false))))
+	 else
+	  let
+	   val (coeffs, pows) = List.foldr foldrFunc ([],[]) nonZeroTerms
+					   
+	   val coeffVar = AvailRHS.addAssign(avail, "coeffs", Ty.vecTy(count), consFunc(coeffs, Ty.vecTy(count)))
+	   val powVar = AvailRHS.addAssign(avail, "powers", Ty.vecTy(count), consFunc(pows, Ty.vecTy(count)))
+	   val resultOP = multFunc(coeffVar, powVar) (*vectorization*)
+				  
+	  in
+	   AvailRHS.addAssign(avail, "basisEval", Ty.realTy, resultOP)
+	  end
+	    
     in
-     AvailRHS.addAssign(avail, "basisEval", Ty.realTy, resultOP)
+     result
     end
 
 fun evalBasisDumb(avail, basisArray, pos) =

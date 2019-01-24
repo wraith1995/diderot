@@ -273,7 +273,7 @@ structure ProbeEin : sig
 	 val basisVar = IR.Var.new("basisResult", basisTensorTy)
 	 val _ =  AvailRHS.addAssignToList (avail, (basisVar, basisOpt))
 	 val basisParam = E.TEN(true, basisShape)
-	 val basisAlpha = sumIndexVar :: dx
+	 val basisAlpha = List.@(dx, [sumIndexVar])
 	 (* List.@(dx, [sumIndexVar]) if we went the other way *)
 	 val basisExpression = E.Tensor(basisParamId, basisAlpha)
 
