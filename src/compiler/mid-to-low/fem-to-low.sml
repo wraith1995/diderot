@@ -129,7 +129,14 @@ structure FemToLow : sig
 	 List.rev (AvailRHS.getAssignments avail)
 	end
 
-    fun expandDofs(lhs, seqTy, loadOpt, loadSource, indexSeq) = expandDofsChoice(lhs, seqTy, loadOpt, loadSource, indexSeq, 0) (*loads scalars one by one*)
+    fun expandDofs(arg as (lhs, seqTy, loadOpt, loadSource, indexSeq)) =
+	(case IR.Var.ty lhs
+	  of Ty.TensorTy([d]) => expandDofsMemCpy arg
+	  |  Ty.TensorTy(_)=> expandDofsChoice(lhs, seqTy, loadOpt, loadSource, indexSeq, 0)
+	 (*loads scalars one by one*)
+	 (*TODO: is there a better way to make this choice?*)
+	 (*end case*))
+	
 
 
     fun expandOp(lhs, arg1, arg2, inputTy, outputTy, (opt, d)) =
