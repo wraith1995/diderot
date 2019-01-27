@@ -92,7 +92,12 @@ structure GenLibraryJSON : sig
       | apiTyToJSON (Ty.SeqTy(ty, NONE)) = J.OBJECT[
             ("kind", J.STRING "dynseq"),
             ("elem-ty", apiTyToJSON ty)
-          ]
+        ]
+      | apiTyToJSON (Ty.FemData(data)) = J.OBJECT[
+	 ("kind", J.STRING "*"),
+	 ("arg", J.STRING "void")
+	]
+    (*TODO: ADD generation of json for fem stuff if we decide to add the structs as arguments*)
 
     fun mkParam (cty, name) = J.OBJECT[
             ("name", J.STRING name),

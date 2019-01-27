@@ -55,7 +55,8 @@ structure FemToLow : sig
 	 val avail = AvailRHS.new ()
 	 val Ty.SeqTy(Ty.IntTy, SOME n ) = seqTy
 	 val newOpt = Op.ExtractFemItem2(Ty.IntTy, Ty.IntTy, seqOpt)
-	 fun loadIndex idx = assignOp(avail, "idx", Ty.IntTy, newOpt, [indexSource, iadd(avail, indexStart, ilit(avail, idx))])
+	 val indexStart' = imul(avail, indexStart, ilit(avail,n))
+	 fun loadIndex idx = assignOp(avail, "idx", Ty.IntTy, newOpt, [indexSource, iadd(avail, indexStart', ilit(avail, idx))])
 	 val idxes = List.tabulate (n, loadIndex)
 	 val result = AvailRHS.addAssign (avail, "seq", seqTy, IR.SEQ(idxes, seqTy))
 	in
@@ -67,6 +68,8 @@ structure FemToLow : sig
 	let
 	 val avail = AvailRHS.new ()
 	 val perDofShape = FO.findTargetShape loadOpt
+	 val dofSize = List.foldr (fn (x,y) => x*y) 1 perDofShape
+				  
 	 val _ = print ("[" ^ (String.concatWith ", " (List.map Int.toString perDofShape)) ^ "]\n")
 	 val perDofShapeRev = List.rev perDofShape
 	 val dim = List.length perDofShapeRev
@@ -86,7 +89,7 @@ structure FemToLow : sig
 	 (*build an array of ops, get cons out, argument via index*)
 	 fun buildDof idx =
 	     let
-	      fun getIndex index =  iadd(avail, ilit(avail, index), imul(avail, ilit(avail,  shift), assignOp (avail, "idx", Ty.IntTy, Op.Subscript Ty.IntTy, [indexSeq, ilit (avail, idx)])))
+	      fun getIndex index =  iadd(avail, ilit(avail, shift * index), imul(avail, ilit(avail,  dofSize), assignOp (avail, "idx", Ty.IntTy, Op.Subscript Ty.IntTy, [indexSeq, ilit (avail, idx)])))
 
 	      val indicies = List.tabulate(count, getIndex)
 	      val accessArray = ArrayNd.fromList'(indicies, accessShape)
