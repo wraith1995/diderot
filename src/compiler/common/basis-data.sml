@@ -186,16 +186,19 @@ fun zero dim = BasisFunc({dim = dim, degree = 0,mapDim = 1, coeffs = Array(A.fro
       
 fun dx(t as BasisFunc({dim, degree, coeffs=Array(coeffs'), strForm, mapDim,...}), varIndex) =
     let
-     val degree' = Int.min(degree - 1, 0)
+     val degree' = Int.max(degree - 1, 0)
      val newShape = dimDegreeShape(dim, degree')
      val start = List.tabulate(dim, fn _ => 0)
      val newArray = ArrayNd.array'(0.0, newShape)(* ArrayNd.subregion(coeffs', start, newShape) *)
      fun printList(a) = "[" ^ (String.concatWith "," (List.map Int.toString a)) ^ "]"
+     fun allSameBut(idx1, idx2, i) = List.foldri (fn (j,(x,y), n) => n andalso (i=j orelse x=y))
+						 true (ListPair.zip(idx1,idx2))
      fun modNew(idx, a) =
 	 let
-
+	  
 	  val power = List.nth(idx, varIndex) + 1
 	  fun foldrFunc(index, a', b') = if List.nth(index, varIndex) = power
+					    andalso allSameBut(index,idx, varIndex)
 				       then a'+b'
 				       else b'
 	  (* grab everyone with idx_{varIndex} = power*)

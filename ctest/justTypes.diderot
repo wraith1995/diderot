@@ -23,7 +23,7 @@ function real s(real k){
 strand gg(int i, cell{msh} j){
 
   output real result = 1.0*i;
-  output tensor[2,2] z = ∇⊗F([0,0]);
+  output tensor[2,2] z = ∇⊗F([1,1]);
 
   int j0 = 2;
 
@@ -35,7 +35,7 @@ strand gg(int i, cell{msh} j){
     tensor[msh.transformDofShape] a = j.transformDofs();
     print("Dof:",a,"\n");
     print("result:", z, "\n");
-    print("other result:", F([1,1]), "\n");
+    print("other result:", F([0,0]), "\n");
 
 
     stabilize;
