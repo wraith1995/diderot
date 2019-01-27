@@ -143,7 +143,8 @@ fun evalFunctionDumb(avail, basisFunc, vars) =
 
 fun evalBasisDumb(avail, basisArray, pos) =
     let
-     val (basisArrayData, varAcc) = BDA.explode basisArray
+     val (basisArrayData, meta) = BDA.explode basisArray
+     val varAcc = BDA.vars(meta)
      val vars = extractVars(avail, pos, varAcc)
      fun convert(func) = evalFunctionDumb(avail, func, vars)
      fun group(vars, n) =

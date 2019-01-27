@@ -8,10 +8,7 @@ Deal with more fiedlds and more files to prase
 --add more fields from it
 advance basis function types (basis info)
 
-Current error: translate basis
-uncaught exception Fail [Fail: bogus operator EvaluateBasis<BasisArray>]
-  raised at common/phase-timer.sml:99.57-99.59
-  raised at mid-to-low/mid-to-low.sml:178.32-178.78
+Current error: 
 
 List of todo:
 -Okay there is a confusion aboout indexDatalower and so forth -> main issue is confusion of when things are loaded
