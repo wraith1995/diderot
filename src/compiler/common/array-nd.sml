@@ -27,6 +27,7 @@ structure ArrayNd : sig
 	   (* ways to build these guys*)
 	   val fromList : 'a list -> 'a ArrayNd
 	   val fromList' : 'a list * int list -> 'a ArrayNd
+	   val fromArray : 'a Array.array -> 'a ArrayNd
 	   val fromArray' : 'a Array.array * int list -> 'a ArrayNd
 	   val duplicate : 'a ArrayNd -> 'a ArrayNd
 	   val zip : 'a ArrayNd * 'b ArrayNd -> ('a * 'b) ArrayNd
@@ -149,6 +150,17 @@ fun fromList(list) =
       dims = 1,
       shape = [len],
       elems = Array.fromList list,
+      index = ref NONE, inverseIndex= ref NONE
+     }
+    end
+fun fromArray(array) =
+    let
+     val len = Array.length array
+    in
+     AND{
+      dims = 1,
+      shape = [len],
+      elems = array,
       index = ref NONE, inverseIndex= ref NONE
      }
     end

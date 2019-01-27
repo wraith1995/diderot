@@ -29,7 +29,7 @@ fun consFunc(vars, ty) = (case ty
 fun multFunc(v1, v2) = (case (IR.Var.ty(v1), IR.Var.ty(v1))
 			 of (Ty.TensorTy[], Ty.TensorTy[]) =>  IR.OP(Op.RMul, [v1,v2])
 			  | (Ty.TensorTy[d1], Ty.TensorTy[d2]) => if d1=d2
-								  then IR.OP(Op.VMul(d1), [v1,v2])
+								  then IR.OP(Op.VDot(d1), [v1,v2])
 								  else raise Fail "impossible"
 			  | _ => raise Fail "impossible"
 		       )
@@ -41,6 +41,7 @@ fun power(avail, var, 0) =
     in
      AvailRHS.addAssign(avail, "one", Ty.realTy, one)
     end
+  | power (avail, var, 1) = AvailRHS.addAssign(avail, "one", Ty.realTy, IR.VAR(var))
   | power(avail, var, n) =
     let
      val prev = power(avail, var, n - 1)
@@ -132,9 +133,10 @@ fun evalFunctionDumb(avail, basisFunc, vars) =
 	   val coeffVar = AvailRHS.addAssign(avail, "coeffs", Ty.vecTy(count), consFunc(coeffs, Ty.vecTy(count)))
 	   val powVar = AvailRHS.addAssign(avail, "powers", Ty.vecTy(count), consFunc(pows, Ty.vecTy(count)))
 	   val resultOP = multFunc(coeffVar, powVar) (*vectorization*)
-				  
+	   val next = AvailRHS.addAssign(avail, "basisEval", Ty.realTy, resultOP)
+	   val next' = IR.Var.new("intermediate", Ty.realTy)
 	  in
-	   AvailRHS.addAssign(avail, "basisEval", Ty.realTy, resultOP)
+	   (AvailRHS.addAssignToList(avail, (next', IR.VAR(next))); next')
 	  end
 	    
     in

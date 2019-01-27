@@ -23,6 +23,7 @@ structure BasisDataArray : sig
 	   val toString : t -> string
 	   val explode : t -> BasisData.t ArrayNd.ArrayNd * meta
 	   val makeUniform : BasisData.t ArrayNd.ArrayNd * int -> t
+	   val makeVarSubset : BasisData.t ArrayNd.ArrayNd * int list -> t
 	   val shape : t -> int list
 
 	   val d : t -> t
@@ -64,6 +65,17 @@ fun makeUniform(a1, n) =
     in
      Array(a1, meta)
     end
+
+fun makeVarSubset(a1, vars) =
+    let
+     val n = List.length vars
+     val degrees = List.map BasisData.degree (ArrayNd.toList a1) (* dumb *)
+     val max = List.foldr (fn (x,y) => Int.max(x,y)) 0 degrees
+     val min = List.foldr (fn (x,y) => Int.min(x,y)) 0 degrees
+     val meta : meta = {vars=vars,minDegree=min,maxDegree=max, dim =n}
+    in
+     Array(a1, meta)
+    end      
 fun shape(Array(a1,_)) = ArrayNd.shape a1
 
 fun dervMeta({vars, dim, maxDegree, minDegree}) = {vars=vars, dim=dim, maxDegree=Int.max(0, maxDegree - 1), minDegree = Int.max(0, minDegree - 1)}

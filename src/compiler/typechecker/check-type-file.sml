@@ -197,6 +197,9 @@ fun makeBool x = oE (PT.E_Lit o Literal.Bool  o JU.asBool) x
 fun makeInt x = oE (PT.E_Lit o Literal.Int o JU.asIntInf ) x
 fun makeReal x = oE (PT.E_Lit o Literal.Real o realToRealLit o JU.asNumber) x
 fun tryAll x = (Option.valOf o Option.join) (List.find Option.isSome (List.map (fn g => g x) [makeString, makeBool, makeInt, makeReal]))
+fun optionInt x = oE (IntInf.toInt o JU.asIntInf) x
+fun optionListInt x = oE (JU.arrayMap (IntInf.toInt o JU.asIntInf)) x
+fun optionRealLit x = oE ( realToRealLit o JU.asNumber) x
 					     
 val bogusExp = AST.E_Lit(L.Int 0)
 val bogusExpTy = (Ty.T_Error, bogusExp)
@@ -299,17 +302,100 @@ fun constantExists(name, ty) =
     in
      List.find finder
     end
-
+(*an object with coeffs and optional var list  or just an array
+if no object, do array
+if object:
+-> if no var, replace it with dim
+-> for each one, look for a coeff list and parse according to global
+-> if there is one, override it.
+*)
 fun parseScalarBasis(env, cxt, tyName, json, dim, degree, spaceDim) =
     let
      fun maker(x : real Array.array ) : BD.t =  Option.valOf (BD.makeBasisFunc(x, dim, degree))
      fun realArray(x : JSON.value) : real Array.array = Array.fromList (JU.arrayMap (JU.asNumber) x)
      val f = maker o realArray
+     fun arrayVersion x = let
+      val array = ArrayNd.fromList(JU.arrayMap f x)
+     in SOME(BasisDataArray.makeUniform(array, dim))  end
+			  handle exn => NONE
+			    
+
+     fun parseAsObject(x : JSON.value, dim, degree) =
+	 let
+	  val vars = Option.mapPartial optionListInt (findField "vars" x)
+	  val vars' = Option.getOpt(vars, List.tabulate(dim, fn x => x))
+	  val dim' = List.length vars'
+	  val polys = Option.map (JU.arrayMap (fn x => x )) (findField "polys" x)
+	  val deg = Option.mapPartial optionInt ((findField "degree") x)
+	  val degree' = Option.getOpt(deg, degree )
+				     (* TODO: insert compatability checks*)
+				     
+	 in
+	  (case polys
+	    of SOME(ps) => SOME(ps, vars', dim', degree')
+	     | _ => NONE)
+	 
+	 end
+	 handle exn =>  NONE
+     fun parseObjectPoly(x : JSON.value, dim, degree) =
+	 let
+	  val coeffs = (findField "coeffs") x
+	  val parsedCoeffs = (Option.map realArray coeffs) handle exn => NONE
+	  val deg = Option.mapPartial optionInt ((findField "degree") x)
+	  val degree' = Option.getOpt(deg, degree)
+	 in
+	  (case parsedCoeffs
+	    of SOME(array) => BD.makeBasisFunc(array, dim, degree')
+	     | _ => NONE)
+	 end
+	 handle exn => NONE
+			 
+     fun parsePolys(xs, dim, degree) =
+	 let
+	  fun tryCoeff x =  let val _ = () in SOME(f x) end
+			    handle exn => NONE
+	  fun tryObj x = parseObjectPoly(x, dim, degree)
+			 handle exn => NONE
+	  fun try x = let
+
+	  in
+	   (case tryCoeff x
+	     of SOME(b) => b
+	      | NONE => Option.valOf ( tryObj x) ) end
+	  val polys = ArrayNd.fromList (List.map try xs )
+	 in
+	  SOME(polys) handle exn => NONE
+	 end
+	 handle exn => NONE
+	   
+
+     (*parse array first*)
+     (*parse object*)
+     (*for each poly, parse array and then object*)
+ 
+     fun parseBasis(x, dim, degree) = 
+	 (case arrayVersion x
+	   of SOME(basis) => SOME(basis) (* yuck*)
+	    | NONE =>
+	      ((case parseAsObject(x, dim, degree)
+		of NONE => (print("umm!!!!!!!!!!!!!!!!!\n"); NONE)
+		 | SOME(polys, vars, dim', degree') =>
+		   (case parsePolys(polys, dim', degree')
+		     of SOME(basis) => SOME(BasisDataArray.makeVarSubset(basis,vars))
+		      | NONE => (print("umm!!!!!!!!!!!!!!!!!\n"); NONE)))))
+	      
+
+	   
+     val leftOver = ArrayNd.fromList (List.tabulate(1, (fn _ => BD.empty(dim, degree))))
+     val error = BasisDataArray.makeUniform(leftOver, 1)
+
+
+
     in
-     JU.arrayMap f json
+     Option.valOf (parseBasis(json, dim, degree))
      handle exn => (err (cxt, [S"Unable to parse polynomial basis for type ", A tyName, S".",
 			S"An exception occured in the parsing:",S (exnMessage(exn)), S"."]);
-     		   [BD.empty(dim, degree)])
+     		   error)
     end
 (* I don't like this.... maybe turn it into specs and process this.*)
 fun parseMesh(env, cxt, tyName, json) =
@@ -342,13 +428,13 @@ fun parseMesh(env, cxt, tyName, json) =
      val scalarBasis = Option.mapPartial (findField "basis") mesh 
      val parsedBasis = Option.map
 			 (fn (json', dim', degree', spaceDim') =>
-			     ArrayNd.fromList(parseScalarBasis(env, cxt, tyName, json', dim', degree', spaceDim')))
+			     (parseScalarBasis(env, cxt, tyName, json', dim', degree', spaceDim')))
 			 (case (scalarBasis, dim, degree, spaceDim)
 			   of (SOME(a), SOME(b), SOME(c), SOME(d)) => SOME((a,b,c,d))
 			    | _ => NONE (*end case *))
 
      val meshVal = Option.map (fn (x,y,z,basis) => FT.mkMesh(x,y,z,
-							     BasisDataArray.makeUniform(basis,x),
+							     basis,
 							     tyName))
 			      (case (dim, spaceDim, degree, parsedBasis)
 				of (SOME(a), SOME(b), SOME(c), SOME(d)) => SOME((a,b,c,d))
