@@ -824,8 +824,11 @@ structure Simplify : sig
 	       val _ = print(STy.toString femCellTySeq)
 	       val STy.T_Sequence(cellTy, NONE) = femCellTySeq
 	       val STy.T_Fem(data') = cellTy
+	       val one = newTemp STy.T_Int
+	       val numCells = newTemp STy.T_Int
 	       val itterStart = newTemp STy.T_Int
 	       val itterEnd = newTemp STy.T_Int
+
 	       val itterIn = iterVar (newTemp STy.T_Int)
 	       val intSeqTy =  (STy.T_Sequence(STy.T_Int, NONE))
 	       val acc = newTemp intSeqTy
@@ -835,14 +838,15 @@ structure Simplify : sig
 	       val appendCell = S.S_Assign(accp, S.E_Prim(BasisVars.at_dT, [S.TY cellTy], [accp, tempAcc], femCellTySeq))
 
 	       val block = List.rev [
-		S.S_Var(itterStart, SOME(S.E_Lit(Literal.Int(IntLit.fromInt 0)))),
-		S.S_Var(itterEnd, SOME(S.E_ExtractFemItem(x', STy.T_Int, (FemOpt.NumCell, data)))),
-		S.S_Var(acc, SOME(S.E_Prim(BasisVars.range, [], [itterStart, itterEnd], intSeqTy))),
-		S.S_Var(accp, SOME(S.E_Seq([], femCellTySeq))),
-		S.S_Foreach(itterIn, acc, S.Block{props = PropList.newHolder(),code = [makeCell', appendCell]}),
-		S.S_Assign(cellGlobal, S.E_Var(accp))
-	       ]
+		    S.S_Var(itterStart, SOME(S.E_Lit(Literal.Int(IntLit.fromInt 0)))),
+		    S.S_Var(one, SOME(S.E_Lit(Literal.Int(IntLit.fromInt 1)))),
+		    S.S_Var(itterEnd, SOME(S.E_ExtractFemItem(x', STy.T_Int, (FemOpt.NumCell, data)))),
 
+		    S.S_Var(acc, SOME(S.E_Prim(BasisVars.range, [], [itterStart, itterEnd], intSeqTy))),
+		    S.S_Var(accp, SOME(S.E_Seq([], femCellTySeq))),
+		    S.S_Foreach(itterIn, acc, S.Block{props = PropList.newHolder(),code = [makeCell', appendCell]}),
+		    S.S_Assign(cellGlobal, S.E_Var(accp))
+		   ]
 	      in
 	       inputs' := inp :: !inputs';
 	       globals' := cellGlobal :: !globals';

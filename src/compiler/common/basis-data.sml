@@ -189,9 +189,11 @@ fun dx(t as BasisFunc({dim, degree, coeffs=Array(coeffs'), strForm, mapDim,...})
      val degree' = Int.min(degree - 1, 0)
      val newShape = dimDegreeShape(dim, degree')
      val start = List.tabulate(dim, fn _ => 0)
-     val newArray = ArrayNd.subregion(coeffs', start, newShape)
+     val newArray = ArrayNd.array'(0.0, newShape)(* ArrayNd.subregion(coeffs', start, newShape) *)
+     fun printList(a) = "[" ^ (String.concatWith "," (List.map Int.toString a)) ^ "]"
      fun modNew(idx, a) =
 	 let
+
 	  val power = List.nth(idx, varIndex) + 1
 	  fun foldrFunc(index, a', b') = if List.nth(index, varIndex) = power
 				       then a'+b'
@@ -203,9 +205,17 @@ fun dx(t as BasisFunc({dim, degree, coeffs=Array(coeffs'), strForm, mapDim,...})
      val _ = ArrayNd.modifyi' modNew newArray
      val strForm' = Atom.atom (makeMonoTerms(newArray, dim, degree'))
      val mapDim' = numNonZero(Array(newArray))
+ 
 
     in
-     BasisFunc{dim = dim, degree = degree', coeffs = Array(newArray), mapDim = mapDim', strForm = strForm'}
+     if degree = 0
+     then zero dim
+     else
+      let
+       val _ = ()
+      in
+       BasisFunc{dim = dim, degree = degree', coeffs = Array(newArray), mapDim = mapDim', strForm = strForm'}
+      end
     end
 
 

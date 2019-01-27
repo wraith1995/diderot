@@ -152,7 +152,7 @@ structure Paths : sig
     fun teemBin () = resolveTeemDir "bin"
     fun teemInclude () = resolveTeemDir "include"
     fun teemLinkFlags () = let
-          val teemLib = resolveTeemDir "lib"
+     val teemLib = resolveTeemDir "lib"
           in
             if true
               then ["-Wl,-rpath=" ^ teemLib, "-L" ^ teemLib, "-lteem"]

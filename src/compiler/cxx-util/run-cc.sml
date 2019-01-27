@@ -26,11 +26,16 @@ structure RunCC : sig
 
   end = struct
 
-    fun system cmd = (
-          Log.msg [cmd, "\n"];
-          if OS.Process.isSuccess(OS.Process.system cmd)
-            then ()
-            else raise Fail "error compiling/linking")
+fun system cmd =
+    let
+     val _ = ()
+    in
+     (
+       Log.msg [cmd, "\n"];
+       if OS.Process.isSuccess(OS.Process.system cmd)
+       then ()
+       else raise Fail "error compiling/linking")
+    end
 
     fun compile (baseName, cxxflags) = let
           val cxxFile = OS.Path.joinBaseExt{base=baseName, ext=SOME "cxx"}

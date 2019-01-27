@@ -128,6 +128,7 @@ structure GenTysAndOps : sig
 		  val int = CL.D_Var([], intTy ,[], "cell", NONE)
 		  val meshName = Atom.toString (FT.nameOf (FT.meshOf ty))
 		  val meshTy = CL.T_Named(meshName)
+		  val meshPtrTy = CL.T_Ptr(meshTy)
 		  val meshPtr =  CL.D_Var([],CL.T_Ptr(meshTy),[], "mesh", NONE)
 		  val osty = CL.T_Named("std::ostream &") (*attr doesn't support ty & *)
 		  val printer = CL.mkFuncDcl(osty, "operator<<", [CL.PARAM([], osty, "os"),
@@ -136,14 +137,14 @@ structure GenTysAndOps : sig
 																		   CL.E_Select(CL.E_Var("cell"),"cell"))))]))
 
 		  val builder = CL.mkFuncDcl(meshCellTy, "makeFem",
-					     [CL.PARAM([], meshTy, "mesh"),
+					     [CL.PARAM([], meshPtrTy, "mesh"),
 					      CL.PARAM([], intTy, "cellInt")],
 					     CL.S_Block([
 							CL.S_Decl([], meshCellTy, "cell", NONE),
 							CL.S_Exp(
 							 CL.E_AssignOp(CL.E_Select(CL.E_Var("cell"), "cell"), CL.$=, CL.E_Var("cellInt"))),
 							CL.S_Exp(CL.E_AssignOp(CL.E_Select(CL.E_Var("cell"), "mesh"), CL.$=,
-															 CL.E_UnOp(CL.%&, CL.E_Var("mesh")))),
+															 (CL.E_Var("mesh")))),
 							CL.S_Return(SOME(CL.E_Var("cell")))
 					    ]))
 

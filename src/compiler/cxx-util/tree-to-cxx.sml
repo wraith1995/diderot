@@ -294,10 +294,10 @@ structure TreeToCxx : sig
 	    | (Op.LoadFem(Ty.FemData(data)), [a,b]) =>
 	      if FemData.baseFem(data)
 	      then CL.mkDispatch(a, "loadFem", [b]) 
-	      else CL.mkApply("makeFem", [a,b])
+	      else CL.mkApply("makeFem", [CL.mkAddrOf(a),b])
 	    | (Op.ExtractFem(ty, ty'), [a]) => (case ty
 					    of Ty.FemData(FemData.Mesh(_)) => (case ty'
-										of Ty.FemData(FT.MeshCell(_)) => CL.mkUnOp(CL.%*, CL.E_Select(a, "mesh"))
+										of Ty.FemData(FT.MeshCell(_)) => CL.mkUnOp(CL.%*, CL.E_Grp(CL.E_Select(a, "mesh")))
 										 | _ => CL.E_Select(a, "mesh")
 									      (* end case*)) 
 					     | Ty.FemData(FemData.Space(_)) => CL.E_Select(a, "space"))
