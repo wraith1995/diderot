@@ -4,6 +4,10 @@ import ctypes as c
 from ctypes import POINTER, c_int, c_double, c_void_p, c_float, c_int32, c_uint
 import ctypes as ct
 
+# These sorts of things should be arguments to the library, which can also supply help converting arugments to the proper form
+# automation of mesh and other types of inputs will require more trickery - maybe modifying generated header file to have those types.
+
+
 floatString = "float32"
 ctylesFloat = c_float
 
