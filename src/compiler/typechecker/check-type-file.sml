@@ -16,7 +16,9 @@ structure CheckTypeFile  : sig
 												
            val parseSpace : Env.t * Env.context * Atom.atom * int list * int list * FemData.mesh * JSON.value -> FemData.femType option * constant list
 																	  (* basis function shape, range shape*)
-	   (* val parseFunc : Env.t * Env.context * Atom.atom * FemData.space * JSON.value -> FemData.func   * constant list *)
+	   val parseFunc : Env.t * Env.context * Atom.atom * int list option * FemData.space * JSON.value -> FemData.femType option * constant list
+															       (*function space shape*)
+															       
 											    
 
 
@@ -510,5 +512,50 @@ fun parseSpace(env, cxt, tyName, basisFunctionShape : int list, rangeShape : int
 
     in
      (spaceVal, newConstants')
+    end
+fun parseFunc(env, cxt, tyName, expectedRangeShape, space, json) =
+    let
+     val _ = (case expectedRangeShape
+	       of NONE => ()
+		| _ => raise Fail "illegal operation")
+     val func = findField "function" json
+
+     val constantsField = Option.mapPartial (findField "constants") func
+     val constant = Option.map (fn x => parseConstants(env, cxt, tyName, x)) func
+
+
+     (*these could actually be parsed and used but for now we block them to avoid confusion*)
+     val optionalRange = (Option.map (constantExists(FN.rangeShape, NONE)) constant)
+     val _ = (case (optionalRange)
+	       of (NONE) => ()
+		| _ => raise Fail "illegal constant assignment")
+
+     val spaceShape = FT.spaceShape space
+     val spaceDim = FT.spaceDim space
+     val spaceDofShape = spaceDim :: spaceShape
+
+     fun makeShapeConst(seq) =
+	 let
+	  val ty = Ty.T_Sequence(Ty.T_Int, SOME((Ty.DimConst o List.length) seq))
+	 in
+	  (ConstExpr.Seq(List.map (ConstExpr.Int o IntLit.fromInt) seq, ty), ty)
+	 end
+     val (spaceShapeTy, spaceShapeConst) = makeShapeConst spaceShape
+     val (dofShapeTy, dofShapeConst) = makeShapeConst spaceDofShape
+				       
+
+     val spaceRangeConst = (spaceShapeConst, spaceShapeTy, FN.rangeShape)
+     val spaceDofConst = (dofShapeConst, dofShapeTy, FN.fds)
+     val constants' = spaceDofConst :: spaceRangeConst :: (Option.getOpt(constant, []))
+     val funcType = SOME(FT.mkFunc(space, [], tyName))
+				       
+
+				  
+
+	       
+			   
+			   
+    in
+     (funcType, constants')
     end
 end

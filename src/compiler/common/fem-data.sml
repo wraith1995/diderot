@@ -15,6 +15,8 @@ structure FemData : sig
 	   val meshBasis : mesh -> BasisDataArray.t 
 		  
 	   type space
+	   val spaceShape : space -> int list
+	   val spaceDim : space -> int
 	   type func
 
 	   datatype femType = Mesh of mesh
@@ -42,7 +44,7 @@ structure FemData : sig
 	   val dataShapeOf : femType -> int list
 	   val dataRangeShapeOf : femType -> int list
 	   val meshMapDim : mesh -> int
-	   val spaceDim : space -> int
+
 
 
 	   (* various utilities for type checking, printing, value numbering. *)
@@ -60,7 +62,7 @@ structure FemData : sig
 
 	   val mkMesh : int * int * int  * BasisDataArray.t * Atom.atom -> femType
 	   val mkSpace : int * int list * mesh * BasisDataArray.t * Atom.atom -> femType
-	   val mkFunc : space * Atom.atom -> femType
+	   val mkFunc : space * int list * Atom.atom -> femType
 
 	  end = struct
 
@@ -94,9 +96,11 @@ fun spaceMesh (Space'{dim, shape, basis, mesh, name, ...}) = mesh
 
 datatype func = Func' of {
 	  space : space,
+	  shape : int list,
 	  name : Atom.atom
 	 }
 fun funcSpace (Func'{space, name, ...}) = space
+fun funcShape (Func'{shape, name, ...}) = shape
 
 
 
@@ -180,7 +184,7 @@ fun sameMesh(m1, m2)
 fun sameSpace(s1, s2)
     = (spaceDim(s1) = spaceDim(s2)) andalso (BasisDataArray.same (spaceBasis s1, spaceBasis s2)) andalso sameMesh((spaceMesh s1), spaceMesh(s2))
       andalso ((List.length (spaceShape s1)) = (List.length (spaceShape s2))) andalso (ListPair.all (fn (x,y) => x=y) ((spaceShape s1), (spaceShape s2)))
-fun sameFunc(f1, f2) = sameSpace(funcSpace f1, funcSpace f2)
+fun sameFunc(f1, f2) = sameSpace(funcSpace f1, funcSpace f2) andalso funcShape(f1)=funcShape(f2)
 				
 				
 
@@ -202,7 +206,7 @@ fun hash ty =
 	 => 0w1 + 0w3 * (Word.fromInt dim) + 0w5 * (Word.fromInt mappingDim) + BasisDataArray.hash basis
        | Space(Space'({dim, shape, basis, mesh, name}))
        	 => 0w13 + 0w17 * (Word.fromInt dim) + BasisDataArray.hash basis + (hash (Mesh(mesh)))
-       | Func(Func'{space, name}) => 0w29 + hash (Space(space))
+       | Func(Func'{space, name, shape}) => 0w29 + hash (Space(space)) + 0w31 * (List.foldr (fn (x,y) => y  + 0w41 * (Word.fromInt x)) 0w37 (shape)) (*foldr consistnecy of hashing*)
        | RefCell(mesh) => 0w31 + (hash (Mesh(mesh)))
        | FuncCell(func)  => 0w37 + (hash (Func(func)))
        | MeshPos(mesh) => 0w41 + (hash (Mesh(mesh)))
@@ -275,7 +279,7 @@ fun mkMesh(dim, mDim, maxDegree, basis, name) = Mesh (Mesh' {dim = dim, mappingD
 
 fun mkSpace(dim, shape, mesh, basis, name) = Space(Space' {dim = dim, shape = shape, basis= basis, mesh = mesh, name = name})
 
-fun mkFunc (space, name) = Func(Func' {space = space, name = name})
+fun mkFunc (space, shape, name) = Func(Func' {space = space, name = name, shape=shape})
 
 end
 		  
