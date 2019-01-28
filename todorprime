@@ -1,12 +1,10 @@
 current todo:
-Basis -- FIX THIS REPRESENATION - clear up organiation, use realLit.t, figure out storage -- just do everything
----Basis - make interface so you only ever -> that is the thing we forget -> so get coefficient and get nonzero coeffs
----map out and do
 Normalize fem interface (mesh, space, func)
 Deal with more fiedlds and more files to prase
 --parsing files
 --add more fields from it
 advance basis function types (basis info)
+--
 
 Current error: 
 

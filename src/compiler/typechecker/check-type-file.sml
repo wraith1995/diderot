@@ -14,7 +14,8 @@ structure CheckTypeFile  : sig
 												      
 	   val parseMesh : Env.t * Env.context * Atom.atom * JSON.value -> (FemData.femType option * constant list)
 												
-           (* val parseSpace : Env.t * Env.context * Atom.atom * FemData.space * JSON.value -> FemData.space * constant list *)
+           val parseSpace : Env.t * Env.context * Atom.atom * int list * int list * FemData.mesh * JSON.value -> FemData.femType option * constant list
+																	  (* basis function shape, range shape*)
 	   (* val parseFunc : Env.t * Env.context * Atom.atom * FemData.space * JSON.value -> FemData.func   * constant list *)
 											    
 
@@ -208,6 +209,12 @@ fun mkConstExpr cxt expr = Option.valOf (CheckConst.eval(cxt, false, expr))
 fun extractIntConst cxt (ty, cexpr, name) =
     (case cexpr
       of ConstExpr.Int(i) => SOME(IntInf.toInt i)
+       | _ => NONE)
+
+fun extractShapeConst cxt (ty, cexpr, name) =
+    (case cexpr
+      of ConstExpr.Seq(seq, Ty.T_Sequence(Ty.T_Int,_)) =>
+	 SOME(List.map (Option.valOf o (fn x => extractIntConst cxt (Ty.T_Int, x, ""))) seq)
        | _ => NONE)
 		   
 fun bogusExpTy' cxt = (Ty.T_Error, mkConstExpr cxt bogusExp, "")
@@ -424,7 +431,6 @@ fun parseMesh(env, cxt, tyName, json) =
 					  ) combined
      val newConstants = Option.map (List.@) (optionTuple(constant, transformShapeConst))
 
-
      val scalarBasis = Option.mapPartial (findField "basis") mesh 
      val parsedBasis = Option.map
 			 (fn (json', dim', degree', spaceDim') =>
@@ -442,5 +448,67 @@ fun parseMesh(env, cxt, tyName, json) =
      val newConstants' = Option.getOpt(newConstants, [])
     in
      (meshVal, newConstants')
+    end
+
+
+fun parseSpace(env, cxt, tyName, basisFunctionShape : int list, rangeShape : int list, meshData, json) =
+    let
+     (*we will note use basisFunctionShape, but I'm keeping it here for now.*)
+     val _ = if List.length basisFunctionShape = 0
+	     then ()
+	     else raise Fail "illegal operation"
+			
+     val space = findField "space" json
+     val constantsField = Option.mapPartial (findField "constants") space
+     val constant = Option.map (fn x => parseConstants(env, cxt, tyName, x)) (space)
+
+     val rangeShapeLength = List.length rangeShape
+     val rangeTy = Ty.T_Sequence(Ty.T_Int, SOME(Ty.DimConst rangeShapeLength))
+
+     val dimConstCheck = Option.valOf (Option.map (constantExists(FN.dim, SOME(Ty.T_Int))) constant)
+     val spaceMapDim = Option.valOf (Option.map (constantExists(FN.spaceMapDim, SOME(Ty.T_Int))) constant)
+     val degreeConstCheck = Option.valOf (Option.map (constantExists(FN.maxDegree, SOME(Ty.T_Int))) constant)
+     val rangeConstCheck =  Option.valOf (Option.map (constantExists(FN.rangeShape, SOME(rangeTy))) constant)
+					 
+
+     val dim : int option = Option.mapPartial (extractIntConst cxt) dimConstCheck
+     val spaceDim : int option = Option.mapPartial (extractIntConst cxt) spaceMapDim
+     val degree : int option = Option.mapPartial (extractIntConst cxt) degreeConstCheck
+     val rangeShape : int list option = Option.mapPartial (extractShapeConst cxt) rangeConstCheck
+
+     val combined = optionList [spaceMapDim, rangeConstCheck]
+     val spaceDofShapeConst = Option.map (fn ([(ty, expr, name), (ty', expr', name')])
+					     =>
+					       let
+						val ty'' = (Ty.T_Sequence(Ty.T_Int, SOME(Ty.DimConst(1+rangeShapeLength))))
+						val CE.Seq(lst, _) = expr'
+					       in
+						[(ty'', CE.Seq(expr::lst, ty''), FN.sds)]
+					       end
+					 ) combined
+     val newConstants = Option.map (List.@) (optionTuple(constant, spaceDofShapeConst))
+
+     val scalarBasis = Option.mapPartial (findField "basis") space
+     val parsedBasis = Option.map
+			 (fn (json', dim', degree', spaceDim') =>
+			     (parseScalarBasis(env, cxt, tyName, json', dim', degree', spaceDim')))
+			 (case (scalarBasis, dim, degree, spaceDim)
+			   of (SOME(a), SOME(b), SOME(c), SOME(d)) => SOME((a,b,c,d))
+			    | _ => NONE (*end case *))
+
+     val spaceVal = Option.map (fn (x,y,basis) => FT.mkSpace(x,y, meshData,
+							     basis,
+							     tyName))
+			      (case (spaceDim, rangeShape, parsedBasis)
+				of (SOME(a), SOME(b), SOME(c)) => SOME((a,b,c))
+				 | _ => NONE (* end case*))
+			      
+     val newConstants' : constant list = Option.getOpt(newConstants, [])
+
+
+			 
+
+    in
+     (spaceVal, newConstants')
     end
 end

@@ -24,6 +24,7 @@ strand gg(int i, cell{msh} j){
 
   output real result = 1.0*i;
   output tensor[2,2] z = ∇⊗F([1,1]);
+  real gug = ∇•F([1,1]);
 
   int j0 = 2;
 
@@ -36,6 +37,7 @@ strand gg(int i, cell{msh} j){
     print("Dof:",a,"\n");
     print("result:", z, "\n");
     print("other result:", F([0,0]), "\n");
+    print("fin result:", gug, "\n");
 
 
     stabilize;

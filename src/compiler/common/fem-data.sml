@@ -57,9 +57,9 @@ structure FemData : sig
 
 
 	   (* placeholders for creating fem data *)
-	   val defaultSpace : mesh * Atom.atom -> femType   
+
 	   val mkMesh : int * int * int  * BasisDataArray.t * Atom.atom -> femType
-	   val mkSpace : int * int list * mesh * Atom.atom -> femType
+	   val mkSpace : int * int list * mesh * BasisDataArray.t * Atom.atom -> femType
 	   val mkFunc : space * Atom.atom -> femType
 
 	  end = struct
@@ -69,7 +69,7 @@ structure BD = BasisData
 datatype mesh = Mesh' of {
 	  dim : int,
 	  mappingDim : int,
-	  degree : int,
+	  degree : int, (* default degree; I don't think we use this; should be removed*)
 	  basis : BasisDataArray.t,
 	  name : Atom.atom
 	 }
@@ -81,7 +81,7 @@ fun meshBasis (Mesh'{dim, mappingDim, basis, name, ...}) = basis
 datatype space = Space' of {
 	  dim : int,
 	  shape : int list,
-	  basis : BasisData.t list,
+	  basis : BasisDataArray.t,
 	  mesh : mesh,
 	  name : Atom.atom
 	 }
@@ -178,7 +178,7 @@ fun dataRangeShapeOf data =
 fun sameMesh(m1, m2)
     = ((meshDim m1) = meshDim(m2)) andalso (meshMapDim(m1) = meshMapDim(m2)) andalso (BasisDataArray.same ((meshBasis m1), (meshBasis m2)))
 fun sameSpace(s1, s2)
-    = (spaceDim(s1) = spaceDim(s2)) andalso (ListPair.all BD.same (spaceBasis s1, spaceBasis s2)) andalso sameMesh((spaceMesh s1), spaceMesh(s2))
+    = (spaceDim(s1) = spaceDim(s2)) andalso (BasisDataArray.same (spaceBasis s1, spaceBasis s2)) andalso sameMesh((spaceMesh s1), spaceMesh(s2))
       andalso ((List.length (spaceShape s1)) = (List.length (spaceShape s2))) andalso (ListPair.all (fn (x,y) => x=y) ((spaceShape s1), (spaceShape s2)))
 fun sameFunc(f1, f2) = sameSpace(funcSpace f1, funcSpace f2)
 				
@@ -201,7 +201,7 @@ fun hash ty =
       of Mesh((Mesh'{dim, degree, mappingDim, basis, name}))
 	 => 0w1 + 0w3 * (Word.fromInt dim) + 0w5 * (Word.fromInt mappingDim) + BasisDataArray.hash basis
        | Space(Space'({dim, shape, basis, mesh, name}))
-       	 => 0w13 + 0w17 * (Word.fromInt dim) + (List.foldl (fn (d, s) => 0w23 * BD.hash d + s) 0w19 basis) + (hash (Mesh(mesh)))
+       	 => 0w13 + 0w17 * (Word.fromInt dim) + BasisDataArray.hash basis + (hash (Mesh(mesh)))
        | Func(Func'{space, name}) => 0w29 + hash (Space(space))
        | RefCell(mesh) => 0w31 + (hash (Mesh(mesh)))
        | FuncCell(func)  => 0w37 + (hash (Func(func)))
@@ -273,10 +273,7 @@ fun isInputFemType ty =
       
 fun mkMesh(dim, mDim, maxDegree, basis, name) = Mesh (Mesh' {dim = dim, mappingDim = mDim, degree = maxDegree, basis = basis, name = name})
 
-
-fun defaultSpace (m as Mesh'{dim,...}, name) = Space (Space' {dim = dim, shape = [], basis = [], mesh = m, name = name})
-
-fun mkSpace(dim, shape, mesh, name) = Space(Space' {dim = dim, shape = shape, basis=[], mesh = mesh, name = name})
+fun mkSpace(dim, shape, mesh, basis, name) = Space(Space' {dim = dim, shape = shape, basis= basis, mesh = mesh, name = name})
 
 fun mkFunc (space, name) = Func(Func' {space = space, name = name})
 
