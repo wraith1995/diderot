@@ -23,4 +23,9 @@ val basisFunctionShape = "basisFunctionShape" (*not used*)
 val rangeShape = "shape"
 val sds = "spaceDofShape"
 
+(*func:*)
+val rangeShape = "shape"
+val fds = "funcDofShape" (*not really used now as this is under current spec same as above*)
+	    
+
 end

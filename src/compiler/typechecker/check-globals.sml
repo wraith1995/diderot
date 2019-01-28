@@ -336,7 +336,6 @@ structure CheckGlobals : sig
 		    (*TODO: parse the file and make these correct...*)
 		    val parsedJson = CF.loadJson(fileinfo, cxt)
 
-		    fun tempFunc space = FT.mkFunc(space, tyName)
 		    (*TODO : check against the file in the following.*)
 
 		   in
@@ -392,10 +391,15 @@ structure CheckGlobals : sig
 			  val spaceType = Option.mapPartial (FT.extractSpace) (Option.map (fn (x,y) => x) (Option.mapPartial TU.extractFemType (Option.mapPartial
 												(fn x => SOME(TypeEnv.findDef x))
 												(E.findTypeEnv(env, space)))))
+
+			  val funcType = Option.map (fn s => CF.parseFunc(env, cxt, tyName, NONE, s, parsed)) spaceType
 			 in
-			  (case spaceType
-			    of SOME(space') => (SOME(tempFunc space', SOME(space)), [])
-			    |  NONE =>  ((err (cxt, [
+			  (case (funcType,spaceType)
+			    of (SOME(SOME(func), consts),SOME(space')) => (SOME(func, SOME(space)), consts)
+			     | (SOME(NONE,_), SOME(_)) => ((err (cxt, [
+				S "Declared a femFunction type ",
+				A(tyName), S" with an invalid definition in the file or incompatability with the space.", A(space)])); (NONE, []))
+			    |  (_, NONE) =>  ((err (cxt, [
 				S "Declared a femFunction type ",
 				A(tyName), S" with an underlying type that is not a space or not defined", A(space)])); (NONE, []))
 			  (* end case *))
