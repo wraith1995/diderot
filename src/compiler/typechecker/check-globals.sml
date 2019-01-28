@@ -335,7 +335,7 @@ structure CheckGlobals : sig
 		   let
 		    (*TODO: parse the file and make these correct...*)
 		    val parsedJson = CF.loadJson(fileinfo, cxt)
-		    fun tempSpace mesh shape = FT.mkSpace(2, shape, mesh,tyName)
+
 		    fun tempFunc space = FT.mkFunc(space, tyName)
 		    (*TODO : check against the file in the following.*)
 
@@ -368,14 +368,19 @@ structure CheckGlobals : sig
 											     (Option.mapPartial
 												(fn x => SOME(TypeEnv.findDef x))
 												(E.findTypeEnv(env, mesh)))))
+
+
+			  val spaceType = Option.map (fn (shape'', mesh) => CF.parseSpace(env, cxt, tyName, [], shape'', mesh, parsed)) (case (shape',meshType)
+																	  of (SOME(a),SOME(b)) => SOME(a,b)
+																	   | _ => NONE (* end case*))
 							   
 			 in
-			  (case (shape', meshType)
-			    of (SOME(lShape), SOME(meshType')) => (SOME(tempSpace meshType' lShape, SOME(mesh)), [])
+			  (case (spaceType, meshType)
+			    of (SOME(SOME(space''), consts), SOME(meshType')) => (SOME(space'', SOME(mesh)), consts)
 			     (*NOTE: these errors could be improved.*)
 			     | (NONE, SOME(_)) => ((err (cxt, [
 				S "Declared a function space type ",
-				A(tyName), S" with an invalid underlying shape type"])); (NONE, []))
+				A(tyName), S" with an invalid space "])); (NONE, []))
 			    | (_, NONE) => ((err (cxt, [
 				S "Declared a function space type ",
 				A(tyName), S" with an underlying type that is not a mesh or not defined", A(mesh)])); (NONE, []))
