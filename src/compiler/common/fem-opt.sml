@@ -11,7 +11,7 @@
 
 structure FemOpt : sig
 
-	   datatype femOpts = NumCell | ExtractDofs | ExtractDofsSeq | ExtractIndices |  ExtractIndex  | ExtractDof | Cells | CellIndex
+	   datatype femOpts = NumCell | ExtractDofs | ExtractDofsSeq | ExtractIndices |  ExtractIndex  | ExtractDof | Cells | CellIndex 
 
 	   type femOption = femOpts * FemData.femType
 					    

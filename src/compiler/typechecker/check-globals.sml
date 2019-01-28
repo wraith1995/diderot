@@ -552,6 +552,7 @@ structure CheckGlobals : sig
 			 in
 			  env'
 			 end
+
 		       | _ => env
 		    (* end case *))
 		   end
