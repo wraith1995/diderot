@@ -14,14 +14,14 @@ structure FemName  = struct
 val dim = "dim"
 val maxDegree = "degree"
 val meshMapDim = "meshMapDim"
-val tds = "transformDofShape"
-val transform = "transform"
+val tds = "transformDofShape" (*computed*)
+val transform = "transform" (*field*)
 (*space: *)
 val spaceMapDim = "spaceMapDim"
 val dim = "dim"
-val basisFunctionShape = "basisFunctionShape" (*not used*)
 val rangeShape = "shape"
-val sds = "spaceDofShape"
+val basisFunctionShape = "basisFunctionShape" (*not used*)
+val sds = "spaceDofShape" (*computed*)
 
 (*func:*)
 val rangeShape = "shape"

@@ -29,8 +29,10 @@ structure CheckGlobals : sig
     structure SS = Substring
     structure CO = CheckOverload
     structure FT = FemData
+    structure FO = FemOpt
     structure N = BasisNames
     structure CF = CheckTypeFile
+
 
 		     
     val err = TypeError.error
@@ -377,7 +379,7 @@ structure CheckGlobals : sig
 			  (case (spaceType, meshType)
 			    of (SOME(SOME(space''), consts), SOME(meshType')) => (SOME(space'', SOME(mesh)), consts)
 			     (*NOTE: these errors could be improved.*)
-			     | (NONE, SOME(_)) => ((err (cxt, [
+			     | (_, SOME(_)) => ((err (cxt, [
 				S "Declared a function space type ",
 				A(tyName), S" with an invalid space "])); (NONE, []))
 			    | (_, NONE) => ((err (cxt, [
@@ -411,11 +413,15 @@ structure CheckGlobals : sig
 
 	       fun makeFemMethods femTyDef file femInfo =
 		   (case (femInfo, femTyDef)
-		     of ((FT.Func(f), n), PT.T_Func(space)) =>
+		     of ((func as FT.Func(f), n), PT.T_Func(space)) =>
 			let
-
+			 val funcName = FT.nameOf func
 			 val spaceFunc = Atom.atom "space"
 			 val space' = FT.spaceOf(FT.Func(f))
+			 val spaceName = FT.nameOf space'
+			 val mesh = FT.meshOf func
+			 val meshName = FT.nameOf mesh
+						  
 			 val spaceType = let
 			  val m = FT.meshOf(space')
 			  val meshName = FT.nameOf(m)
@@ -426,9 +432,38 @@ structure CheckGlobals : sig
 					     
 			 val spaceFuncBody = AST.S_Block([AST.S_Return(AST.E_ExtractFem(AST.E_Var(param,span),space'))])
 			 val spaceFun = AST.D_Func(spaceFuncVar, [param], spaceFuncBody)
-			 
+
+			 (* OH GOD THIS NEEDS TO BE CLEANED UP*)
+			 val funcArgTy = Ty.T_Named(tyName, Ty.T_Fem(femInfo))
+			 val funcCellTy = Ty.T_Fem(func, SOME(funcName))
+			 val FT.Mesh(meshData) = FT.meshOf func
+			 val meshCell = FT.MeshCell(meshData)
+			 val funcCellVal = FT.FuncCell(f)
+			 val meshCellTy = Ty.T_Fem(meshCell, SOME(meshName))
+			 val funcCellTy = Ty.T_Fem(funcCellVal, SOME(funcName))
+						  
+			 val funcCell = Atom.atom "funcCell"
+			 val funcCellType = Ty.T_Fun([funcArgTy, meshCellTy], funcCellTy)
+			 val funcCellFuncVar = Var.new (funcCell, span, AST.FunVar, funcCellType)
+
+			 val param = Var.new (Atom.atom "arg0", span, AST.FunParam, funcArgTy)
+			 val param' = Var.new (Atom.atom "arg1", span, AST.FunParam, meshCellTy)
+			 (* optional debug information could go here.*)
+			 val funcCellBody = AST.S_Return(AST.E_LoadFem(funcCellVal,
+								       SOME(AST.E_Var(param, span)),
+								       SOME(AST.E_ExtractFemItem(
+									      AST.E_Var(param', span),
+									      Ty.T_Int,
+									      (FO.CellIndex, meshCell)))))
+			 val funcCellFunc = AST.D_Func(funcCellFuncVar,
+						       [param, param'],
+						       funcCellBody)
+
+
 			in
-			 ([(spaceFunc, spaceFuncVar)],[spaceFun],[])
+			 ([(funcCell, funcCellFuncVar), (spaceFunc, spaceFuncVar)],
+			  [funcCellFunc, spaceFun],
+			  [])
 			end
 		      | ((FT.Space(s), n), PT.T_Space(meshName)) =>
 			let
@@ -444,8 +479,9 @@ structure CheckGlobals : sig
 			in
 			 ([(meshFunc, meshFuncVar)], [meshFun],[])
 			end
-		      | ((FT.Mesh(m), n), PT.T_Mesh) =>
+		      | ((meshData as FT.Mesh(m), n), PT.T_Mesh) =>
 			let
+			 val meshName = FT.nameOf meshData
 			 val meshArgTy = Ty.T_Named(tyName, Ty.T_Fem(femInfo))
 			 val numCell = Atom.atom "numCell"
 			 val meshType = Ty.T_Fem(FT.Mesh(m), SOME(tyName))
@@ -459,7 +495,7 @@ structure CheckGlobals : sig
 			 (*get list of cells -> we are going to use a extract*)
 			 val cells' = Atom.atom "0cells"
 			 val cells = Atom.atom "cells"
-			 val cellType = Ty.T_Fem(FT.MeshCell(m), NONE)
+			 val cellType = Ty.T_Fem(FT.MeshCell(m), SOME(meshName))
 			 val cellSeqType = Ty.T_Sequence(cellType, NONE)
 			 val cellTypeFuncTy = Ty.T_Fun([meshArgTy], cellSeqType)
 			 val cellFuncVar' = Var.new (cells, span, AST.FunVar, cellTypeFuncTy)
@@ -489,6 +525,7 @@ structure CheckGlobals : sig
 			in
 			 ([(numCell, numCellFuncVar), (cells', cellFuncVar')], [numCellFun, cellsFun', cellsFun], [(cells, makeCells, cellTypeFuncTy)])
 			end
+
 		   (*end case*))
 
 	       fun makeDescendentFemTypes(env, femType) =
@@ -503,6 +540,7 @@ structure CheckGlobals : sig
 		    (case femType
 		      of FT.Mesh(m) =>
 			 let
+			  val meshName = FT.nameOf femType
 			  val mapDim = FT.meshDim m
 			  val meshMapDim = FT.meshMapDim m
 			  val shape = FT.dataShapeOf femType
@@ -510,7 +548,7 @@ structure CheckGlobals : sig
 			  val cellName = Atom.atom ("cell(" ^ (Atom.toString name) ^ ")" )
 						   (*pos name*)
 			  val cellData = FT.cellOf femType
-			  val cellTy = Ty.T_Fem(cellData, NONE) (* no name*)
+			  val cellTy = Ty.T_Fem(cellData, SOME(meshName)) 
 
 			  val transformDofs = Atom.atom "transformDofs"
 			  val transformDofsTy = Ty.T_Tensor(Ty.Shape((List.map Ty.DimConst shape))) (*careful*)

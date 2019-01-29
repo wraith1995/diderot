@@ -28,6 +28,47 @@
 		       [0.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0]
 		   ]
 		  }
+    },
+    "space" : {
+	"constants" : [
+	    {
+		"name" : "dim",
+		"type" : "int",
+		"value" : 2
+	    },
+	    {
+		"name" : "spaceMapDim",
+		"type" : "int",
+		"value" : 4
+	    },
+	    {
+		"name" : "shape",
+		"type" : "int[1]",
+		"value" : [1]
+	    },
+	    {
+		"name" : "degree",
+		"type" : "int",
+		"value" : 2
+	    }
+	],
+	"basis" : {"polys"
+		   : [
+		       {"coeffs":  [1.0,0.0,0.0,0.0],
+			"degree": 1},
+		       {"coeffs":  [0.0,1.0,0.0,0.0],
+			"degree": 1},
+		       {"coeffs":  [0.0,0.0,1.0,0.0],
+			"degree": 1},
+		       [0.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0]
+		   ]
+		  }
+    },
+    "function" : {
+	"constants" : [
+	]
+	
     }
-}
     
+}
+
