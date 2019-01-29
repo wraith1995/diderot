@@ -169,13 +169,16 @@ fun dataShapeOf data =
       of Mesh(m) => [meshMapDim m, meshDim m]
        | MeshCell(m) => [meshMapDim m, meshDim m] 
        | MeshPos(m) => [meshMapDim m, meshDim m]
+       | Space(Space'{shape,dim,...}) => dim::shape
+       | Func(Func'{space,...}) => dataShapeOf (Space(space))
+       | FuncCell(f) => dataShapeOf (Func(f))
 
     (*end case*))
 
 fun dataRangeShapeOf data =
     (case data
       of Mesh(m) => [meshDim m]
-       | Func(Func'{space,...}) => spaceShape space
+       | Func(Func'{shape,...}) => shape
        | _ => raise Fail "impossible")
 
 

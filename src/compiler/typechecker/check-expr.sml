@@ -307,6 +307,7 @@ structure CheckExpr : sig
 			val tyName = (case astTy
 				       of Ty.T_Named(tyName, tyDef) => SOME(tyName)
 					| Ty.T_Fem(FT.MeshCell(m), _) => SOME(Atom.atom ("cell(" ^ (Atom.toString (FT.nameOf (FT.Mesh(m)))) ^ ")" ))
+					| Ty.T_Fem(FT.FuncCell(f), SOME(name)) => SOME(Atom.atom ("cell(" ^ (Atom.toString name) ^")"))
 					| _ => (err (cxt, [TY(astTy), S " is not a named type and so has no members."]); NONE)
 				     (*end case*))
 
