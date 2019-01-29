@@ -105,7 +105,7 @@ structure FemToLow : sig
 		  end
 
 	     in
-	      ArrayNd.convertToTree(accessArray, convert, group)
+	      ArrayNd.convertToTree(accessArray, convert, group) handle exn => raise exn
 	     end
 
 	 val result = assignCons(avail, "dofs", List.tabulate(numDofs, buildDof))

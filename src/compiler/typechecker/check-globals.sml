@@ -30,6 +30,7 @@ structure CheckGlobals : sig
     structure CO = CheckOverload
     structure FT = FemData
     structure FO = FemOpt
+    structure FN = FemName
     structure N = BasisNames
     structure CF = CheckTypeFile
 
@@ -587,6 +588,44 @@ structure CheckGlobals : sig
 
 			  val env' = Env.insertNamedType(env, cxt, cellName, cellTy, constants, methods, transformFuncs)
 							 
+			 in
+			  env'
+			 end
+		       | FT.Func(f) =>
+			 let
+			  val funcName = FT.nameOf femType
+			  val cellName = Atom.atom ("cell(" ^ (Atom.toString funcName) ^ ")")
+			  val SOME(space) = FT.dependencyOf femType
+			  val mesh = FT.meshOf femType
+			  val FT.Space(spaceData) = space
+			  val FT.Mesh(meshData) = mesh
+			  val funcCellData = FT.cellOf femType
+			  val cellTy = Ty.T_Fem(funcCellData, SOME(funcName))
+			  val funcDataShape = FT.dataShapeOf femType
+			  val funcRangeShape = FT.dataRangeShapeOf femType
+			  val dofCount = FT.spaceDim spaceData
+			  val dofIndexSeq = Ty.T_Sequence(Ty.T_Int, SOME(Ty.DimConst(dofCount)))
+
+			  val functionDofs = Atom.atom FN.funcDofs
+			  val funcDofsTy = Ty.T_Tensor(Ty.Shape (List.map Ty.DimConst funcDataShape))
+			  val functionDofsFunTy = Ty.T_Fun([cellTy], funcDofsTy)
+			  fun makeFunctionDofs vars = (case vars
+							of [v] =>
+							   let
+							    val getFunc = AST.E_ExtractFem(v, femType)
+							    val getSpace = AST.E_ExtractFem(getFunc,space)
+							    (*might want to extract it now.*)
+							    val getCellInt= AST.E_ExtractFemItem(v, Ty.T_Int, (FemOpt.CellIndex, funcCellData))
+							    val getIndexi = AST.E_ExtractFemItem2(getSpace, (getCellInt), Ty.T_Int, dofIndexSeq, (FemOpt.ExtractIndices, space))
+							    val getTensor = AST.E_ExtractFemItem2(getFunc, (getIndexi), dofIndexSeq, funcDofsTy, (FemOpt.ExtractDofsSeq, femType))
+							   in
+							    getTensor
+							   end
+							 | _ => raise Fail "impossible argument to method got passed type checking")
+
+
+			  val transformFuncs = [(functionDofs, makeFunctionDofs, functionDofsFunTy)]
+			  val env' = Env.insertNamedType(env, cxt, cellName, cellTy, constants, methods, transformFuncs)
 			 in
 			  env'
 			 end

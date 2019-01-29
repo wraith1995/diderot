@@ -31,6 +31,8 @@ strand gg(int i, cell{msh} j){
 
   update{
     print("funcCell:", kk, "\n");
+    tensor[FUNC.funcDofShape] b = kk.dofs();
+    print("funcCellDofs: ", b, "\n");
     result = f(result, i*10);
     int cellCount = a.numCell();
     print("cell:", j,"\n");

@@ -549,7 +549,7 @@ fun parseFunc(env, cxt, tyName, expectedRangeShape, space, json) =
      val spaceRangeConst = (spaceShapeConst, spaceShapeTy, FN.rangeShape)
      val spaceDofConst = (dofShapeConst, dofShapeTy, FN.fds)
      val constants' = spaceDofConst :: spaceRangeConst :: (Option.getOpt(constant, []))
-     val funcType = SOME(FT.mkFunc(space, [], tyName))
+     val funcType = SOME(FT.mkFunc(space, spaceShape, tyName))
 				       
 
 				  

@@ -118,18 +118,19 @@ fun findTargetShape (opt, data) =
      (case (opt, data)
        of (ExtractDofs, FT.Mesh(m)) => FT.dataShapeOf data
 	| (ExtractDofsSeq, FT.Mesh(m)) => FT.dataShapeOf data
-	| (ExtractDofs, FT.Space(s)) => FT.dataShapeOf data
+	| (ExtractDofs, FT.Func(s)) => FT.dataShapeOf data
+	| (ExtractDof, FT.Func(s)) => FT.dataRangeShapeOf data
 	| (ExtractDofsSeq, FT.Space(s)) => FT.dataShapeOf data
 	| (ExtractDof, FT.Mesh(m)) => [FT.meshDim m]
 	| (ExtractDof, FT.Space(s)) => FT.dataRangeShapeOf data
-	| _ => raise Fail "impossible optiion and data combination"
+	| _ => raise Fail ("impossible option and data combination: "  ^ (toString (opt, data)))
     (* end case *) )
 
 
 fun splitDataOpt (opt, data) =
     (case (opt, data)
       of (ExtractDofs, FT.Mesh(m)) => SOME((ExtractIndices, data), (ExtractDofsSeq, data))
-       | _ => raise Fail "impossible optiion and data combination"
+       | _ => NONE
     (* end case *))
 
       

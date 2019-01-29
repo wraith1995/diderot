@@ -110,18 +110,49 @@ class Library:
             self.saveOutput(fileName, output)
         self.shutDown()
 
-class _CFunction(ct.Structure):
-    """C struct that represents a base mesh"""
-    _fields_ = [
-        ("indexMap", POINTER(ctylesInt)),
-        ("coordMap", POINTER(ctylesFloat)),
-        ("dim", ctylesInt),
-        ("mapDim", ctylesInt),
-        ("numCells", ctylesInt)
-    ]
 
-mesh =  _CFunction()
-doingSometing = Library(library, nameSpace=nameSpaceArg)
+
+def makeArrayType(array, ty):
+    array.flatten()
+    dataType = array.ctypes.data_as(POINTER(ty))
+    return(dataType)
+
+def makeMeshType():
+    class _CFunction(ct.Structure):
+        """C struct that represents a base mesh"""
+        _fields_ = [
+            ("indexMap", POINTER(ctylesInt)),
+            ("coordMap", POINTER(ctylesFloat)),
+            ("dim", ctylesInt),
+            ("mapDim", ctylesInt),
+            ("numCells", ctylesInt)
+        ]
+    return(_CFunction)
+def makeSpaceType(meshTy):
+    class _CFunction(ct.Structure):
+        """C struct that represents a base mesh"""
+        _fields_ = [
+            ("indexMap", POINTER(ctylesInt)),
+            ("mesh", meshTy)
+        ]
+    return(_CFunction)
+def makeFuncType(spaceTy):
+    class _CFunction(ct.Structure):
+        """C struct that represents a base mesh"""
+        _fields_ = [
+            ("coordMap", POINTER(ctylesFloat)),
+            ("space", spaceTy)
+        ]
+    return(_CFunction)
+
+meshType = makeMeshType()
+mesh =  meshType()
+spaceType = makeSpaceType(meshType)
+space = spaceType()
+funcType = makeFuncType(spaceType)
+func = funcType()
+
+
 mesh.dim = 2
 mesh.mapDim = 4
 mesh.numCells = 2
@@ -130,11 +161,20 @@ indexMap = np.array([[0, 1, 2, 3], [4, 5, 6, 7]], dtype=intString)
 indexMap.flatten()
 coordMap = np.array([[1.0, 2.0], [3.0, 5.0], [7.0, 11.0], [13.0, 17.0], [19.0, 23.0], [27.0, 29.0],[31.0, 37.0], [41.0, 43.0]], dtype=floatString)
 coordMap.flatten()
-
 mesh.indexMap = indexMap.ctypes.data_as(c_int_p)
 mesh.coordMap = coordMap.ctypes.data_as(POINTER(ctylesFloat))
+
+space.indexMap = indexMap.ctypes.data_as(c_int_p)
+space.mesh = mesh
+func.coordMap = coordMap.ctypes.data_as(POINTER(ctylesFloat))
+func.space = space
+
 meshPtr = ct.cast(ct.pointer(mesh), ct.c_void_p)
-inputs = {"a" : [meshPtr]}
+spacePtr = ct.cast(ct.pointer(space), ct.c_void_p)
+funcPtr = ct.cast(ct.pointer(func), ct.c_void_p)
+
+inputs = {"a" : [meshPtr], "b" : [spacePtr], "c" : [funcPtr]}
 outputs = ["z"]
 
+doingSometing = Library(library, nameSpace=nameSpaceArg)
 doingSometing.go(inputs, outputs)
