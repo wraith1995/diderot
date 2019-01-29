@@ -1,11 +1,11 @@
 #version 3.0
 type mesh msh = file("firstMesh.json");
-/* type functionSpace{msh}[12] fns; */
-/* type femFunction{fns} FUNC; */
+type functionSpace{msh}[12] fns = file("firstMesh.json");
+type femFunction{fns} FUNC = file("firstMesh.json");
 
 input msh a;
-/* input fns b = fns(a); */
-/* input FUNC c = FUNC(b);  */
+input fns b = fns(a);
+input FUNC c = FUNC(b);
 field(2)[2] F = a.cells()[0].transform;
 int[] a1 = {k + 2 | k in {1+j | j in 0..10}};
 real[] a2 = {k + 2.0 | k in {1.0+j | j in 0..10}};
@@ -25,11 +25,12 @@ strand gg(int i, cell{msh} j){
   output real result = 1.0*i;
   output tensor[2,2] z = ∇⊗F([1,1]);
   real gug = ∇•F([1,1]);
+  cell{FUNC} kk = c.funcCell(j);
 
   int j0 = 2;
 
   update{
-
+    print("funcCell:", kk, "\n");
     result = f(result, i*10);
     int cellCount = a.numCell();
     print("cell:", j,"\n");

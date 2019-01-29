@@ -158,7 +158,6 @@ structure Unify : sig
         (* end case *))
 
     (* QUESTION: do we need an occurs check? *)
-    (* QUESTION: do we need to check femData stuff here? I think the answer is no. Femdata types should not be more than tyDefs.*)
     fun unifyType (pl, ty1, ty2) = let
           fun matchVar (tv1 as Ty.TV{id=id1, bind=b1}, tv2 as Ty.TV{id=id2, bind=b2}) =
                 if Stamp.same(id1, id2)
@@ -192,7 +191,22 @@ structure Unify : sig
                 equalDiff (pl, k1, k2) andalso equalDim (pl, d1, d2) andalso equalShape(pl, s1, s2)
             | match (Ty.T_Fun(tys11, ty12), Ty.T_Fun(tys21, ty22)) =
               ListPair.allEq match (tys11, tys21) andalso match (ty12, ty22)
-	    | match (Ty.T_Fem(data, name), Ty.T_Fem(data', name')) = FemData.same(data, data')
+	    | match (Ty.T_Fem(data, SOME(name)), Ty.T_Fem(data', SOME(name'))) =
+	      let
+	       val test = FemData.same(data, data')
+	       val _ = print("Testing and we found: "^(Bool.toString test) ^ "\n")
+	       val _ = print("The femdata names are: " ^(Atom.toString name) ^ " and " ^ (Atom.toString name') ^ "\n")
+	      in
+	       test
+	      end
+	    | match (Ty.T_Fem(data, NONE), Ty.T_Fem(data', NONE)) =
+	      let
+	       val test = FemData.same(data, data')
+	       val _ = print("Testing and we found: "^(Bool.toString test) ^ "\n")
+				      
+	      in
+	       test
+	      end
             | match (Ty.T_Error, _) = true
             | match (_, Ty.T_Error) = true
             | match _ = false

@@ -154,6 +154,38 @@ structure GenTysAndOps : sig
 		  (class, [printer, builder])
 		 end
 		)
+		| FT.FuncCell(func) => (
+		 let
+		  val funcCellTy = CL.T_Named(name)
+		  val funcCellRefTy = CL.T_Named(name ^ " & ")
+		  val int = CL.D_Var([], intTy ,[], "cell", NONE)
+		  val funcName = Atom.toString ((FT.nameOf o Option.valOf o FT.dependencyOf) ty)
+		  val funcTy = CL.T_Named(funcName)
+		  val funcPtrTy = CL.T_Ptr(funcTy)
+		  val funcPtr = CL.D_Var([],funcPtrTy,[], "func", NONE)
+					
+		  val osty = CL.T_Named("std::ostream &") (*attr doesn't support ty & *)
+		  val printer = CL.mkFuncDcl(osty, "operator<<", [CL.PARAM([], osty, "os"),
+								  CL.PARAM([], funcCellRefTy, "cell")],
+					     CL.S_Block(
+					      [CL.S_Return(SOME(CL.E_BinOp(CL.E_Var("os"),CL.#<<, CL.E_Select(CL.E_Var("cell"),"cell"))))]))
+
+		  val builder = CL.mkFuncDcl(funcCellTy, "makeFem",
+					     [CL.PARAM([], funcPtrTy, "func"),
+					      CL.PARAM([], intTy, "cellInt")],
+					     CL.S_Block([
+							CL.S_Decl([], funcCellTy, "cell", NONE),
+							CL.S_Exp(
+							 CL.E_AssignOp(CL.E_Select(CL.E_Var("cell"), "cell"), CL.$=, CL.E_Var("cellInt"))),
+							CL.S_Exp(CL.E_AssignOp(CL.E_Select(CL.E_Var("cell"), "func"), CL.$=,(CL.E_Var("func")))),
+							CL.S_Return(SOME(CL.E_Var("cell")))
+					    ]))
+		  val fields = [int, funcPtr]
+		  val class = CL.D_ClassDef{name=name, args=NONE, from=NONE,public = fields , protected = [], private = []}
+		 in
+		  (class, [printer, builder])
+		 end
+		)
 		
 		  
 		

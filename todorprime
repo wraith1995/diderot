@@ -1,3 +1,33 @@
+CLEAN UP AREAS:
+-check-globals is a mess - should take fem part else where
+-parsing of constants and check type file is a mess
+-ast use of constants
+-fem data interface
+-cxx generation of things
+
+
+Somehwere in here the namespace needs to be cleaned:
+MORNING:
+refField:
+1.MakeFem cells via promotion function (look at debug directive) and normalize names of these types for god sake
+---have to generate the c code for that
+2.Get Fem dofs --split at the index location
+3. Do it.
+
+
+RefCell:
+0. add refCell function
+1. add inside mesh parsing (C string-in infustructure, diderot function, simplex???)
+-Add newton inverse associated to the mesh.
+
+MeshPos:
+-Add descendent type
+-Add basic ref pos way of creating
+-Add global way of creating it.
+
+---NEW EIN STUFF
+
+
 
 Somehwere in here the namespace needs to be cleaned
 refField:

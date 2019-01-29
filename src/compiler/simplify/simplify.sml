@@ -870,7 +870,7 @@ structure Simplify : sig
 	       val setupFem = S.S_Assign(x', S.E_LoadFem(data, intermediateGlobal, var'))
 	      in
 	       inputs' := inp :: !inputs';
-	       (* globals' := x' :: !globals'; *)
+	       globals' := x' :: !globals'; 
 	       globalInit := setupFem :: !globalInit
 	      end
             | simplifyInputDcl ((x, SOME e), desc) = let

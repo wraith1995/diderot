@@ -455,22 +455,23 @@ fun parseMesh(env, cxt, tyName, json) =
 
 fun parseSpace(env, cxt, tyName, basisFunctionShape : int list, rangeShape : int list, meshData, json) =
     let
+
      (*we will note use basisFunctionShape, but I'm keeping it here for now.*)
      val _ = if List.length basisFunctionShape = 0
 	     then ()
 	     else raise Fail "illegal operation"
 			
      val space = findField "space" json
-     val constantsField = Option.mapPartial (findField "constants") space
-     val constant = Option.map (fn x => parseConstants(env, cxt, tyName, x)) (space)
 
+     val constantsField = Option.mapPartial (findField "constants") space
+     val constant = Option.map (fn x => parseConstants(env, cxt, tyName, x)) (space) 
      val rangeShapeLength = List.length rangeShape
      val rangeTy = Ty.T_Sequence(Ty.T_Int, SOME(Ty.DimConst rangeShapeLength))
 
-     val dimConstCheck = Option.valOf (Option.map (constantExists(FN.dim, SOME(Ty.T_Int))) constant)
-     val spaceMapDim = Option.valOf (Option.map (constantExists(FN.spaceMapDim, SOME(Ty.T_Int))) constant)
-     val degreeConstCheck = Option.valOf (Option.map (constantExists(FN.maxDegree, SOME(Ty.T_Int))) constant)
-     val rangeConstCheck =  Option.valOf (Option.map (constantExists(FN.rangeShape, SOME(rangeTy))) constant)
+     val dimConstCheck = Option.valOf (Option.map (constantExists(FN.dim, SOME(Ty.T_Int))) constant) handle exn => raise exn
+     val spaceMapDim = Option.valOf (Option.map (constantExists(FN.spaceMapDim, SOME(Ty.T_Int))) constant) handle exn => raise exn
+     val degreeConstCheck = Option.valOf (Option.map (constantExists(FN.maxDegree, SOME(Ty.T_Int))) constant) handle exn => raise exn
+     val rangeConstCheck =  Option.valOf (Option.map (constantExists(FN.rangeShape, SOME(rangeTy))) constant) handle exn => raise exn
 					 
 
      val dim : int option = Option.mapPartial (extractIntConst cxt) dimConstCheck
@@ -508,10 +509,10 @@ fun parseSpace(env, cxt, tyName, basisFunctionShape : int list, rangeShape : int
      val newConstants' : constant list = Option.getOpt(newConstants, [])
 
 
-			 
+
 
     in
-     (spaceVal, newConstants')
+     (spaceVal, newConstants') handle exn => raise exn
     end
 fun parseFunc(env, cxt, tyName, expectedRangeShape, space, json) =
     let
@@ -522,13 +523,14 @@ fun parseFunc(env, cxt, tyName, expectedRangeShape, space, json) =
 
      val constantsField = Option.mapPartial (findField "constants") func
      val constant = Option.map (fn x => parseConstants(env, cxt, tyName, x)) func
+     val _ = Option.app (fn x => print(Int.toString(List.length(x)))) constant
 
 
      (*these could actually be parsed and used but for now we block them to avoid confusion*)
-     val optionalRange = (Option.map (constantExists(FN.rangeShape, NONE)) constant)
-     val _ = (case (optionalRange)
+     val optionalRange = (Option.mapPartial (constantExists(FN.rangeShape, NONE)) constant)
+     val _ = (case optionalRange
 	       of (NONE) => ()
-		| _ => raise Fail "illegal constant assignment")
+		| SOME(_) => raise Fail "illegal constant assignment")
 
      val spaceShape = FT.spaceShape space
      val spaceDim = FT.spaceDim space
