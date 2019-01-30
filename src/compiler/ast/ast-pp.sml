@@ -100,7 +100,7 @@ structure ASTPP : sig
 							    string ", "; string (FemOpt.toString femOpt); string ")")
 		  | AST.E_ExtractFemItem2(e1,e2, ty, outTy, femOpt) => (string "extractFemItem("; pp e1; string ", "; pp e2; string " : "; string(TU.toString ty); string ", "; string(TU.toString outTy);
 									string ", "; string (FemOpt.toString femOpt); string ")")
-		  | AST.E_FemField(data, cell, fieldTy, femField, func) => (string "femField("; pp data; string "," ;Option.app pp cell; string ","; string(TU.toString fieldTy); string ", "; string (FemOpt.fieldString femField); string ", "; Option.map (fn (x,y) => var x) func; string ")")
+		  | AST.E_FemField(data, data', cell, fieldTy, femField, func) => (string "femField("; pp data; string "," ;Option.app pp cell; string ","; string(TU.toString fieldTy); string ", "; string (FemOpt.fieldString femField); string ", "; Option.map (fn (x,y) => var x) func; string ")")
 														     
                   | AST.E_Coerce{dstTy, e, ...} => (
                       PP.openHBox ppStrm;

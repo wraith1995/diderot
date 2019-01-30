@@ -458,7 +458,7 @@ print(concat["doVar (", SV.uniqueNameOf srcVar, ", ", IR.phiToString phi, ", _) 
                 in
                   [IR.ASSGN(lhs, IR.OP(Op.Inside(info, s), [lookup env pos, lookup env img]))]
             end
-	    | S.E_FemField(mesh,SOME(index), ty, FemOpt.Transform, NONE)=>
+	    | S.E_FemField(mesh,_, SOME(index), ty, FemOpt.Transform, NONE)=>
 	      let
 	       val Ty.T_Fem(FemData.Mesh(m)) = SimpleVar.typeOf(mesh)
 	       val data = FemData.Mesh(m)
@@ -473,6 +473,25 @@ print(concat["doVar (", SV.uniqueNameOf srcVar, ", ", IR.phiToString phi, ", _) 
 	       val mesh' = lookup env mesh
 	      in
 	       [IR.ASSGN(lhs, IR.EINAPP(rator, [lookup env index, mesh', mesh']))]
+	      end
+	    | S.E_FemField(func,space, SOME(index), ty, FemOpt.RefField, NONE)=>
+	      let
+	       val Ty.T_Fem(funcData as FemData.Func(f)) = SimpleVar.typeOf(func)
+	       val Ty.T_Fem(spaceData as FemData.Space(s)) = SimpleVar.typeOf(space)
+	       val basis = FemData.spaceBasis s
+	       val spaceDim = FemData.spaceDim s
+	       val shape = FemData.rangeShape f
+	       val shapeVars = List.tabulate(List.length shape, fn x => E.V x )
+	       val femEin = E.Plain(basis, spaceDim)
+	       val rator = E.EIN{
+		    params = [E.INT, E.FEM(funcData), E.FEM(spaceData)],
+		    index = shape,
+		    body = E.Fem(femEin,0,1,2,shapeVars,[])
+		   }
+	       val func' = lookup env func
+	       val space' = lookup env space
+	      in
+	       [IR.ASSGN(lhs, IR.EINAPP(rator, [lookup env index, func', space']))]
 	      end
             | S.E_FieldFn f => let
               (* Variable convention used

@@ -577,7 +577,7 @@ structure CheckGlobals : sig
 								  val getMesh = AST.E_ExtractFem(v, femType)
 								  val getCellInt= AST.E_ExtractFemItem(v, Ty.T_Int, (FemOpt.CellIndex, FT.MeshCell(m)))
 								 in
-								  AST.E_FemField(getMesh, SOME(getCellInt), transformFieldTy, FemOpt.Transform, NONE)
+								  AST.E_FemField(getMesh,getMesh, SOME(getCellInt), transformFieldTy, FemOpt.Transform, NONE)
 								 end
 							       | _ => raise Fail "impossible argument to method got passed type checking"
 							    (* end case*))
@@ -599,6 +599,8 @@ structure CheckGlobals : sig
 			  val mesh = FT.meshOf femType
 			  val FT.Space(spaceData) = space
 			  val FT.Mesh(meshData) = mesh
+			  val mapDim = FT.meshDim meshData
+
 			  val funcCellData = FT.cellOf femType
 			  val cellTy = Ty.T_Fem(funcCellData, SOME(funcName))
 			  val funcDataShape = FT.dataShapeOf femType
@@ -622,6 +624,23 @@ structure CheckGlobals : sig
 							    getTensor
 							   end
 							 | _ => raise Fail "impossible argument to method got passed type checking")
+
+
+			  val refField = Atom.atom FemName.refField
+			  val dimConst = Ty.DimConst(mapDim)
+			  val rangeShape = Ty.Shape((List.map Ty.DimConst funcRangeShape))
+			  val inf = Ty.DiffConst(NONE)
+			  val refFieldTy = Ty.T_Field({diff = inf, dim = dimConst, shape=rangeShape})
+			  val refFieldFunc =  Ty.T_Fun([cellTy], refFieldTy)
+			  fun makeRefFieldFunc vars = (case vars
+							of [v] =>
+							   let
+							    val getFunc = AST.E_ExtractFem(v, femType)
+							    val getSpace = AST.E_ExtractFem(getFunc, space)
+							    val getCellInt= AST.E_ExtractFemItem(v, Ty.T_Int, (FemOpt.CellIndex, funcCellData))
+							   in
+							    AST.E_FemField(getFunc,getSpace, SOME(getCellInt),refFieldTy,FO.RefField, NONE )
+							   end)
 
 
 			  val transformFuncs = [(functionDofs, makeFunctionDofs, functionDofsFunTy)]

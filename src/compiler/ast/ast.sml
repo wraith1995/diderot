@@ -97,7 +97,7 @@ structure AST =
       | E_ExtractFem of expr * FemData.femType                   (* extract femdata from an expression of the given femdata type*)
       | E_ExtractFemItem of expr * Ty.ty * FemOpt.femOption      (* extract a member from femdata *)
       | E_ExtractFemItem2 of expr * expr * Ty.ty * Ty.ty * FemOpt.femOption      (* extract a member from femdata *)
-      | E_FemField of expr * expr option * Ty.ty * FemOpt.femField * var_use option (* Given a possible data source, a possible cell source, a field type, an opt, and a possible function, we get a fem specific field. *)
+      | E_FemField of expr * expr * expr option * Ty.ty * FemOpt.femField * var_use option (* Given a  data source, a cell source, a possible cell source, a field type, an opt, and a possible function, we get a fem specific field. *)
 
 
 

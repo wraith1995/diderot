@@ -116,7 +116,7 @@ structure CheckVarUses : sig
 		  | AST.E_ExtractFem(e, _) => chk (e, unused)
 		  | AST.E_ExtractFemItem(e,_,_) => chk (e, unused)
 		  | AST.E_ExtractFemItem2(e1, e2, _, _,_) => (chk (e1, unused); chk(e2, unused))
-		  | AST.E_FemField(e1, e2, _, _, v) => (chk (e1, unused); (Option.map (fn x => chk(x, unused)) e2);(Option.getOpt(Option.map (fn x => chkUse(cxt, x, undef, unused)) v, unused)))
+		  | AST.E_FemField(e1,e1', e2, _, _, v) => (chk (e1, unused);chk (e1', unused); (Option.map (fn x => chk(x, unused)) e2);(Option.getOpt(Option.map (fn x => chkUse(cxt, x, undef, unused)) v, unused)))
                 (* end case *))
           and chk' (es, unused) = List.foldl chk unused es
           in
