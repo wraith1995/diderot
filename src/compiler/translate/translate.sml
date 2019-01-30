@@ -484,14 +484,14 @@ print(concat["doVar (", SV.uniqueNameOf srcVar, ", ", IR.phiToString phi, ", _) 
 	       val shapeVars = List.tabulate(List.length shape, fn x => E.V x )
 	       val femEin = E.Plain(basis, spaceDim)
 	       val rator = E.EIN{
-		    params = [E.INT, E.FEM(funcData), E.FEM(spaceData)],
+		    params = [E.INT, E.FEM(spaceData), E.FEM(funcData)],
 		    index = shape,
 		    body = E.Fem(femEin,0,1,2,shapeVars,[])
 		   }
 	       val func' = lookup env func
 	       val space' = lookup env space
 	      in
-	       [IR.ASSGN(lhs, IR.EINAPP(rator, [lookup env index, func', space']))]
+	       [IR.ASSGN(lhs, IR.EINAPP(rator, [lookup env index, space', func']))]
 	      end
             | S.E_FieldFn f => let
               (* Variable convention used

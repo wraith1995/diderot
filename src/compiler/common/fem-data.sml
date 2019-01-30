@@ -172,7 +172,7 @@ fun dataShapeOf data =
        | MeshCell(m) => [meshMapDim m, meshDim m] 
        | MeshPos(m) => [meshMapDim m, meshDim m]
        | Space(Space'{shape,dim,...}) => dim::shape
-       | Func(Func'{space,...}) => dataShapeOf (Space(space))
+       | Func(Func'{space,...}) => dataShapeOf (Space(space)) (*TODO: This an error*)
        | FuncCell(f) => dataShapeOf (Func(f))
 
     (*end case*))

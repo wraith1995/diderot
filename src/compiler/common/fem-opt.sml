@@ -102,19 +102,27 @@ fun same ((v1, d1),(v2, d2)) = FT.same(d1,d2) andalso
 
 
 fun findIndexLength (opt, data) =
+    let
+     val spaceDimGet = FT.spaceDim o Option.valOf o FT.extractSpace o Option.valOf o FT.dependencyOf
+    in
     (case (opt, data)
       of (ExtractDofs, FT.Mesh(m)) => FT.meshMapDim m
        | (ExtractDof, FT.Mesh(m)) => FT.meshMapDim m
        | (ExtractDofsSeq, FT.Mesh(m)) => FT.meshMapDim m
        | (ExtractIndices, FT.Mesh(m)) => FT.meshMapDim m
+       | (ExtractIndices, FT.Space(s)) => FT.spaceDim s
        | (ExtractIndex, FT.Mesh(m)) => FT.meshMapDim m
        | (ExtractDofs, FT.Space(s)) => FT.spaceDim s
        | (ExtractIndex, FT.Space(s)) => FT.spaceDim s
-       | _ => raise Fail "impossible optiion and data combination"
+       | (ExtractDofsSeq, FT.Func(f)) => spaceDimGet data
+       | (ExtractDofs, FT.Func(f)) => spaceDimGet data
+       | (ExtractDof, FT.Func(f)) =>  spaceDimGet data
+       | _ => raise Fail ("impossible optiion and data combination: " ^ (toString(opt, data)))
     (* end case *) )
-
+    end
 
 fun findTargetShape (opt, data) =
+    
      (case (opt, data)
        of (ExtractDofs, FT.Mesh(m)) => FT.dataShapeOf data
 	| (ExtractDofsSeq, FT.Mesh(m)) => FT.dataShapeOf data
@@ -123,13 +131,17 @@ fun findTargetShape (opt, data) =
 	| (ExtractDofsSeq, FT.Space(s)) => FT.dataShapeOf data
 	| (ExtractDof, FT.Mesh(m)) => [FT.meshDim m]
 	| (ExtractDof, FT.Space(s)) => FT.dataRangeShapeOf data
-	| _ => raise Fail ("impossible option and data combination: "  ^ (toString (opt, data)))
+	| (ExtractDofsSeq, FT.Func(f)) => FT.dataShapeOf data
+	| _ => raise Fail ("impossible option and data combination: "  ^ (toString(opt, data)))
     (* end case *) )
 
 
 fun splitDataOpt (opt, data) =
     (case (opt, data)
-      of (ExtractDofs, FT.Mesh(m)) => SOME((ExtractIndices, data), (ExtractDofsSeq, data))
+      of (ExtractDofs, FT.Mesh(m)) =>
+	 SOME( (ExtractIndices, data), (ExtractDofsSeq, data))
+       | (ExtractDofs, FT.Func(f)) =>
+	 (SOME( (ExtractIndices, (Option.valOf o FT.dependencyOf) data), (ExtractDofsSeq,data)))
        | _ => NONE
     (* end case *))
 
