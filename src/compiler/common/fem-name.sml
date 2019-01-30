@@ -27,6 +27,6 @@ val sds = "spaceDofShape" (*computed*)
 val rangeShape = "shape"
 val fds = "funcDofShape" (*not really used now as this is under current spec same as above*)
 val funcDofs = "dofs"
-val refField = "field"
+val refField = "refField"
 
 end

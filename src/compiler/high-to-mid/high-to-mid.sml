@@ -193,6 +193,7 @@ structure HighToMid : sig
 		   | NONE => assign (DstOp.ExtractFemItem2(cvtTy ty, cvtTy ty', opt))
 		(* end case *))
 
+
               | rator => raise Fail("bogus operator " ^ SrcOp.toString rator)
             (* end case *)
           end

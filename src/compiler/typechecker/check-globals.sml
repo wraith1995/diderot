@@ -643,7 +643,7 @@ structure CheckGlobals : sig
 							   end)
 
 
-			  val transformFuncs = [(functionDofs, makeFunctionDofs, functionDofsFunTy)]
+			  val transformFuncs = [(functionDofs, makeFunctionDofs, functionDofsFunTy), (refField, makeRefFieldFunc, refFieldFunc)]
 			  val env' = Env.insertNamedType(env, cxt, cellName, cellTy, constants, methods, transformFuncs)
 			 in
 			  env'
