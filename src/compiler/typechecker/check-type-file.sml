@@ -48,7 +48,7 @@ structure V = Vector
 
 		
 val tensorTy = "tensor((\\[([0-9]+,)*[0-9]*\\]))"
-val otherbase = "string|int|bool"
+val otherbase = "string|int|bool|real"
 val seqDims = "(\\[[0-9]+\\])+"
 
 val tensor = RE.compileString tensorTy
@@ -122,13 +122,16 @@ fun matchType string =
     let
      val baseMatch = tryOtherStart string
      val tensorMatch = tryTensor string
+     fun empty x = (x,[])
      val baseTyAndRest = (case (baseMatch, tensorMatch)
 			   of (SOME(sub, next), _) => SOME(next,
 							   if sub = "bool"
 							   then Ty.T_Bool
 							   else if sub = "string"
 							   then Ty.T_String
-							   else  Ty.T_Int, [])
+							   else if sub = "int"
+							   then Ty.T_Int
+							   else Ty.realTy, [])
 
 			    | (NONE, SOME(ints, next)) => SOME(next, Ty.T_Tensor(Ty.Shape(List.map Ty.DimConst ints)), ints)
 			    | (NONE, NONE) => NONE
@@ -471,14 +474,17 @@ fun parseSpace(env, cxt, tyName, basisFunctionShape : int list, rangeShape : int
      val dimConstCheck = Option.valOf (Option.map (constantExists(FN.dim, SOME(Ty.T_Int))) constant) handle exn => raise exn
      val spaceMapDim = Option.valOf (Option.map (constantExists(FN.spaceMapDim, SOME(Ty.T_Int))) constant) handle exn => raise exn
      val degreeConstCheck = Option.valOf (Option.map (constantExists(FN.maxDegree, SOME(Ty.T_Int))) constant) handle exn => raise exn
-     val rangeConstCheck =  Option.valOf (Option.map (constantExists(FN.rangeShape, SOME(rangeTy))) constant) handle exn => raise exn
+     val rangeConstCheck =  Option.join (Option.map (constantExists(FN.rangeShape, SOME(rangeTy))) constant) handle exn => raise exn
+     
 					 
 
      val dim : int option = Option.mapPartial (extractIntConst cxt) dimConstCheck
      val spaceDim : int option = Option.mapPartial (extractIntConst cxt) spaceMapDim
      val degree : int option = Option.mapPartial (extractIntConst cxt) degreeConstCheck
      val rangeShape : int list option = Option.mapPartial (extractShapeConst cxt) rangeConstCheck
-
+     val rangeShape = (case rangeShape
+			of SOME([1]) => SOME([])
+			 | _ => rangeShape)
      val combined = optionList [spaceMapDim, rangeConstCheck]
      val spaceDofShapeConst = Option.map (fn ([(ty, expr, name), (ty', expr', name')])
 					     =>

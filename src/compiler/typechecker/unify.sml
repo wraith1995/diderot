@@ -194,16 +194,12 @@ structure Unify : sig
 	    | match (Ty.T_Fem(data, SOME(name)), Ty.T_Fem(data', SOME(name'))) =
 	      let
 	       val test = FemData.same(data, data')
-	       val _ = print("Testing and we found: "^(Bool.toString test) ^ "\n")
-	       val _ = print("The femdata names are: " ^(Atom.toString name) ^ " and " ^ (Atom.toString name') ^ "\n")
 	      in
 	       test
 	      end
 	    | match (Ty.T_Fem(data, NONE), Ty.T_Fem(data', NONE)) =
 	      let
 	       val test = FemData.same(data, data')
-	       val _ = print("Testing and we found: "^(Bool.toString test) ^ "\n")
-				      
 	      in
 	       test
 	      end

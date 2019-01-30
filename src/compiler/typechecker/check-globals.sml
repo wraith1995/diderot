@@ -638,9 +638,11 @@ structure CheckGlobals : sig
 							    val getFunc = AST.E_ExtractFem(v, femType)
 							    val getSpace = AST.E_ExtractFem(getFunc, space)
 							    val getCellInt= AST.E_ExtractFemItem(v, Ty.T_Int, (FemOpt.CellIndex, funcCellData))
+							    val _ = print("Called!")
 							   in
 							    AST.E_FemField(getFunc,getSpace, SOME(getCellInt),refFieldTy,FO.RefField, NONE )
-							   end)
+							   end
+							 | _ => raise Fail "impossible argument to method got passed type checking")
 
 
 			  val transformFuncs = [(functionDofs, makeFunctionDofs, functionDofsFunTy), (refField, makeRefFieldFunc, refFieldFunc)]
