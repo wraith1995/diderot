@@ -42,7 +42,7 @@ structure Inliner : sig
                     | deleteStm (S.S_Print _) = ()
                     | deleteStm (S.S_MapReduce _) = raise Fail "unexpected MapReduce"
                   and deleteExp (S.E_Apply(f, _)) = decCnt' f
-		    | deleteExp (S.E_FemField(_,_,_,_,SOME(f))) = decCnt' f
+		    | deleteExp (S.E_FemField(_,_,_,_,_,SOME(f))) = decCnt' f
                     | deleteExp _ = ()
                   val S.Func{body, ...} = remove f
                   in
@@ -207,7 +207,7 @@ structure Inliner : sig
 		  | S.E_ExtractFemItem(v, ty, data) => S.E_ExtractFemItem(rename env v, ty, data)
 		  | S.E_ExtractFemItem2(v1, v2, ty, outTy, data) => S.E_ExtractFemItem2(rename env v1, rename env v2, ty, outTy, data)
 		  | S.E_LoadFem(data, v1, v2) => S.E_LoadFem(data, rename env v1, rename env v2)
-		  | S.E_FemField(v1, v2, ty, field, func) => S.E_FemField(rename env v1, Option.map (rename env) v2, ty, field, Option.map SimpleFunc.use func)
+		  | S.E_FemField(v1, v1', v2, ty, field, func) => S.E_FemField(rename env v1,rename env v1', Option.map (rename env) v2, ty, field, Option.map SimpleFunc.use func)
                 (* end case *))
         (* build the initial environment by mapping parameters to arguments *)
           val env = ListPair.foldlEq

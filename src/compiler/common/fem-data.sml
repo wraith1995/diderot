@@ -17,7 +17,9 @@ structure FemData : sig
 	   type space
 	   val spaceShape : space -> int list
 	   val spaceDim : space -> int
+	   val spaceBasis : space -> BasisDataArray.t
 	   type func
+	   val rangeShape : func -> int list
 
 	   datatype femType = Mesh of mesh
 			    | Space of space
@@ -101,7 +103,7 @@ datatype func = Func' of {
 	 }
 fun funcSpace (Func'{space, name, ...}) = space
 fun funcShape (Func'{shape, name, ...}) = shape
-
+val rangeShape = funcShape
 
 
 datatype femType = Mesh of mesh

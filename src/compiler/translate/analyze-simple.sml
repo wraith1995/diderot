@@ -178,7 +178,7 @@ structure AnalyzeSimple : sig
 			| S.E_ExtractFem(v,_) => [v]
 			| S.E_ExtractFemItem(v,_,_) => [v]
 			| S.E_ExtractFemItem2(v1, v2,_,_, _) => [v1,v2]
-			| S.E_FemField(v1,v2,_,_,_) => v1::(Option.getOpt(Option.map (fn x => [x]) v2, []))
+			| S.E_FemField(v1,v1',v2,_,_,_) => v1::v1'::(Option.getOpt(Option.map (fn x => [x]) v2, []))
                         | S.E_InsideImage(pos, img, _) => [pos, img]
                         | S.E_FieldFn f => []
                       (* end case *))
