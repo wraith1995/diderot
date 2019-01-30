@@ -708,7 +708,8 @@ structure CheckExpr : sig
 	    | (e' , Ty.T_Fem(data, _)) =>
 	      let
 	       val tyName = (case data
-			    of FT.MeshCell(m) => SOME(Atom.atom ("cell(" ^ (Atom.toString (FT.nameOf (FT.Mesh(m)))) ^ ")"))
+			      of FT.MeshCell(m) => SOME(Atom.atom ("cell(" ^ (Atom.toString (FT.nameOf (FT.Mesh(m)))) ^ ")"))
+			       | FT.FuncCell(f) => SOME(Atom.atom ("cell(" ^ (Atom.toString (FT.nameOf (FT.Func(f)))) ^ ")"))
 			     | _ => NONE
 			  (* end case *))
 	       val tyEnv = (Option.mapPartial (fn name => case Env.findTypeEnv(env, name)
@@ -719,13 +720,14 @@ structure CheckExpr : sig
 								  | NONE => ( (err (cxt, [S"The type named", A (TypeEnv.findName env),
 										     S " does not have a member named",
 										     A(field)])); NONE))) tyEnv
+	       val _ = print("Called on this crud:"^ (Atom.toString field) ^"\n");
 			    
 	      in
 	       (case method (*I think that any aditional typechecking here is redundant*)
 		 of SOME(f, Ty.T_Fun([v], a)) =>
 		    let
 		     val fieldExpr = f [e']
-				       
+		     val _ = print("found\n")		       
 		    in
 		     (fieldExpr, a)
 		    end

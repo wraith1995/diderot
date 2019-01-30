@@ -26,6 +26,7 @@ strand gg(int i, cell{msh} j){
   output tensor[2,2] z = ∇⊗F([1,1]);
   real gug = ∇•F([1,1]);
   cell{FUNC} kk = c.funcCell(j);
+  tensor[2] qqq = (∇(kk.refField))([1,1]);
   
 
   int j0 = 2;
@@ -34,7 +35,7 @@ strand gg(int i, cell{msh} j){
     print("funcCell:", kk, "\n");
     tensor[FUNC.funcDofShape] b = kk.dofs();
     print("funcCellDofs: ", b, "\n");
-    print("FuncCellVal:", kk.refField([0,0]), "\n");
+    print("FuncCellVal:",qqq , "\n");
     result = f(result, i*10);
     int cellCount = a.numCell();
     print("cell:", j,"\n");
