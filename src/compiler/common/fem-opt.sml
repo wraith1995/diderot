@@ -11,7 +11,7 @@
 
 structure FemOpt : sig
 
-	   datatype femOpts = NumCell | ExtractDofs | ExtractDofsSeq | ExtractIndices |  ExtractIndex  | ExtractDof | Cells | CellIndex  | PromoteCell
+	   datatype femOpts = NumCell | ExtractDofs | ExtractDofsSeq | ExtractIndices |  ExtractIndex  | ExtractDof | Cells | CellIndex  | PromoteCell  | RefCell
 
 	   type femOption = femOpts * FemData.femType
 					    
@@ -31,11 +31,12 @@ structure FemOpt : sig
 	   val fieldString : femField -> string
 									     
 	  end = struct
-datatype femOpts = Cells
+datatype femOpts = Cells | RefCell
 		 | ExtractDofs
 		 | ExtractIndices |  ExtractDofsSeq
 		 | NumCell  | ExtractIndex | ExtractDof (* primitize all*)
 		 | CellIndex | PromoteCell (* primitize, cells*)
+				 
 
 datatype femField =  Transform | RefField | InvTransform | TRefField | Field
 
@@ -60,6 +61,7 @@ fun toStringOpt v =
        | ExtractIndices => "ExtractIndices"
        | ExtractDofsSeq => "ExtractDofsSeq"
        | PromoteCell => "PromoteCell"
+       | RefCell => "RefCell"
     (* end case*))
 
 fun toString (v, d) = toStringOpt(v) ^ "(" ^ (FT.toString d) ^ ")"
@@ -74,6 +76,7 @@ fun arity (NumCell) = 1
   | arity (ExtractIndex) = 2
   | arity (ExtractDof) = 2
   | arity (PromoteCell) = 2
+  | arity (RefCell) = 1
 
 
 
@@ -86,6 +89,7 @@ fun hash (NumCell, d) = 0w1 + FT.hash d
   | hash (ExtractIndices, d) = 0w13 + FT.hash d
   | hash (ExtractDofsSeq, d) = 0w17 + FT.hash d
   | hash (PromoteCell, d) = 0w19 + FT.hash d
+  | hash (RefCell, d) = 0w23 + FT.hash d
 		     
 fun same ((v1, d1),(v2, d2)) = FT.same(d1,d2) andalso
     (case (v1,v2)
@@ -98,6 +102,7 @@ fun same ((v1, d1),(v2, d2)) = FT.same(d1,d2) andalso
        | (ExtractDof, ExtractDof) => true
        | (ExtractDofsSeq,ExtractDofsSeq) => true
        | (PromoteCell, PromoteCell) => true
+       | (RefCell,RefCell) => true
        | _ => false)
 
 

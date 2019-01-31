@@ -306,8 +306,7 @@ structure CheckExpr : sig
 			val (astExp, astTy) = check (env, cxt, exp)
 			val tyName = (case astTy
 				       of Ty.T_Named(tyName, tyDef) => SOME(tyName)
-					| Ty.T_Fem(FT.MeshCell(m), _) => SOME(Atom.atom ("cell(" ^ (Atom.toString (FT.nameOf (FT.Mesh(m)))) ^ ")" ))
-					| Ty.T_Fem(FT.FuncCell(f), SOME(name)) => SOME(Atom.atom ("cell(" ^ (Atom.toString name) ^")"))
+					| Ty.T_Fem(data, _) => SOME( FT.envNameOf data)
 					| _ => (err (cxt, [TY(astTy), S " is not a named type and so has no members."]); NONE)
 				     (*end case*))
 
@@ -707,11 +706,7 @@ structure CheckExpr : sig
 					  (* end case *))
 	    | (e' , Ty.T_Fem(data, _)) =>
 	      let
-	       val tyName = (case data
-			      of FT.MeshCell(m) => SOME(Atom.atom ("cell(" ^ (Atom.toString (FT.nameOf (FT.Mesh(m)))) ^ ")"))
-			       | FT.FuncCell(f) => SOME(Atom.atom ("cell(" ^ (Atom.toString (FT.nameOf (FT.Func(f)))) ^ ")"))
-			     | _ => NONE
-			  (* end case *))
+	       val tyName = SOME(FT.envNameOf data ) handle exn => NONE
 	       val tyEnv = (Option.mapPartial (fn name => case Env.findTypeEnv(env, name)
 								    of SOME(s) => SOME(s)
 								     | NONE =>  (err (cxt, [S "There is no type named", A(name)]); NONE) ) tyName)

@@ -445,9 +445,9 @@ PrimitiveType
         | "real"                => (PT.T_Tensor[])
         | "string"              => (PT.T_String)
         | ID                    => (PT.T_Id ID)
-	| "refCell""{" ID "}"   => (markTy(FULL_SPAN, PT.T_RefCell ID))
+	| "refCell" "{" ID "}"   => (markTy(FULL_SPAN, PT.T_RefCell ID))
 	| "cell" "{" ID "}"      => (markTy(FULL_SPAN, PT.T_Cell ID))
-	| "position""{" ID "}"  => (markTy(FULL_SPAN, PT.T_MeshPos ID))
+	| "position" "{" ID "}"  => (markTy(FULL_SPAN, PT.T_MeshPos ID))
         ;
 
 Shape

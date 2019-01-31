@@ -521,10 +521,18 @@ structure CheckGlobals : sig
 						of [v] => AST.E_ExtractFemItem(v, cellSeqType, (FemOpt.Cells, FT.Mesh(m)))
 						 | _ => raise Fail "impossible argument to method got pass type checking")
 
+			 val refCellName = Atom.atom "refcell"
+			 val refCell = FT.RefCell(m)
+			 val refCellTy = Ty.T_Fem(refCell, SOME(meshName))
+			 val refCellEnvName = FT.envNameOf refCell
+			 val refCellFuncTy = Ty.T_Fun([meshArgTy], refCellTy)
+			 val refCellFuncBody = AST.S_Block([AST.S_Return(AST.E_ExtractFemItem(AST.E_Var(param, span), refCellTy, (FemOpt.RefCell, FT.Mesh(m))))])
+			 val refCellFuncVar = Var.new(refCellName, span, AST.FunVar, refCellFuncTy)
+			 val refCellFunc = AST.D_Func(refCellFuncVar, [param], refCellFuncBody)
 
 
 			in
-			 ([(numCell, numCellFuncVar), (cells', cellFuncVar')], [numCellFun, cellsFun', cellsFun], [(cells, makeCells, cellTypeFuncTy)])
+			 ([(numCell, numCellFuncVar), (cells', cellFuncVar'), (refCellName, refCellFuncVar)], [numCellFun, cellsFun', cellsFun,refCellFunc], [(cells, makeCells, cellTypeFuncTy)])
 			end
 
 		   (*end case*))
@@ -545,10 +553,12 @@ structure CheckGlobals : sig
 			  val mapDim = FT.meshDim m
 			  val meshMapDim = FT.meshMapDim m
 			  val shape = FT.dataShapeOf femType
-			  
-			  val cellName = Atom.atom ("cell(" ^ (Atom.toString name) ^ ")" )
-						   (*pos name*)
-			  val cellData = FT.cellOf femType
+			  val cellData = FT.cellOf femType			  
+			  val cellName = FT.envNameOf (cellData)
+			  val refCell = FT.RefCell(m)
+			  val refCellName = FT.envNameOf refCell
+
+
 			  val cellTy = Ty.T_Fem(cellData, SOME(meshName)) 
 
 			  val transformDofs = Atom.atom "transformDofs"
@@ -583,10 +593,17 @@ structure CheckGlobals : sig
 							    (* end case*))
 
 
+
+
 			  val transformFuncs = [(transformDofs, makeTransformDofs, transformsDofsFunTy), (transform, makeTransformFieldFunc, transformFieldFunc)]
 			  (* TODO: The naming in this area of the compiler is really inconsistent*)
 
 			  val env' = Env.insertNamedType(env, cxt, cellName, cellTy, constants, methods, transformFuncs)
+
+
+							(*Make meshPos and the reference cell*)
+
+
 							 
 			 in
 			  env'
@@ -594,7 +611,7 @@ structure CheckGlobals : sig
 		       | FT.Func(f) =>
 			 let
 			  val funcName = FT.nameOf femType
-			  val cellName = Atom.atom ("cell(" ^ (Atom.toString funcName) ^ ")")
+			  val cellName = FT.envNameOf (FT.FuncCell(f))
 			  val SOME(space) = FT.dependencyOf femType
 			  val mesh = FT.meshOf femType
 			  val FT.Space(spaceData) = space
