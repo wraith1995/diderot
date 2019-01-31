@@ -10,6 +10,7 @@ input fns b = fns(a);
 input FUNC c = FUNC(b);
 field(2)[2] F = a.cells()[0].transform;
 refCell{msh} AAA = a.refcell();
+bool randomTest = AAA.isInside([1.2,0.2]);
 
 int[] a1 = {k + 2 | k in {1+j | j in 0..10}};
 real[] a2 = {k + 2.0 | k in {1.0+j | j in 0..10}};
@@ -50,7 +51,7 @@ strand gg(int i, cell{msh} j){
     print("result:", z, "\n");
     print("other result:", F([0,0]), "\n");
     print("fin result:", gug, "\n");
-
+    print("uummm:", randomTest, "\n");
 
     stabilize;
   }

@@ -166,14 +166,14 @@ structure CheckExpr : sig
                       of Env.PrimFun[rator] => let
                        val (tyArgs, Ty.T_Fun(domTy, rngTy)) = TU.instantiate(Var.typeOf rator)
                       in
-                       case Unify.matchArgs(domTy, [e1', e2'], [ty1, ty2])
+                       (case Unify.matchArgs(domTy, [e1', e2'], [ty1, ty2])
                         of SOME args => CO.chkPrim (AST.E_Prim(rator, tyArgs, args, rngTy), rngTy)
                          | NONE => err (cxt, [
 					S "type error for binary operator ", V rator, S "\n",
 					S "  expected: ", TYS domTy, S "\n",
 					S "  found:    ", TYS[ty1, ty2]
                                        ])
-				       (* end case *)
+		       (* end case *))
                       end
                        | Env.PrimFun ovldList =>
                          resolveOverload (cxt, rator, [ty1, ty2], [e1', e2'], ovldList)

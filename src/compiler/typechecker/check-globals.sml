@@ -538,6 +538,17 @@ structure CheckGlobals : sig
 
 		   (*end case*))
 
+	       fun makePrim(prim, argTys) =
+		   let
+		    val AST.E_Prim(var, metargs, exprs, result) = prim
+		    val (tyArgs, Ty.T_Fun(domTy, rngTy)) = TU.instantiate(Var.typeOf var)
+		    val exprs' = Option.valOf(Unify.matchArgs(domTy, exprs, argTys))
+		    val _ = Unify.matchType(result, rngTy)
+
+		   in
+		    AST.E_Prim(var, tyArgs, exprs', result)
+		   end
+
 	       fun makeRefCellInside(env, cxt, span, dim, refCellInfo, posVar, meshVar) =
 		   let
 		    val insideVec = Ty.vecTy dim
@@ -545,22 +556,22 @@ structure CheckGlobals : sig
 		    val epsExpr = AST.E_Lit(Literal.Real(eps))
 		    val one = AST.E_Lit(Literal.Real(RealLit.one))
 		    val onePlusEps = one (*TODO: FIX EPSILON*)
-		    val posVar' = AST.E_Var(posVar, span)
-		    val meshVar' = AST.E_Var(meshVar, span)
+		    val posVar' = posVar
+		    val meshVar' = meshVar
 		    fun greaterThanTest top bot =
 			let
 			 val (tyArgs, Ty.T_Fun(domTy, rngTy)) = TU.instantiate(Var.typeOf BV.gt_rr)
 			in
-			 AST.E_Prim(BV.gt_rr, tyArgs, [top, bot], rngTy)
+			 makePrim(AST.E_Prim(BV.gt_rr, tyArgs, [top, bot], Ty.T_Bool), [Ty.realTy, Ty.realTy])
 			end
 		    fun subs vecExpr i = AST.E_Slice(vecExpr, [SOME(AST.E_Lit(Literal.intLit i))], Ty.realTy)
 
-		    fun makeAnd v1 v2 =
-			let
-			 val (tyArgs, Ty.T_Fun(domTy, rngTy)) = TU.instantiate(Var.typeOf BV.op_and)
-			in
-			 AST.E_Prim(BV.op_and, tyArgs, [v1,v2], rngTy)
-			end
+		    fun makeAnd v1 v2 = AST.E_Andalso(v1,v2)
+			(* let *)
+			(*  val (tyArgs, Ty.T_Fun(domTy, rngTy)) = TU.instantiate(Var.typeOf BV.op_and) *)
+			(* in *)
+			(*  makePrim(AST.E_Prim(BV.op_and, tyArgs, [v1,v2], Ty.T_Bool), [Ty.T_Bool, Ty.T_Bool]) *)
+			(* end *)
 		    fun makeAnds([v1,v2]) = makeAnd v1 v2
 		      | makeAnds (v::vs) = makeAnd v (makeAnds vs)
 					  
@@ -572,14 +583,14 @@ structure CheckGlobals : sig
 							insideVec)
 			  val oneVec = AST.E_Tensor(List.tabulate(dim, fn x => one), insideVec)
 			  val (tyArgs, Ty.T_Fun(domTy, rngTy)) = TU.instantiate(Var.typeOf BV.add_tt)
-			  val adjustedPos = AST.E_Prim(BV.add_tt, tyArgs, [epsilonVec, posVar'], rngTy)
+			  val adjustedPos = makePrim(AST.E_Prim(BV.add_tt, tyArgs, [epsilonVec, posVar'], insideVec), [insideVec, insideVec])
 			  val adjustedPosAcc = List.tabulate(dim,
 							     fn x => subs adjustedPos x)
 			  val posTests = List.map (fn x => greaterThanTest x (AST.E_Lit(Literal.Real(RealLit.zero true)))) adjustedPosAcc
 			  val (tyArgs', Ty.T_Fun(domTy', rngTy')) = TU.instantiate(Var.typeOf BV.op_inner_tt)
-			  val sumVar = AST.E_Prim(BV.op_inner_tt, tyArgs', [oneVec, posVar'], rngTy')
+			  val sumVar = makePrim(AST.E_Prim(BV.op_inner_tt, tyArgs', [oneVec, posVar'], Ty.realTy), [insideVec, insideVec])
 			  val sumTest = greaterThanTest onePlusEps sumVar
-			  val endResult = makeAnds (sumVar::posTests)
+			  val endResult = makeAnds (sumTest::posTests)
 			  
 			 in
 			  endResult
@@ -587,7 +598,7 @@ structure CheckGlobals : sig
 		       | FemData.KCube =>
 			 let
 			  val (tyArgs, Ty.T_Fun(domTy, rngTy)) = TU.instantiate(Var.typeOf BV.op_norm_t)
-			  val norm = AST.E_Prim(BV.op_norm_t, tyArgs, [posVar'], rngTy)
+			  val norm = makePrim(AST.E_Prim(BV.op_norm_t, tyArgs, [posVar'], Ty.realTy), [insideVec])
 			  val endTest = greaterThanTest onePlusEps norm
 			 in
 			  endTest
@@ -666,8 +677,10 @@ structure CheckGlobals : sig
 			  fun makeRefCellInsideFunc vars = (case vars
 							 of [v1,v2] => makeRefCellInside(env, cxt, span, mapDim, refCellInfo, v2, v1)
 							  | _ => raise Fail "impossble got through type checker"
-						       (* end case*))
-							
+							   (* end case*))
+
+			  val refCellTransformFuncs = [(refCellInside, makeRefCellInsideFunc, refCellInsideTy)]
+			  val env'' = Env.insertNamedType(env', cxt, refCellName, refCellTy, constants, methods, refCellTransformFuncs)			
 
 
 							(*Make meshPos and the reference cell*)
@@ -677,7 +690,7 @@ structure CheckGlobals : sig
 
 							 
 			 in
-			  env'
+			  env''
 			 end
 		       | FT.Func(f) =>
 			 let
