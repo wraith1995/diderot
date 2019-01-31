@@ -27,7 +27,11 @@
 			"degree": 1},
 		       [0.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0]
 		   ]
-		  }
+		  },
+	"refCell" : {
+	    "type" : "simplex",
+	    "epsilon" : 0.0000001
+	}
     },
     "space" : {
 	"constants" : [

@@ -45,7 +45,6 @@ structure V = Vector
 
 
 
-
 		
 val tensorTy = "tensor((\\[([0-9]+,)*[0-9]*\\]))"
 val otherbase = "string|int|bool|real"
@@ -209,8 +208,19 @@ fun optionRealLit x = oE ( realToRealLit o JU.asNumber) x
 					     
 val bogusExp = AST.E_Lit(L.Int 0)
 val bogusExpTy = (Ty.T_Error, bogusExp)
-
 fun mkConstExpr cxt expr = Option.valOf (CheckConst.eval(cxt, false, expr))
+fun bogusExpTy' cxt = (Ty.T_Error, mkConstExpr cxt bogusExp, "")
+			
+fun err arg = (TypeError.error arg; bogusExpTy)
+		
+val err = TypeError.error
+
+datatype token = datatype TypeError.token		
+
+
+fun makeParseError(err, cxt, field, msg, default) = (err (cxt, [S "Unable to parse field, ", S field, S" with message:", S msg]); default)
+
+
 fun extractIntConst cxt (ty, cexpr, name) =
     (case cexpr
       of ConstExpr.Int(i) => SOME(IntInf.toInt i)
@@ -222,13 +232,6 @@ fun extractShapeConst cxt (ty, cexpr, name) =
 	 SOME(List.map (Option.valOf o (fn x => extractIntConst cxt (Ty.T_Int, x, ""))) seq)
        | _ => NONE)
 		   
-fun bogusExpTy' cxt = (Ty.T_Error, mkConstExpr cxt bogusExp, "")
-		   
-fun err arg = (TypeError.error arg; bogusExpTy)
-		     
-val err = TypeError.error
-
-datatype token = datatype TypeError.token		
 
 fun loadJson(fileName, cxt) = SOME(JP.parseFile fileName)
 			      handle exn =>
@@ -410,6 +413,23 @@ fun parseScalarBasis(env, cxt, tyName, json, dim, degree, spaceDim) =
      		   error)
     end
 (* I don't like this.... maybe turn it into specs and process this.*)
+fun paresRefCell(env, cxt, refCellJson, dim, machinePres) =
+    let
+     val tyOption = (findField "type") refCellJson
+     val epsilonOption = (findField "epsilon") refCellJson
+     val epsilon = Option.mapPartial (optionRealLit) epsilonOption
+     val eps = (case epsilon
+		 of SOME(e) => e
+		  | _ => makeParseError(err,cxt, "epsilon", "field doesn't exist or isn't a real number.",  realToRealLit machinePres))
+     val cellClass = Option.mapPartial (oE JU.asString) tyOption
+     val cell = Option.mapPartial FemData.fromStr cellClass
+    in
+     (case cell
+       of SOME(cellVal) => SOME(FemData.RefCellData({ty=cellVal, eps = eps}))
+	| NONE => makeParseError(err, cxt, "cell:type", "field doesn't exsist, isn't a string, or string is stupid", NONE)
+     (*end case*))
+    end
+      
 fun parseMesh(env, cxt, tyName, json) =
     let
      val mesh = findField "mesh" json
@@ -444,11 +464,15 @@ fun parseMesh(env, cxt, tyName, json) =
 			   of (SOME(a), SOME(b), SOME(c), SOME(d)) => SOME((a,b,c,d))
 			    | _ => NONE (*end case *))
 
-     val meshVal = Option.map (fn (x,y,z,basis) => FT.mkMesh(x,y,z,
+     val refCellField = Option.mapPartial (findField "refCell") mesh
+     val refCellData = Option.mapPartial (fn (x,y) => paresRefCell(env, cxt,x,y, 0.0000001))
+					 (optionTuple(refCellField, dim))
+
+     val meshVal = Option.map (fn (x,y,z,basis, cell) => FT.mkMesh(x,y,z,
 							     basis,
-							     tyName))
-			      (case (dim, spaceDim, degree, parsedBasis)
-				of (SOME(a), SOME(b), SOME(c), SOME(d)) => SOME((a,b,c,d))
+							     tyName, cell))
+			      (case (dim, spaceDim, degree, parsedBasis, refCellData)
+				of (SOME(a), SOME(b), SOME(c), SOME(d), SOME(e)) => SOME((a,b,c,d,e))
 				 | _ => NONE (* end case*))
      val newConstants' = Option.getOpt(newConstants, [])
     in

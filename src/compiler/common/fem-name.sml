@@ -16,6 +16,10 @@ val maxDegree = "degree"
 val meshMapDim = "meshMapDim"
 val tds = "transformDofShape" (*computed*)
 val transform = "transform" (*field*)
+
+(*ref cell:*)
+val refCellIsInside = "isInside"
+		  
 (*space: *)
 val spaceMapDim = "spaceMapDim"
 val dim = "dim"
