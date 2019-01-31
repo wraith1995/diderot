@@ -160,13 +160,16 @@ c_int_p = POINTER(ctylesInt)
 indexMap = np.array([[0, 1, 2, 3], [4, 5, 6, 7]], dtype=intString)
 indexMap.flatten()
 coordMap = np.array([[1.0, 2.0], [3.0, 5.0], [7.0, 11.0], [13.0, 17.0], [19.0, 23.0], [27.0, 29.0],[31.0, 37.0], [41.0, 43.0]], dtype=floatString)
+coordMapPrime = np.array([2.0,3.0,5.0,7.0,11.0,13.0,17.0,19.0,23.0,29.0,31.0,37.0,41.0, 43.0, 47.0, 53.0, 59.0, 61.0, 68.0, 71.0, 73.0, 79.0, 83.0, 89.0, 97.0, 101.0, 103.0, 107.0, 109.0, 113.0, 127.0, 131.0], dtype=floatString)
+print(coordMapPrime.reshape(8,2,2))
 coordMap.flatten()
+
 mesh.indexMap = indexMap.ctypes.data_as(c_int_p)
 mesh.coordMap = coordMap.ctypes.data_as(POINTER(ctylesFloat))
 
 space.indexMap = indexMap.ctypes.data_as(c_int_p)
 space.mesh = mesh
-func.coordMap = coordMap.ctypes.data_as(POINTER(ctylesFloat))
+func.coordMap = coordMapPrime.ctypes.data_as(POINTER(ctylesFloat))
 func.space = space
 
 meshPtr = ct.cast(ct.pointer(mesh), ct.c_void_p)
