@@ -33,6 +33,7 @@ structure CheckGlobals : sig
     structure FN = FemName
     structure N = BasisNames
     structure CF = CheckTypeFile
+    structure BV = BasisVars
 
 
 		     
@@ -537,6 +538,62 @@ structure CheckGlobals : sig
 
 		   (*end case*))
 
+	       fun makeRefCellInside(env, cxt, span, dim, refCellInfo, posVar, meshVar) =
+		   let
+		    val insideVec = Ty.vecTy dim
+		    val FemData.RefCellData({ty=refCellClass, eps}) = refCellInfo
+		    val epsExpr = AST.E_Lit(Literal.Real(eps))
+		    val one = AST.E_Lit(Literal.Real(RealLit.one))
+		    val onePlusEps = one (*TODO: FIX EPSILON*)
+		    val posVar' = AST.E_Var(posVar, span)
+		    val meshVar' = AST.E_Var(meshVar, span)
+		    fun greaterThanTest top bot =
+			let
+			 val (tyArgs, Ty.T_Fun(domTy, rngTy)) = TU.instantiate(Var.typeOf BV.gt_rr)
+			in
+			 AST.E_Prim(BV.gt_rr, tyArgs, [top, bot], rngTy)
+			end
+		    fun subs vecExpr i = AST.E_Slice(vecExpr, [SOME(AST.E_Lit(Literal.intLit i))], Ty.realTy)
+
+		    fun makeAnd v1 v2 =
+			let
+			 val (tyArgs, Ty.T_Fun(domTy, rngTy)) = TU.instantiate(Var.typeOf BV.op_and)
+			in
+			 AST.E_Prim(BV.op_and, tyArgs, [v1,v2], rngTy)
+			end
+		    fun makeAnds([v1,v2]) = makeAnd v1 v2
+		      | makeAnds (v::vs) = makeAnd v (makeAnds vs)
+					  
+		   in
+		    (case refCellClass
+		      of FemData.KSimplex =>
+			 let
+			  val epsilonVec = AST.E_Tensor(List.tabulate(dim, fn x => epsExpr),
+							insideVec)
+			  val oneVec = AST.E_Tensor(List.tabulate(dim, fn x => one), insideVec)
+			  val (tyArgs, Ty.T_Fun(domTy, rngTy)) = TU.instantiate(Var.typeOf BV.add_tt)
+			  val adjustedPos = AST.E_Prim(BV.add_tt, tyArgs, [epsilonVec, posVar'], rngTy)
+			  val adjustedPosAcc = List.tabulate(dim,
+							     fn x => subs adjustedPos x)
+			  val posTests = List.map (fn x => greaterThanTest x (AST.E_Lit(Literal.Real(RealLit.zero true)))) adjustedPosAcc
+			  val (tyArgs', Ty.T_Fun(domTy', rngTy')) = TU.instantiate(Var.typeOf BV.op_inner_tt)
+			  val sumVar = AST.E_Prim(BV.op_inner_tt, tyArgs', [oneVec, posVar'], rngTy')
+			  val sumTest = greaterThanTest onePlusEps sumVar
+			  val endResult = makeAnds (sumVar::posTests)
+			  
+			 in
+			  endResult
+			 end
+		       | FemData.KCube =>
+			 let
+			  val (tyArgs, Ty.T_Fun(domTy, rngTy)) = TU.instantiate(Var.typeOf BV.op_norm_t)
+			  val norm = AST.E_Prim(BV.op_norm_t, tyArgs, [posVar'], rngTy)
+			  val endTest = greaterThanTest onePlusEps norm
+			 in
+			  endTest
+			 end)
+		   end
+
 	       fun makeDescendentFemTypes(env, femType) =
 		   let
 		    val constants = []
@@ -551,15 +608,18 @@ structure CheckGlobals : sig
 			 let
 			  val meshName = FT.nameOf femType
 			  val mapDim = FT.meshDim m
+			  val dimSizeVec = Ty.vecTy mapDim
 			  val meshMapDim = FT.meshMapDim m
 			  val shape = FT.dataShapeOf femType
+
 			  val cellData = FT.cellOf femType			  
 			  val cellName = FT.envNameOf (cellData)
-			  val refCell = FT.RefCell(m)
-			  val refCellName = FT.envNameOf refCell
+			  val cellTy = Ty.T_Fem(cellData, SOME(meshName))
+					       
+			  val refCellData = FT.RefCell(m)
+			  val refCellName = FT.envNameOf refCellData
+			  val refCellTy = Ty.T_Fem(refCellData, SOME(meshName))
 
-
-			  val cellTy = Ty.T_Fem(cellData, SOME(meshName)) 
 
 			  val transformDofs = Atom.atom "transformDofs"
 			  val transformDofsTy = Ty.T_Tensor(Ty.Shape((List.map Ty.DimConst shape))) (*careful*)
@@ -600,8 +660,19 @@ structure CheckGlobals : sig
 
 			  val env' = Env.insertNamedType(env, cxt, cellName, cellTy, constants, methods, transformFuncs)
 
+			  val refCellInfo = FT.refCell m
+			  val refCellInside = Atom.atom (FemName.refCellIsInside)
+			  val refCellInsideTy = Ty.T_Fun([refCellTy, dimSizeVec], Ty.T_Bool)
+			  fun makeRefCellInsideFunc vars = (case vars
+							 of [v1,v2] => makeRefCellInside(env, cxt, span, mapDim, refCellInfo, v2, v1)
+							  | _ => raise Fail "impossble got through type checker"
+						       (* end case*))
+							
+
 
 							(*Make meshPos and the reference cell*)
+
+							
 
 
 							 
