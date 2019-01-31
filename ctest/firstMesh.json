@@ -43,8 +43,8 @@
 	    },
 	    {
 		"name" : "shape",
-		"type" : "int[1]",
-		"value" : [1]
+		"type" : "int[2]",
+		"value" : [2,2]
 	    },
 	    {
 		"name" : "degree",

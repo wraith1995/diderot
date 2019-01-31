@@ -345,7 +345,7 @@ fun convertToTree(t as AND{dims, shape, elems, ...}, convert, convertFunc) =
     let
      val listRep = List.map convert (toList t)
      val parseOrder = List.rev shape
-     fun groupLists(n, [], lists) = lists
+     fun groupLists(n, [], lists) = List.rev lists
        | groupLists (n, list, lists) =
 	 groupLists(n, List.drop(list, n), convertFunc(List.take(list,n), n)::lists)
 	 handle exn => raise exn
