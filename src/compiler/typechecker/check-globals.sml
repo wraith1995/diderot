@@ -605,6 +605,61 @@ structure CheckGlobals : sig
 			 end)
 		   end
 
+	       fun makeNewtonInversesBody(env, cxt, span, dim, refCellInfo, posExpr, cellExpr, meshExpr, insideFunction) =
+		   let
+		    val insideVec = Ty.vecTy dim
+		    val dimConst = Ty.DimConst(dim)
+		    val inf = Ty.DiffConst(NONE)
+		    val transformFieldTy = Ty.T_Field({diff=inf, dim = dimConst, shape=Ty.Shape([dimConst])})
+		    val dTransformFieldTy = Ty.T_Field({diff=inf, dim = dimConst, shape=Ty.Shape([dimConst, dimConst])})
+		    val FemData.RefCellData({ty=refCellClass, eps}) = refCellInfo
+		    val epsExpr = AST.E_Lit(Literal.Real(eps))
+		    val startPosition = (case refCellClass
+					  of FemData.KCube => AST.E_Tensor(List.tabulate(dim, fn x => AST.E_Lit(Literal.Real(RealLit.zero))), insideVec)
+					   | FemData.KSimplex =>
+					     let
+					      val digits = List.tabulate(100, fn x => 3)
+					      val exp = IntInf.fromInt (~1)
+					      val third = RealLit.fromDigits({isNeg = false, digits = digits, exp = exp})
+					     in
+					      AST.E_Tensor(List.tabulate(dim, fn x => AST.E_Lit(Literal.Real(third))), insideVec)
+					     end
+					(* end case*))
+		    val invVar = if dim = 2
+				 then BV.fn_inv2_f
+				 else if dim = 3
+				 then BV.fn_inv3_f
+				 else raise Fail "invalid dim;" (*TODO: this resgtriction should be left as I should be able to do arbitrary inverses of a matrix*)
+		    (*formulate this all into one single prim thing*)
+		    val (dFieldTy, Ty.T_Fun(fieldDomTy, fieldRngTy)) = TU.instantiate(Var.typeOf BV.op_Dotimes)
+		    val (invDFieldTy, Ty.T_Fun(invFieldDomTy, invFieldRngTy)) = TU.instantiate(Var.typeOf invVar)
+		    val (dotMeta, Ty.T_Fun(dotDomTy, dotRngTy)) = TU.instantiate(Var.typeOf BV.op_inner_ff)
+		    (*probe1, probe2, dot*)
+		    val (probeMeta, Ty.T_Fun(probeDom, probeRng)) = TU.instantiate(Var.typeOf BV.op_Probe)
+		    val newPosVar = Var.new(Atom.atom "pos", span, AST.LocalVar, insideVec)
+		    val newPosVarExpr = AST.E_Var((newPosVar, span))
+		    val initPos = AST.S_Assign((newPosVar, span), startPosition)
+		    val getCellExpr = AST.E_ExtractFemItem(cellExpr, Ty.T_Int, CellIndex)
+							  
+		    val transformField = AST.E_FemField(meshExpr, meshExpr, SOME(getCellExpr), transformFieldTy, NONE)
+		    val dTransformField = AST.E_Prim(BV.op_Dotimes, dFieldTy, [transformField], fieldRngTy)
+		    (*ugg order them*)
+		    val _ = ListPair.map Unify.matchType (List.rev (fieldRngTy::fieldDomTy), List.rev [dTransformFieldTy,transformField] )
+		    val invDTransformField = AST.E_Prim(invVar, invDFieldTy, [dTransformField], invFieldRngTy)
+		    val _ = ListPair.map Unify.matchType (List.rev (invFieldRngTy::invFieldDomTy), List.rev [dTransformFieldTy, transformField])
+		    val dotFields = AST.E_Prim(BV.op_inner_ff, dotMeta, [invDTransformField, transformField], dotRngTy)
+		    val _ = ListPair.map Unify.matchType (List.rev (dotRngTy::dotDomTy), List.rev [transformField, dTransformFieldTy, transformField])
+		    val probeField = AST.E_Prim(BV.op_Probe, probeMeta, [dotFields, posExpr], probeRng)
+		    val _ = ListPair.map Unify.matchType (List.rev (probeRng::probeDom), List.rev [insideVec, transformField, insideVec])
+		    val updateVar = Var.new(Atom.atom "update", span, AST.LocalVar, insideVec)
+		    val updateStm = AST.S_Assign((updateVar, span), probeField)
+		    val
+					       
+									
+		   in
+		    
+		   end
+
 	       fun makeDescendentFemTypes(env, femType) =
 		   let
 		    val constants = []
@@ -630,7 +685,7 @@ structure CheckGlobals : sig
 			  val refCellData = FT.RefCell(m)
 			  val refCellName = FT.envNameOf refCellData
 			  val refCellTy = Ty.T_Fem(refCellData, SOME(meshName))
-
+			  val refCellInfo = FT.refCell m
 
 			  val transformDofs = Atom.atom "transformDofs"
 			  val transformDofsTy = Ty.T_Tensor(Ty.Shape((List.map Ty.DimConst shape))) (*careful*)
@@ -671,7 +726,7 @@ structure CheckGlobals : sig
 
 			  val env' = Env.insertNamedType(env, cxt, cellName, cellTy, constants, methods, transformFuncs)
 
-			  val refCellInfo = FT.refCell m
+			  
 			  val refCellInside = Atom.atom (FemName.refCellIsInside)
 			  val refCellInsideTy = Ty.T_Fun([refCellTy, dimSizeVec], Ty.T_Bool)
 			  fun makeRefCellInsideFunc vars = (case vars
