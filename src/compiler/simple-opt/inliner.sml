@@ -24,7 +24,7 @@ structure Inliner : sig
    *)
     fun decCnt funcTbl = let
           val remove = F.Tbl.remove funcTbl
-          fun decCnt' f = if (F.decCnt f <= 0)
+          fun decCnt' f = if (F.decCnt f <= 0) (*QUESTION: Why is this < 0?*)
                 then let
                   fun deleteBlk (S.Block{code, ...}) = List.app deleteStm code
                   and deleteStm (S.S_Var(_, NONE)) = ()

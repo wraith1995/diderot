@@ -205,6 +205,7 @@ fun tryAll x = (Option.valOf o Option.join) (List.find Option.isSome (List.map (
 fun optionInt x = oE (IntInf.toInt o JU.asIntInf) x
 fun optionListInt x = oE (JU.arrayMap (IntInf.toInt o JU.asIntInf)) x
 fun optionRealLit x = oE ( realToRealLit o JU.asNumber) x
+fun optionBool x = oE (JU.asBool) x
 					     
 val bogusExp = AST.E_Lit(L.Int 0)
 val bogusExpTy = (Ty.T_Error, bogusExp)
@@ -423,9 +424,23 @@ fun paresRefCell(env, cxt, refCellJson, dim, machinePres) =
 		  | _ => makeParseError(err,cxt, "epsilon", "field doesn't exist or isn't a real number.",  realToRealLit machinePres))
      val cellClass = Option.mapPartial (oE JU.asString) tyOption
      val cell = Option.mapPartial FemData.fromStr cellClass
+
+     val newtonParamsJson = (findField "newtonParams") refCellJson
+     val newtonParamsDict = (case newtonParamsJson
+			      of NONE => {contraction = true, itters = 16, killAfterTol = true, newtonTol = realToRealLit 0.001}
+			       | SOME(json) =>
+				 let
+				  val contraction = Option.getOpt(Option.mapPartial (optionBool) (findField "contraction" json), true)
+				  val itters = Option.getOpt(Option.mapPartial (optionInt) (findField "itters" json), 16)
+				  val killAfterTol = Option.getOpt(Option.mapPartial (optionBool) (findField "killAfterTol" json), true)
+				  val newtonTol = Option.getOpt(Option.mapPartial (optionRealLit) (findField "newtonTol" json), realToRealLit 0.001)
+				 in
+				  {contraction=contraction, itters=itters, killAfterTol=killAfterTol, newtonTol=newtonTol}
+				 end
+			    (*end case*))
     in
      (case cell
-       of SOME(cellVal) => SOME(FemData.RefCellData({ty=cellVal, eps = eps}))
+       of SOME(cellVal) => SOME(FemData.RefCellData({ty=cellVal, eps = eps, newtonControl = newtonParamsDict}))
 	| NONE => makeParseError(err, cxt, "cell:type", "field doesn't exsist, isn't a string, or string is stupid", NONE)
      (*end case*))
     end

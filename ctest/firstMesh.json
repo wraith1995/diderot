@@ -30,7 +30,13 @@
 		  },
 	"refCell" : {
 	    "type" : "simplex",
-	    "epsilon" : 0.0000001
+	    "epsilon" : 0.0000001,
+	    "newtonParams" : {
+		"contraction" : true,
+		"itters" : 17,
+		"killAfterTol" : false,
+		"newtonTol" : 0.0001
+	    }
 	}
     },
     "space" : {
