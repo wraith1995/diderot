@@ -549,10 +549,21 @@ structure CheckGlobals : sig
 		    AST.E_Prim(var, tyArgs, exprs', result)
 		   end
 
+	       fun makePrim'(var, args, argTys, resultTy) =
+		   let
+		    val (tyArgs, Ty.T_Fun(domTy, rngTy)) = TU.instantiate(Var.typeOf var)
+		    val args' = Option.valOf(Unify.matchArgs(domTy, args, argTys))
+		    val _ = Unify.matchType(resultTy, rngTy)
+		   in
+		    AST.E_Prim(var, tyArgs, args', rngTy)
+		   end
+	       fun makeAnd v1 v2 = makePrim'(BV.and_b, [v1,v2], [Ty.T_Bool, Ty.T_Bool], Ty.T_Bool)
+	       fun makeAnds([v1,v2]) = makeAnd v1 v2
+		 | makeAnds (v::vs) = makeAnd v (makeAnds vs)
 	       fun makeRefCellInside(env, cxt, span, dim, refCellInfo, posVar, meshVar) =
 		   let
 		    val insideVec = Ty.vecTy dim
-		    val FemData.RefCellData({ty=refCellClass, eps}) = refCellInfo
+		    val FemData.RefCellData({ty=refCellClass, eps,...}) = refCellInfo
 		    val epsExpr = AST.E_Lit(Literal.Real(eps))
 		    val one = AST.E_Lit(Literal.Real(RealLit.one))
 		    val onePlusEps = one (*TODO: FIX EPSILON*)
@@ -566,14 +577,8 @@ structure CheckGlobals : sig
 			end
 		    fun subs vecExpr i = AST.E_Slice(vecExpr, [SOME(AST.E_Lit(Literal.intLit i))], Ty.realTy)
 
-		    fun makeAnd v1 v2 = AST.E_Andalso(v1,v2)
-			(* let *)
-			(*  val (tyArgs, Ty.T_Fun(domTy, rngTy)) = TU.instantiate(Var.typeOf BV.op_and) *)
-			(* in *)
-			(*  makePrim(AST.E_Prim(BV.op_and, tyArgs, [v1,v2], Ty.T_Bool), [Ty.T_Bool, Ty.T_Bool]) *)
-			(* end *)
-		    fun makeAnds([v1,v2]) = makeAnd v1 v2
-		      | makeAnds (v::vs) = makeAnd v (makeAnds vs)
+
+		    
 					  
 		   in
 		    (case refCellClass
@@ -605,21 +610,25 @@ structure CheckGlobals : sig
 			 end)
 		   end
 
-	       fun makeNewtonInversesBody(env, cxt, span, dim, refCellInfo, posExpr, cellExpr, meshExpr, insideFunction) =
+	       fun makeNewtonInversesBody(env, cxt, span, refCellClass, meshData, newtonTol, newtonAttempts, contraction, killAfterTol, posExpr, cellIntExpr, meshExpr, insideFunction) =
 		   let
+		    (*Setup useful types*)
+		    val dim = FemData.meshDim meshData
 		    val insideVec = Ty.vecTy dim
+		    val insideMat = Ty.matTy dim
 		    val dimConst = Ty.DimConst(dim)
 		    val inf = Ty.DiffConst(NONE)
 		    val transformFieldTy = Ty.T_Field({diff=inf, dim = dimConst, shape=Ty.Shape([dimConst])})
-		    val dTransformFieldTy = Ty.T_Field({diff=inf, dim = dimConst, shape=Ty.Shape([dimConst, dimConst])})
-		    val FemData.RefCellData({ty=refCellClass, eps}) = refCellInfo
-		    val epsExpr = AST.E_Lit(Literal.Real(eps))
+		    val dTransformFieldTy = Ty.T_Field({diff=inf, dim = dimConst, shape=Ty.Shape([dimConst, dimConst])}) 
+
+		    (*setup useful vars and expressions*)
+		    val tolExpr = newtonTol
 		    val startPosition = (case refCellClass
-					  of FemData.KCube => AST.E_Tensor(List.tabulate(dim, fn x => AST.E_Lit(Literal.Real(RealLit.zero))), insideVec)
+					  of FemData.KCube => AST.E_Tensor(List.tabulate(dim, fn x => AST.E_Lit(Literal.Real(RealLit.zero false))), insideVec)
 					   | FemData.KSimplex =>
 					     let
 					      val digits = List.tabulate(100, fn x => 3)
-					      val exp = IntInf.fromInt (~1)
+					      val exp = IntInf.fromInt (1)
 					      val third = RealLit.fromDigits({isNeg = false, digits = digits, exp = exp})
 					     in
 					      AST.E_Tensor(List.tabulate(dim, fn x => AST.E_Lit(Literal.Real(third))), insideVec)
@@ -630,34 +639,86 @@ structure CheckGlobals : sig
 				 else if dim = 3
 				 then BV.fn_inv3_f
 				 else raise Fail "invalid dim;" (*TODO: this resgtriction should be left as I should be able to do arbitrary inverses of a matrix*)
-		    (*formulate this all into one single prim thing*)
-		    val (dFieldTy, Ty.T_Fun(fieldDomTy, fieldRngTy)) = TU.instantiate(Var.typeOf BV.op_Dotimes)
-		    val (invDFieldTy, Ty.T_Fun(invFieldDomTy, invFieldRngTy)) = TU.instantiate(Var.typeOf invVar)
-		    val (dotMeta, Ty.T_Fun(dotDomTy, dotRngTy)) = TU.instantiate(Var.typeOf BV.op_inner_ff)
-		    (*probe1, probe2, dot*)
-		    val (probeMeta, Ty.T_Fun(probeDom, probeRng)) = TU.instantiate(Var.typeOf BV.op_Probe)
-		    val newPosVar = Var.new(Atom.atom "pos", span, AST.LocalVar, insideVec)
+
+		    val newPosVar = Var.new(Atom.atom "xn", span, AST.LocalVar, insideVec)
 		    val newPosVarExpr = AST.E_Var((newPosVar, span))
 		    val initPos = AST.S_Assign((newPosVar, span), startPosition)
-		    val getCellExpr = AST.E_ExtractFemItem(cellExpr, Ty.T_Int, CellIndex)
-							  
-		    val transformField = AST.E_FemField(meshExpr, meshExpr, SOME(getCellExpr), transformFieldTy, NONE)
-		    val dTransformField = AST.E_Prim(BV.op_Dotimes, dFieldTy, [transformField], fieldRngTy)
-		    (*ugg order them*)
-		    val _ = ListPair.map Unify.matchType (List.rev (fieldRngTy::fieldDomTy), List.rev [dTransformFieldTy,transformField] )
-		    val invDTransformField = AST.E_Prim(invVar, invDFieldTy, [dTransformField], invFieldRngTy)
-		    val _ = ListPair.map Unify.matchType (List.rev (invFieldRngTy::invFieldDomTy), List.rev [dTransformFieldTy, transformField])
-		    val dotFields = AST.E_Prim(BV.op_inner_ff, dotMeta, [invDTransformField, transformField], dotRngTy)
-		    val _ = ListPair.map Unify.matchType (List.rev (dotRngTy::dotDomTy), List.rev [transformField, dTransformFieldTy, transformField])
-		    val probeField = AST.E_Prim(BV.op_Probe, probeMeta, [dotFields, posExpr], probeRng)
-		    val _ = ListPair.map Unify.matchType (List.rev (probeRng::probeDom), List.rev [insideVec, transformField, insideVec])
-		    val updateVar = Var.new(Atom.atom "update", span, AST.LocalVar, insideVec)
-		    val updateStm = AST.S_Assign((updateVar, span), probeField)
-		    val
-					       
-									
+		    val updateVar = Var.new(Atom.atom "delta", span, AST.LocalVar, insideVec)
+		    val itterVar = Var.new(Atom.atom "itter", span, AST.IterVar, Ty.T_Int)
+		    val itterRange = makePrim'(BV.range,
+					       [AST.E_Lit(Literal.intLit 0), newtonAttempts],
+					       [Ty.T_Int, Ty.T_Int], Ty.T_Sequence(Ty.T_Int, NONE)) (*TODO: shouldn't we put a SOME here.*)
+		    val itter = (itterVar, itterRange)
+					   
+
+		    (*TODO: should we use newton or contraction - if contraction, lift derivative out...*)
+		    val transformField = AST.E_FemField(meshExpr, meshExpr, SOME(cellIntExpr), transformFieldTy, FemOpt.Transform, NONE)
+		    val transformFieldModPos = makePrim'(BV.sub_ft, [transformField, posExpr], [transformFieldTy, insideVec], transformFieldTy)
+		    val dTransformField = makePrim'(BV.op_Dotimes,[transformField], [transformFieldTy], dTransformFieldTy)
+		    val invDTransformField = makePrim'(invVar, [dTransformField], [dTransformFieldTy], dTransformFieldTy)
+						      
+		    val deltaNorm = makePrim'(BV.op_norm_t, [AST.E_Var((updateVar, span))], [insideVec], Ty.realTy)
+		    val deltaNormTest = makePrim'(BV.gte_rr, [tolExpr, deltaNorm], [Ty.realTy, Ty.realTy], Ty.T_Bool)
+		    val insideTest = insideFunction([newPosVarExpr, meshExpr])
+		    (* val combinedTest = AST.Andalso(deltaNormTest, insideTest) (*note: we might want to combined them...... it might be better to do delta test then inside test????*) *)
+		    val succesReturn = AST.S_Return(newPosVarExpr) (*TODO: return the itterated thing*)
+		    val nans = makePrim'(BV.nan, [], [], insideVec) (*return nans to signal failure*)
+		    val failReturn = AST.S_Return(nans)
+		    val ifStm = if killAfterTol
+				then AST.S_IfThenElse(deltaNormTest, (*we might want to change this test to be this and that, rather than a nested if.*)
+						 AST.S_Block([AST.S_IfThenElse(insideTest,
+									       AST.S_Block([succesReturn]), (*converged and arrived*)
+									       AST.S_Block([failReturn]))]), (*converged and failed; somehow*)
+						 AST.S_Block([]))
+				else AST.S_IfThenElse(makeAnd deltaNormTest insideTest, AST.S_Block([succesReturn]), AST.S_Block([failReturn]))
+
+						
+		    val completeBody =
+			if contraction
+			then
+			 let
+			  val probeD = makePrim'(BV.op_probe, [invDTransformField, startPosition], [dTransformFieldTy, insideVec], insideMat)
+			  val matVar = Var.new(Atom.atom "A", span, AST.LocalVar, insideMat)
+			  val probeDAssign = AST.S_Assign((matVar,span), probeD)
+			  val dotFields = makePrim'(BV.op_inner_tf,  [AST.E_Var(matVar, span), transformFieldModPos], [insideMat, transformFieldTy], transformFieldTy)
+			  val probeUpdate = makePrim'(BV.op_probe, [dotFields, newPosVarExpr], [transformFieldTy, insideVec], insideVec)
+			  val updateDeltaStm = AST.S_Assign((updateVar, span), probeUpdate)
+			  val updateCurrentPosExpr = makePrim'(BV.sub_tt, [AST.E_Var(newPosVar,span), AST.E_Var(updateVar, span)], [insideVec, insideVec], insideVec)
+			  val updateCurrentPosStm = AST.S_Assign((newPosVar,span), updateCurrentPosExpr)
+
+			  val forLoop = AST.S_Foreach(itter, AST.S_Block([
+									 updateDeltaStm,
+									 updateCurrentPosStm,
+									 ifStm]))
+			 in
+			  AST.S_Block( [
+				      initPos,
+				      probeDAssign,
+				      forLoop,
+				      failReturn])
+			 end
+			else
+			 let
+			  val dotFields = makePrim'(BV.op_inner_ff,  [invDTransformField, transformFieldModPos], [dTransformFieldTy, transformFieldTy], transformFieldTy) 
+						   
+			  val probeUpdate = makePrim'(BV.op_probe, [dotFields, newPosVarExpr], [transformFieldTy, insideVec], insideVec) (**)
+			  val updateDeltaStm = AST.S_Assign((updateVar, span), probeUpdate)
+			  val updateCurrentPosExpr = makePrim'(BV.sub_tt, [AST.E_Var(newPosVar,span), AST.E_Var(updateVar, span)], [insideVec, insideVec], insideVec)
+			  val updateCurrentPosStm = AST.S_Assign((newPosVar,span), updateCurrentPosExpr)
+
+			  val forLoop = AST.S_Foreach(itter, AST.S_Block( [
+									 updateDeltaStm,
+									 updateCurrentPosStm,
+									 ifStm]))
+			 in
+			  AST.S_Block([
+				      initPos,
+				      forLoop,
+				      failReturn])
+			 end
+			   
 		   in
-		    
+		    completeBody
 		   end
 
 	       fun makeDescendentFemTypes(env, femType) =
@@ -673,6 +734,7 @@ structure CheckGlobals : sig
 		      of FT.Mesh(m) =>
 			 let
 			  val meshName = FT.nameOf femType
+			  val meshTy = Ty.T_Fem(femType, NONE)
 			  val mapDim = FT.meshDim m
 			  val dimSizeVec = Ty.vecTy mapDim
 			  val meshMapDim = FT.meshMapDim m
@@ -721,31 +783,77 @@ structure CheckGlobals : sig
 
 
 
-			  val transformFuncs = [(transformDofs, makeTransformDofs, transformsDofsFunTy), (transform, makeTransformFieldFunc, transformFieldFunc)]
-			  (* TODO: The naming in this area of the compiler is really inconsistent*)
-
-			  val env' = Env.insertNamedType(env, cxt, cellName, cellTy, constants, methods, transformFuncs)
-
-			  
 			  val refCellInside = Atom.atom (FemName.refCellIsInside)
 			  val refCellInsideTy = Ty.T_Fun([refCellTy, dimSizeVec], Ty.T_Bool)
 			  fun makeRefCellInsideFunc vars = (case vars
-							 of [v1,v2] => makeRefCellInside(env, cxt, span, mapDim, refCellInfo, v2, v1)
-							  | _ => raise Fail "impossble got through type checker"
+							     of [v1,v2] => makeRefCellInside(env, cxt, span, mapDim, refCellInfo, v2, v1)
+							      | _ => raise Fail "impossble got through type checker"
 							   (* end case*))
+
+			  fun mkVar (var) = AST.E_Var(var,span)
+			  val (hiddenFuncAtom, hiddenFuncVar, newtonFunc) = let (*TODO: USE let a lot here too refactor this code... god this code is ugly*)
+			   val hiddenFuncAtom = Atom.atom "(newton)"
+
+
+			   val FemData.RefCellData({ty=refCellClass, eps, newtonControl}) = refCellInfo (*move this outside? Eh.*)
+			   val {contraction, itters, newtonTol, killAfterTol} = newtonControl
+			   val meshData = m
+			   val posTy = Ty.vecTy mapDim
+			   val newtonTol = AST.E_Lit(Literal.Real(newtonTol)) (*TODO fix me with ref cell info*)
+			   val newtonAttempts = AST.E_Lit(Literal.intLit itters) (*TODO fix me with ref cell info*)
+
+
+			   val posParam = Var.new (Atom.atom "pos", span, AST.FunParam, posTy)
+			   val cellIntParam = Var.new (Atom.atom "cellInt", span, AST.FunParam, Ty.T_Int)
+			   val meshParam = Var.new (Atom.atom "mesh", span, AST.FunParam, meshTy)
+
+			   val funTy = Ty.T_Fun([Ty.vecTy mapDim, Ty.T_Int, meshTy], posTy)
+			   val hiddenFuncVar = Var.new (hiddenFuncAtom, span, AST.FunVar, funTy)
+						       
+			   val posExpr = mkVar posParam
+			   val cellIntExpr = mkVar cellIntParam
+			   val meshExpr = mkVar meshParam
+						
+			   val insideFunc = makeRefCellInsideFunc
+
+			   val body = makeNewtonInversesBody(env, cxt, span, refCellClass, meshData, newtonTol, newtonAttempts, killAfterTol, contraction, posExpr, cellIntExpr, meshExpr, insideFunc)
+			   val newtonFunc = AST.D_Func(hiddenFuncVar, [posParam, cellIntParam, meshParam], body)
+			  in
+			   (hiddenFuncAtom, hiddenFuncVar, newtonFunc)
+			  end
+
+			  val invTransformSpec =
+			      let
+			       val invTransformField = Atom.atom FemName.invTransform
+			       val invTransformFieldFuncTy = Ty.T_Fun([cellTy],transformFieldTy)
+			       fun makeInvTransformFieldFunc vars = (case vars
+								      of [v] =>
+									 let
+									  val getMesh = AST.E_ExtractFem(v, femType)
+									  val getCellInt = AST.E_ExtractFemItem(v, Ty.T_Int, (FemOpt.CellIndex, FT.MeshCell(m)))
+									 in
+									  AST.E_FemField(getMesh, getMesh, SOME(getCellInt), transformFieldTy, FemOpt.InvTransform, SOME(hiddenFuncVar, span))
+									 end
+								       | _ => raise Fail "impossible for this to be get past typechecker"
+								    )
+			      in
+			       (invTransformField, makeInvTransformFieldFunc, invTransformFieldFuncTy)
+			      end
+
+			  val transformFuncs = [(transformDofs, makeTransformDofs, transformsDofsFunTy), (transform, makeTransformFieldFunc, transformFieldFunc), invTransformSpec]
+			  val cellMethods = [(hiddenFuncAtom, hiddenFuncVar)]
+			  (* TODO: The naming in this area of the compiler is really inconsistent*)
+
+			  val env' = Env.insertNamedType(env, cxt, cellName, cellTy, constants, cellMethods, transformFuncs)
+
+			  
+			 
 
 			  val refCellTransformFuncs = [(refCellInside, makeRefCellInsideFunc, refCellInsideTy)]
 			  val env'' = Env.insertNamedType(env', cxt, refCellName, refCellTy, constants, methods, refCellTransformFuncs)			
-
-
-							(*Make meshPos and the reference cell*)
-
-							
-
-
 							 
 			 in
-			  env''
+			  (env'', [newtonFunc])
 			 end
 		       | FT.Func(f) =>
 			 let
@@ -804,10 +912,10 @@ structure CheckGlobals : sig
 			  val transformFuncs = [(functionDofs, makeFunctionDofs, functionDofsFunTy), (refField, makeRefFieldFunc, refFieldFunc)]
 			  val env' = Env.insertNamedType(env, cxt, cellName, cellTy, constants, methods, transformFuncs)
 			 in
-			  env'
+			  (env', [])
 			 end
 
-		       | _ => env
+		       | _ => (env, [])
 		    (* end case *))
 		   end
 
@@ -825,7 +933,7 @@ structure CheckGlobals : sig
 		    val env' = Option.map makeDescendentFemTypes argsOption
 		   in
 		    (case env'
-		      of SOME(env'') => (OTHERS(methods), env'')
+		      of SOME(env'', methods') => (OTHERS(List.@(methods', methods)), env'')
 		       | NONE => (ERROR, env)
 		    (* end case *))
 		    

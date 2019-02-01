@@ -3,8 +3,8 @@ Gordon meeting: 3:30
 1. . vs $ vs. something else $ -> Expression $
 -----ASK John abouts this
 2. My bug - purity would fix it - mutability is evil.
-
-Talk to JOHN: locality, data structure, $ idea, ein as a functor
+3. Thoughts on embedding newton's method - commutation - what if someone wanted to change it, diff calc better----still call solve implict but interface with solver.
+Talk to JOHN: locality, data structure, $ idea, ein as a functor, basis function evaluation
 
 
 
@@ -17,23 +17,28 @@ TODO functionality:
 3.5 mesh pos methods and ideas: basics
 4. more advanced cell search (connectivity, locality, geometry) and more mesh file stuff: c++ code inserts, c code call backs
 5. other meta data attaching and optional mesh cell verticies mechanisms
+---paper
 6. Better basis function evaluation, tensor product basises, and affine function thoughts
 7. Nrrd interface and better python interface creation.
 8. Field parsing: c.t, field variables in a function, or field arguments to a function or c$T (binding strength of .) -- diffOp diff expression and suffix are out of order -- move selct suffix into diffExpr optioin - atomixExpr (SR)* 
 9. Expliration: newton paramter tuning live, varying levels of use of C code insert or call backs vs compiler figures it out
 10. Debugging logs via printing and basis function evaluation conuts -- find flags for this stuff.
 11. Border control -- dumb thing.
+12. Raise errors that occur
 
 Code notes:
--Check-globals, check-type files, check-expr are kind of messy - need to be cleabed and better error messages - lots of options need to be checed to generated err cxt messesages
+-Check-globals, check-type files, check-expr are kind of messy - need to be cleabed and better errormessages - lots of options need to be checed to generated err cxt messesages
+---and needs to be inside.
 -Fem interface needs checkers/validations
 -check-ir parts need components
 -fem-name name needs to be more consistently used
--FIELDS will be done by having functio nattached to both - chain rule means that just having it in the inverse transform will be enough!!!!
+-FIELDS will be done by having functions attached to both and analyzing comp to make a call, a probe, and so forth.
 -debug section via insert prints would be useful.
 --try to figure that out
 -TEST with affine and something else.
 --add itter based on affine - analyze that somehow...
+
+x_{n+1} = x_{n} - DF(x_{o or n})^{-1}[F(x_{n}) - pos]
 
 
 

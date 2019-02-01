@@ -11,7 +11,11 @@
 structure FemData : sig
 	   datatype refCellType = KSimplex | KCube
 	   val fromStr : string -> refCellType option
-	   datatype refCell = RefCellData of {ty : refCellType, eps : RealLit.t}
+	   datatype refCell = RefCellData of {ty : refCellType,
+					      eps : RealLit.t,
+					      newtonControl :
+					      {contraction : bool, itters: int, newtonTol : RealLit.t, killAfterTol : bool}}
+					     
 	   type mesh
 	   val meshDim : mesh -> int
 	   val meshBasis : mesh -> BasisDataArray.t
@@ -80,7 +84,10 @@ fun fromStr(str) = if str = "simplex"
 		   then SOME(KCube)
 		   else NONE
 			  
-datatype refCell = RefCellData of {ty : refCellType, eps : RealLit.t}
+datatype refCell = RefCellData of {ty : refCellType,
+				   eps : RealLit.t,
+				   newtonControl :
+				   {contraction : bool, itters: int, newtonTol : RealLit.t, killAfterTol : bool}}
 
 fun getCellType(RefCellData{ty,...}) = ty
 fun getCellEps(RefCellData{eps,...}) = eps
