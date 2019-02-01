@@ -1,9 +1,59 @@
-CLEAN UP AREAS:
--check-globals is a mess - should take fem part else where
--parsing of constants and check type file is a mess
--ast use of constants
--fem data interface
--cxx generation of things
+Gordon meeting: 3:30
+0. Paper intro write
+1. . vs $ vs. something else $ -> Expression $
+-----ASK John abouts this
+2. My bug - purity would fix it - mutability is evil.
+
+Talk to JOHN: locality, data structure, $ idea, ein as a functor
+
+
+
+TODO functionality:
+0. newton call
+1. Inverse transform
+2. transfrmed ref
+2.5 mesh pos basics
+3. field
+3.5 mesh pos methods and ideas: basics
+4. more advanced cell search (connectivity, locality, geometry) and more mesh file stuff: c++ code inserts, c code call backs
+5. other meta data attaching and optional mesh cell verticies mechanisms
+6. Better basis function evaluation, tensor product basises, and affine function thoughts
+7. Nrrd interface and better python interface creation.
+8. Field parsing: c.t, field variables in a function, or field arguments to a function or c$T (binding strength of .) -- diffOp diff expression and suffix are out of order -- move selct suffix into diffExpr optioin - atomixExpr (SR)* 
+9. Expliration: newton paramter tuning live, varying levels of use of C code insert or call backs vs compiler figures it out
+10. Debugging logs via printing and basis function evaluation conuts -- find flags for this stuff.
+11. Border control -- dumb thing.
+
+Code notes:
+-Check-globals, check-type files, check-expr are kind of messy - need to be cleabed and better error messages - lots of options need to be checed to generated err cxt messesages
+-Fem interface needs checkers/validations
+-check-ir parts need components
+-fem-name name needs to be more consistently used
+-FIELDS will be done by having functio nattached to both - chain rule means that just having it in the inverse transform will be enough!!!!
+-debug section via insert prints would be useful.
+--try to figure that out
+-TEST with affine and something else.
+--add itter based on affine - analyze that somehow...
+
+
+
+
+
+Current:
+Push on newton function call with regard to A^{-1} check and how that is a single itteration.
+---make sure to do newton for inverse function right -- currently is wrong
+---make sure to set up the function in a nice manner with useful prim setups
+-FIX EIN's function derivative: https://math.stackexchange.com/questions/96265/differentiating-an-inner-product
+--Push down
+
+
+
+
+
+
+
+
+
 
 
 Somehwere in here the namespace needs to be cleaned:
