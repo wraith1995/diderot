@@ -251,7 +251,51 @@ structure Derivative : sig
             | E.Field _ => NONE
             | E.Lift _ => SOME zero
             | E.Conv(v, alpha, h, d2) => SOME(E.Conv(v, alpha, h, d2@dx))
-	    | E.Fem((E.Plain(bda, n)), id1, id2, id3, alpha, dxes)  => SOME(E.Fem(E.Plain( BasisDataArray.D(bda), n), id1, id2, id3, alpha, dxes@dx))
+	    | E.Fem((E.Plain(bda, n, f)), id1, id2, id3, alpha, dxes)  => SOME(E.Fem(E.Plain( BasisDataArray.D(bda), n, f), id1, id2, id3, alpha, dxes@dx))
+	    | E.Fem((E.Invert(bda, n, f)), id1, id2, id3, [mu1], [])  =>
+	      let
+	       (*QUESTION: What to do about 1D? THIS CODE fucks shit up*)
+
+	       fun fact 0 = 1
+		 | fact 1 = 1
+		 | fact n = n * ( fact (n-1))
+				  
+	       val mu2 = List.hd dx
+	       val dx' = List.tl dx
+	       fun probeAtIndex(mu1, mu2) = E.Fem(E.Plain( BasisDataArray.D(bda), n, SOME(f)), id1, id2, id3, [mu1], [mu2])
+	       val dim = BasisDataArray.domainDim bda
+	       val _ = if dim <> 2 andalso dim <> 3
+		       then raise Fail "One d and higher than 3d fields not yet supported"
+		       else ()
+	       val sumStart = sumX
+	       val sumItter = List.tabulate(dim, fn x => x +  sumStart + 1)
+	       val sumMus = List.map E.V sumItter
+	       val sumRanges = List.map (fn x => (x, 0, dim - 1 )) sumItter (*QUESTION: dim - 1correct?*)
+	       (*get mesh and get the dim*)
+	       val accRanges = List.tabulate(dim, fn x => E.C x)
+
+	       fun makeEps([a,b]) = E.Eps2(a,b)
+		 | makeEps([a,b,c]) = E.Epsilon(a,b,c)
+	       val eps = makeEps sumMus
+	       val detAcces = List.map probeAtIndex (ListPair.zip(accRanges, sumMus))
+	       val det = E.Op2(E.Div, E.Sum(sumRanges, E.Opn(E.Prod, eps::detAcces)), E.Const(fact dim))
+	       (* fix sum indecies*)
+	       val sumStartAdj = sumX + dim
+	       val adjSumItter1 = List.tabulate(dim - 1, fn x => x + sumStartAdj + 1)
+	       val adjSumItter2 = List.tabulate(dim - 1, fn x => x + sumStartAdj + dim + 1)
+	       val adjSumMus1 = List.map E.V adjSumItter1
+	       val adjSumMus2 = List.map E.V adjSumItter2
+	       val adjSumRanges = List.map (fn x => (x, 0, dim - 1)) (List.@(adjSumItter1, adjSumItter2))
+	       val finalSumX = sumStartAdj + 2 * (dim - 1) (*TODO: fix me*)
+	       val eps1 = makeEps (List.@(adjSumMus1, [mu1]))
+	       val eps2 = makeEps (List.@(adjSumMus2, [mu2]))
+	       val adjAccess = List.map probeAtIndex (ListPair.zip(adjSumMus1, adjSumMus2))
+	       val adj = E.Op2(E.Div, E.Sum(adjSumRanges, E.Opn(E.Prod, eps1::eps2::adjAccess)), E.Const(fact (dim - 1)))
+
+	       val inv = E.Op2(E.Div, adj, det)
+	      in
+	       mkApply(E.Partial dx', inv, params, finalSumX)
+	      end
             | E.Partial _ => err("Apply of Partial")
             | E.Apply(E.Partial d2, e2) => SOME(E.Apply(E.Partial(dx@d2), e2))
             | E.Apply _ => err "Apply of non-Partial expression"

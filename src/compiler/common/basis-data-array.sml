@@ -25,6 +25,7 @@ structure BasisDataArray : sig
 	   val makeUniform : BasisData.t ArrayNd.ArrayNd * int -> t
 	   val makeVarSubset : BasisData.t ArrayNd.ArrayNd * int list -> t
 	   val shape : t -> int list
+	   val domainDim : t -> int
 
 	   val d : t -> t
 	   val D : t -> t
@@ -77,6 +78,7 @@ fun makeVarSubset(a1, vars) =
      Array(a1, meta)
     end      
 fun shape(Array(a1,_)) = ArrayNd.shape a1
+fun domainDim(Array(a1, meta)) = dim meta
 
 fun dervMeta({vars, dim, maxDegree, minDegree}) = {vars=vars, dim=dim, maxDegree=Int.max(0, maxDegree - 1), minDegree = Int.max(0, minDegree - 1)}
 

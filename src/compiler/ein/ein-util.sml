@@ -64,10 +64,25 @@ structure EinUtil : sig
                 | (E.Conv(fid1, alpha1, tid1, ix1), E.Conv(fid2, alpha2, tid2, ix2)) =>
                     (fid1 = fid2) andalso (tid1 = tid2) andalso
                     sameIndex (alpha1, alpha2) andalso sameIndex (ix1, ix2)
-		| (E.Fem(E.Plain(basis1,n1), cell1, index1, dof1, shape1, dxes1),E.Fem(E.Plain(basis2,n2), cell2, index2, dof2, shape2, dxes2)) =>
-		  (n1=n2) andalso (BasisDataArray.same ( basis1, basis2))
-		  andalso cell1=cell2 andalso index1=index2 andalso dof1=dof2
+		| (E.Fem(femEin1, cell1, index1, dof1, shape1, dxes1),E.Fem(femEin2, cell2, index2, dof2, shape2, dxes2)) =>
+		   cell1=cell2 andalso index1=index2 andalso dof1=dof2
 		  andalso sameIndex(shape1,shape2) andalso sameIndex(dxes1,dxes2)
+		  andalso
+		  (case (femEin1, femEin2)
+		    of (E.Plain(bda1,n1, SOME(s1)), E.Plain(bda2,n2, SOME(s2))) =>
+		       (n1=n2)
+		       andalso (BasisDataArray.same ( bda1, bda2))
+		       andalso Stamp.same(s1,s2)
+		    |  (E.Plain(bda1,n1, NONE), E.Plain(bda2,n2, NONE)) => 
+		       (n1=n2)
+		       andalso (BasisDataArray.same ( bda1, bda2))
+		    | (E.Invert(bda1,n1, s1), E.Invert(bda2,n2, s2)) =>
+		       (n1=n2)
+		       andalso (BasisDataArray.same ( bda1, bda2))
+		       andalso Stamp.same(s1,s2)
+		    | _ => false
+		  (*end case*))
+		
 		| (E.Partial ix, E.Partial jx) => sameIndex(ix, jx)
                 | (E.Apply(e11, e12), E.Apply(e21, e22)) => same(e11, e21) andalso same(e12, e22)
                 | (E.Comp(e11, es1), E.Comp(e21, es2)) =>
@@ -176,9 +191,15 @@ structure EinUtil : sig
                 | E.Op3(E.Clamp, e1, e2, e3) => 0w173 + hash' e1 + hash' e2 + hash' e3
                 | E.Opn(E.Add, es) => 0w179 + iter es
                 | E.Opn(E.Prod, es) => 0w181 + iter es
-		| E.Fem(E.Plain(basis1,n1),_,_,_,shape1,dxes1) =>
-		  0w191 + (BasisDataArray.hash basis1)
-		  + hashAlpha shape1 + hashAlpha dxes1
+		| E.Fem(femEin1,_,_,_,shape1,dxes1) =>
+		  0w191 + hashAlpha shape1 + hashAlpha dxes1
+		  + (case femEin1
+		      of E.Plain(bda, n, SOME(s)) =>
+			 0w193 + BasisDataArray.hash bda + Stamp.hash s
+		       | E.Plain(bda, _, _) => 0w193 + BasisDataArray.hash bda
+		       | E.Invert(bda,_,s) => 0w197 + BasisDataArray.hash bda + Stamp.hash s
+		    (*end case*))
+		 
               (* end case *)
             end
         in
