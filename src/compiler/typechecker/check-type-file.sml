@@ -170,6 +170,7 @@ fun handleArray [] (x::xs) valueWrap json =
 fun oE f x = SOME(f x) handle exn => NONE
 fun realToRealLit x =
     let
+     val preProc  = String.implode o (List.map (fn #"~" => #"-" | a => a)) o String.explode
      fun mkReal ss = let
       val (isNeg, rest) = (case Substring.getc ss
 			    of SOME(#"-", r) => (true, r)
@@ -177,7 +178,10 @@ fun realToRealLit x =
 			     | _ => (false, ss)
 			  (* end case *))
       val (whole, rest) = Substring.splitl Char.isDigit rest
-      val rest = Substring.triml 1 rest (* remove "." *)
+      val rest = (case Substring.getc rest
+		   of SOME(#".", _) => Substring.triml 1 rest (* remove "." if it exists*)
+		    | _ => rest
+		  (* end case*))
       val (frac, rest) = Substring.splitl Char.isDigit rest
       val exp = if Substring.isEmpty rest
 		then 0
@@ -194,8 +198,11 @@ fun realToRealLit x =
          exp = exp
       })
      end
+		       
+     
+
     in
-     mkReal (Substring.extract (Real.toString x, 0, NONE))
+     mkReal (Substring.extract (preProc(Real.toString x), 0, NONE))
     end
 fun makeString x = oE (PT.E_Lit o Literal.String o JU.asString ) x
 fun makeBool x = oE (PT.E_Lit o Literal.Bool  o JU.asBool) x
@@ -431,13 +438,16 @@ fun paresRefCell(env, cxt, refCellJson, dim, machinePres) =
 			       | SOME(json) =>
 				 let
 				  val contraction = Option.getOpt(Option.mapPartial (optionBool) (findField "contraction" json), true)
+				  val _ = print("Contraction test:" ^ (Bool.toString contraction) ^ "\n")
 				  val itters = Option.getOpt(Option.mapPartial (optionInt) (findField "itters" json), 16)
 				  val killAfterTol = Option.getOpt(Option.mapPartial (optionBool) (findField "killAfterTol" json), true)
 				  val newtonTol = Option.getOpt(Option.mapPartial (optionRealLit) (findField "newtonTol" json), realToRealLit 0.001)
+
 				 in
 				  {contraction=contraction, itters=itters, killAfterTol=killAfterTol, newtonTol=newtonTol}
 				 end
 			    (*end case*))
+     val _ = print("epsilon: " ^ (RealLit.toString eps) ^ "\n");
     in
      (case cell
        of SOME(cellVal) => SOME(FemData.RefCellData({ty=cellVal, eps = eps, newtonControl = newtonParamsDict}))

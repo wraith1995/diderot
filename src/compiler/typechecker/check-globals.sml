@@ -566,7 +566,7 @@ structure CheckGlobals : sig
 		    val FemData.RefCellData({ty=refCellClass, eps,...}) = refCellInfo
 		    val epsExpr = AST.E_Lit(Literal.Real(eps))
 		    val one = AST.E_Lit(Literal.Real(RealLit.one))
-		    val onePlusEps = one (*TODO: FIX EPSILON*)
+		    val onePlusEps = one (*TODO: FIX EPSILON and add me*)
 		    val posVar' = posVar
 		    val meshVar' = meshVar
 		    fun greaterThanTest top bot =
@@ -659,7 +659,7 @@ structure CheckGlobals : sig
 						      
 		    val deltaNorm = makePrim'(BV.op_norm_t, [AST.E_Var((updateVar, span))], [insideVec], Ty.realTy)
 		    val deltaNormTest = makePrim'(BV.gte_rr, [tolExpr, deltaNorm], [Ty.realTy, Ty.realTy], Ty.T_Bool)
-		    val insideTest = insideFunction([newPosVarExpr, meshExpr])
+		    val insideTest = insideFunction([meshExpr, newPosVarExpr])
 		    (* val combinedTest = AST.Andalso(deltaNormTest, insideTest) (*note: we might want to combined them...... it might be better to do delta test then inside test????*) *)
 		    val succesReturn = AST.S_Return(newPosVarExpr) (*TODO: return the itterated thing*)
 		    val nans = makePrim'(BV.nan, [], [], insideVec) (*return nans to signal failure*)
@@ -671,12 +671,13 @@ structure CheckGlobals : sig
 									       AST.S_Block([failReturn]))]), (*converged and failed; somehow*)
 						 AST.S_Block([]))
 				else AST.S_IfThenElse(makeAnd deltaNormTest insideTest, AST.S_Block([succesReturn]), AST.S_Block([failReturn]))
-
+		    val _ = print("The contraction is:"^(Bool.toString contraction) ^ "\n")
 						
 		    val completeBody =
 			if contraction
 			then
 			 let
+			  val _ = print("Contraction yes\n")
 			  val probeD = makePrim'(BV.op_probe, [invDTransformField, startPosition], [dTransformFieldTy, insideVec], insideMat)
 			  val matVar = Var.new(Atom.atom "A", span, AST.LocalVar, insideMat)
 			  val probeDAssign = AST.S_Assign((matVar,span), probeD)
@@ -699,9 +700,10 @@ structure CheckGlobals : sig
 			 end
 			else
 			 let
-			  val dotFields = makePrim'(BV.op_inner_ff,  [invDTransformField, transformFieldModPos], [dTransformFieldTy, transformFieldTy], transformFieldTy) 
+			  val _ = print("Contraction not")
+			  val dotFields' = makePrim'(BV.op_inner_ff,  [invDTransformField, transformFieldModPos], [dTransformFieldTy, transformFieldTy], transformFieldTy) 
 						   
-			  val probeUpdate = makePrim'(BV.op_probe, [dotFields, newPosVarExpr], [transformFieldTy, insideVec], insideVec) (**)
+			  val probeUpdate = makePrim'(BV.op_probe, [dotFields', newPosVarExpr], [transformFieldTy, insideVec], insideVec) (**)
 			  val updateDeltaStm = AST.S_Assign((updateVar, span), probeUpdate)
 			  val updateCurrentPosExpr = makePrim'(BV.sub_tt, [AST.E_Var(newPosVar,span), AST.E_Var(updateVar, span)], [insideVec, insideVec], insideVec)
 			  val updateCurrentPosStm = AST.S_Assign((newPosVar,span), updateCurrentPosExpr)
@@ -797,6 +799,7 @@ structure CheckGlobals : sig
 
 			   val FemData.RefCellData({ty=refCellClass, eps, newtonControl}) = refCellInfo (*move this outside? Eh.*)
 			   val {contraction, itters, newtonTol, killAfterTol} = newtonControl
+			   val _ = print("The contraction is:"^(Bool.toString contraction) ^ "\n")
 			   val meshData = m
 			   val posTy = Ty.vecTy mapDim
 			   val newtonTol = AST.E_Lit(Literal.Real(newtonTol)) (*TODO fix me with ref cell info*)
@@ -816,7 +819,7 @@ structure CheckGlobals : sig
 						
 			   val insideFunc = makeRefCellInsideFunc
 
-			   val body = makeNewtonInversesBody(env, cxt, span, refCellClass, meshData, newtonTol, newtonAttempts, killAfterTol, contraction, posExpr, cellIntExpr, meshExpr, insideFunc)
+			   val body = makeNewtonInversesBody(env, cxt, span, refCellClass, meshData, newtonTol, newtonAttempts, contraction, killAfterTol, posExpr, cellIntExpr, meshExpr, insideFunc)
 			   val newtonFunc = AST.D_Func(hiddenFuncVar, [posParam, cellIntParam, meshParam], body)
 			  in
 			   (hiddenFuncAtom, hiddenFuncVar, newtonFunc)

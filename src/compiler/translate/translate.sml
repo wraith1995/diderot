@@ -493,6 +493,26 @@ print(concat["doVar (", SV.uniqueNameOf srcVar, ", ", IR.phiToString phi, ", _) 
 	      in
 	       [IR.ASSGN(lhs, IR.EINAPP(rator, [lookup env index, space', func']))]
 	      end
+	    | S.E_FemField(mesh, _, SOME(index), ty, FemOpt.InvTransform, SOME(func)) =>
+	      let
+	       val Ty.T_Fem(FemData.Mesh(m)) = SimpleVar.typeOf(mesh)
+	       val data = FemData.Mesh(m)
+	       val dim = FemData.meshDim m
+	       val spaceDim = FemData.meshMapDim m
+	       val func' = cvtFuncVar func
+	       val IR.FV{id=stamp,...} =  func'
+	       val femEin = E.Invert((FemData.meshBasis m), spaceDim, stamp)
+
+	       val rator = E.EIN{
+		    params = [E.INT, E.FEM(data), E.FEM(data)],
+		    index = [dim],
+		    body = E.Fem(femEin,0,1,2,[E.V(0)],[])
+		   }
+	       val mesh' = lookup env mesh
+	      in
+	       [IR.ASSGN(lhs, IR.EINAPP(rator, [lookup env index, mesh', mesh']))]
+
+	      end
             | S.E_FieldFn f => let
               (* Variable convention used
                *   - "alphas" tensor size

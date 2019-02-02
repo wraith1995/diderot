@@ -73,6 +73,7 @@ structure Ein =
     and conditional = Compare of compare * ein_exp * ein_exp | Var of param_id
 
     and femEin = Plain of BasisDataArray.t * int
+	       | Invert of BasisDataArray.t * int * Stamp.t (* hash corresponding to a function*)
 
     and ein_exp
     (* Basic terms *)
