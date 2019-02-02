@@ -33,7 +33,7 @@
 	    "epsilon" : 0.0000001,
 	    "newtonParams" : {
 		"contraction" : true,
-		"itters" : 17,
+		"itters" : 20,
 		"killAfterTol" : false,
 		"newtonTol" : 0.0001
 	    }
