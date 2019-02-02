@@ -201,7 +201,7 @@ structure FloatEin : sig
 
     fun transform (y, ein as Ein.EIN{body=E.Probe (E.Conv _, _), ...}, args) =
         [(y, IR.EINAPP(ein, args))]
-      | transform (y, ein as Ein.EIN{body=E.Probe (E.Fem(E.Plain(_,_), _, _, _, _, _), _), ...}, args) =
+      | transform (y, ein as Ein.EIN{body=E.Probe (E.Fem(E.Plain _, _, _, _, _, _), _), ...}, args) =
 	[(y, IR.EINAPP(ein, args))]
       | transform (y, ein as Ein.EIN{body=E.Sum(_, E.Probe (E.Conv _, _)), ...}, args) =
         [(y, IR.EINAPP(ein, args))]

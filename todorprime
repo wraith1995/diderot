@@ -27,6 +27,9 @@ TODO functionality:
 12. Raise errors that occur
 
 Code notes:
+---make plain have an option call to this so the translation into it can still make sense
+---carefully write it all out and do
+
 -Check-globals, check-type files, check-expr are kind of messy - need to be cleabed and better errormessages - lots of options need to be checed to generated err cxt messesages
 ---and needs to be inside.
 -Fem interface needs checkers/validations
