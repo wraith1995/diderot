@@ -794,7 +794,7 @@ structure CheckGlobals : sig
 
 			  fun mkVar (var) = AST.E_Var(var,span)
 			  val (hiddenFuncAtom, hiddenFuncVar, newtonFunc) = let (*TODO: USE let a lot here too refactor this code... god this code is ugly*)
-			   val hiddenFuncAtom = Atom.atom "(newton)"
+			   val hiddenFuncAtom = Atom.atom  (FemName.hiddenNewtonInverse)
 
 
 			   val FemData.RefCellData({ty=refCellClass, eps, newtonControl}) = refCellInfo (*move this outside? Eh.*)
@@ -864,8 +864,10 @@ structure CheckGlobals : sig
 			  val cellName = FT.envNameOf (FT.FuncCell(f))
 			  val SOME(space) = FT.dependencyOf femType
 			  val mesh = FT.meshOf femType
+
 			  val FT.Space(spaceData) = space
 			  val FT.Mesh(meshData) = mesh
+			  val meshCellEnvName = FT.envNameOf (FT.MeshCell(meshData))
 			  val mapDim = FT.meshDim meshData
 
 			  val funcCellData = FT.cellOf femType
@@ -905,14 +907,39 @@ structure CheckGlobals : sig
 							    val getFunc = AST.E_ExtractFem(v, femType)
 							    val getSpace = AST.E_ExtractFem(getFunc, space)
 							    val getCellInt= AST.E_ExtractFemItem(v, Ty.T_Int, (FemOpt.CellIndex, funcCellData))
+						
 							    val _ = print("Called!")
 							   in
 							    AST.E_FemField(getFunc,getSpace, SOME(getCellInt),refFieldTy,FO.RefField, NONE )
 							   end
 							 | _ => raise Fail "impossible argument to method got passed type checking")
 
+			  val transformRefFieldFunc = Atom.atom (FemName.trf)
+			  val transformFieldTy = Ty.T_Field({diff = inf, dim = dimConst, shape = Ty.Shape([dimConst])})
+			  fun makeTransformRefFieldFunc vars = (case vars
+								 of [v] =>
+								    let
+								     val getFunc = AST.E_ExtractFem(v, femType)
+								     val getSpace = AST.E_ExtractFem(getFunc, space)
+								     val getMesh = AST.E_ExtractFem(getSpace, mesh)
+								     val getCellInt= AST.E_ExtractFemItem(v, Ty.T_Int, (FemOpt.CellIndex, funcCellData))
+								     (*get mesh cell env, get the function, make the fields*)
+								     val SOME(meshCellEnv) = Env.findTypeEnv(env, meshCellEnvName)
+								     val SOME(newtonMethod) = TypeEnv.findMethod(meshCellEnv, Atom.atom FemName.hiddenNewtonInverse)
+								     (*get the basis*)
+								     val field1 = AST.E_FemField(getFunc,getSpace, SOME(getCellInt), refFieldTy, FO.RefField, NONE )
+								     val field2 = AST.E_FemField(getMesh, getMesh, SOME(getCellInt), transformFieldTy, FemOpt.InvTransform, NONE)
+								     val field = makePrim'(BV.comp, [field1, field2], [refFieldTy, transformFieldTy], refFieldTy)
+								    in
+								     field
+								    end
+								 | _ => raise Fail "impossible that this got past the typechecker"
+							     )
 
-			  val transformFuncs = [(functionDofs, makeFunctionDofs, functionDofsFunTy), (refField, makeRefFieldFunc, refFieldFunc)]
+
+			  val transformFuncs = [(functionDofs, makeFunctionDofs, functionDofsFunTy),
+						(refField, makeRefFieldFunc, refFieldFunc),
+						(transformRefFieldFunc, makeTransformRefFieldFunc, refFieldFunc)]
 			  val env' = Env.insertNamedType(env, cxt, cellName, cellTy, constants, methods, transformFuncs)
 			 in
 			  (env', [])

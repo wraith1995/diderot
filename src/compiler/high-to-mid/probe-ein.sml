@@ -399,7 +399,8 @@ structure ProbeEin : sig
 	     (case femEin
 	       of E.Plain(a,b, NONE) => (a,b, prePosVar, false)
 		| E.Plain(a,b, SOME(f))=> (a,b, callNewtonFunc(env, avail, BasisDataArray.domainDim a, f, prePosVar,indexVar, dofSrcVar), false) (*TODO: determine if this is a mesh or not...*)
-		| E.Invert(a,b, f) => (a,b, callNewtonFunc(env, avail, BasisDataArray.domainDim a, f , prePosVar,indexVar, dofSrcVar), true))
+		| E.Invert(a,b, SOME(f)) => (a,b, callNewtonFunc(env, avail, BasisDataArray.domainDim a, f , prePosVar,indexVar, dofSrcVar), true)
+		| E.Invert(a,b, NONE) => (a, b, prePosVar, true))
 	 val dim = BasisDataArray.domainDim basisArray
 
 	 val finRhs =

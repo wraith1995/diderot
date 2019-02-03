@@ -71,7 +71,7 @@ structure EinPP : sig
 	       val basisString = "Basis(" ^ ")"
 	       val alpha = if null coeffShape then "" else multiIndex2s coeffShape
                val beta = if null dxes then "" else "dx" ^ multiIndex2s dxes
-	       val s = Stamp.toString stamp
+	       val s = Option.getOpt(Option.map Stamp.toString stamp, "NoStamp")
 				  
 	      in
 	       concat ["femInvV(",s,", ", i2s cell,", ", i2s index,", ", i2s dofs,")", alpha,  "⊛", basisString, beta]
