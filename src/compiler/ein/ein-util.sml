@@ -79,7 +79,10 @@ structure EinUtil : sig
 		    | (E.Invert(bda1,n1, s1), E.Invert(bda2,n2, s2)) =>
 		       (n1=n2)
 		       andalso (BasisDataArray.same ( bda1, bda2))
-		       andalso Stamp.same(s1,s2)
+		       andalso (case (s1,s2)
+				 of (SOME(s1'),SOME(s2')) => Stamp.same(s1',s2')
+				  | (NONE, NONE) => true
+				  | _ => false (* end case*))
 		    | _ => false
 		  (*end case*))
 		
@@ -197,7 +200,8 @@ structure EinUtil : sig
 		      of E.Plain(bda, n, SOME(s)) =>
 			 0w193 + BasisDataArray.hash bda + Stamp.hash s
 		       | E.Plain(bda, _, _) => 0w193 + BasisDataArray.hash bda
-		       | E.Invert(bda,_,s) => 0w197 + BasisDataArray.hash bda + Stamp.hash s
+		       | E.Invert(bda,_,SOME(s)) => 0w197 + BasisDataArray.hash bda + Stamp.hash s
+		       | E.Invert(bda,_,NONE) => 0w197 + BasisDataArray.hash bda
 		    (*end case*))
 		 
               (* end case *)

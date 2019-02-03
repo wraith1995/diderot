@@ -20,7 +20,6 @@ TODO functionality:
 5.5 mesh pos moving mehtods: require C inserts or function call backs that have our functions
 ---paper
 
-
 6. Better basis function evaluation, tensor product basises, and affine function thoughts
 7. Nrrd interface and better python interface creation.
 8. Field parsing: c.t, field variables in a function, or field arguments to a function or c$T (binding strength of .) -- diffOp diff expression and suffix are out of order -- move selct suffix into diffExpr optioin - atomixExpr (SR)* 
@@ -30,8 +29,10 @@ TODO functionality:
 12. Raise errors that occur
 
 Code notes:
----make plain have an option call to this so the translation into it can still make sense
----carefully write it all out and do
+---Does pushing this out as various functions lead to miss ops for common code?
+---have to think about that tomorrow after we provide meshPos ops
+---Think about holding the functions in blocks longer? Recongize them more?
+---full field is currently just a composition that recongizes something, but it could be based on three compositions that notice something thought that is numerically risky
 
 -Check-globals, check-type files, check-expr are kind of messy - need to be cleabed and better errormessages - lots of options need to be checed to generated err cxt messesages
 ---and needs to be inside.

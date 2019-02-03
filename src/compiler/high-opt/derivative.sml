@@ -262,7 +262,7 @@ structure Derivative : sig
 				  
 	       val mu2 = List.hd dx
 	       val dx' = List.tl dx
-	       fun probeAtIndex(mu1, mu2) = E.Fem(E.Plain( BasisDataArray.D(bda), n, SOME(f)), id1, id2, id3, [mu1], [mu2])
+	       fun probeAtIndex(mu1, mu2) = E.Fem(E.Plain( BasisDataArray.D(bda), n, f), id1, id2, id3, [mu1], [mu2])
 	       val dim = BasisDataArray.domainDim bda
 	       val _ = if dim <> 2 andalso dim <> 3
 		       then raise Fail "One d and higher than 3d fields not yet supported"
@@ -294,7 +294,9 @@ structure Derivative : sig
 
 	       val inv = E.Op2(E.Div, adj, det)
 	      in
-	       mkApply(E.Partial dx', inv, params, finalSumX)
+	       (case dx'
+		of [] => SOME(inv)
+		 | _ => mkApply(E.Partial dx', inv, params, finalSumX))
 	      end
             | E.Partial _ => err("Apply of Partial")
             | E.Apply(E.Partial d2, e2) => SOME(E.Apply(E.Partial(dx@d2), e2))

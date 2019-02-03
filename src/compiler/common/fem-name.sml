@@ -17,6 +17,7 @@ val meshMapDim = "meshMapDim"
 val tds = "transformDofShape" (*computed*)
 val transform = "transform" (*field*)
 val invTransform = "invTransform"
+
 val hiddenNewtonInverse = "(newtonInverse)"
 (*ref cell:*)
 val refCellIsInside = "isInside"
@@ -33,5 +34,5 @@ val rangeShape = "shape"
 val fds = "funcDofShape" (*not really used now as this is under current spec same as above*)
 val funcDofs = "dofs"
 val refField = "refField"
-
+val trf = "transformedRefField"
 end

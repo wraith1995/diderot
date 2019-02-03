@@ -34,7 +34,8 @@ strand gg(int i, cell{msh} j){
   cell{FUNC} kk = c.funcCell(j);
   tensor[2,2,2] qqq = ( ∇⊗(kk.refField))([1,1]);
   tensor[2] smrgh = j.invTransform([0,0]);
-
+  tensor[2,2,2] smrgh2 =  ∇⊗∇⊗(j.invTransform)([0,0]);
+  tensor[2,2,2] afsafafa = ∇⊗(kk.transformedRefField)([0,0]);
 
 
   int j0 = 2;
@@ -50,7 +51,7 @@ strand gg(int i, cell{msh} j){
     print("cell:", j,"\n");
     tensor[msh.transformDofShape] a = j.transformDofs();
     print("Dof:",a,"\n");
-    print("Inv1: ", smrgh, "\n");
+    print("Inv1: ", smrgh,smrgh2,afsafafa, "\n");
     print("result:", z, "\n");
     print("other result:", F([0,0]), "\n");
     print("fin result:", gug, "\n");

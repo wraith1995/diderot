@@ -27,7 +27,7 @@ structure FemOpt : sig
 	   (*Find the shape of a tensor that is the result a fem opt*)
 	   val findTargetShape : femOption -> int list
 
-	   datatype femField =  Transform | RefField | InvTransform | TRefField | Field						  
+	   datatype femField =  Transform | RefField | InvTransform | IdTransform | Field						  
 	   val fieldString : femField -> string
 									     
 	  end = struct
@@ -38,13 +38,13 @@ datatype femOpts = Cells | RefCell
 		 | CellIndex | PromoteCell (* primitize, cells*)
 				 
 
-datatype femField =  Transform | RefField | InvTransform | TRefField | Field
+datatype femField =  Transform | RefField | InvTransform | IdTransform | Field
 
 
 fun fieldString (Transform) = "Transform"
   | fieldString (RefField) = "refField"
   | fieldString (InvTransform) = "InvTransform"
-  | fieldString (TRefField) = "TRefField"
+  | fieldString (IdTransform) = "IdTransform"
   | fieldString (Field) = "Field"
 
 type femOption = femOpts * FemData.femType

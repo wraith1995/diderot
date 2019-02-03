@@ -501,7 +501,25 @@ print(concat["doVar (", SV.uniqueNameOf srcVar, ", ", IR.phiToString phi, ", _) 
 	       val spaceDim = FemData.meshMapDim m
 	       val func' = cvtFuncVar func
 	       val IR.FV{id=stamp,...} =  func'
-	       val femEin = E.Invert((FemData.meshBasis m), spaceDim, stamp)
+	       val femEin = E.Invert((FemData.meshBasis m), spaceDim, SOME(stamp))
+
+	       val rator = E.EIN{
+		    params = [E.INT, E.FEM(data), E.FEM(data)],
+		    index = [dim],
+		    body = E.Fem(femEin,0,1,2,[E.V(0)],[])
+		   }
+	       val mesh' = lookup env mesh
+	      in
+	       [IR.ASSGN(lhs, IR.EINAPP(rator, [lookup env index, mesh', mesh']))]
+
+	      end
+	    | S.E_FemField(mesh, _, SOME(index), ty, FemOpt.InvTransform, NONE) =>
+	      let
+	       val Ty.T_Fem(FemData.Mesh(m)) = SimpleVar.typeOf(mesh)
+	       val data = FemData.Mesh(m)
+	       val dim = FemData.meshDim m
+	       val spaceDim = FemData.meshMapDim m
+	       val femEin = E.Invert((FemData.meshBasis m), spaceDim, NONE)
 
 	       val rator = E.EIN{
 		    params = [E.INT, E.FEM(data), E.FEM(data)],
