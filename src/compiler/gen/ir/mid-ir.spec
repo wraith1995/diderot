@@ -89,6 +89,7 @@ Strands : ty * StrandSets.t : 1 : 0 :
 # BuildPos<s>(x) -- builds a vector of 2s kernel arguments at positions [x-s, .., x+(s-1)]
 BuildPos : int : 1 : 1 : compute vector of kernel arguments
 EvaluateBasis : BasisDataArray.t : 1 : 1 : compute array of basis values.
+Func3 : Stamp.t : 1 : 3  : A simple wrap to call a function on 3 arguments
 #
 # EvalKernel<d,h,k>(u) -- computes h^(k)(u_i) for 1<i<d, where d is the size of vector u.
 EvalKernel : int * Kernel.t * int : 1 : 1 : evaluate a kernel function application

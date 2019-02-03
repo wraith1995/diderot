@@ -56,7 +56,11 @@ structure Flatten : sig
    * literals from the global/constant initialization blocks.
    *)
     fun index (x, path) = let
-          fun mkIndex (x, path) = let
+
+     fun mkIndex (x, path) = let
+
+
+
                 val t = IR.Var.new("t", LowTypes.realTy)
                 val rator = (case (V.ty x, path)
                        of (Ty.TensorTy[d], [idx]) => Op.VIndex(d, idx)
@@ -180,7 +184,7 @@ raise ex)
                   | IR.ASSIGN{stm=(y, IR.CONS(xs, ty as Ty.TensorTy(_::d::dd))), ...} =>
                       if (V.useCount y = 0)
                         then ST.tick cntSkipCons (* y will be removed *)
-                        else let
+                      else let
                           val (xs', stms) = flatten (xs, d, dd)
                           val cfg' = IR.CFG.mkBlock(List.rev(IR.ASSGN(y, IR.CONS(xs', ty))::stms))
                           in

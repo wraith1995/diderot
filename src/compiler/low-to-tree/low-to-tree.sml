@@ -684,6 +684,13 @@ structure LowToTree : sig
                   val (rhs, stms') = trOp (env, rator, args)
                   val stms = stms' @ stms
                   val emitBind = (V.useCount lhs > 1) orelse not(Env.isInlineOp env rator)
+		  val _ =  print(concat[
+                              "OP(", LowOps.toString rator, ", [",
+                              String.concatWithMap "," V.toString args, "])\n",
+                              "rhs = ", Env.bindingToString rhs, "\n",
+                              "eqCls = ", eqToString (eqClassRepOf(env, lhs)), "\n",
+                              "emitBind = ", Bool.toString emitBind, "\n"
+                             ]);
                   in
                     case (rhs, eqClassRepOf(env, lhs), emitBind)
                      of (_, NOEQ, false) => (Env.bindVar (env, lhs, rhs); stms)
@@ -710,7 +717,7 @@ structure LowToTree : sig
                     (* end case *)
                   end
               | IR.CONS(args, ty) => let
-                  val (es, stms') = simpleArgs (env, args)
+               val (es, stms') = simpleArgs (env, args)
                   in
                     bindCons (es, ty, stms' @ stms)
                   end
@@ -736,10 +743,16 @@ structure LowToTree : sig
                     (* end case *)
                   end
               | IR.APPLY(f, args) => let
-                  val (es, stms') = singleArgs (env, args)
+               val (es, stms') = singleArgs (env, args)
+	       val f' = getFuncVar f
+
+	       val (treeResultTy, _) = TreeFunc.ty f'
+						   
+	       val newAssign = mkDefn'(newLocal(env, lhs), T.E_Apply(f', es))
+	       val stms'' = newAssign::stms'
                   in
-                    Env.bindVar (env, lhs, Env.TREE(T.E_Apply(getFuncVar f, es)));
-                    stms' @ stms
+                    
+                    stms'' @ stms
                   end
               | rhs => raise Fail(concat["unexpected ", IR.RHS.toString rhs, " in LowIR code"])
             (* end case *)
@@ -1033,7 +1046,7 @@ raise ex)
 
     fun translate (prog, info) = let
         (* first step is to flatten any nested CONS nodes *)
-          val prog = Flatten.transform prog
+     val prog = Flatten.transform prog
           val LowIR.Program{
                   props, consts, inputs, constInit, globals,
                   funcs, globInit, strand, create, start, update

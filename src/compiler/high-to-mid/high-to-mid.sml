@@ -41,28 +41,11 @@ structure HighToMid : sig
                   "expected rhs operator for ", SrcIR.Var.toString x,
                   " but found ", SrcIR.RHS.toString rhs
                 ])
-          (* end case *))
+		     (* end case *))
 
-    fun cvtTy SrcTy.BoolTy = DstTy.BoolTy
-      | cvtTy SrcTy.StringTy = DstTy.StringTy
-      | cvtTy SrcTy.IntTy = DstTy.intTy
-      | cvtTy (SrcTy.TensorTy dd) = DstTy.tensorTy dd
-      | cvtTy (SrcTy.TupleTy tys) = DstTy.TupleTy(List.map cvtTy tys)
-      | cvtTy (SrcTy.SeqTy(ty, n)) = DstTy.SeqTy(cvtTy ty, n)
-      | cvtTy (SrcTy.ImageTy info) = DstTy.ImageTy info
-      | cvtTy (SrcTy.StrandTy n) = DstTy.StrandTy n
-      | cvtTy SrcTy.KernelTy = DstTy.KernelTy
-    (* we replace Field operations by 0, so the types are mapped to int *)
-      | cvtTy SrcTy.FieldTy = DstTy.intTy
-      | cvtTy (SrcTy.FemData(data)) = DstTy.FemData(data)
+    val cvtTy = HME.cvtTy
 
-  (* instantiate the translation environment *)
-    structure Env = TranslateEnvFn (
-      struct
-        structure SrcIR = SrcIR
-        structure DstIR = DstIR
-        val cvtTy = cvtTy
-      end)
+
 
   (* expand raising a real to an integer power.  When we know the exponent, we can inline
    * multiplications.
@@ -205,7 +188,7 @@ handle ex => (print(concat["HighToMid.expandOp: error converting ", SrcOp.toStri
     fun expandEINAPP (env, srcy, y, rator, args) = (case SrcIR.Var.ty srcy
            of SrcTy.FieldTy => [DstIR.ASSGN(y, DstIR.LIT(Literal.Int 0))]
             | _ => if (useCount srcy > 0)
-                then HandleEin.expand (y, rator, Env.renameList(env, args))
+                then HandleEin.expand (y,env, rator, Env.renameList(env, args))
                 else []
           (* end case *))
 handle ex => (print(concat["HighToMid.expandEINAPP: error converting ", MidIR.Var.toString y, " = ",

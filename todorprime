@@ -4,20 +4,23 @@ Gordon meeting: 3:30
 -----ASK John abouts this
 2. My bug - purity would fix it - mutability is evil.
 3. Thoughts on embedding newton's method - commutation - what if someone wanted to change it, diff calc better----still call solve implict but interface with solver.
-Talk to JOHN: locality, data structure, $ idea, ein as a functor, basis function evaluation
+Talk to JOHN: locality, data structure, $ idea, ein as a functor, basis function evaluation, this dumb tree thing
 
 
-
+--bug about (newton)-ops
 TODO functionality:
 0. newton call
 1. Inverse transform
 2. transfrmed ref
 2.5 mesh pos basics
 3. field
-3.5 mesh pos methods and ideas: basics
+3.5 ref cell mesh pos methods and ideas: basics
 4. more advanced cell search (connectivity, locality, geometry) and more mesh file stuff: c++ code inserts, c code call backs
 5. other meta data attaching and optional mesh cell verticies mechanisms
+5.5 mesh pos moving mehtods: require C inserts or function call backs that have our functions
 ---paper
+
+
 6. Better basis function evaluation, tensor product basises, and affine function thoughts
 7. Nrrd interface and better python interface creation.
 8. Field parsing: c.t, field variables in a function, or field arguments to a function or c$T (binding strength of .) -- diffOp diff expression and suffix are out of order -- move selct suffix into diffExpr optioin - atomixExpr (SR)* 
