@@ -464,7 +464,7 @@ print(concat["doVar (", SV.uniqueNameOf srcVar, ", ", IR.phiToString phi, ", _) 
 	       val data = FemData.Mesh(m)
 	       val dim = FemData.meshDim m
 	       val spaceDim = FemData.meshMapDim m 
-	       val femEin = E.Plain((FemData.meshBasis m), spaceDim)
+	       val femEin = E.Plain((FemData.meshBasis m), spaceDim, NONE)
 	       val rator = E.EIN{
 		    params = [E.INT, E.FEM(data), E.FEM(data)],
 		    index = [dim],
@@ -482,7 +482,7 @@ print(concat["doVar (", SV.uniqueNameOf srcVar, ", ", IR.phiToString phi, ", _) 
 	       val spaceDim = FemData.spaceDim s
 	       val shape = FemData.rangeShape f
 	       val shapeVars = List.tabulate(List.length shape, fn x => E.V x )
-	       val femEin = E.Plain(basis, spaceDim)
+	       val femEin = E.Plain(basis, spaceDim, NONE)
 	       val rator = E.EIN{
 		    params = [E.INT, E.FEM(spaceData), E.FEM(funcData)],
 		    index = shape,
@@ -671,13 +671,18 @@ print(concat["doVar (", SV.uniqueNameOf srcVar, ", ", IR.phiToString phi, ", _) 
                       val (body, _) = cvtBlock (state, insert(env, x, x'), (1, join)::joinStk, b)
                       val body = IR.CFG.appendNode (body, IR.Node.mkNEXT())
                       val env = commitJoin (joinStk, join)
+		      fun findReturn(S.S_Return(_)) = true
+			| findReturn _ = false
+		      fun hasReturn xs = Option.isSome (List.find findReturn xs)
                       in
                       (* link in CFG edges *)
                         IR.Node.setBodyEntry (foreachNd, IR.CFG.entry body); (* loop header to body *)
                         IR.Node.setPred (IR.CFG.entry body, foreachNd);      (* back edge *)
                         IR.Node.setSucc (IR.CFG.exit body, foreachNd);
                         IR.Node.setBodyExit (foreachNd, IR.CFG.exit body);
-                      (* process the rest of the block *)
+			(* process the rest of the block *)
+			print("We have stms left:"^(Int.toString(List.length stms))^"\n");
+			print("And there is a return:"^(Bool.toString (hasReturn stms)) ^"\n");
                         cvt (env, IR.CFG.concat (cfg, IR.CFG{entry=foreachNd, exit=foreachNd}), stms)
                       end
                   | S.S_New(strandId, args) => let

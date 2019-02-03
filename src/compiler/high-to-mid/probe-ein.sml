@@ -34,7 +34,7 @@
 
 structure ProbeEin : sig
 
-    val expand : AvailRHS.t -> MidIR.var * MidIR.rhs -> unit
+    val expand : Env.t -> AvailRHS.t -> MidIR.var * MidIR.rhs -> unit
 
   end = struct
 
@@ -42,6 +42,8 @@ structure ProbeEin : sig
     structure Op = MidOps
     structure V = IR.Var
     structure Ty = MidTypes
+    structure HTy = HighTypes
+    structure HIR = HighIR
     structure E = Ein
     structure T = CoordSpaceTransform
 
@@ -342,7 +344,7 @@ structure ProbeEin : sig
     * rewrites body
     * replace probe with expanded version
     *)
-    fun replaceImgProbe (avail, (y, IR.EINAPP(Ein.EIN{params, index, body}, args)), probe, sx) = let
+    fun replaceImgProbe (avail, env, (y, IR.EINAPP(Ein.EIN{params, index, body}, args)), probe, sx) = let
         (* tensor ids for position, transform matrix P, and kernel terms*)
 
           val pid = length params
@@ -366,41 +368,84 @@ structure ProbeEin : sig
             AvailRHS.addAssignToList (avail, einapp)
     end
 
-    fun replaceFemProbe(avail, (y, IR.EINAPP(Ein.EIN{params, index, body}, args)), probe, sx) =
+    fun callNewtonFunc(env, avail, n, func, posVar, cellIntVar, meshVar) =
+	let
+	 (*we need to find the function*)
+	 val Ty.FemData(data) = IR.Var.ty meshVar
+	 val tempName = "newton"
+	 val paramTys = [HTy.TensorTy([n]), HTy.IntTy, HTy.FemData data]
+	 val newFuncFV = HIR.FV{id=func, name = tempName, ty = HTy.TensorTy([n]),
+				useCnt = ref 1,
+				paramTys = paramTys,
+				props = PropList.newHolder ()}
+	 val targetFV = Env.renameFV(env, newFuncFV)
+	 
+	in
+	 AvailRHS.addAssign(avail, "callNewton", Ty.TensorTy([n]), IR.APPLY(targetFV, [posVar, cellIntVar, meshVar]))
+	end
+
+    (* fun resolveFunctionCallFromStamp() *)
+    fun replaceFemProbe ( avail, env, (y, IR.EINAPP(Ein.EIN{params, index, body}, args)), probe, sx) =
 	let
 	 val E.Probe(E.Fem(femEin, indexVarId, indexSrcId, dofSrcId, alpha, dx), E.Tensor(tid, _)) = probe
 	 val prePosVar = List.nth(args, tid)
-	 val (basisArray, dofCount : int, posVar) =
-	     (case femEin
-	       of E.Plain(a,b) => (a,b, prePosVar))
 	 val indexInt = List.nth(params, indexVarId)
-	 val indexSrc = List.nth(params, indexSrcId)
 	 val dofSrc =   List.nth(params, dofSrcId)
-	 (* Remove all of these - get newParamIds*)
-	 val E.FEM(dofData) = dofSrc
+	 val indexSrc = List.nth(params, indexSrcId)
 	 val indexVar = List.nth(args, indexVarId)
 	 val indexSrcVar = List.nth(args, indexSrcId)
 	 val dofSrcVar = List.nth(args, dofSrcId)
-			      
-	 val freshIndex = getsumshift (sx, length index) + length dx
-	 val newParamLen = List.length params
-	 val dofId = newParamLen
-	 val basisId = dofId + 1 
+	 val (basisArray, dofCount : int, posVar, id: bool) =
+	     (case femEin
+	       of E.Plain(a,b, NONE) => (a,b, prePosVar, false)
+		| E.Plain(a,b, SOME(f))=> (a,b, callNewtonFunc(env, avail, BasisDataArray.domainDim a, f, prePosVar,indexVar, dofSrcVar), false) (*TODO: determine if this is a mesh or not...*)
+		| E.Invert(a,b, f) => (a,b, callNewtonFunc(env, avail, BasisDataArray.domainDim a, f , prePosVar,indexVar, dofSrcVar), true))
+	 val dim = BasisDataArray.domainDim basisArray
 
-	 val (args', params', probe') = femFieldReconstruction(
-	      avail, freshIndex, dofId, basisId, posVar, alpha,
-	      dx, indexVar, indexSrcVar, dofSrcVar, basisArray, dofCount, dofData)
+	 val finRhs =
+	     if id
+	     then 
+	      let
+	       (*substitute the result of the function call into the ein expression:*)
+	       val newParamLen = List.length params
+	       val newParamId = newParamLen
+	       val newParamKind = E.TEN(true, [dim])
+	       val params'' = params @ [newParamKind]
+	       val args'' = args @ [posVar]
+	       val newProbe = E.Tensor(newParamId, alpha)
+	       val (_, body') = substituteProbe(body, newProbe)
+	      in
+	       (y, IR.EINAPP(mkEin(params'', index, body'), args''))
+	      end
+	     else
+	      let
 
-	 val args'' = args @ args'
-	 val params'' = params @ params'
-	 val (_, body') = substituteProbe(body, probe')
-					 
-	 val einapp = (y, IR.EINAPP(mkEin(params'', index, body'), args''))
+	       (* Remove all of these - get newParamIds*)
+	       val E.FEM(dofData) = dofSrc
+	       
+				       
+	       val freshIndex = getsumshift (sx, length index) + length dx
+	       val newParamLen = List.length params
+	       val dofId = newParamLen
+	       val basisId = dofId + 1 
+
+	       val (args', params', probe') = femFieldReconstruction(
+		    avail, freshIndex, dofId, basisId, posVar, alpha,
+		    dx, indexVar, indexSrcVar, dofSrcVar, basisArray, dofCount, dofData)
+
+	       val args'' = args @ args'
+	       val params'' = params @ params'
+	       val (_, body') = substituteProbe(body, probe')
+					       
+	       val einapp = (y, IR.EINAPP(mkEin(params'', index, body'), args''))
+	      in
+	       einapp
+	      end
 	in
-	 AvailRHS.addAssignToList (avail, einapp)
+	 AvailRHS.addAssignToList (avail, finRhs)
 	end
 	  
-    fun replaceProbe (arg as (avail, (y, IR.EINAPP(Ein.EIN{params, index, body}, args)), probe, sx)) =
+    fun replaceProbe (arg as (avail, env, (y, IR.EINAPP(Ein.EIN{params, index, body}, args)), probe, sx)) =
 	let
 	 val E.Probe(f, _) = probe
 	in
@@ -482,21 +527,21 @@ structure ProbeEin : sig
    * A this point we only have simple ein ops
    * Looks to see if the expression has a probe. If so, replaces it.
    *)
-    fun expand avail (e as (_, IR.EINAPP(Ein.EIN{body, ...}, _))) = (case body
+    fun expand env avail (e as (_, IR.EINAPP(Ein.EIN{body, ...}, _))) = (case body
            of (E.Probe(E.Conv(_, _, _, []) ,_)) =>
-                replaceProbe (avail, e, body, [])
+                replaceProbe (avail, env, e, body, [])
             | (E.Probe(E.Conv(_, alpha, _, dx) ,_)) =>
               liftProbe (avail, e, body, []) (*scans dx for contant*)
 	    | (p as E.Probe(E.Fem _, _)) =>
-	      replaceProbe (avail, e, p, [])
+	      replaceProbe (avail, env, e, p, [])
             | (E.Sum(sx, p as E.Probe(E.Conv(_, _, _, []), _))) =>
-                replaceProbe (avail, e, p, sx)   (*no dx*)
+                replaceProbe (avail, env, e, p, sx)   (*no dx*)
             | (E.Sum(sx, p as E.Probe(E.Conv(_, [], _, dx), _))) =>
                 liftProbe (avail, e, p, sx) (*scalar field*)
             | (E.Sum(sx, E.Probe p)) =>
-                replaceProbe (avail, e, E.Probe p, sx)
+                replaceProbe (avail, env, e, E.Probe p, sx)
             | (E.Sum(sx, E.Opn(E.Prod, [eps, E.Probe p]))) =>
-                replaceProbe (avail, e, E.Probe p, sx)
+                replaceProbe (avail, env, e, E.Probe p, sx)
             | _ => AvailRHS.addAssignToList (avail, e)
           (* end case *))
 

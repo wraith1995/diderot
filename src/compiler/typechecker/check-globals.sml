@@ -664,7 +664,7 @@ structure CheckGlobals : sig
 		    val succesReturn = AST.S_Return(newPosVarExpr) (*TODO: return the itterated thing*)
 		    val nans = makePrim'(BV.nan, [], [], insideVec) (*return nans to signal failure*)
 		    val failReturn = AST.S_Return(nans)
-		    val ifStm = if killAfterTol
+		    val ifStm = if true
 				then AST.S_IfThenElse(deltaNormTest, (*we might want to change this test to be this and that, rather than a nested if.*)
 						 AST.S_Block([AST.S_IfThenElse(insideTest,
 									       AST.S_Block([succesReturn]), (*converged and arrived*)

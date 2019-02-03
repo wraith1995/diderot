@@ -22,6 +22,7 @@ local
   ../mid-ir/sources.mlb
 
   avail-rhs.sml
+  high-to-mid-env.sml
   clean-index.sml
   clean-params.sml
   coord-space-transform.sml
