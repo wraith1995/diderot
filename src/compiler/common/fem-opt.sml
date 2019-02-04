@@ -10,8 +10,15 @@
 
 
 structure FemOpt : sig
-
-	   datatype femOpts = NumCell | ExtractDofs | ExtractDofsSeq | ExtractIndices |  ExtractIndex  | ExtractDof | Cells | CellIndex  | PromoteCell  | RefCell
+datatype femOpts = Cells | RefCell
+		 | ExtractDofs
+		 | ExtractIndices |  ExtractDofsSeq
+		 | NumCell  | ExtractIndex | ExtractDof (* primitize all*)
+		 | CellIndex | PromoteCell (* primitize, cells*)
+		 (*mesh pos operations:*)
+		 | Valid | RefPos | WorldPos of Atom.atom option * Stamp.t option 
+		 | RefBuild | WorldBuild of Atom.atom option * Stamp.t option 
+		 | InvalidBuild | WorldTest
 
 	   type femOption = femOpts * FemData.femType
 					    
@@ -36,6 +43,10 @@ datatype femOpts = Cells | RefCell
 		 | ExtractIndices |  ExtractDofsSeq
 		 | NumCell  | ExtractIndex | ExtractDof (* primitize all*)
 		 | CellIndex | PromoteCell (* primitize, cells*)
+		 (*mesh pos operations:*)
+		 | Valid | RefPos | WorldPos of Atom.atom option * Stamp.t option 
+		 | RefBuild | WorldBuild of Atom.atom option * Stamp.t option 
+		 | InvalidBuild | WorldTest (*internal use only*)
 				 
 
 datatype femField =  Transform | RefField | InvTransform | IdTransform | Field
@@ -49,6 +60,12 @@ fun fieldString (Transform) = "Transform"
 
 type femOption = femOpts * FemData.femType
 structure FT = FemData
+
+fun mapAS f g e (a,b) = (case (a,b)
+			  of (SOME(a'), NONE) => f a'
+			  |  (NONE, SOME(b')) => g b'
+			  | _ => e
+			(*end case*))
 (* add airity*)			 
 fun toStringOpt v =
     (case v
@@ -62,6 +79,13 @@ fun toStringOpt v =
        | ExtractDofsSeq => "ExtractDofsSeq"
        | PromoteCell => "PromoteCell"
        | RefCell => "RefCell"
+       | Valid => "Valid"
+       | RefPos => "RefPos"
+       | WorldPos r => "WorldPos(" ^ (mapAS Atom.toString Stamp.toString "NONE" r) ^ ")"
+       | RefBuild => "RefBuild"
+       | WorldBuild r => "WorldBuild(" ^ ((mapAS Atom.toString Stamp.toString "Error") r) ^ ")"
+       | InvalidBuild => "InvalidBuild"
+       | WorldTest => "WorldTest"
     (* end case*))
 
 fun toString (v, d) = toStringOpt(v) ^ "(" ^ (FT.toString d) ^ ")"
@@ -77,6 +101,13 @@ fun arity (NumCell) = 1
   | arity (ExtractDof) = 2
   | arity (PromoteCell) = 2
   | arity (RefCell) = 1
+  | arity (Valid) = 1
+  | arity (RefPos) = 1
+  | arity (WorldPos _) = 1
+  | arity (RefBuild) = 2
+  | arity (WorldBuild _) = 2
+  | arity (InvalidBuild) = 1
+  | arity (WorldTest) = 1
 
 
 
@@ -90,7 +121,24 @@ fun hash (NumCell, d) = 0w1 + FT.hash d
   | hash (ExtractDofsSeq, d) = 0w17 + FT.hash d
   | hash (PromoteCell, d) = 0w19 + FT.hash d
   | hash (RefCell, d) = 0w23 + FT.hash d
-		     
+  | hash (Valid, d) =  0w29 + FT.hash d
+  | hash (RefPos, d) = 0w31 + FT.hash d
+  | hash (RefBuild, d) = 0w37 + FT.hash d
+  | hash (InvalidBuild, d) = 0w53 + FT.hash d
+  | hash (WorldBuild r, d) = 0w41 + FT.hash d + 0w43 * (mapAS Atom.hash Stamp.hash 0w47 r)
+  | hash (WorldPos r, d) = 0w53 + FT.hash d + 0w59 * (mapAS Atom.hash Stamp.hash 0w61 r)
+  | hash (WorldTest, d) = 0w67 + FT.hash d
+
+fun sameR ((a1,s1), (a2,s2)) = (case (a1, a2)
+				 of (SOME(a1'), SOME(a2')) => Atom.same(a1', a2')
+				  | (SOME(_), NONE) => false
+				  | (NONE, SOME(_)) => false
+				  | _ =>  (case (s1, s2)
+					    of (SOME(s1'), SOME(s2')) => Stamp.same(s1', s2')
+					     | (NONE, NONE) => true
+					     | _ => false
+					  (*end case*) )
+			       (*end case*))
 fun same ((v1, d1),(v2, d2)) = FT.same(d1,d2) andalso
     (case (v1,v2)
       of (NumCell, NumCell) => true
@@ -103,7 +151,15 @@ fun same ((v1, d1),(v2, d2)) = FT.same(d1,d2) andalso
        | (ExtractDofsSeq,ExtractDofsSeq) => true
        | (PromoteCell, PromoteCell) => true
        | (RefCell,RefCell) => true
-       | _ => false)
+       | (Valid, Valid) => true
+       | (RefPos, RefPos) => true
+       | (RefBuild, RefBuild) => true
+       | (InvalidBuild, InvalidBuild) => true
+       | (WorldTest, WorldTest) => true
+       | (WorldBuild r1, WorldBuild r2) => sameR(r1, r2)
+       | (WorldPos r1, WorldPos r2) => sameR(r1, r2)
+       | _ => false
+    (*end case*))
 
 
 fun findIndexLength (opt, data) =

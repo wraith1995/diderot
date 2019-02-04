@@ -1,3 +1,19 @@
+
+John talk:
+update
+pos vs _pos
+Geometric data structure: My suggestion: C insert library and call functions in later and callback
+Draft
+$ vs some other precdence expression or manipulation of fem fields or manipulation of global fields
+Basis function evaluation.
+Dependent types - already enforced on fields
+Paul
+Gordon talk:
+$, sphere, and DRAFT
+
+
+
+
 Gordon meeting: 3:30
 0. Paper intro write
 1. . vs $ vs. something else $ -> Expression $
@@ -27,6 +43,29 @@ TODO functionality:
 10. Debugging logs via printing and basis function evaluation conuts -- find flags for this stuff.
 11. Border control -- dumb thing.
 12. Raise errors that occur
+
+
+
+
+
+Code notes (mesh pos 1):
+Get: cellInt, cell, refPos, worldPos, mesh, valid
+Build: (cell) (cellint, mesh), refPos 2
+Build: (invalid extract from mesh) 1
+Modify: SetWorldPos, ComputeWorldPos(func) 2: DO AN IF BRANCH
+
+Recall: meshPosIn (vecN+vecN+POINTER+VALID+Yeah), meshPosOut (yes) (vecN+1)
+---MeshPosOutType is a giant vector, yay.
+ALSO: ADD CELL VALID. Can't hurt. 
+
+
+
+
+
+
+
+
+
 
 Code notes:
 ---Does pushing this out as various functions lead to miss ops for common code?
