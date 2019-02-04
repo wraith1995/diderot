@@ -9,17 +9,17 @@ Talk to JOHN: locality, data structure, $ idea, ein as a functor, basis function
 
 --bug about (newton)-ops
 TODO functionality:
-0. newton call
-1. Inverse transform
-2. transfrmed ref
 2.5 mesh pos basics
 3. field
 3.5 ref cell mesh pos methods and ideas: basics
+3.75. mesh pos sphere querry
 4. more advanced cell search (connectivity, locality, geometry) and more mesh file stuff: c++ code inserts, c code call backs
 5. other meta data attaching and optional mesh cell verticies mechanisms
 5.5 mesh pos moving mehtods: require C inserts or function call backs that have our functions
 ---paper
-
+5.75. mesh pos lazyness?
+5.77. issue of how data is represented (best way to be implemented later) - THe key is that the you should try to use pointers everwyhere and minimize indirections and avoid loss of pointers in functions so have pointers attached to everything: idea solution is: pass around pointers everwhere and have a realize blob ability.
+5.8. Loading cells: issue of mesh indicator - mesh.loadCells - 
 6. Better basis function evaluation, tensor product basises, and affine function thoughts
 7. Nrrd interface and better python interface creation.
 8. Field parsing: c.t, field variables in a function, or field arguments to a function or c$T (binding strength of .) -- diffOp diff expression and suffix are out of order -- move selct suffix into diffExpr optioin - atomixExpr (SR)* 

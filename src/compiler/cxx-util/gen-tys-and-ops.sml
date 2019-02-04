@@ -129,7 +129,7 @@ structure GenTysAndOps : sig
 		  val meshName = Atom.toString (FT.nameOf (FT.meshOf ty))
 		  val meshTy = CL.T_Named(meshName)
 		  val meshPtrTy = CL.T_Ptr(meshTy)
-		  val meshPtr =  CL.D_Var([],CL.T_Ptr(meshTy),[], "mesh", NONE)
+		  val meshPtr =  CL.D_Var([],meshTy,[], "mesh", NONE)
 		  val osty = CL.T_Named("std::ostream &") (*attr doesn't support ty & *)
 		  val printer = CL.mkFuncDcl(osty, "operator<<", [CL.PARAM([], osty, "os"),
 								  CL.PARAM([], meshCellRefTy, "cell")], CL.S_Block([CL.S_Return(SOME(CL.E_BinOp(CL.E_Var("os"),
@@ -137,7 +137,7 @@ structure GenTysAndOps : sig
 																		   CL.E_Select(CL.E_Var("cell"),"cell"))))]))
 
 		  val builder = CL.mkFuncDcl(meshCellTy, "makeFem",
-					     [CL.PARAM([], meshPtrTy, "mesh"),
+					     [CL.PARAM([], meshTy, "mesh"),
 					      CL.PARAM([], intTy, "cellInt")],
 					     CL.S_Block([
 							CL.S_Decl([], meshCellTy, "cell", NONE),
@@ -162,7 +162,7 @@ structure GenTysAndOps : sig
 		  val funcName = Atom.toString ((FT.nameOf o Option.valOf o FT.dependencyOf) ty)
 		  val funcTy = CL.T_Named(funcName)
 		  val funcPtrTy = CL.T_Ptr(funcTy)
-		  val funcPtr = CL.D_Var([],funcPtrTy,[], "func", NONE)
+		  val funcPtr = CL.D_Var([],funcTy,[], "func", NONE)
 					
 		  val osty = CL.T_Named("std::ostream &") (*attr doesn't support ty & *)
 		  val printer = CL.mkFuncDcl(osty, "operator<<", [CL.PARAM([], osty, "os"),
@@ -171,7 +171,7 @@ structure GenTysAndOps : sig
 					      [CL.S_Return(SOME(CL.E_BinOp(CL.E_Var("os"),CL.#<<, CL.E_Select(CL.E_Var("cell"),"cell"))))]))
 
 		  val builder = CL.mkFuncDcl(funcCellTy, "makeFem",
-					     [CL.PARAM([], funcPtrTy, "func"),
+					     [CL.PARAM([], funcTy, "func"),
 					      CL.PARAM([], intTy, "cellInt")],
 					     CL.S_Block([
 							CL.S_Decl([], funcCellTy, "cell", NONE),
