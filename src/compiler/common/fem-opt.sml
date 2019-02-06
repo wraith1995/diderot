@@ -16,8 +16,8 @@ datatype femOpts = Cells | RefCell
 		 | NumCell  | ExtractIndex | ExtractDof (* primitize all*)
 		 | CellIndex | PromoteCell (* primitize, cells*)
 		 (*mesh pos operations:*)
-		 | Valid | RefPos | WorldPos of Atom.atom option * Stamp.t option 
-		 | RefBuild | WorldBuild of Atom.atom option * Stamp.t option 
+		 | Valid | RefPos | WorldPos of Atom.atom option * Stamp.t option | UWorldPos
+		 | RefBuild | WorldBuild of Atom.atom option * Stamp.t option | AllBuild
 		 | InvalidBuild | WorldTest
 
 	   type femOption = femOpts * FemData.femType
@@ -44,8 +44,8 @@ datatype femOpts = Cells | RefCell
 		 | NumCell  | ExtractIndex | ExtractDof (* primitize all*)
 		 | CellIndex | PromoteCell (* primitize, cells*)
 		 (*mesh pos operations:*)
-		 | Valid | RefPos | WorldPos of Atom.atom option * Stamp.t option 
-		 | RefBuild | WorldBuild of Atom.atom option * Stamp.t option 
+		 | Valid | RefPos | WorldPos of Atom.atom option * Stamp.t option | UWorldPos
+		 | RefBuild | WorldBuild of Atom.atom option * Stamp.t option | AllBuild
 		 | InvalidBuild | WorldTest (*internal use only*)
 				 
 
@@ -85,7 +85,9 @@ fun toStringOpt v =
        | RefBuild => "RefBuild"
        | WorldBuild r => "WorldBuild(" ^ ((mapAS Atom.toString Stamp.toString "Error") r) ^ ")"
        | InvalidBuild => "InvalidBuild"
+       | AllBuild => "AllBuild"
        | WorldTest => "WorldTest"
+       | UWorldPos => "UWorldPos"
     (* end case*))
 
 fun toString (v, d) = toStringOpt(v) ^ "(" ^ (FT.toString d) ^ ")"
@@ -108,7 +110,8 @@ fun arity (NumCell) = 1
   | arity (WorldBuild _) = 2
   | arity (InvalidBuild) = 1
   | arity (WorldTest) = 1
-
+  | arity (UWorldPos) = 1
+  | arity (AllBuild) = 4
 
 
 fun hash (NumCell, d) = 0w1 + FT.hash d
@@ -128,6 +131,8 @@ fun hash (NumCell, d) = 0w1 + FT.hash d
   | hash (WorldBuild r, d) = 0w41 + FT.hash d + 0w43 * (mapAS Atom.hash Stamp.hash 0w47 r)
   | hash (WorldPos r, d) = 0w53 + FT.hash d + 0w59 * (mapAS Atom.hash Stamp.hash 0w61 r)
   | hash (WorldTest, d) = 0w67 + FT.hash d
+  | hash (UWorldPos, d) = 0w71 + FT.hash d
+  | hash (AllBuild, d) = 0w73 + FT.hash d
 
 fun sameR ((a1,s1), (a2,s2)) = (case (a1, a2)
 				 of (SOME(a1'), SOME(a2')) => Atom.same(a1', a2')
@@ -158,6 +163,8 @@ fun same ((v1, d1),(v2, d2)) = FT.same(d1,d2) andalso
        | (WorldTest, WorldTest) => true
        | (WorldBuild r1, WorldBuild r2) => sameR(r1, r2)
        | (WorldPos r1, WorldPos r2) => sameR(r1, r2)
+       | (UWorldPos, UWorldPos) => true
+       | (AllBuild, AllBuild) => true
        | _ => false
     (*end case*))
 
