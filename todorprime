@@ -39,11 +39,11 @@ TODO functionality:
 6. Better basis function evaluation, tensor product basises, and affine function thoughts
 7. Nrrd interface and better python interface creation.
 8. Field parsing: c.t, field variables in a function, or field arguments to a function or c$T (binding strength of .) -- diffOp diff expression and suffix are out of order -- move selct suffix into diffExpr optioin - atomixExpr (SR)* 
-9. Expliration: newton paramter tuning live, varying levels of use of C code insert or call backs vs compiler figures it out
+9. Expliration: newton paramter tuning live, varying levels of use of C code insert or call backs vs compiler figures it out - have field take params, newtonInverse take params!
 10. Debugging logs via printing and basis function evaluation conuts -- find flags for this stuff.
 11. Border control -- dumb thing.
 12. Raise errors that occur
-
+13. cell equality tests and so forth
 
 
 
