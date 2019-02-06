@@ -44,8 +44,8 @@ datatype femOpts = Cells | RefCell
 		 | NumCell  | ExtractIndex | ExtractDof (* primitize all*)
 		 | CellIndex | PromoteCell (* primitize, cells*)
 		 (*mesh pos operations:*)
-		 | Valid | RefPos | WorldPos of Atom.atom option * Stamp.t option | UWorldPos
-		 | RefBuild | WorldBuild of Atom.atom option * Stamp.t option | AllBuild
+		 | Valid | RefPos | WorldPos of Atom.atom option * Stamp.t option | UWorldPos (*function to do Transform*)
+		 | RefBuild | WorldBuild of Atom.atom option * Stamp.t option | AllBuild (*function to do inverse, but not needed*)
 		 | InvalidBuild | WorldTest (*internal use only*)
 				 
 
