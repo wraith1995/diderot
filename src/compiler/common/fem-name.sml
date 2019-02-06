@@ -17,7 +17,7 @@ val meshMapDim = "meshMapDim"
 val tds = "transformDofShape" (*computed*)
 val transform = "transform" (*field*)
 val invTransform = "invTransform"
-
+val meshPos = "meshPos"
 val hiddenNewtonInverse = "(newtonInverse)"
 (*ref cell:*)
 val refCellIsInside = "isInside"

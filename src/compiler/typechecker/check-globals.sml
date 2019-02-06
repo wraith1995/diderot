@@ -412,132 +412,7 @@ structure CheckGlobals : sig
 		       | _ => raise Fail ("Non fem type passed to validateFemType: " ^ Atom.toString(tyName))
 		    (* end case *))
 		   end
-
-	       fun makeFemMethods femTyDef file femInfo =
-		   (case (femInfo, femTyDef)
-		     of ((func as FT.Func(f), n), PT.T_Func(space)) =>
-			let
-			 val funcName = FT.nameOf func
-			 val spaceFunc = Atom.atom "space"
-			 val space' = FT.spaceOf(FT.Func(f))
-			 val spaceName = FT.nameOf space'
-			 val mesh = FT.meshOf func
-			 val meshName = FT.nameOf mesh
-						  
-			 val spaceType = let
-			  val m = FT.meshOf(space')
-			  val meshName = FT.nameOf(m)
-			 in Ty.T_Fem(space', SOME(meshName)) end
-			 val spaceFuncTy = Ty.T_Fun([Ty.T_Named(tyName,Ty.T_Fem(femInfo))],Ty.T_Named(space, spaceType))
-			 val spaceFuncVar = Var.new (spaceFunc, span, AST.FunVar, spaceFuncTy)
-			 val param = Var.new (Atom.atom "arg0", span, AST.FunParam, Ty.T_Named(tyName,Ty.T_Fem(femInfo)))
-					     
-			 val spaceFuncBody = AST.S_Block([AST.S_Return(AST.E_ExtractFem(AST.E_Var(param,span),space'))])
-			 val spaceFun = AST.D_Func(spaceFuncVar, [param], spaceFuncBody)
-
-			 (* OH GOD THIS NEEDS TO BE CLEANED UP*)
-			 val funcArgTy = Ty.T_Named(tyName, Ty.T_Fem(femInfo))
-			 val funcCellTy = Ty.T_Fem(func, SOME(funcName))
-			 val FT.Mesh(meshData) = FT.meshOf func
-			 val meshCell = FT.MeshCell(meshData)
-			 val funcCellVal = FT.FuncCell(f)
-			 val meshCellTy = Ty.T_Fem(meshCell, SOME(meshName))
-			 val funcCellTy = Ty.T_Fem(funcCellVal, SOME(funcName))
-						  
-			 val funcCell = Atom.atom "funcCell"
-			 val funcCellType = Ty.T_Fun([funcArgTy, meshCellTy], funcCellTy)
-			 val funcCellFuncVar = Var.new (funcCell, span, AST.FunVar, funcCellType)
-
-			 val param = Var.new (Atom.atom "arg0", span, AST.FunParam, funcArgTy)
-			 val param' = Var.new (Atom.atom "arg1", span, AST.FunParam, meshCellTy)
-			 (* optional debug information could go here.*)
-			 val funcCellBody = AST.S_Return(AST.E_LoadFem(funcCellVal,
-								       SOME(AST.E_Var(param, span)),
-								       SOME(AST.E_ExtractFemItem(
-									      AST.E_Var(param', span),
-									      Ty.T_Int,
-									      (FO.CellIndex, meshCell)))))
-			 val funcCellFunc = AST.D_Func(funcCellFuncVar,
-						       [param, param'],
-						       funcCellBody)
-
-
-			in
-			 ([(funcCell, funcCellFuncVar), (spaceFunc, spaceFuncVar)],
-			  [funcCellFunc, spaceFun],
-			  [])
-			end
-		      | ((FT.Space(s), n), PT.T_Space(meshName)) =>
-			let
-			 val meshFunc = Atom.atom "domain"
-			 val mesh = FT.meshOf(FT.Space(s))
-			 val meshName = FT.nameOf(mesh)
-			 val meshType = Ty.T_Fem(mesh, SOME(meshName))
-			 val meshFuncTy = Ty.T_Fun([Ty.T_Named(tyName, Ty.T_Fem(femInfo))], Ty.T_Named(meshName, meshType))
-			 val meshFuncVar = Var.new(meshFunc, span, AST.FunVar, meshFuncTy)
-			 val param = Var.new (Atom.atom "arg0", span, AST.FunParam, Ty.T_Named(tyName,Ty.T_Fem(femInfo)))
-			 val meshFuncBody =  AST.S_Block([AST.S_Return(AST.E_ExtractFem(AST.E_Var(param,span),mesh))])
-			 val meshFun = AST.D_Func(meshFuncVar, [param], meshFuncBody)
-			in
-			 ([(meshFunc, meshFuncVar)], [meshFun],[])
-			end
-		      | ((meshData as FT.Mesh(m), n), PT.T_Mesh) =>
-			let
-			 val meshName = FT.nameOf meshData
-			 val meshArgTy = Ty.T_Named(tyName, Ty.T_Fem(femInfo))
-			 val numCell = Atom.atom "numCell"
-			 val meshType = Ty.T_Fem(FT.Mesh(m), SOME(tyName))
-			 val numCellFuncTy = Ty.T_Fun([meshArgTy],Ty.T_Int)
-			 val numCellFuncVar = Var.new (numCell, span, AST.FunVar, numCellFuncTy)
-			 val param = Var.new (Atom.atom "arg0", span, AST.FunParam, meshArgTy)
-			 val numCellBody = AST.S_Block([AST.S_Return(AST.E_ExtractFemItem(AST.E_Var(param, span), Ty.T_Int, (FemOpt.NumCell, FT.Mesh(m))))])
-			 val numCellFun = AST.D_Func(numCellFuncVar, [param], numCellBody)
-
-
-			 (*get list of cells -> we are going to use a extract*)
-			 val cells' = Atom.atom "0cells"
-			 val cells = Atom.atom "cells"
-			 val cellType = Ty.T_Fem(FT.MeshCell(m), SOME(meshName))
-			 val cellSeqType = Ty.T_Sequence(cellType, NONE)
-			 val cellTypeFuncTy = Ty.T_Fun([meshArgTy], cellSeqType)
-			 val cellFuncVar' = Var.new (cells, span, AST.FunVar, cellTypeFuncTy)
-			 val param' = Var.new (Atom.atom "arg0", span, AST.FunParam, meshArgTy)
-
-			 val itterVar = Var.new (Atom.atom "i", span, AST.IterVar, Ty.T_Int)
-			 val iter = (itterVar, AST.E_Prim(BasisVars.range, [],
-			 				  [AST.E_Lit(Literal.Int(IntLit.fromInt 0)),
-			 				   AST.E_ExtractFemItem(AST.E_Var(param', span), Ty.T_Int, (FemOpt.NumCell, FT.Mesh(m)))],
-			 				  Ty.T_Sequence(Ty.T_Int, NONE)))
-			 val comp  = AST.E_Comprehension(AST.E_LoadFem(FT.MeshCell(m), SOME(AST.E_Var(param', span)), SOME(AST.E_Var(itterVar, span))), iter, cellSeqType)
-			 				(*AST.E_ExtractFemItem(AST.E_Var(param', span)*)
-			 val cellsBody = AST.S_Block([AST.S_Return(comp)])
-			 val cellsFun' =  AST.D_Func(cellFuncVar', [param'], cellsBody)
-
-			 val cellFuncVar = Var.new (cells, span, AST.FunVar, cellTypeFuncTy)
-			 val cellsFun = AST.D_Func(cellFuncVar, [param'],
-						   AST.S_Block([AST.S_Return(AST.E_ExtractFemItem(AST.E_Var(param',span), cellSeqType, ( FemOpt.Cells, FT.Mesh(m))))]))
-
-
-			 fun makeCells vars = (case vars
-						of [v] => AST.E_ExtractFemItem(v, cellSeqType, (FemOpt.Cells, FT.Mesh(m)))
-						 | _ => raise Fail "impossible argument to method got pass type checking")
-
-			 val refCellName = Atom.atom "refcell"
-			 val refCell = FT.RefCell(m)
-			 val refCellTy = Ty.T_Fem(refCell, SOME(meshName))
-			 val refCellEnvName = FT.envNameOf refCell
-			 val refCellFuncTy = Ty.T_Fun([meshArgTy], refCellTy)
-			 val refCellFuncBody = AST.S_Block([AST.S_Return(AST.E_ExtractFemItem(AST.E_Var(param, span), refCellTy, (FemOpt.RefCell, FT.Mesh(m))))])
-			 val refCellFuncVar = Var.new(refCellName, span, AST.FunVar, refCellFuncTy)
-			 val refCellFunc = AST.D_Func(refCellFuncVar, [param], refCellFuncBody)
-
-
-			in
-			 ([(numCell, numCellFuncVar), (cells', cellFuncVar'), (refCellName, refCellFuncVar)], [numCellFun, cellsFun', cellsFun,refCellFunc], [(cells, makeCells, cellTypeFuncTy)])
-			end
-
-		   (*end case*))
-
+		     
 	       fun makePrim(prim, argTys) =
 		   let
 		    val AST.E_Prim(var, metargs, exprs, result) = prim
@@ -623,9 +498,16 @@ structure CheckGlobals : sig
 			 AST.E_Tensor(List.tabulate(dim, fn x => AST.E_Lit(Literal.Real(third))), vecTy)
 			end
 		   (* end case*))
-	       fun dnT(env, cxt, span, meshData, posExpr, cellIntExpr, meshExpr) =
+
+	       (*build n derivative functions of the transform*)
+	       (*also refcell insideCheck...*)
+	       (*with these functions, we can do more interesting things...*)
+		     
+	       fun dnT(env, cxt, span, meshData) =
 		   let
-		    val _ = ()
+		    (*build types*)
+		    (*build params*)
+		    (**)
 		   in
 		    ()
 		   end
@@ -772,7 +654,7 @@ structure CheckGlobals : sig
 			 let
 			  val dotFields' = makePrim'(BV.op_inner_ff,  [invDTransformField, transformFieldModPos], [dTransformFieldTy, transformFieldTy], transformFieldTy) 
 						   
-			  val probeUpdate = makePrim'(BV.op_probe, [dotFields', newPosVarExpr], [transformFieldTy, insideVec], insideVec) (**)
+			  val probeUpdate = makePrim'(BV.op_probe, [dotFields', newPosVarExpr], [transformFieldTy, insideVec], insideVec) 
 			  val updateDeltaStm = AST.S_Assign((updateVar, span), probeUpdate)
 			  val updateCurrentPosExpr = makePrim'(BV.sub_tt, [AST.E_Var(newPosVar,span), AST.E_Var(updateVar, span)], [insideVec, insideVec], insideVec)
 			  val updateCurrentPosStm = AST.S_Assign((newPosVar,span), updateCurrentPosExpr)
@@ -904,6 +786,171 @@ structure CheckGlobals : sig
 	       in
 		(atomName, funcCall, functionTy)
 	       end
+
+	       fun makeFemMethods femTyDef file femInfo =
+		   (case (femInfo, femTyDef)
+		     of ((func as FT.Func(f), n), PT.T_Func(space)) =>
+			let
+			 val funcName = FT.nameOf func
+			 val spaceFunc = Atom.atom "space"
+			 val space' = FT.spaceOf(FT.Func(f))
+			 val spaceName = FT.nameOf space'
+			 val mesh = FT.meshOf func
+			 val meshName = FT.nameOf mesh
+						  
+			 val spaceType = let
+			  val m = FT.meshOf(space')
+			  val meshName = FT.nameOf(m)
+			 in Ty.T_Fem(space', SOME(meshName)) end
+			 val spaceFuncTy = Ty.T_Fun([Ty.T_Named(tyName,Ty.T_Fem(femInfo))],Ty.T_Named(space, spaceType))
+			 val spaceFuncVar = Var.new (spaceFunc, span, AST.FunVar, spaceFuncTy)
+			 val param = Var.new (Atom.atom "arg0", span, AST.FunParam, Ty.T_Named(tyName,Ty.T_Fem(femInfo)))
+					     
+			 val spaceFuncBody = AST.S_Block([AST.S_Return(AST.E_ExtractFem(AST.E_Var(param,span),space'))])
+			 val spaceFun = AST.D_Func(spaceFuncVar, [param], spaceFuncBody)
+
+			 (* OH GOD THIS NEEDS TO BE CLEANED UP*)
+			 val funcArgTy = Ty.T_Named(tyName, Ty.T_Fem(femInfo))
+			 val funcCellTy = Ty.T_Fem(func, SOME(funcName))
+			 val FT.Mesh(meshData) = FT.meshOf func
+			 val meshCell = FT.MeshCell(meshData)
+			 val funcCellVal = FT.FuncCell(f)
+			 val meshCellTy = Ty.T_Fem(meshCell, SOME(meshName))
+			 val funcCellTy = Ty.T_Fem(funcCellVal, SOME(funcName))
+						  
+			 val funcCell = Atom.atom "funcCell"
+			 val funcCellType = Ty.T_Fun([funcArgTy, meshCellTy], funcCellTy)
+			 val funcCellFuncVar = Var.new (funcCell, span, AST.FunVar, funcCellType)
+
+			 val param = Var.new (Atom.atom "arg0", span, AST.FunParam, funcArgTy)
+			 val param' = Var.new (Atom.atom "arg1", span, AST.FunParam, meshCellTy)
+			 (* optional debug information could go here.*)
+			 val funcCellBody = AST.S_Return(AST.E_LoadFem(funcCellVal,
+								       SOME(AST.E_Var(param, span)),
+								       SOME(AST.E_ExtractFemItem(
+									      AST.E_Var(param', span),
+									      Ty.T_Int,
+									      (FO.CellIndex, meshCell)))))
+			 val funcCellFunc = AST.D_Func(funcCellFuncVar,
+						       [param, param'],
+						       funcCellBody)
+
+
+			in
+			 ([(funcCell, funcCellFuncVar), (spaceFunc, spaceFuncVar)],
+			  [funcCellFunc, spaceFun],
+			  [])
+			end
+		      | ((FT.Space(s), n), PT.T_Space(meshName)) =>
+			let
+			 val meshFunc = Atom.atom "domain"
+			 val mesh = FT.meshOf(FT.Space(s))
+			 val meshName = FT.nameOf(mesh)
+			 val meshType = Ty.T_Fem(mesh, SOME(meshName))
+			 val meshFuncTy = Ty.T_Fun([Ty.T_Named(tyName, Ty.T_Fem(femInfo))], Ty.T_Named(meshName, meshType))
+			 val meshFuncVar = Var.new(meshFunc, span, AST.FunVar, meshFuncTy)
+			 val param = Var.new (Atom.atom "arg0", span, AST.FunParam, Ty.T_Named(tyName,Ty.T_Fem(femInfo)))
+			 val meshFuncBody =  AST.S_Block([AST.S_Return(AST.E_ExtractFem(AST.E_Var(param,span),mesh))])
+			 val meshFun = AST.D_Func(meshFuncVar, [param], meshFuncBody)
+			in
+			 ([(meshFunc, meshFuncVar)], [meshFun],[])
+			end
+		      | ((meshData as FT.Mesh(m), n), PT.T_Mesh) =>
+			let
+			 val meshName = FT.nameOf meshData
+			 val meshArgTy = Ty.T_Named(tyName, Ty.T_Fem(femInfo))
+			 val numCell = Atom.atom "numCell"
+			 val meshType = Ty.T_Fem(FT.Mesh(m), SOME(tyName))
+			 val numCellFuncTy = Ty.T_Fun([meshArgTy],Ty.T_Int)
+			 val numCellFuncVar = Var.new (numCell, span, AST.FunVar, numCellFuncTy)
+			 val param = Var.new (Atom.atom "arg0", span, AST.FunParam, meshArgTy)
+			 val numCellBody = AST.S_Block([AST.S_Return(AST.E_ExtractFemItem(AST.E_Var(param, span), Ty.T_Int, (FemOpt.NumCell, FT.Mesh(m))))])
+			 val numCellFun = AST.D_Func(numCellFuncVar, [param], numCellBody)
+
+
+			 (*get list of cells -> we are going to use a extract*)
+			 val cells' = Atom.atom "0cells"
+			 val cells = Atom.atom "cells"
+			 val cellType = Ty.T_Fem(FT.MeshCell(m), SOME(meshName))
+			 val cellSeqType = Ty.T_Sequence(cellType, NONE)
+			 val cellTypeFuncTy = Ty.T_Fun([meshArgTy], cellSeqType)
+			 val cellFuncVar' = Var.new (cells, span, AST.FunVar, cellTypeFuncTy)
+			 val param' = Var.new (Atom.atom "arg0", span, AST.FunParam, meshArgTy)
+
+			 val itterVar = Var.new (Atom.atom "i", span, AST.IterVar, Ty.T_Int)
+			 val iter = (itterVar, AST.E_Prim(BasisVars.range, [],
+			 				  [AST.E_Lit(Literal.Int(IntLit.fromInt 0)),
+			 				   AST.E_ExtractFemItem(AST.E_Var(param', span), Ty.T_Int, (FemOpt.NumCell, FT.Mesh(m)))],
+			 				  Ty.T_Sequence(Ty.T_Int, NONE)))
+			 val comp  = AST.E_Comprehension(AST.E_LoadFem(FT.MeshCell(m), SOME(AST.E_Var(param', span)), SOME(AST.E_Var(itterVar, span))), iter, cellSeqType)
+			 				(*AST.E_ExtractFemItem(AST.E_Var(param', span)*)
+			 val cellsBody = AST.S_Block([AST.S_Return(comp)])
+			 val cellsFun' =  AST.D_Func(cellFuncVar', [param'], cellsBody)
+
+			 val cellFuncVar = Var.new (cells, span, AST.FunVar, cellTypeFuncTy)
+			 val cellsFun = AST.D_Func(cellFuncVar, [param'],
+						   AST.S_Block([AST.S_Return(AST.E_ExtractFemItem(AST.E_Var(param',span), cellSeqType, ( FemOpt.Cells, FT.Mesh(m))))]))
+
+
+			 fun makeCells vars = (case vars
+						of [v] => AST.E_ExtractFemItem(v, cellSeqType, (FemOpt.Cells, FT.Mesh(m)))
+						 | _ => raise Fail "impossible argument to method got pass type checking")
+
+			 val refCellName = Atom.atom "refcell"
+			 val refCell = FT.RefCell(m)
+			 val refCellTy = Ty.T_Fem(refCell, SOME(meshName))
+			 val refCellEnvName = FT.envNameOf refCell
+			 val refCellFuncTy = Ty.T_Fun([meshArgTy], refCellTy)
+			 val refCellFuncBody = AST.S_Block([AST.S_Return(AST.E_ExtractFemItem(AST.E_Var(param, span), refCellTy, (FemOpt.RefCell, FT.Mesh(m))))])
+			 val refCellFuncVar = Var.new(refCellName, span, AST.FunVar, refCellFuncTy)
+			 val refCellFunc = AST.D_Func(refCellFuncVar, [param], refCellFuncBody)
+
+
+
+						     (*meshPosMaker:*)
+			 val meshPosFuncAtom = Atom.atom FemName.meshPos
+							 
+			 val meshPos = FT.MeshPos(m)
+			 val meshPosTy = Ty.T_Fem(meshPos, SOME(meshName))
+			 val refCellData = FemData.refCell m
+			 val FemData.RefCellData({ty=refCellClass, eps, newtonControl}) = refCellData
+			 val {contraction, itters, newtonTol, killAfterTol} = newtonControl
+			 val newtonTolExp = AST.E_Lit(Literal.Real(newtonTol))
+			 val newtonAttempts = AST.E_Lit(Literal.intLit itters)
+
+			 val mapDim = FemData.meshDim m
+			 val vecTy = Ty.vecTy mapDim
+
+			 val posParam = Var.new (Atom.atom "pos", span, AST.FunParam, vecTy)
+			 val meshParam = Var.new (Atom.atom "mesh", span, AST.FunParam, meshType)
+			 val posExpr = AST.E_Var(posParam,span)
+			 val meshExpr = AST.E_Var(meshParam, span)
+			 val meshPosfuncTy = Ty.T_Fun([meshType, vecTy], meshPosTy)
+			 val meshPosFuncVar = Var.new (meshPosFuncAtom, span, AST.FunVar, meshPosfuncTy)
+
+			 fun makeRefCellInsideFunc vars = (case vars
+							    of [v1,v2] => makeRefCellInside(env, cxt, span, mapDim, refCellData, v2, v1)
+							     | _ => raise Fail "impossble got through type checker"
+							  (* end case*))
+			 val meshPosBody = makeMeshPosSearch(env, cxt, span,
+							     refCellClass,
+							     FT.Mesh(m),
+							     newtonTolExp,newtonAttempts,
+							     contraction, killAfterTol,
+							     posExpr, meshExpr,
+							     makeRefCellInsideFunc)
+
+			 val meshPosFunc = AST.D_Func(meshPosFuncVar, [meshParam, posParam], meshPosBody)
+
+
+			in
+			 ([(numCell, numCellFuncVar), (cells', cellFuncVar'), (refCellName, refCellFuncVar), (meshPosFuncAtom, meshPosFuncVar)],
+			  [numCellFun, cellsFun', cellsFun, refCellFunc, meshPosFunc],
+			  [(cells, makeCells, cellTypeFuncTy)])
+			end
+
+		   (*end case*))
+
 	       fun makeMeshPos(env, cxt, span, meshData, transformFunctionName) = let
 		val results = []
 		val meshName = FT.nameOf meshData
@@ -1019,7 +1066,7 @@ structure CheckGlobals : sig
 							   (* end case*))
 
 			  fun mkVar (var) = AST.E_Var(var,span)
-			  val (hiddenFuncAtom, hiddenFuncVar, newtonFunc) = let (*TODO: USE let a lot here too refactor this code... god this code is ugly*)
+			  val (newtonResult) = let (*TODO: USE let a lot here too refactor this code... god this code is ugly*)
 			   val hiddenFuncAtom = Atom.atom  (FemName.hiddenNewtonInverse)
 
 
@@ -1047,9 +1094,14 @@ structure CheckGlobals : sig
 
 			   val body = makeNewtonInversesBody(env, cxt, span, refCellClass, meshData, newtonTol, newtonAttempts, contraction, killAfterTol, posExpr, cellIntExpr, meshExpr, insideFunc)
 			   val newtonFunc = AST.D_Func(hiddenFuncVar, [posParam, cellIntParam, meshParam], body)
+
+
+			   
 			  in
-			   (hiddenFuncAtom, hiddenFuncVar, newtonFunc)
+			   ((hiddenFuncAtom, hiddenFuncVar, newtonFunc))
 			  end
+
+			  val (hiddenFuncAtom, hiddenFuncVar, newtonFunc) = newtonResult
 
 			  val invTransformSpec =
 			      let
