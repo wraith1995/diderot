@@ -43,7 +43,7 @@ structure Keywords300 : sig
 	    ("femFunction",     T.KW_func),
 	    ("functionSpace",   T.KW_space),
 	    ("cell",            T.KW_cell),
-	    ("position",        T.KW_pos),
+	    ("pos",             T.KW_pos),
 	    ("refCell",         T.KW_refCell),
             ("int",             T.KW_int),
             ("kernel",          T.KW_kernel),
