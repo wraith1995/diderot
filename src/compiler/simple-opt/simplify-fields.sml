@@ -156,6 +156,7 @@ structure SimplifyFields : sig
 	      | S.E_ExtractFemItem(_,_,_) => NONE
 	      | S.E_ExtractFemItem2(_,_,_,_, _) => NONE
 	      | S.E_FemField(_,_,_,_,_,_) => (bindImages(lhs, VMap.empty); NONE) (* THIS IS MAYBE NOT THE RIGHT WAY TO DO femFields -> we should be tracking mesh, spaces, etc like images*)
+	      | S.E_ExtractFemItemN(vars, tys, outTy, opt, funcOpt) => NONE
               | S.E_LoadImage _ => image()
               | S.E_InsideImage _ => raise Fail "premature InsideImage"
 (* QUESTION: is this a valid way to handle field functions? *)

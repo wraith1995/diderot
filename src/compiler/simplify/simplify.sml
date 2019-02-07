@@ -564,7 +564,16 @@ structure Simplify : sig
 		  in
 		   (stms', S.E_FemField(var1,var1', var2, ty', field, func'))
 		  end
-		   
+		| AST.E_ExtractFemItemN(exprs, tys, outTy, femOpt, optVar) =>
+		  let
+		   val tys' = List.map cvtTy tys
+		   val outTy' = cvtTy outTy
+		   val (stms', exprs') = simplifyExpsToVars (cxt, exprs, stms)
+		   val femOpt' = femOpt
+		   val optVar' = Option.map (fn (x,y) => SimpleFunc.use(cvtFunc x)) optVar
+		  in
+		   (stms', S.E_ExtractFemItemN(exprs', tys',outTy', femOpt', optVar'))
+		  end
               | AST.E_Coerce{dstTy, e=AST.E_Lit(Literal.Int n), ...} => (case cvtTy dstTy
                    of SimpleTypes.T_Tensor[] => (stms, S.E_Lit(Literal.Real(RealLit.fromInt n)))
                     | _ => raise Fail "impossible: bad coercion"

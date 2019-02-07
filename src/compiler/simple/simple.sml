@@ -113,6 +113,7 @@ structure Simple =
       | E_ExtractFemItem of var * ty * FemOpt.femOption (* var.femOption : ty*)
       | E_ExtractFemItem2 of var * var * ty * ty * FemOpt.femOption (* var.femOption : ty*)
       | E_FemField of var * var * var option * ty * FemOpt.femField * func option
+      | E_ExtractFemItemN of var list * ty list * ty * FemOpt.femOption * func option
       | E_InsideImage of var * var * int        (* inside-image test; introduced by the
                                                  * simplify-fields pass. The third argument is
                                                  * the maximum support of the image.
@@ -148,6 +149,7 @@ structure Simple =
       | typeOf (E_LoadImage(ty, _, _)) = ty
       | typeOf (E_LoadFem(data, _, _)) = SimpleTypes.T_Fem(data) 
       | typeOf (E_ExtractFemItem(_,ty,_)) = ty
+      | typeOf (E_ExtractFemItemN (_, tys, outTy, _, _)) = outTy
       | typeOf (E_ExtractFemItem2(_,_,ty, outTy,_)) = outTy
       | typeOf (E_ExtractFem(_,data)) = SimpleTypes.T_Fem(data)
       | typeOf (E_FemField(_,_,_,ty,_,_)) = ty

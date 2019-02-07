@@ -91,6 +91,7 @@ structure SimplifyVars : sig
 		  | S.E_ExtractFemItem2(v1, v2,_,_,_) => (chkVar bvs v1; chkVar bvs v2)
 		  | S.E_ExtractFem(v,_) => chkVar bvs v
 		  | S.E_FemField(v1,v1', v2, ty, opt, func) => (chkVar bvs v1;chkVar bvs v1'; Option.app (chkVar bvs) v2)
+		  | S.E_ExtractFemItemN(vars, tys, outTy, opt, funcOpt) => List.app (chkVar bvs) vars
                 (* end case *))
           in
             fn blk => analyzeBlk (blk, VSet.empty)
@@ -258,6 +259,7 @@ structure SimplifyVars : sig
 		  | S.E_ExtractFemItem2(v1,v2,a,b, c) => S.E_ExtractFemItem2(rename v1, rename v2, a,b, c)
 		  | S.E_ExtractFem(v,a) => S.E_ExtractFem(rename v,a)
 		  | S.E_FemField(v1,v1', v2, ty, opt, func) => S.E_FemField(rename v1,rename v1', Option.map rename v2, ty, opt, func)
+		  | S.E_ExtractFemItemN(vars, tys, outTy, opt, funcOpt) => S.E_ExtractFemItemN(List.map rename vars, tys, outTy, opt, funcOpt)
                 (* end case *))
           in
             renameBlk

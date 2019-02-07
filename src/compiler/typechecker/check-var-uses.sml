@@ -118,8 +118,10 @@ structure CheckVarUses : sig
 		  | AST.E_ExtractFemItem2(e1, e2, _, _,_) => chk'([e1, e2], unused)
 		  | AST.E_FemField(e1,e1', e2, _, _, v) => let val unused' = chk'((case e2
 									       of SOME(e2') => [e1, e1', e2']
-										| _ =>  [e1, e1']), unused) in (Option.getOpt(Option.map (fn x => chkUse(cxt, x, undef, unused')) v, unused')) end
-		  | AST.E_ExtractFemItemN(_, exprs, tys, femOpt_, v) => let val unused' = (chk'(exprs, unused)) in (Option.getOpt(Option.map (fn x => chkUse(cxt, x, undef, unused')) v, unused')) end
+										| _ =>  [e1, e1']), unused)
+							   in (Option.getOpt(Option.map (fn x => chkUse(cxt, x, undef, unused')) v, unused')) end
+		  | AST.E_ExtractFemItemN(exprs, tys, outTy, femOpt, v) => let val unused' = (chk'(exprs, unused))
+									in (Option.getOpt(Option.map (fn x => chkUse(cxt, x, undef, unused')) v, unused')) end
                 (* end case *))
           and chk' (es, unused) = List.foldl chk unused es
           in

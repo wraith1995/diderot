@@ -184,8 +184,93 @@ structure GenTysAndOps : sig
 		  val class = CL.D_ClassDef{name=name, args=NONE, from=NONE,public = fields , protected = [], private = []}
 		 in
 		  (class, [printer, builder])
+		 end)
+		| FT.MeshPos(mesh) => (
+		 let
+		  val meshPosTy = CL.T_Named(name)
+		  val meshPosRefTy = CL.T_Named(name ^ " & ")
+		  val meshName = Atom.toString (FT.nameOf (FT.meshOf ty))
+		  val meshTy = CL.T_Named(meshName);
+
+		  val dim = FT.meshDim mesh
+		  val tensorTy = RN.tensorRefTy [dim] (*TODO: maybe tensor ref or vec???? - figure out later.*)
+
+		  (*params:*)
+		  val meshParam = CL.D_Var([], meshTy, [], "mesh", NONE)
+		  val intParam = CL.D_Var([], intTy, [], "cell", NONE)
+		  val refPosParam = CL.D_Var([], tensorTy, [], "refPos", NONE)
+		  val worldPosParam = CL.D_Var([], tensorTy, [], "worldPos", NONE)
+		  val worldPosCompute = CL.D_Var([], CL.boolTy, [], "wpc", NONE)
+		  val valid = CL.D_Var([], CL.boolTy, [], "valid", NONE)
+
+		  val osty = CL.T_Named("std::ostream &")
+
+
+
+		  (*TODO: fix meshPos printing*)
+		  val printer = CL.mkFuncDcl(osty, "operator<<", [CL.PARAM([], osty, "os"), CL.PARAM([], meshPosRefTy, "pos")], 
+					     CL.S_Block([
+							CL.S_Return(SOME(CL.E_BinOp(CL.E_Var("os"),
+										    CL.#<<, 
+										       CL.E_Select(CL.E_Var("pos"),"cell"))))]))
+
+		  fun assgn name = CL.S_Exp(CL.E_AssignOp(CL.E_Select(CL.E_Var("pos"), name), CL.$=, CL.E_Var(name)))
+		  fun init name = (name, CL.I_Exp(CL.E_Var(name)))
+		  fun init' name exp = (name, CL.I_Exp(exp))
+
+		  fun assgn' name expr = CL.S_Exp(CL.E_AssignOp(CL.E_Select(CL.E_Var("pos"), name), CL.$=, expr))
+
+		  val genBuild = CL.D_Constr([],[], name,
+					      [CL.PARAM([], meshTy, "mesh"),
+					       CL.PARAM([], intTy, "cell"),
+					       CL.PARAM([], tensorTy, "refPos"),
+					       CL.PARAM([], tensorTy, "worldPos"),
+					       CL.PARAM([], CL.boolTy, "wpc"),
+					       CL.PARAM([], CL.boolTy, "valid")],
+					      CL.S_Block([
+							 CL.S_Decl([], meshPosTy, "pos", SOME(
+								    CL.I_Struct(
+								     [
+								       init "mesh",
+								       init "cell",
+								       init "refPos",
+								       init "worldPos",
+								       init "wpc",
+								       init "valid"
+								     ]
+									  
+								    )
+								  )),
+							 CL.S_Return(SOME(CL.E_Var("pos")))
+							])
+					     )
+		  val invalidBuild = CL.D_Constr([],[], name,
+						  [CL.PARAM([], meshTy, "mesh")],
+					      CL.S_Block([
+							 CL.S_Decl([], meshPosTy, "pos", SOME(
+						    CL.I_Struct(
+						     [
+						       init "mesh",
+						       init' "cell" (CL.E_Int(IntLit.fromInt (~1), intTy)),
+						       init' "wpc" (CL.E_Bool(false)),
+						       init' "valid" (CL.E_Bool(false)),
+						       init' "refPos" (CL.E_Var("nullptr")),
+						       init' "worldPos" (CL.E_Var("nullptr"))
+						     ]
+						    ))),
+							 CL.S_Return(SOME(CL.E_Var("pos")))])
+							
+						 )
+		  val defaultBuild =  CL.D_Constr (
+                       [], [], name, [], SOME([CL.mkApply(name, [])], CL.mkBlock[]))
+		  val fields = [meshParam, intParam, refPosParam, worldPosParam, worldPosCompute, valid, defaultBuild]
+		  val class = CL.D_ClassDef{name=name, args=NONE, from=NONE,public = fields , protected = [], private = []}
+		  
+		 in
+		  (class, [printer, genBuild,invalidBuild])
 		 end
 		)
+		
 		
 		  
 		

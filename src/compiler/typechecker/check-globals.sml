@@ -583,8 +583,8 @@ structure CheckGlobals : sig
 		    val deltaNormTest = makePrim'(BV.gte_rr, [tolExpr, deltaNorm], [Ty.realTy, Ty.realTy], Ty.T_Bool)
 						 
 		    val insideTest = insideFunction([meshExpr, newPosVarExpr])
-		    val makeMeshPos = AST.E_ExtractFemItemN(4, [meshExpr, cellItterVarExp, posExpr, newPosVarExpr], [meshTy, Ty.T_Int, insideVec, insideVec], (FemOpt.AllBuild, meshPosData), NONE)
-		    val invalidMeshPos = AST.E_ExtractFemItem(meshExpr, meshTy, (FemOpt.InvalidBuild, meshPosData))
+		    val makeMeshPos = AST.E_ExtractFemItemN([meshExpr, cellItterVarExp, posExpr, newPosVarExpr], [meshTy, Ty.T_Int, insideVec, insideVec], meshPosType, (FemOpt.AllBuild, meshPosData), NONE)
+		    val invalidMeshPos = AST.E_ExtractFemItemN([meshExpr], [ meshTy], meshPosType, (FemOpt.InvalidBuild, meshPosData), NONE)
 
 		    val succesReturn = AST.S_Return(makeMeshPos)
 		    val failReturn = AST.S_Return(invalidMeshPos)
@@ -925,7 +925,7 @@ structure CheckGlobals : sig
 			 val meshParam = Var.new (Atom.atom "mesh", span, AST.FunParam, meshType)
 			 val posExpr = AST.E_Var(posParam,span)
 			 val meshExpr = AST.E_Var(meshParam, span)
-			 val meshPosfuncTy = Ty.T_Fun([meshType, vecTy], meshPosTy)
+			 val meshPosfuncTy = Ty.T_Fun([meshArgTy, vecTy], meshPosTy)
 			 val meshPosFuncVar = Var.new (meshPosFuncAtom, span, AST.FunVar, meshPosfuncTy)
 
 			 fun makeRefCellInsideFunc vars = (case vars

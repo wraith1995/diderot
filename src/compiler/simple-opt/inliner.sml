@@ -208,6 +208,7 @@ structure Inliner : sig
 		  | S.E_ExtractFemItem2(v1, v2, ty, outTy, data) => S.E_ExtractFemItem2(rename env v1, rename env v2, ty, outTy, data)
 		  | S.E_LoadFem(data, v1, v2) => S.E_LoadFem(data, rename env v1, rename env v2)
 		  | S.E_FemField(v1, v1', v2, ty, field, func) => S.E_FemField(rename env v1,rename env v1', Option.map (rename env) v2, ty, field, Option.map SimpleFunc.use func)
+		  | S.E_ExtractFemItemN(vars, tys, outTy, opt, funcOpt) => S.E_ExtractFemItemN(List.map (rename env) vars, tys, outTy, opt, Option.map SimpleFunc.use funcOpt)
                 (* end case *))
         (* build the initial environment by mapping parameters to arguments *)
           val env = ListPair.foldlEq

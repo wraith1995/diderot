@@ -250,9 +250,9 @@ structure CheckExpr : sig
                               case Unify.matchArgs (domTy, arg::args', ty::tys')
                                of SOME args => (AST.E_Apply(useVar(cxt, f), args, rngTy), rngTy)
                                 | NONE => err(cxt, [
-					      S "type error in application of method ", V f, S "defined in type ", TY(ty),
+					      S "type error in application of method,", V f, S ", defined in type ", TY(ty),
 					      S "  expected: ", TYS domTy, S "\n",
-					      S "  found:    ", TYS tys'
+					      S "  found:    ", TYS (ty::tys')
                       ])
                               (* end case *))
                           | _ => err(cxt, [S "application of non-function/field ", V f])
