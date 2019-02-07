@@ -501,6 +501,25 @@ structure LowToTree : sig
 	      | Op.ExtractFemItem(ty, opt) => bindTREE (TOp.ExtractFemItem(U.trType ty, opt))
 	      | Op.ExtractFem(ty, inTy) => bindTREE (TOp.ExtractFem (U.trType ty, U.trType inTy))
 	      | Op.ExtractFemItem2(ty, outTy, opt) => bindTREE (TOp.ExtractFemItem2(U.trType ty, U.trType outTy, opt))
+	      | Op.ExtractFemItemN(tys, outTy, opt, stamp, name, fTys, fTy) =>
+		let
+		 val newFuncFV = LowIR.FV{id=stamp,
+					  name = name,
+					  ty = fTy,
+					  useCnt = ref 1,
+					  paramTys = fTys,
+					  props = PropList.newHolder ()}
+		 val qname = if Stamp.same(Stamp.zero, stamp)
+			     then ""
+			     else let val lowerfuncFV = getFuncVar newFuncFV in TreeFunc.qname lowerfuncFV end
+		 val tys' = List.map U.trType tys
+		 val outTy' = U.trType outTy
+		 val fTys' = List.map U.trType fTys
+		 val fTy' = U.trType fTy
+
+		in
+		 bindTREE' ((TOp.ExtractFemItemN(tys', outTy', opt, name, qname, fTys', fTy')))
+		end
               | rator => raise Fail("bogus operator " ^ Op.toString srcRator)
             (* end case *)
           end

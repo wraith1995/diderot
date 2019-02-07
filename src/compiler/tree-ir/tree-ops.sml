@@ -143,6 +143,7 @@ structure TreeOps =
       | ExtractFemItem of ty * FemOpt.femOption
       | ExtractFemItem2 of ty * ty * FemOpt.femOption
       | ExtractFem of ty * ty
+      | ExtractFemItemN of tys * ty * FemOpt.femOption * string * string * tys * ty
       | MathFn of MathFns.t
 
     fun resultArity IAdd = 1
@@ -229,6 +230,7 @@ structure TreeOps =
       | resultArity (ExtractFemItem _) = 1
       | resultArity (ExtractFemItem2 _) = 1
       | resultArity (ExtractFem _) = 1
+      | resultArity (ExtractFemItemN _) = 1
       | resultArity (MathFn _) = 1
 
     fun arity IAdd = 2
@@ -315,6 +317,7 @@ structure TreeOps =
       | arity (ExtractFemItem _) = 1
       | arity (ExtractFemItem2 _) = 2
       | arity (ExtractFem _) = 1
+      | arity (ExtractFemItemN _) = ~1
       | arity (MathFn _) = ~1
 
     fun isPure (MkDynamic _) = false
@@ -407,6 +410,7 @@ structure TreeOps =
       | same (ExtractFemItem(a0,a1), ExtractFemItem(b0,b1)) = samety(a0, b0) andalso FemOpt.same(a1, b1)
       | same (ExtractFemItem2(a0,a1,a2), ExtractFemItem2(b0,b1,b2)) = samety(a0, b0) andalso samety(a1, b1) andalso FemOpt.same(a2, b2)
       | same (ExtractFem(a0,a1), ExtractFem(b0,b1)) = samety(a0, b0) andalso samety(a1, b1)
+      | same (ExtractFemItemN(a0,a1,a2,a3,a4,a5,a6), ExtractFemItemN(b0,b1,b2,b3,b4,b5,b6)) = sametys(a0, b0) andalso samety(a1, b1) andalso FemOpt.same(a2, b2) andalso samestring(a3, b3) andalso samestring(a4, b4) andalso sametys(a5, b5) andalso samety(a6, b6)
       | same (MathFn(a0), MathFn(b0)) = MathFns.same(a0, b0)
       | same _ = false
 
@@ -494,7 +498,8 @@ structure TreeOps =
       | hash (ExtractFemItem(a0,a1)) = 0w431 + hashty a0 + FemOpt.hash a1
       | hash (ExtractFemItem2(a0,a1,a2)) = 0w433 + hashty a0 + hashty a1 + FemOpt.hash a2
       | hash (ExtractFem(a0,a1)) = 0w439 + hashty a0 + hashty a1
-      | hash (MathFn(a0)) = 0w443 + MathFns.hash a0
+      | hash (ExtractFemItemN(a0,a1,a2,a3,a4,a5,a6)) = 0w443 + hashtys a0 + hashty a1 + FemOpt.hash a2 + hashstring a3 + hashstring a4 + hashtys a5 + hashty a6
+      | hash (MathFn(a0)) = 0w449 + MathFns.hash a0
 
     fun toString IAdd = "IAdd"
       | toString ISub = "ISub"
@@ -580,6 +585,7 @@ structure TreeOps =
       | toString (ExtractFemItem(a0,a1)) = concat["ExtractFemItem<", tyToString a0, ",", FemOpt.toString a1, ">"]
       | toString (ExtractFemItem2(a0,a1,a2)) = concat["ExtractFemItem2<", tyToString a0, ",", tyToString a1, ",", FemOpt.toString a2, ">"]
       | toString (ExtractFem(a0,a1)) = concat["ExtractFem<", tyToString a0, ",", tyToString a1, ">"]
+      | toString (ExtractFemItemN(a0,a1,a2,a3,a4,a5,a6)) = concat["ExtractFemItemN<", tysToString a0, ",", tyToString a1, ",", FemOpt.toString a2, ",", stringToString a3, ",", stringToString a4, ",", tysToString a5, ",", tyToString a6, ">"]
       | toString (MathFn(a0)) = concat["MathFn<", MathFns.toString a0, ">"]
 
   end

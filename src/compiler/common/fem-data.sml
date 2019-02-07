@@ -279,6 +279,7 @@ fun isValue ty =
     (case ty
       of MeshCell(_) => true
        | FuncCell(_) => true
+       | MeshPos(_) => true
        | _ => false)
 
 fun toString ty =

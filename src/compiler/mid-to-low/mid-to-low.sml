@@ -170,8 +170,31 @@ structure MidToLow : sig
 		 (* end case *))
 		end
 
-
-		
+	      | SrcOp.ExtractFemItemN(tys, outTy, opt, stamp, name, paramTys, fTy) =>
+		let
+		 val tys' = List.map cvtTy tys
+		 val outTy' = cvtTy outTy
+		 val opt' = opt
+		 val new = if Stamp.same(Stamp.zero, stamp)
+			   then (stamp, name, cvtTy fTy, [])
+			   else
+			    let
+			     val newFuncFV = SrcIR.FV{id=stamp,
+						      name = name,
+						      ty = fTy,
+						      useCnt = ref 1,
+						      paramTys = paramTys,
+						      props = PropList.newHolder ()}
+			     val targetFV = Env.renameFV(env, newFuncFV)
+			     val DstIR.FV{id, name, ty, paramTys,...} = targetFV
+			    in
+			     (id, name, ty, paramTys)
+			    end
+		 val (stamp', name', fTy', paramTys') = new
+		in
+		 assign (DstOp.ExtractFemItemN(tys', outTy', opt', stamp', name', paramTys',  fTy'))
+		end
+		  
 		(* let *)
 		(*  val [dataArg, indexArg] = args' (* it should alwalys be 2*) *)
 		(* in *)

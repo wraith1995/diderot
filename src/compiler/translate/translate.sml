@@ -453,6 +453,19 @@ print(concat["doVar (", SV.uniqueNameOf srcVar, ", ", IR.phiToString phi, ", _) 
 	      in
 	       [IR.ASSGN(lhs, IR.OP(Op.ExtractFemItem2(ty', outTy', opt), [v1', v2']))]
 	      end
+	    | S.E_ExtractFemItemN(vars, tys, outTy, opt, func) =>
+	      let
+	       val tys' = List.map cvtTy tys
+	       val outTy' = cvtTy outTy
+	       val vars' = List.map (lookup env) vars
+	       val func' = Option.map cvtFuncVar func
+	       val (stamp', name, ty, paramTys) =
+		   (case func'
+		     of SOME(IR.FV{id=stamp, name, ty, paramTys, ...}) => (stamp, name, ty, paramTys)
+		      | NONE => (Stamp.zero, "", DstTy.IntTy, []))
+	      in
+	       [IR.ASSGN(lhs, IR.OP(Op.ExtractFemItemN(tys', outTy', opt, stamp', name,  paramTys, ty), vars'))]
+	      end
             | S.E_InsideImage(pos, img, s) => let
                 val Ty.T_Image info = SV.typeOf img
                 in

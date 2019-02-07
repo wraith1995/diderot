@@ -313,6 +313,25 @@ structure TreeToCxx : sig
 		 | Ty.TensorTy(_) => CL.mkUnOp(CL.%&, CL.E_Subscript(CL.E_Select(a, "coordMap"), b))
 	      (* end case*))
 	    | (Op.ExtractFemItem2(ty,ty', (FemOpt.ExtractIndex, _)), [a,b]) => CL.E_Subscript(CL.E_Select(a, "indexMap"), b)
+	    | (Op.ExtractFemItemN(tys, outTy, opt,name, qfname, fTys, fTy), args) =>
+	      let
+	       val _ = ()
+	      in
+	       (case (opt, args)
+		 of ((AllBuild, FT.MeshPos(m)), [mesh, cellInt,worldPos, refPos]) =>
+		    let
+		     val args' = [mesh, cellInt, worldPos, refPos, CL.E_Bool(true), CL.E_Bool(true)]
+		    in
+		     CL.mkApply("allBuild", args')
+		    end
+		  | ((InvalidBuild, FT.MeshPos(m)), [mesh]) =>
+		    let
+		    in
+		     CL.mkApply("invalidBuild", [mesh])
+		    end
+	       (*end case*))
+	      end
+
             | _ => raise Fail(concat[
                    "unknown or incorrect operator ", Op.toString rator
                  ])

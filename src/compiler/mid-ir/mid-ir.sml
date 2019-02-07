@@ -111,6 +111,7 @@ structure MidOps =
       | ExtractFemItem of ty * FemOpt.femOption
       | ExtractFemItem2 of ty * ty * FemOpt.femOption
       | ExtractFem of ty * ty
+      | ExtractFemItemN of tys * ty * FemOpt.femOption * Stamp.t * string * tys * ty
       | KillAll
       | StabilizeAll
       | Print of tys
@@ -179,6 +180,7 @@ structure MidOps =
       | resultArity (ExtractFemItem _) = 1
       | resultArity (ExtractFemItem2 _) = 1
       | resultArity (ExtractFem _) = 1
+      | resultArity (ExtractFemItemN _) = 1
       | resultArity KillAll = 0
       | resultArity StabilizeAll = 0
       | resultArity (Print _) = 0
@@ -247,6 +249,7 @@ structure MidOps =
       | arity (ExtractFemItem _) = 1
       | arity (ExtractFemItem2 _) = 2
       | arity (ExtractFem _) = 1
+      | arity (ExtractFemItemN _) = ~1
       | arity KillAll = 0
       | arity StabilizeAll = 0
       | arity (Print _) = ~1
@@ -324,6 +327,7 @@ structure MidOps =
       | same (ExtractFemItem(a0,a1), ExtractFemItem(b0,b1)) = samety(a0, b0) andalso FemOpt.same(a1, b1)
       | same (ExtractFemItem2(a0,a1,a2), ExtractFemItem2(b0,b1,b2)) = samety(a0, b0) andalso samety(a1, b1) andalso FemOpt.same(a2, b2)
       | same (ExtractFem(a0,a1), ExtractFem(b0,b1)) = samety(a0, b0) andalso samety(a1, b1)
+      | same (ExtractFemItemN(a0,a1,a2,a3,a4,a5,a6), ExtractFemItemN(b0,b1,b2,b3,b4,b5,b6)) = sametys(a0, b0) andalso samety(a1, b1) andalso FemOpt.same(a2, b2) andalso Stamp.same(a3, b3) andalso samestring(a4, b4) andalso sametys(a5, b5) andalso samety(a6, b6)
       | same (KillAll, KillAll) = true
       | same (StabilizeAll, StabilizeAll) = true
       | same (Print(a0), Print(b0)) = sametys(a0, b0)
@@ -393,10 +397,11 @@ structure MidOps =
       | hash (ExtractFemItem(a0,a1)) = 0w293 + hashty a0 + FemOpt.hash a1
       | hash (ExtractFemItem2(a0,a1,a2)) = 0w307 + hashty a0 + hashty a1 + FemOpt.hash a2
       | hash (ExtractFem(a0,a1)) = 0w311 + hashty a0 + hashty a1
-      | hash KillAll = 0w313
-      | hash StabilizeAll = 0w317
-      | hash (Print(a0)) = 0w331 + hashtys a0
-      | hash (MathFn(a0)) = 0w337 + MathFns.hash a0
+      | hash (ExtractFemItemN(a0,a1,a2,a3,a4,a5,a6)) = 0w313 + hashtys a0 + hashty a1 + FemOpt.hash a2 + Stamp.hash a3 + hashstring a4 + hashtys a5 + hashty a6
+      | hash KillAll = 0w317
+      | hash StabilizeAll = 0w331
+      | hash (Print(a0)) = 0w337 + hashtys a0
+      | hash (MathFn(a0)) = 0w347 + MathFns.hash a0
 
     fun toString IAdd = "IAdd"
       | toString ISub = "ISub"
@@ -461,6 +466,7 @@ structure MidOps =
       | toString (ExtractFemItem(a0,a1)) = concat["ExtractFemItem<", tyToString a0, ",", FemOpt.toString a1, ">"]
       | toString (ExtractFemItem2(a0,a1,a2)) = concat["ExtractFemItem2<", tyToString a0, ",", tyToString a1, ",", FemOpt.toString a2, ">"]
       | toString (ExtractFem(a0,a1)) = concat["ExtractFem<", tyToString a0, ",", tyToString a1, ">"]
+      | toString (ExtractFemItemN(a0,a1,a2,a3,a4,a5,a6)) = concat["ExtractFemItemN<", tysToString a0, ",", tyToString a1, ",", FemOpt.toString a2, ",", Stamp.toString a3, ",", stringToString a4, ",", tysToString a5, ",", tyToString a6, ">"]
       | toString KillAll = "KillAll"
       | toString StabilizeAll = "StabilizeAll"
       | toString (Print(a0)) = concat["Print<", tysToString a0, ">"]

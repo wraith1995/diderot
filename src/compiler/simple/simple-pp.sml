@@ -126,6 +126,10 @@ structure SimplePP : sig
 		   string "femField("; var v1; string ","; Option.app var v2; string ","; string (Ty.toString ty); string ","; string (FemOpt.fieldString field);string ",";
 		   (Option.map (fn x => (ppFunc (ppStrm, x); sp())) func); string ")"
 		  )
+		  | S.E_ExtractFemItemN(vars, tys, ty, opt, func) => (
+		   string "extractFemItemN("; ppArgs (ppStrm, vars); string ",";string (FemOpt.toString opt); string ",";
+		   (Option.map (fn x => (ppFunc (ppStrm, x); sp())) func); string ")"
+		  )
 
                   | S.E_InsideImage(pos, img, s) => (
                       string "insideImage("; var pos; string ","; var img;

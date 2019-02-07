@@ -34,7 +34,7 @@ strand gg(int i, cell{msh} j){
 
 
   cell{FUNC} kk = c.funcCell(j);
-  /* pos{msh} yy = a.meshPos([0.0, 0.0]); */
+  pos{msh} yy = a.meshPos([0.0, 0.0]);
   tensor[2,2,2] qqq = ( ∇⊗(kk.refField))([1,1]);
   tensor[2] smrgh = j.invTransform([0,0]);
   tensor[2,2,2] smrgh2 =  ∇⊗∇⊗(j.invTransform)([0,0]);
@@ -44,7 +44,7 @@ strand gg(int i, cell{msh} j){
   int j0 = 2;
 
   update{
-    print("SAFAFAFAFA:", yy);
+    print("SAFAFAFAFA:", yy, "\n");
 
     print("funcCell:", kk, "\n");
     tensor[FUNC.funcDofShape] b = kk.dofs();

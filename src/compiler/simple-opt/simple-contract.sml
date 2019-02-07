@@ -142,6 +142,7 @@ structure SimpleContract : sig
 		  | S.E_ExtractFem(x,_) => markUsed x
 		  | S.E_FemField(v1,v1', v2, ty, field, func) => (markUsed v1;markUsed v1'; Option.app markUsed v2)
                   | S.E_InsideImage(pos, img, _) => (markUsed pos; markUsed img)
+		  | S.E_ExtractFemItemN(vars, tys, outTy, opt, funcOpt) => (List.app markUsed vars)
                   | S.E_FieldFn _ => ()
                 (* end case *))
           in
@@ -210,6 +211,7 @@ structure SimpleContract : sig
 	    | S.E_ExtractFemItem2(x,y, _,_, _) => (unuse x; unuse y)
 	    | S.E_ExtractFem(x,_) => unuse x
 	    | S.E_FemField(v1,v1', v2, ty, field, func) => (unuse v1;unuse v1'; Option.app unuse v2; Option.app ((fn x => ()) o SimpleFunc.decCnt) func)
+	    | S.E_ExtractFemItemN(vars, tys, outTy, opt, funcOpt) => (List.map unuse vars;  Option.app ((fn x => ()) o SimpleFunc.decCnt) funcOpt)
           (* end case *))
 
   (* delete a block of code and decrement use counts of the variables in it *)

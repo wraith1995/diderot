@@ -175,6 +175,30 @@ structure HighToMid : sig
 		  of SOME(_) => let val [arg1,arg2] = Env.renameList(env, args) in FemOptSplit.indexedDataLowering(y, opt, arg1, arg2) end
 		   | NONE => assign (DstOp.ExtractFemItem2(cvtTy ty, cvtTy ty', opt))
 		(* end case *))
+	      | SrcOp.ExtractFemItemN(tys, outTy, opt, stamp, name, paramTys, fTy) =>
+		let
+		 val tys' = List.map cvtTy tys
+		 val outTy' = cvtTy outTy
+		 val opt' = opt
+		 val new = if Stamp.same(Stamp.zero, stamp)
+				then (stamp, name, cvtTy fTy, [])
+			   else
+			    let
+			     val newFuncFV = SrcIR.FV{id=stamp,
+						    name = name,
+						    ty = fTy,
+						    useCnt = ref 1,
+						    paramTys = paramTys,
+						    props = PropList.newHolder ()}
+			     val targetFV = Env.renameFV(env, newFuncFV)
+			     val DstIR.FV{id, name, ty, paramTys,...} = targetFV
+			    in
+			     (id, name, ty, paramTys)
+			    end
+		 val (stamp', name', fTy', paramTys') = new
+		in
+		assign (DstOp.ExtractFemItemN(tys', outTy', opt', stamp', name', paramTys',  fTy'))
+		end
 
 
               | rator => raise Fail("bogus operator " ^ SrcOp.toString rator)
