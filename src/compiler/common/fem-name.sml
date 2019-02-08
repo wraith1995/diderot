@@ -35,6 +35,7 @@ val fds = "funcDofShape" (*not really used now as this is under current spec sam
 val funcDofs = "dofs"
 val refField = "refField"
 val trf = "transformedRefField";
+val field = "F";
 
 (*meshPos:*)
 val cell = "mc"

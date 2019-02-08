@@ -279,7 +279,7 @@ structure ProbeEin : sig
 	 (* List.@(dx, [sumIndexVar]) if we went the other way *)
 	 val basisExpression = E.Tensor(basisParamId, basisAlpha)
 
-	 val args = [dofVar, basisVar]
+	 val args = [dofVar, basisVar, posVar]
 	 val params = [dofParam, basisParam]
 			
 	 val summationRange = (sumId,0, dofCount - 1)
@@ -333,6 +333,13 @@ structure ProbeEin : sig
 	   | E.Probe _ => (true, exp) 
 	   | _ => raise Fail "impossible"
 	(* end case*) )
+    fun checkForIdentityReplace(body) =
+	(case body
+	  of E.Sum(sx, E.Probe _) => false
+           | E.Sum(sx, E.Opn(E.Prod,[eps0, E.Probe _ ])) => false 
+	   | E.Probe _ => true
+	   | _ => raise Fail "impossible"
+	(* end case*) )
 
 
 					       
@@ -384,6 +391,35 @@ structure ProbeEin : sig
 	 AvailRHS.addAssign(avail, "callNewton", Ty.TensorTy([n]), IR.APPLY(targetFV, [posVar, cellIntVar, meshVar]))
 	end
 
+    fun callMeshPosFunc(avail, env, n, func, posVar, meshVar, meshData) =
+	let
+	 val Ty.FemData(data) = IR.Var.ty meshVar (*check meshData*)
+	 val FemData.Mesh(meshData) = data
+	 val tempName = Atom.toString (FemData.functionNameMake' data (FemName.meshPos) func)
+	 val paramTys = [HTy.FemData data, HTy.TensorTy([n])]
+	 val newFuncFV = HIR.FV({id=func, name = tempName, ty = HTy.FemData (FemData.MeshPos(meshData)),
+				 useCnt = ref (1) : int ref,
+				 paramTys = paramTys,
+				 props = PropList.newHolder ()})
+	 val targetFV = Env.renameFV(env, newFuncFV)
+	 val meshPosResult = AvailRHS.addAssign(avail, "callFindPos",
+						Ty.FemData(FemData.MeshPos(meshData)),
+						IR.APPLY(targetFV, [meshVar, posVar]))
+	 val intVar = AvailRHS.addAssign(avail, "intPos",
+					 Ty.IntTy,
+					 IR.OP(
+					  Op.ExtractFemItem(Ty.IntTy, (FemOpt.CellIndex, data)),
+					  [meshPosResult]))
+	 val newPosVar = AvailRHS.addAssign(avail, "refPos",
+					 Ty.TensorTy([n]),
+					 IR.OP(
+					  Op.ExtractFemItem( Ty.TensorTy([n]),
+							     (FemOpt.RefPos, data)),
+					  [meshPosResult]))
+	in
+	 (intVar, newPosVar)
+	end
+
     (* fun resolveFunctionCallFromStamp() *)
     fun replaceFemProbe ( avail, env, (y, IR.EINAPP(Ein.EIN{params, index, body}, args)), probe, sx) =
 	let
@@ -392,15 +428,24 @@ structure ProbeEin : sig
 	 val indexInt = List.nth(params, indexVarId)
 	 val dofSrc =   List.nth(params, dofSrcId)
 	 val indexSrc = List.nth(params, indexSrcId)
-	 val indexVar = List.nth(args, indexVarId)
+	 val preIndexVar = List.nth(args, indexVarId)
 	 val indexSrcVar = List.nth(args, indexSrcId)
 	 val dofSrcVar = List.nth(args, dofSrcId)
-	 val (basisArray, dofCount : int, posVar, id: bool) =
-	     (case femEin
-	       of E.Plain(a,b, NONE) => (a,b, prePosVar, false)
-		| E.Plain(a,b, SOME(f))=> (a,b, callNewtonFunc(env, avail, BasisDataArray.domainDim a, f, prePosVar,indexVar, dofSrcVar), false) (*TODO: determine if this is a mesh or not...*)
-		| E.Invert(a,b, SOME(f)) => (a,b, callNewtonFunc(env, avail, BasisDataArray.domainDim a, f , prePosVar,indexVar, dofSrcVar), true)
-		| E.Invert(a,b, NONE) => (a, b, prePosVar, true))
+	 val (basisArray, dofCount : int, posVar, id: bool, indexVar) =
+	     (case (femEin, indexInt)
+	       of (E.Plain(a,b, NONE), E.INT) =>
+		  (a,b, prePosVar, false, preIndexVar)
+		| (E.Plain(a,b, SOME(f)), E.INT)=>
+		  (a,b, callNewtonFunc(env, avail, BasisDataArray.domainDim a, f, prePosVar, preIndexVar, dofSrcVar), false, preIndexVar) (*TODO: determine if this is a mesh or not...*)
+		| (E.Invert(a,b, SOME(f)), E.INT) =>
+		  (a,b, callNewtonFunc(env, avail, BasisDataArray.domainDim a, f , prePosVar, preIndexVar, dofSrcVar), true, preIndexVar)
+		| (E.Invert(a,b, NONE), E.INT) =>
+		  (a, b, prePosVar, true, preIndexVar)
+		| (E.Invert(a,b, SOME(f)), E.FEM(ms as FemData.Mesh(meshDef))) =>
+		  let val (newInt, newPos) = callMeshPosFunc(avail, env, BasisDataArray.domainDim a, f, prePosVar, preIndexVar, meshDef) in  (a, b, prePosVar, true, newInt) end
+		| (E.Plain(a,b, SOME(f)), E.FEM(ms as FemData.Mesh(meshDef))) =>
+		  let val (newInt, newPos) = callMeshPosFunc(avail, env, BasisDataArray.domainDim a, f, prePosVar, preIndexVar, meshDef) in  (a, b, newPos, false, newInt) end
+	     (*end case*))
 	 val dim = BasisDataArray.domainDim basisArray
 
 	 val finRhs =
@@ -410,25 +455,26 @@ structure ProbeEin : sig
 	       (*substitute the result of the function call into the ein expression:*)
 	       val newParamLen = List.length params
 	       val newParamId = newParamLen
-	       val newParamKind = E.TEN(true, [dim])
-	       val params'' = params @ [newParamKind]
-	       val args'' = args @ [posVar]
+	       val newParamKinds = [E.TEN(true, [dim]), E.INT]
+	       val params'' = params @ newParamKinds
+	       val args'' = args @ [posVar, indexVar]
 	       val newProbe = E.Tensor(newParamId, alpha)
-	       val (_, body') = substituteProbe(body, newProbe)
+	       val (_, body') = substituteProbe(body, newProbe) (*should we be doing sumShift or something like that;*)
 	      in
+	       if (checkForIdentityReplace body)
+	       then (y, IR.VAR(posVar))
+	       else
 	       (y, IR.EINAPP(mkEin(params'', index, body'), args''))
 	      end
 	     else
 	      let
-
-	       (* Remove all of these - get newParamIds*)
 	       val E.FEM(dofData) = dofSrc
-	       
-				       
 	       val freshIndex = getsumshift (sx, length index) + length dx
 	       val newParamLen = List.length params
 	       val dofId = newParamLen
-	       val basisId = dofId + 1 
+	       val basisId = dofId + 1
+	       (**)
+	       val newPosVarId = basisId + 1
 
 	       val (args', params', probe') = femFieldReconstruction(
 		    avail, freshIndex, dofId, basisId, posVar, alpha,

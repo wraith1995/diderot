@@ -506,6 +506,28 @@ print(concat["doVar (", SV.uniqueNameOf srcVar, ", ", IR.phiToString phi, ", _) 
 	      in
 	       [IR.ASSGN(lhs, IR.EINAPP(rator, [lookup env index, space', func']))]
 	      end
+	    | S.E_FemField(func,space, SOME(mesh), ty, FemOpt.RefField, SOME(funcVar))=>
+	      let
+	       val Ty.T_Fem(funcData as FemData.Func(f)) = SimpleVar.typeOf(func)
+	       val Ty.T_Fem(spaceData as FemData.Space(s)) = SimpleVar.typeOf(space)
+	       val Ty.T_Fem(meshData as FemData.Mesh(m)) = SimpleVar.typeOf(mesh)
+	       val basis = FemData.spaceBasis s
+	       val spaceDim = FemData.spaceDim s
+	       val shape = FemData.rangeShape f
+	       val shapeVars = List.tabulate(List.length shape, fn x => E.V x )
+	       val func' = cvtFuncVar funcVar
+	       val IR.FV{id=stamp,...} =  func'
+	       val femEin = E.Plain(basis, spaceDim, SOME(stamp))
+	       val rator = E.EIN{
+		    params = [E.FEM(meshData), E.FEM(spaceData), E.FEM(funcData)],
+		    index = shape,
+		    body = E.Fem(femEin,0,1,2,shapeVars,[])
+		   }
+	       val func' = lookup env func
+	       val space' = lookup env space
+	      in
+	       [IR.ASSGN(lhs, IR.EINAPP(rator, [lookup env mesh, space', func']))]
+	      end
 	    | S.E_FemField(mesh, _, SOME(index), ty, FemOpt.InvTransform, SOME(func)) =>
 	      let
 	       val Ty.T_Fem(FemData.Mesh(m)) = SimpleVar.typeOf(mesh)
@@ -515,9 +537,14 @@ print(concat["doVar (", SV.uniqueNameOf srcVar, ", ", IR.phiToString phi, ", _) 
 	       val func' = cvtFuncVar func
 	       val IR.FV{id=stamp,...} =  func'
 	       val femEin = E.Invert((FemData.meshBasis m), spaceDim, SOME(stamp))
+	       val param1 = (case SimpleVar.typeOf index
+			      of Ty.T_Fem(meshData as FemData.Mesh(m)) => E.FEM(meshData)
+			       | Ty.T_Int => E.INT
+			       | _ => raise Fail "impossible"
+			    (*end case*))
 
 	       val rator = E.EIN{
-		    params = [E.INT, E.FEM(data), E.FEM(data)],
+		    params = [param1, E.FEM(data), E.FEM(data)],
 		    index = [dim],
 		    body = E.Fem(femEin,0,1,2,[E.V(0)],[])
 		   }
@@ -590,10 +617,8 @@ print(concat["doVar (", SV.uniqueNameOf srcVar, ", ", IR.phiToString phi, ", _) 
   (* add nodes to save the varying strand state, followed by an exit node *)
     fun saveStrandState (env, (srcState, dstState), exit) = let
      val lookup = lookup env
-     (*check if a var is a meshPos var; if it is, insert an assignmnet*)
           fun save (x, x', cfg) = if AnalyzeSimple.varyingStateVar x'
 				  then IR.CFG.appendNode (cfg, IR.Node.mkSAVE(x, lookup x'))
-							 (*check if it is a meshPos; if it is, we need to insert the damn save; check if pos and replace with _pos*)
 				  else cfg  (* no need to save invariant variables! *)
           in
             IR.CFG.appendNode (

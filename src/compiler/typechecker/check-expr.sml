@@ -730,21 +730,40 @@ structure CheckExpr : sig
 		  | NONE => bogusExpTy
 	       (* end case *))
 	      end
-	    (* | (e', Ty.T_Named(name, ty')) => *)
-	    (*   let *)
-	    (*    (* There in one case here: 1 argument functions s*) *)
-	    (*    (* NOTE TO SELF: THIS checks a named type value*) *)
-	    (*    (* I'm only implementing constants for now.*) *)
-	    (*    val tyEnv = Env.findTypeEnv(env, name) *)
-	    (*    val const = TypeEnv.findConstant(env, field) *)
-	    (*    val method =  TypeEnv.findMethod(env, field) *)
-	    (*    val func = TypeEnv.findHiddenVar(env, field) *)
-	    (*   in *)
-	    (*    (case (const, method, func) *)
-	    (* 	 of (SOME(const), _, _) *)
-	    (* 	  | _ => err(cxt, [S "In selection of ", A field, S " from "]) *)
-	    (*    (* end case*)) *)
-	    (*   end *)
+	    | (e', namedTy as Ty.T_Named(name, ty')) =>
+	      let
+	       (* There in one case here: 1 argument functions s*)
+	       (* NOTE TO SELF: THIS checks a named type value*)
+	       (* I'm only implementing constants for now.*)
+	       val tyEnv = Env.findTypeEnv(env, name)
+	       val const = Option.mapPartial (fn x => TypeEnv.findConstant(x, field)) tyEnv
+	       val method =  Option.mapPartial (fn x => TypeEnv.findMethod(x, field)) tyEnv
+	       val func = Option.mapPartial (fn x => TypeEnv.findHiddenVar(x, field)) tyEnv
+	       (*Var.monoTypeOf f*)
+	       fun checkFunApp(f, Ty.T_Fun([dom], rng)) = (case Unify.matchArgs([dom], [e'], [namedTy])
+							    of SOME(args) => (AST.E_Apply(useVar(cxt, f), [e'], rng), rng)
+							     | NONE => raise Fail "IS THIS ACTUALlY POSSIBLE???"
+							  (*end case*))
+		 | checkFunApp _ = ((err (cxt, [S"Application of function ", A (field), S ", a member of the type ", A(name), S "requires arguments"]));bogusExpTy)
+
+	       fun checkFunApp'(f, Ty.T_Fun([dom], rng)) = (case Unify.matchArgs([dom], [e'], [namedTy])
+							    of SOME(args) => (f [e'], rng)
+							     | NONE => ((err (cxt, [S"Application of function ", A (field), S ", a member of the type ", A(name),
+										    S "requires argument of type ", TY(dom), S" but got an argument of type", TY(namedTy), S"!"]));bogusExpTy)
+							  (*end case*))
+		 | checkFunApp' _ = ((err (cxt, [S"Application of function ", A (field), S ", a member of the type ", A(name), S "requires arguments"]));bogusExpTy)
+			    
+					    
+	      in
+	       (case (tyEnv, const, method, func)
+	    	 of (_, SOME(const'), _, _) =>
+		    (ConstExpr.valueToExpr const', ConstExpr.typeOfConst const')
+		  | (_, NONE, SOME(method), _) => checkFunApp(method, Var.monoTypeOf method)
+		  | (_, NONE, NONE, SOME(func', fTy)) => checkFunApp'(func', fTy)
+	    	  | (SOME(_), NONE, NONE, NONE) => (err(cxt, [S "In selection of ", A field, S " from  the type env, ", A(name), S ", the field could not be located!"]); bogusExpTy)
+		  | _ => (err (cxt, [S "Trying to select a field, ", A field, S ", from type, ", A(name), S ", but the type does not exist!"]);bogusExpTy)
+	       (* end case*))
+	      end
             | (_, Ty.T_Error) => bogusExpTy
             | (_, ty) => err (cxt, [
                   S "expected strand type or named type, but found ", TY ty,

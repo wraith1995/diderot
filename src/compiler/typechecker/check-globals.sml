@@ -897,10 +897,14 @@ structure CheckGlobals : sig
 		     of ((func as FT.Func(f), n), PT.T_Func(space)) =>
 			let
 			 val funcName = FT.nameOf func
+
 			 val spaceFunc = Atom.atom "space"
 			 val space' = FT.spaceOf(FT.Func(f))
 			 val spaceName = FT.nameOf space'
+			 val funcTy' = Ty.T_Fem(func, SOME(spaceName))
+			 val funcTy = Ty.T_Named(funcName, funcTy')
 			 val mesh = FT.meshOf func
+			 val FT.Mesh(meshData) = mesh
 			 val meshName = FT.nameOf mesh
 						  
 			 val spaceType = let
@@ -938,13 +942,63 @@ structure CheckGlobals : sig
 									      (FO.CellIndex, meshCell)))))
 			 val funcCellFunc = AST.D_Func(funcCellFuncVar,
 						       [param, param'],
-						       funcCellBody)
+						       funcCellBody);
+
+			 (*the whole field:*)
+			 (*fix old newton inverse*)
+			 (*we need to build the newton inverse; get all the paramters;
+			 build a compose
+			  *)
+			 local
+			  
+			  val SOME(meshTyEnv) = Env.findTypeEnv(env, meshName)
+			  val SOME(findPosVar) = TypeEnv.findMethod(meshTyEnv, Atom.atom (FemName.meshPos))
+
+			  val dim = FT.meshDim meshData
+			  val rangeShape = FT.rangeShape f
+			  val diff = Ty.DiffConst(NONE)
+			  val dimConst = Ty.DimConst(dim)
+			  val rangeShape = Ty.Shape(List.map Ty.DimConst rangeShape)
+			  val fieldTy2 = Ty.T_Field({diff = diff,
+						     dim = dimConst,
+						     shape = rangeShape})
+			  val fieldTy1 = Ty.T_Field({diff = diff,
+						     dim = dimConst,
+						     shape = Ty.Shape([dimConst])})
+
+						       
+			  val fieldFunTy = Ty.T_Fun([funcTy], fieldTy2)
+			  val fieldAtom = Atom.atom (FemName.field)
+
+			  val badCell = AST.E_Lit(Literal.intLit (~1))
+			  fun fieldMakerFun([funExpr]) =
+			      let
+			       val spaceExpr = AST.E_ExtractFem(funExpr, space')
+			       val meshExpr = AST.E_ExtractFem(spaceExpr, mesh)
+			       val field2 = AST.E_FemField(funExpr, spaceExpr, SOME(meshExpr),
+							   fieldTy2, FemOpt.RefField,
+							   SOME(findPosVar, span))
+							  
+			       val field1 = AST.E_FemField(meshExpr, meshExpr, SOME(meshExpr),
+							   fieldTy1, FemOpt.InvTransform,
+							   SOME(findPosVar, span))
+			       val field = makePrim'(BV.comp, [field2, field1],
+						     [fieldTy2, fieldTy1], fieldTy2)
+			      in
+			       field
+			      end
+			    | fieldMakerFun _ = raise Fail "impossible: invalid number of args go through typechecker"
+
+
+			 in
+			 val result = (fieldAtom, fieldMakerFun, fieldFunTy)
+			 end
 
 
 			in
 			 ([(funcCell, funcCellFuncVar), (spaceFunc, spaceFuncVar)],
 			  [funcCellFunc, spaceFun],
-			  [])
+			  [result])
 			end
 		      | ((FT.Space(s), n), PT.T_Space(meshName)) =>
 			let
