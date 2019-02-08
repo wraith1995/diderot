@@ -39,6 +39,8 @@ structure FemData : sig
 	   (* Extract the name of a type of fem data as provided by the surface *)
 	   val nameOf : femType -> Atom.atom
 	   val envNameOf : femType -> Atom.atom
+	   val functionNameMake : femType  -> string -> Atom.atom
+	   val functionNameMake' : femType  -> string -> Stamp.t -> Atom.atom
 
 	   (* Extract femData that helps to define other fem data *)
 	   val meshOf : femType -> femType
@@ -191,7 +193,8 @@ fun envNameOf data =
     | RefCell(Mesh'{name,...}) =>  Atom.atom ("refCell(" ^(Atom.toString name)^")")
     | _ => raise Fail "Asked for env name on base fem type" (* end case*))
 					     
-
+fun functionNameMake data name = Atom.atom ("#" ^ (Atom.toString (nameOf data)) ^ "_" ^ name)
+fun functionNameMake' data name stamp = Atom.atom ((Stamp.toString(stamp)) ^ "_" ^ (Atom.toString (nameOf data)) ^ "_" ^ name)
 fun cellOf data =
     (case data
       of Mesh(m) => MeshCell(m)

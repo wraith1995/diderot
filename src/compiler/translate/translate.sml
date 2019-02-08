@@ -589,10 +589,12 @@ print(concat["doVar (", SV.uniqueNameOf srcVar, ", ", IR.phiToString phi, ", _) 
 
   (* add nodes to save the varying strand state, followed by an exit node *)
     fun saveStrandState (env, (srcState, dstState), exit) = let
-          val lookup = lookup env
+     val lookup = lookup env
+     (*check if a var is a meshPos var; if it is, insert an assignmnet*)
           fun save (x, x', cfg) = if AnalyzeSimple.varyingStateVar x'
-                then IR.CFG.appendNode (cfg, IR.Node.mkSAVE(x, lookup x'))
-                else cfg  (* no need to save invariant variables! *)
+				  then IR.CFG.appendNode (cfg, IR.Node.mkSAVE(x, lookup x'))
+							 (*check if it is a meshPos; if it is, we need to insert the damn save; check if pos and replace with _pos*)
+				  else cfg  (* no need to save invariant variables! *)
           in
             IR.CFG.appendNode (
               ListPair.foldlEq save IR.CFG.empty (dstState, srcState),
