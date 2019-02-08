@@ -24,12 +24,16 @@ function real s(real k){
   return(k);
 }
 
+field(2)[2,2] FFF = c.F;
 
 strand gg(int i, cell{msh} j){
 
   output real result = 1.0*i;
   output tensor[2,2] z = ∇⊗F([1,1]);
   real gug = ∇•F([1,1]);
+
+  tensor[2,2] stupidTemp = FFF([0.0,0.0]);
+  tensor[2,2,2] stupidTemp1 = ∇⊗FFF([0.0,0.0]);
 
 
 
@@ -51,7 +55,7 @@ strand gg(int i, cell{msh} j){
 
   update{
     print("SAFAFAFAFA:", yy, fluf, ref, wref, test, "\n");
-
+    print("Just a test:", stupidTemp,stupidTemp1, "\n");
     print("funcCell:", kk, "\n");
     tensor[FUNC.funcDofShape] b = kk.dofs();
     print("funcCellDofs: ", b, "\n");

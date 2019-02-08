@@ -32,7 +32,7 @@ structure HandleEin : sig
           val newbies = List.foldr (fn (e, acc) => TranslateOField.transform e @ acc) [] newbies
         (* ************** ProbeEIN *********** *)
           val avail = AvailRHS.new()
-          val _ = List.app (ProbeEin.expand env avail) (newbies);
+          val _ = List.app (ProbeEin.expand env avail) (newbies) handle exn => raise exn;
           val stmts = List.rev (AvailRHS.getAssignments avail)
           in
             List.map DstIR.ASSGN stmts

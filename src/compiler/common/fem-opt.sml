@@ -35,7 +35,8 @@ datatype femOpts = Cells | RefCell
 	   (*Find the shape of a tensor that is the result a fem opt*)
 	   val findTargetShape : femOption -> int list
 
-	   datatype femField =  Transform | RefField | InvTransform | IdTransform | Field						  
+	   datatype femField =  Transform | RefField | InvTransform
+			
 	   val fieldString : femField -> string
 									     
 	  end = struct
@@ -50,14 +51,12 @@ datatype femOpts = Cells | RefCell
 		 | InvalidBuild | WorldTest (*internal use only*)
 				 
 
-datatype femField =  Transform | RefField | InvTransform | IdTransform | Field
+datatype femField =  Transform | RefField | InvTransform 
 
 
 fun fieldString (Transform) = "Transform"
   | fieldString (RefField) = "refField"
   | fieldString (InvTransform) = "InvTransform"
-  | fieldString (IdTransform) = "IdTransform"
-  | fieldString (Field) = "Field"
 
 type femOption = femOpts * FemData.femType
 structure FT = FemData
