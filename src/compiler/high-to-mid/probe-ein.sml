@@ -372,7 +372,7 @@ structure ProbeEin : sig
 	let
 	 (*we need to find the function*)
 	 val Ty.FemData(data) = IR.Var.ty meshVar
-	 val tempName = "newton"
+	 val tempName = Atom.toString (FemData.functionNameMake' data (FemName.hiddenNewtonInverse) func)
 	 val paramTys = [HTy.TensorTy([n]), HTy.IntTy, HTy.FemData data]
 	 val newFuncFV = HIR.FV{id=func, name = tempName, ty = HTy.TensorTy([n]),
 				useCnt = ref 1,

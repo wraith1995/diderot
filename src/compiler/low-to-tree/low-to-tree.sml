@@ -511,7 +511,9 @@ structure LowToTree : sig
 					  props = PropList.newHolder ()}
 		 val qname = if Stamp.same(Stamp.zero, stamp)
 			     then ""
-			     else let val lowerfuncFV = getFuncVar newFuncFV in TreeFunc.qname lowerfuncFV end
+			     else
+			      let val lowerfuncFV = getFuncVar newFuncFV
+			      in TreeFunc.qname lowerfuncFV end
 		 val tys' = List.map U.trType tys
 		 val outTy' = U.trType outTy
 		 val fTys' = List.map U.trType fTys

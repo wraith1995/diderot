@@ -563,6 +563,7 @@ structure Simplify : sig
 
 		  in
 		   (stms', S.E_FemField(var1,var1', var2, ty', field, func'))
+		     
 		  end
 		| AST.E_ExtractFemItemN(exprs, tys, outTy, femOpt, optVar) =>
 		  let
@@ -601,7 +602,7 @@ structure Simplify : sig
               | AST.E_Coerce{srcTy, dstTy, e} => doCoerce (srcTy, dstTy, e, stms)
             (* end case *)
           end
-
+						    
     and simplifyExpToVar (cxt, exp, stms) = let
           val (stms, e) = simplifyExp (cxt, exp, stms)
           in

@@ -18,6 +18,7 @@ datatype femOpts = Cells | RefCell
 		 (*mesh pos operations:*)
 		 | Valid | RefPos | WorldPos of Atom.atom option * Stamp.t option | UWorldPos
 		 | RefBuild | WorldBuild of Atom.atom option * Stamp.t option | AllBuild
+		 | NewWorld
 		 | InvalidBuild | WorldTest
 
 	   type femOption = femOpts * FemData.femType
@@ -45,7 +46,7 @@ datatype femOpts = Cells | RefCell
 		 | CellIndex | PromoteCell (* primitize, cells*)
 		 (*mesh pos operations:*)
 		 | Valid | RefPos | WorldPos of Atom.atom option * Stamp.t option | UWorldPos (*function to do Transform*)
-		 | RefBuild | WorldBuild of Atom.atom option * Stamp.t option | AllBuild (*function to do inverse, but not needed*)
+		 | RefBuild | WorldBuild of Atom.atom option * Stamp.t option | AllBuild | NewWorld (*function to do inverse, but not needed*)
 		 | InvalidBuild | WorldTest (*internal use only*)
 				 
 
@@ -88,6 +89,7 @@ fun toStringOpt v =
        | AllBuild => "AllBuild"
        | WorldTest => "WorldTest"
        | UWorldPos => "UWorldPos"
+       | NewWorld => "NewWorld"
     (* end case*))
 
 fun toString (v, d) = toStringOpt(v) ^ "(" ^ (FT.toString d) ^ ")"
@@ -112,6 +114,7 @@ fun arity (NumCell) = 1
   | arity (WorldTest) = 1
   | arity (UWorldPos) = 1
   | arity (AllBuild) = 4
+  | arity (NewWorld) = 2
 
 
 fun hash (NumCell, d) = 0w1 + FT.hash d
@@ -133,6 +136,7 @@ fun hash (NumCell, d) = 0w1 + FT.hash d
   | hash (WorldTest, d) = 0w67 + FT.hash d
   | hash (UWorldPos, d) = 0w71 + FT.hash d
   | hash (AllBuild, d) = 0w73 + FT.hash d
+  | hash (NewWorld, d) = 0w79 + FT.hash d
 
 fun sameR ((a1,s1), (a2,s2)) = (case (a1, a2)
 				 of (SOME(a1'), SOME(a2')) => Atom.same(a1', a2')
@@ -165,6 +169,7 @@ fun same ((v1, d1),(v2, d2)) = FT.same(d1,d2) andalso
        | (WorldPos r1, WorldPos r2) => sameR(r1, r2)
        | (UWorldPos, UWorldPos) => true
        | (AllBuild, AllBuild) => true
+       | (NewWorld, NewWorld) => true
        | _ => false
     (*end case*))
 
