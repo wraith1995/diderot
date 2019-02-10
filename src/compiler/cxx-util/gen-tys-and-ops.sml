@@ -148,7 +148,21 @@ structure GenTysAndOps : sig
 							CL.S_Return(SOME(CL.E_Var("cell")))
 					    ]))
 
-		  val fields = [int, meshPtr]
+		  val copy_to = CL.mkFuncDcl(CL.charPtr, "copy_to", [CL.PARAM([], CL.charPtr, "cp")],
+					     CL.S_Block([
+							CL.S_Decl([], CL.size_t,
+								  "nbytes",
+								  SOME(CL.I_Exp(CL.E_Sizeof(intTy)))),
+							CL.mkCallExp(CL.E_Var("std::memcpy"),
+								     [
+								       CL.E_Var("cp"),
+								       CL.mkAddrOf (CL.E_Grp((CL.E_Indirect(CL.E_Var("this"), "cell")))),
+								       CL.E_Var("nbytes")
+								    ]),
+							CL.S_Return(SOME(CL.mkBinOp(CL.E_Var("cp"), CL.#+, CL.E_Var("nbytes"))))
+					    ]))
+
+		  val fields = [int, meshPtr,copy_to]
 		  val class = CL.D_ClassDef{name=name, args=NONE, from=NONE,public = fields , protected = [], private = []}
 		 in
 		  (class, [printer, builder])
@@ -180,7 +194,20 @@ structure GenTysAndOps : sig
 							CL.S_Exp(CL.E_AssignOp(CL.E_Select(CL.E_Var("cell"), "func"), CL.$=,(CL.E_Var("func")))),
 							CL.S_Return(SOME(CL.E_Var("cell")))
 					    ]))
-		  val fields = [int, funcPtr]
+		  val copy_to = CL.mkFuncDcl(CL.charPtr, "copy_to", [CL.PARAM([], CL.charPtr, "cp")],
+					     CL.S_Block([
+							CL.S_Decl([], CL.size_t,
+								  "nbytes",
+								  SOME(CL.I_Exp(CL.E_Sizeof(intTy)))),
+							CL.mkCallExp(CL.E_Var("std::memcpy"),
+								     [
+								       CL.E_Var("cp"),
+								       CL.mkAddrOf (CL.E_Grp((CL.E_Indirect(CL.E_Var("this"), "cell")))),
+								       CL.E_Var("nbytes")
+								    ]),
+							CL.S_Return(SOME(CL.mkBinOp(CL.E_Var("cp"), CL.#+, CL.E_Var("nbytes"))))
+					    ]))
+		  val fields = [int, funcPtr, copy_to]
 		  val class = CL.D_ClassDef{name=name, args=NONE, from=NONE,public = fields , protected = [], private = []}
 		 in
 		  (class, [printer, builder])
@@ -194,6 +221,7 @@ structure GenTysAndOps : sig
 
 		  val dim = FT.meshDim mesh
 		  val tensorTy = RN.tensorRefTy [dim] (*TODO: maybe tensor ref or vec???? - figure out later.*)
+		  val tensorDataTy = RN.tensorTy [dim] (*to figure out sizing for copies*)
 
 		  (*params:*)
 		  val meshParam = CL.D_Var([], meshTy, [], "mesh", NONE)
@@ -302,8 +330,60 @@ structure GenTysAndOps : sig
 		  (* 				   crapInit "worldPos" (CL.E_Var("nullPtr")) *)
 		  (* 				  ] *)
 		  (* 				 ) *)
-		 
-		  val fields = [meshParam, intParam, refPosParam, worldPosParam, worldPosCompute, valid, genBuild, defaultBuild,defaultBuild']
+
+		  val arrayTy = CL.T_Array(realTy, SOME(dim*2))
+
+		  val copy_to = CL.mkFuncDcl(CL.charPtr, "copy_to", [CL.PARAM([], CL.charPtr, "cp")],
+					     CL.S_Block([
+							CL.S_Decl([], CL.size_t,
+								  "nbytes1",
+								  SOME(CL.I_Exp(CL.E_Sizeof(tensorDataTy)))),
+							CL.S_Decl([], CL.size_t,
+								  "nbytes2",
+								  SOME(CL.I_Exp(CL.E_Sizeof(intTy)))),
+							
+							CL.mkCallExp(CL.E_Var("std::memcpy"),
+								     [
+								       CL.E_Var("cp"),
+								       CL.mkAddrOf (CL.E_Grp((CL.E_Indirect(CL.E_Var("this"), "cell")))),
+								       CL.E_Var("nbytes2")
+								    ]),
+							CL.S_Exp(CL.E_AssignOp(CL.E_Var("cp"), CL.+=, CL.E_Var("nbytes2"))),
+							CL.mkIfThenElse (
+							 CL.E_Indirect(CL.E_Var("this"), "valid"),
+							 CL.S_Block([
+								    CL.mkCallExp(CL.E_Var("std::memcpy"),
+										 [
+										   CL.E_Var("cp"),
+										   CL.E_Select((CL.E_Indirect(CL.E_Var("this"), "refPos")), "_data"),
+										   CL.E_Var("nbytes1")
+										]),
+								    CL.S_Exp(CL.E_AssignOp(CL.E_Var("cp"), CL.+=, CL.E_Var("nbytes1"))),
+								    CL.mkCallExp(CL.E_Var("std::memcpy"),
+										 [
+										   CL.E_Var("cp"),
+										   CL.E_Select((CL.E_Indirect(CL.E_Var("this"), "worldPos")), "_data"),
+										   CL.E_Var("nbytes1")
+										]),
+								    CL.S_Exp(CL.E_AssignOp(CL.E_Var("cp"), CL.+=, CL.E_Var("nbytes1")))]),
+							 CL.S_Block([
+								    
+								    CL.S_Decl(["const"], arrayTy, "dumb", SOME(CL.I_Array([]))),
+								    CL.S_Decl([], CL.size_t, "nbytes3", SOME(CL.I_Exp(CL.E_Sizeof(arrayTy)))),
+								    CL.mkCallExp(CL.E_Var("std::memcpy"),
+										 [
+										   CL.E_Var("cp"),
+										   CL.mkAddrOf(CL.E_Var("dumb")),
+										   CL.E_Var("nbytes3")
+										]),
+								    CL.S_Exp(CL.E_AssignOp(CL.E_Var("cp"), CL.+=, CL.E_Var("nbytes3")))
+								   ])
+
+							),
+						
+							CL.S_Return(SOME(CL.E_Var("cp")))
+					    ]))
+		  val fields = [meshParam, intParam, refPosParam, worldPosParam, worldPosCompute, valid, genBuild, defaultBuild,defaultBuild', copy_to]
 		  val class = CL.D_ClassDef{name=name, args=NONE, from=NONE,public = fields , protected = [], private = []}
 		  
 		 in

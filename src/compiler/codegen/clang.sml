@@ -47,6 +47,7 @@ structure CLang =
     val float = T_Num(RawTypes.RT_Float)
     val double = T_Num(RawTypes.RT_Double)
     val autoTy = T_Named "auto"
+    val size_t = T_Named "size_t"
 
   (* make a "const ty *" type for some ty *)
     fun constPtrTy ty = T_Ptr(T_Const ty)
