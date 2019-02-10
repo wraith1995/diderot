@@ -99,8 +99,9 @@ structure CheckExpr : sig
                                of Ty.T_Tensor(Ty.Shape[]) => result 1
                                 | Ty.T_Tensor(Ty.Shape[Ty.DimConst 2]) => result 2
                                 | Ty.T_Tensor(Ty.Shape[Ty.DimConst 3]) => result 3
+				| Ty.T_Fem(FT.MeshPos(meshData),_) => result (FemData.meshDim meshData)
                                 | ty => err(cxt, [
-                                      S "'expected one of real, vec2, or vec3 for type of 'pos',\n",
+                                      S "'expected one of real, vec2, vec3, or a meshPosition on a mesh of dim 2 or 3 for type of 'pos',\n",
                                       S "  but found: ", TY ty
                                     ])
                               (* end case *))

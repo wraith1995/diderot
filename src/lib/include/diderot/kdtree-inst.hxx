@@ -68,22 +68,22 @@ namespace diderot {
         uint32_t axis, index_t lo, index_t hi, index_t pivotIx)
     {
         uint32_t inIdx = this->_strands->in_state_index();
-        REAL X = this->strand(pivotIx)->pos(inIdx)[axis];
+        REAL X = this->strand(pivotIx)->_pos(inIdx)[axis];
 
       // move pivot element to end
         this->swap_parts(pivotIx, hi);
 
         index_t jx = lo;
       // skip over leading values that are already in the right place
-        while ((jx < hi) && (this->strand(jx)->pos(inIdx)[axis] < X)) {
+        while ((jx < hi) && (this->strand(jx)->_pos(inIdx)[axis] < X)) {
             jx++;
         }
-        assert (this->strand(jx)->pos(inIdx)[axis] >= X);
+        assert (this->strand(jx)->_pos(inIdx)[axis] >= X);
         index_t ix = jx;
         while (jx < hi) {
           // INV: strands from lo to ix-1 are < X
           //      strands from ix to jx-1 are >= X
-            if (this->strand(jx)->pos(inIdx)[axis] < X) {
+            if (this->strand(jx)->_pos(inIdx)[axis] < X) {
                 this->swap_parts (ix, jx);
                 ix++;
             }
@@ -240,7 +240,7 @@ namespace diderot {
                 for (index_t i = nd->_u._leaf._first;  i <= nd->_u._leaf._last;  i++) {
                     const strand_t *strand = this->strand(i);
                     if ((self != strand)
-                    && __details::within_sphere<D,REAL>(strand->pos(inIdx), center, radius2)) {
+                    && __details::within_sphere<D,REAL>(strand->_pos(inIdx), center, radius2)) {
                       // add the strand to the result list
                         result.append (this->_parts[i]);
 #ifdef CHECK_KD_TREE_QUERY
@@ -260,7 +260,7 @@ namespace diderot {
             else {
                 uint32_t axis = nd->axis();
                 const strand_t *strand = this->strand(nd);
-                const REAL *sPos = strand->pos(inIdx);
+                const REAL *sPos = strand->_pos(inIdx);
                 REAL sPosX = sPos[axis];
                 if (center[axis] < sPosX - radius) {
                   // nd and nodes on right must be outside sphere
@@ -292,7 +292,7 @@ namespace diderot {
             for (int i = 0;  i < this->_nStrands;  i++) {
                 const strand_t *strand = this->strand(i);
                 if ((self != strand)
-                && __details::within_sphere<D,REAL>(strand->pos(inIdx), center, radius2)) {
+                && __details::within_sphere<D,REAL>(strand->_pos(inIdx), center, radius2)) {
                   // add the strand to the result list
                     res2.push_back(strand);
                 }
@@ -328,23 +328,23 @@ namespace diderot {
                 outS << "], " << radius << ") ****\n";
                 outS << "** kdtree result (" << res1.size() << " strands): \n";
                 for (auto it = res1.cbegin();  it != res1.cend();  ++it) {
-                    const REAL *pos = (*it)->pos(inIdx);
+                    const REAL *pos = (*it)->_pos(inIdx);
                     outS << "   " << (*it) << " [" << pos[0];
                     for (int i = 1;  i < D;  i++) {
                         outS << ", " << pos[i];
                     }
                     outS << "]; distance = "
-                        << __details::distance<D,REAL>(center, (*it)->pos(inIdx)) << "\n";
+                        << __details::distance<D,REAL>(center, (*it)->_pos(inIdx)) << "\n";
                 }
                 outS << "** brute-force result (" << res2.size() << " strands): \n";
                 for (auto it = res2.cbegin();  it != res2.cend();  ++it) {
-                    const REAL *pos = (*it)->pos(inIdx);
+                    const REAL *pos = (*it)->_pos(inIdx);
                     outS << "   " << (*it) << " [" << pos[0];
                     for (int i = 1;  i < D;  i++) {
                         outS << ", " << pos[i];
                     }
                     outS << "]; distance = "
-                        << __details::distance<D,REAL>(center, (*it)->pos(inIdx)) << "\n";
+                        << __details::distance<D,REAL>(center, (*it)->_pos(inIdx)) << "\n";
                 }
                 outS << "** all strands\n";
                 for (index_t ix = strands->begin_alive();
@@ -352,7 +352,7 @@ namespace diderot {
                     ix = strands->next_alive(ix))
                 {
                     const strand_t *strand = strands->strand(ix);
-                    const REAL *pos = strand->pos(inIdx);
+                    const REAL *pos = strand->_pos(inIdx);
                     if (self == strand) { outS << ">> "; } else { outS << "   "; }
                     outS << ix << ". sid = " << strands->id(ix) << "; pos = [" << pos[0];
                     for (int i = 1;  i < D;  i++) {
@@ -387,7 +387,7 @@ namespace diderot {
                     outS << ", ";
                 }
                 sid_t id = this->_parts[i];
-                const REAL *pos = this->_strands->id_to_strand(id)->pos(inIdx);
+                const REAL *pos = this->_strands->id_to_strand(id)->_pos(inIdx);
                 outS << id << " @ [" << pos[0];
                 for (int i = 1;  i < D;  i++) { outS << "," << pos[i]; }
                 outS << "]";
@@ -395,7 +395,7 @@ namespace diderot {
             outS << "}\n";
         }
         else {
-            const REAL *pos = this->_strands->id_to_strand(nd->_u._nd._id)->pos(inIdx);
+            const REAL *pos = this->_strands->id_to_strand(nd->_u._nd._id)->_pos(inIdx);
             outS << "Node: axis = " << nd->axis() << "; id = " << nd->_u._nd._id
                 << " @ [" << pos[0];
             for (int i = 1;  i < D;  i++) { outS << "," << pos[i]; }

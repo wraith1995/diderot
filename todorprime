@@ -2,18 +2,31 @@ Minor code task:
 make newtoneps return a meshpos - better for error checking?
 Means error code can be inserted when done
 Make authorative list of places to call error code.
-
+Steps:
+in simplyfStrand:
+-find pos var - add _pos and great property - find it as needed and replcae
+in ast:
+-modify the spatial query options
+-two places...
+-or do basis vars
+---spatial querry check--sphere
 New TODO:
-0. Email John with example and paper
+0. FIGURE OUT FUNCTION NAMES ISSUE
 1. Fix pos mechanics: lazyness, use in template, SAVING
 2. Fix precedence.
 3. Figure out portion of functionality completed in correspondence with spec, clean up the names
 4. RefCell, MeshPos methods along with C++ code inserts, call backs, mesh file, new variables hanging out of cells, export of mesh struct, verticies.
 5. Loading in meshCells sequences, funcCell Sequences, meshPos: saving out both meshCell, funcCell, and meshPos sequences - meshCell is all that is needed.
-EXPAND: (4,5)
+EXPAND: (1(half), 2, 4,5)
+-pos var
+-precdence
 -Load in meshCells, sequences of meshCells
--Export meshCells, sequences of meshCells
+-Export meshCells, sequences of meshCells,
 -meshPos, functions - disallow import sequences of meshes, etc?
+-geometrices queries for newton
+-cell connectivity, verticies, other imports
+-refCeoo geomery queries, C code insets
+-meshPos geometry queriesi
 6. More general cleanup of the function name message, the use of femItemN, and the names in checkGlobal and hiding of hte env
 7. Considerations to the rpesentation of data in the C++: the use of pointers vs. raw data, how and when to extract from pointers.
 8. Considerpations in simple to make mesh,fns, etc more like images - i.e kind last definition of something and follow back to it.
@@ -35,8 +48,9 @@ EXPAND: (4,5)
 24. Would be nice to integrate fem stuff into type vars
 25. conflict in basis evaluation
 8. Field parsing: c.t, field variables in a function, or field arguments to a function or c$T (binding strength of .) -- diffOp diff expression and suffix are out of order -- move selct suffix into diffExpr optioin - atomixExpr (SR)* 
-
-
+26. Add basis evaluation functions?
+27. wrapping expanded func calls and potential mistakes there.
+28. more sequence operations; break operation
 
 
 

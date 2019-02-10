@@ -64,19 +64,19 @@ structure GenStrand : sig
           val realTy = RawTypes.toString(Env.rawRealTy env)
           fun mkDcl s = CL.D_Verbatim[concat s]
           val (addrof, select) = (case SV.ty posV
-                 of TreeTypes.VecTy(1, 1) => ("&", "sv_pos")
-                  | TreeTypes.TensorTy[d] => ("", "sv_pos.base()")
+                 of TreeTypes.VecTy(1, 1) => ("&", "sv__pos")
+                  | TreeTypes.TensorTy[d] => ("", "sv__pos.base()")
                 (* end case *))
           in
 (* FIXME: once CLang supports "const" functions, we should switch to building AST *)
             mkDcl [
-                "const ", realTy, " *pos (uint32_t inIdx) const { return ",
+                "const ", realTy, " *_pos (uint32_t inIdx) const { return ",
                 addrof, "this->", substruct, select, "; }"
               ]
           end
 
   (* is a state variable the special "pos" variable? *)
-    fun isPosVar x = (SV.name x = "pos")
+    fun isPosVar x = (SV.name x = "_pos")
 
   (* generate the strand-state struct declaration *)
     fun genStrandStructs (env, strandName, state) = let

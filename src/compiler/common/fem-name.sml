@@ -42,4 +42,6 @@ val cell = "mc"
 val refPos = "refPos"
 val worldPos = "worldPos"
 val valid = "isValid"
+
+val pos = "pos"
 end

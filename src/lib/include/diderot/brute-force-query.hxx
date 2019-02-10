@@ -135,7 +135,7 @@ namespace diderot {
             assert(strands->status(ix) <= kDie);
             const strand_t *strand = strands->strand(ix);
             if ((self != strand)
-            && __details::within_sphere<D,REAL>(strand->pos(inIdx), center, radius2)) {
+            && __details::within_sphere<D,REAL>(strand->_pos(inIdx), center, radius2)) {
               // add the strand to the result list
                 result.append (strands->id(ix));
             }
