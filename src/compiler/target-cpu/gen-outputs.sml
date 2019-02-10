@@ -97,12 +97,11 @@ structure GenOutputs : sig
     fun seqCopy (seq, dst) = CL.mkDispatch(seq, "copy_to", [dst])
 
     (*analyze a type to determine the nature of the loop needed to copy it over*)
-    fun tyAnalysis ty =
+    fun tyAnalysis(ty : APITypes.t) =
 	let
-	 fun tyAnalysis'(APITypes.SeqTy(ty', SOME(n)), xs) = tyAnalysis(ty', n::xs)
+	 fun tyAnalysis'(APITypes.SeqTy(ty', SOME(n)), xs) = tyAnalysis'(ty', n::xs)
 	   | tyAnalysis'(APITypes.FemData(_), xs) = (true, List.rev xs)
 	   | tyAnalysis'(_, xs) = (false, List.rev xs)
-	   | tyAnalysis' _ = raise Fail "impossible"
 	in
 	 tyAnalysis'(ty, [])
 	end
@@ -118,7 +117,7 @@ structure GenOutputs : sig
 	 val (fem, seqDims) = tyAnalysis ty
 
 	 fun mkLoop([]) = CL.mkBlock([
-				     CL.mkDispatch(copyTarget, "copy_to", [cpV]),
+				     CL.mkExpStm(CL.mkDispatch(copyTarget, "copy_to", [cpV])),
 				     CL.mkExpStm(CL.mkAssignOp(cpV,
 							       CL.+=,
 								  CL.mkBinOp(mkInt nElems, CL.#*, CL.mkSizeof elemCTy)))
@@ -130,8 +129,8 @@ structure GenOutputs : sig
 	      val rest = mkLoop(xs)
 	     in
 	      CL.mkFor(CL.intTy, [(var, CL.E_Int(IntLit.fromInt 0, CL.intTy))],
-		       CL.E_BinOp(CL.E_Var(var), CL.#<, CL.E_Int(IntLit.fromInt x)),
-		       CL.E_PosOp(CL.E_Var(var), CL.^++),
+		       CL.E_BinOp(CL.E_Var(var), CL.#<, CL.E_Int(IntLit.fromInt x, CL.intTy)),
+		       [CL.E_PostOp(CL.E_Var(var), CL.^++)],
 		       rest
 		      )
 	     end
@@ -149,12 +148,12 @@ structure GenOutputs : sig
 					   CL.mkBinOp(mkInt nElems, CL.#*, CL.mkSizeof elemCTy)))
              ]
 	   | copy (false, true) = mkLoop([])
-	     CL.mkBlock([
-			CL.mkDispatch(copyTarget, "copy_to", [cpV]),
-			CL.mkExpStm(CL.mkAssignOp(cpV,
-						  CL.+=,
-						     CL.mkBinOp(mkInt nElems, CL.#*, CL.mkSizeof elemCTy)))
-		       ])
+	     (* CL.mkBlock([ *)
+	     (* 		CL.mkDispatch(copyTarget, "copy_to", [cpV]), *)
+	     (* 		CL.mkExpStm(CL.mkAssignOp(cpV, *)
+	     (* 					  CL.+=, *)
+	     (* 					     CL.mkBinOp(mkInt nElems, CL.#*, CL.mkSizeof elemCTy))) *)
+	     (* 	       ]) *)
 	   | copy (true,true) = mkLoop(seqDims)
 	in
 	 copy(dynSeq, fem)
@@ -296,11 +295,12 @@ structure GenOutputs : sig
                   forStrands mode copyBlk ::
                   initAxisKinds (nLengthsV, Nrrd.Kind2Vector, nAxes, domAxisKind)
                 end
-        (* generate the nData copy code *)
+          (* generate the nData copy code *)
+	  val targetVar = stateVar name
           val copyData = let
                 val pInit = CL.mkDeclInit(CL.charPtr, "cp",
                       CL.mkReinterpretCast(CL.charPtr, CL.mkIndirect(nDataV, "data")))
-                val copyStm = CL.mkAssign(cpV, seqCopy(stateVar name, cpV))
+                val copyStm = copy(true, ty, targetVar, nElems, elemCTy) (* CL.mkAssign(cpV, seqCopy(stateVar name, cpV)) *)
                 val mode = if #isGrid spec
                       then "alive"
                       else if #snapshot spec
@@ -361,16 +361,19 @@ structure GenOutputs : sig
         (* generate the copy code *)
           val copyCode = let
                 val pDecl = CL.mkDeclInit(CL.charPtr, "cp",
-                      CL.mkReinterpretCast(CL.charPtr, CL.mkIndirect(nDataV, "data")))
-                val copyBlk = CL.mkBlock[
-                        CL.mkCall("memcpy", [
-                            cpV,
-                            CL.mkUnOp(CL.%&, stateVar name),
-                            CL.mkBinOp(mkInt nElems, CL.#*, CL.mkSizeof elemCTy)
-                          ]),
-                        CL.mkExpStm(CL.mkAssignOp(cpV, CL.+=,
-                          CL.mkBinOp(mkInt nElems, CL.#*, CL.mkSizeof elemCTy)))
-                      ]
+					  CL.mkReinterpretCast(CL.charPtr, CL.mkIndirect(nDataV, "data")))
+		val targetVar = stateVar name
+                val copyBlk = copy(false, ty, targetVar, nElems, elemCTy)
+
+		    (* CL.mkBlock[ *)
+                (*         CL.mkCall("memcpy", [ *)
+                (*             cpV, *)
+                (*             CL.mkUnOp(CL.%&, stateVar name), *)
+                (*             CL.mkBinOp(mkInt nElems, CL.#*, CL.mkSizeof elemCTy) *)
+                (*           ]), *)
+                (*         CL.mkExpStm(CL.mkAssignOp(cpV, CL.+=, *)
+                (*           CL.mkBinOp(mkInt nElems, CL.#*, CL.mkSizeof elemCTy))) *)
+                (*       ] *)
                 val mode = if #isGrid spec orelse snapshot
                       then "alive"
                       else "stable"
