@@ -739,8 +739,6 @@ print(concat["doVar (", SV.uniqueNameOf srcVar, ", ", IR.phiToString phi, ", _) 
                         IR.Node.setSucc (IR.CFG.exit body, foreachNd);
                         IR.Node.setBodyExit (foreachNd, IR.CFG.exit body);
 			(* process the rest of the block *)
-			print("We have stms left:"^(Int.toString(List.length stms))^"\n");
-			print("And there is a return:"^(Bool.toString (hasReturn stms)) ^"\n");
                         cvt (env, IR.CFG.concat (cfg, IR.CFG{entry=foreachNd, exit=foreachNd}), stms)
                       end
                   | S.S_New(strandId, args) => let
