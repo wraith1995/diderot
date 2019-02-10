@@ -61,7 +61,7 @@
   | KW_func                     ("femFunction")
   | KW_refCell                  ("refCell")
   | KW_cell                     ("cell")
-  | KW_pos                      ("pos")
+  | KW_pos                      ("position")
   | OP_eq                       ("=")
   | OP_pluseq                   ("+=")
   | OP_minuseq                  ("-=")
@@ -447,7 +447,7 @@ PrimitiveType
         | ID                    => (PT.T_Id ID)
 	| "refCell" "{" ID "}"  => (markTy(FULL_SPAN, PT.T_RefCell ID))
 	| "cell" "{" ID "}"     => (markTy(FULL_SPAN, PT.T_Cell ID))
-	| "pos" "{" ID "}"      => (markTy(FULL_SPAN, PT.T_MeshPos ID))
+	| "position" "{" ID "}"      => (markTy(FULL_SPAN, PT.T_MeshPos ID))
         ;
 
 Shape

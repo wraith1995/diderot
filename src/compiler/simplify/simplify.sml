@@ -158,6 +158,69 @@ structure Simplify : sig
     val {getFn = cvtFunc, ...} = Var.newProp cvt
     end
 
+    local
+     fun cvt x =
+	 let
+	  val kind = Var.kindOf x
+	  val name = Var.nameOf x
+	  val ty = Var.monoTypeOf x
+	  val dim = (case ty
+		      of Ty.T_Tensor(Ty.Shape([Ty.DimConst(d)])) => SOME(d)
+		       | Ty.T_Fem(FemData.MeshPos(meshData), _) => SOME(FemData.meshDim meshData)
+		       | _ => NONE
+		    (*end case*))
+	 in if (kind = Var.StrandStateVar
+		orelse kind = Var.StrandOutputVar)
+	       andalso name = FemName.pos
+	       andalso Option.isSome dim
+	    then SOME(SimpleVar.new ("_pos", kind, STy.T_Tensor([Option.valOf dim])))
+	    else NONE
+	 end
+     val {getFn=getNewPosVar, ...} = Var.newProp cvt
+     fun makePosAssign(x, x') =
+	 (case getNewPosVar x
+	   of NONE => NONE
+	    | SOME(x'') => (case SimpleVar.typeOf x'
+			     of STy.T_Tensor([d])
+				=> SOME([S.S_Assign(x'',S.E_Var(x'))])
+			      | STy.T_Fem(ms as FemData.MeshPos(meshData)) =>
+				let
+				 val meshHolder = FemData.Mesh(meshData)
+				 val meshCellHolder = FemData.MeshCell(meshData)
+				 val meshTy = STy.T_Fem(meshHolder)
+				 val dim = FemData.meshDim (meshData)
+				 val newTensor = STy.T_Tensor([dim])
+							     
+				 val refPosTemp = newTemp newTensor;
+				 val meshTemp = newTemp meshTy;
+				 val cellTemp = newTemp STy.T_Int
+
+				 val fieldTy = STy.T_Field({diff=NONE, dim=dim, shape=[dim]});
+				 val fieldTemp = newTemp fieldTy;
+
+				 val getCell = S.S_Assign(cellTemp, S.E_ExtractFemItem(x', STy.T_Int, (FemOpt.CellIndex, ms)))
+				 val getMesh = S.S_Assign(meshTemp, S.E_ExtractFem(x', meshHolder))
+				 val fieldAssign = S.S_Assign(fieldTemp, S.E_FemField(meshTemp, meshTemp, SOME(cellTemp), fieldTy, FemOpt.Transform, NONE))
+				 val getRefCell = S.S_Assign(refPosTemp, S.E_ExtractFemItem(x', newTensor, (FemOpt.RefPos, ms)))
+
+				 (*need to build metavars: DK, SK, NK!*)
+				 (**)
+				 val metaArgs = [STy.DIFF(NONE), STy.DIM(dim), STy.SHAPE([dim])]
+				 val fin = S.S_Assign(x'', S.E_Prim(BasisVars.op_probe, metaArgs, [fieldTemp, refPosTemp], newTensor))
+
+				in
+				 SOME([fin, fieldAssign, getRefCell, getMesh, getCell])
+				end
+			   (*end case*))
+			     
+	 (*end case*))
+	   
+    in
+    val getNewPosVar = getNewPosVar
+    val makePosAssign = makePosAssign
+    end
+
+
   (* a property to map AST variables to SimpleAST variables *)
     local
       fun cvt x = SimpleVar.new (Var.nameOf x, Var.kindOf x, cvtTy(Var.monoTypeOf x))
@@ -253,8 +316,13 @@ structure Simplify : sig
             | AST.S_Assign((x, _), e) => let
                 val (stms, e') = simplifyExp (cxt, e, stms)
                 val x' = cvtLHS (x, e')
-                in
-                  S.S_Assign(x', e') :: stms
+		val checkReplacement = makePosAssign(x, x')
+            in
+	     (case checkReplacement
+	       of SOME(stms') =>  stms'@(S.S_Assign(x', e') :: stms)
+		| NONE => S.S_Assign(x', e') :: stms
+	     (*end case*))
+
                 end
             | AST.S_New(name, args) => let
                 val (stms, xs) = simplifyExpsToVars (cxt, args, stms)
@@ -308,10 +376,13 @@ structure Simplify : sig
                     (* get the strand environment for the strand *)
                       val SOME sEnv = findStrand(cxt, strand)
                       fun result (query, pos) =
-                            (stms, S.E_Prim(query, tyArgs, cvtVar pos::xs, cvtTy ty))
+                          (stms, S.E_Prim(query, tyArgs, pos::xs, cvtTy ty))
+
+		      val posVar = StrandEnv.findPosVar sEnv
+		      val posVar' = Option.mapPartial getNewPosVar posVar
                       in
                       (* extract the position variable and spatial dimension *)
-                        case (StrandEnv.findPosVar sEnv, StrandEnv.getSpaceDim sEnv)
+                        case (posVar', StrandEnv.getSpaceDim sEnv)
                          of (SOME pos, SOME 1) => result (BV.fn_sphere1_r, pos)
                           | (SOME pos, SOME 2) => result (BV.fn_sphere2_t, pos)
                           | (SOME pos, SOME 3) => result (BV.fn_sphere3_t, pos)
@@ -692,16 +763,28 @@ structure Simplify : sig
           val params' = cvtVars params
           fun simplifyState ([], xs, stms) = (List.rev xs, stms)
             | simplifyState ((x, optE) :: r, xs, stms) = let
-                val x' = cvtVar x
+             val x' = cvtVar x
+	     val x'' = getNewPosVar x
+	     val x''' = (case x''
+			  of NONE => [x']
+			   | SOME umm => [umm,x'])
+	     val transformStm = makePosAssign(x, x')
                 in
-                  case optE
-                   of NONE => simplifyState (r, x'::xs, stms)
+                 (case optE
+                   of NONE => simplifyState (r, x'''@xs, stms)
                     | SOME e => let
-                        val (stms, e') = simplifyExp (cxt, e, stms)
-                        in
-                          simplifyState (r, x'::xs, S.S_Assign(x', e') :: stms)
-                        end
-                  (* end case *)
+                     val (stms, e') = simplifyExp (cxt, e, stms)
+
+                    in
+		     (case transformStm
+		       of SOME(tStm) =>
+			  simplifyState (r, x'''@xs, tStm@(S.S_Assign(x', e') :: stms))
+			| NONE =>
+			  simplifyState (r, x'''@xs, S.S_Assign(x', e') :: stms)
+
+		     (*end case*))
+		    end
+                  (* end case *))
                 end
           val (xs, stateInit) = let
               (* simplify the state-variable initializations *)

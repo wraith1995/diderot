@@ -599,8 +599,9 @@ structure CheckGlobals : sig
 
 
 		    val dumbWordPos = Ty.T_Fun([meshPosTy], dimT)
-		    val dumbWorldPosName =  Atom.atom "worldPos"
-		    val dumbWorldPosFunVar = Var.new(dumbWorldPosName, span, AST.FunVar, dumbWordPos)
+		    val dumbWorldPosName = FemData.functionNameMake mesh (FemName.worldPos)
+		    val dumWorldPosOutSideName = Atom.atom (FemName.worldPos)
+		    val dumbWorldPosFunVar = Var.new(dumWorldPosOutSideName, span, AST.FunVar, dumbWordPos)
 		    val dumbBody = AST.S_Return(AST.E_Apply(
 			   (firstFun, span),
 			   [AST.E_ExtractFemItem(AST.E_Var(meshPosParam, span),
@@ -611,7 +612,7 @@ structure CheckGlobals : sig
 						 (FemOpt.CellIndex, meshPosData)),
 			   AST.E_ExtractFem(AST.E_Var(meshPosParam, span),mesh)], dimT))
 		    val dumbFun = AST.D_Func(dumbWorldPosFunVar,[meshPosParam],dumbBody)
-		    val dumbSpecialResult = (dumbWorldPosName, dumbWorldPosFunVar, dumbFun)
+		    val dumbSpecialResult = (dumWorldPosOutSideName, dumbWorldPosFunVar, dumbFun)
 					       
 		   in
 		    (specialResult,dumbSpecialResult, results)

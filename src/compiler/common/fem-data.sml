@@ -193,8 +193,8 @@ fun envNameOf data =
     | RefCell(Mesh'{name,...}) =>  Atom.atom ("refCell(" ^(Atom.toString name)^")")
     | _ => raise Fail "Asked for env name on base fem type" (* end case*))
 					     
-fun functionNameMake data name = Atom.atom ("#" ^ (Atom.toString (nameOf data)) ^ "_" ^ name)
-fun functionNameMake' data name stamp = Atom.atom ((Stamp.toString(stamp)) ^ "_" ^ (Atom.toString (nameOf data)) ^ "_" ^ name)
+fun functionNameMake data name = Atom.atom ("_" ^ (Atom.toString (nameOf data)) ^ "_" ^ name)
+fun functionNameMake' data name stamp = Atom.atom ("_" ^ (Stamp.toString(stamp)) ^ "_" ^ (Atom.toString (nameOf data)) ^ "_" ^ name)
 fun cellOf data =
     (case data
       of Mesh(m) => MeshCell(m)

@@ -895,6 +895,9 @@ structure BasisVars =
           [tensor[N2], Ty.realTy] --> dynSeq(Ty.T_Var tv)))
     val fn_sphere3_t = polyVar (N.fn_sphere, all([TK], fn [Ty.TYPE tv] =>
           [tensor[N3], Ty.realTy] --> dynSeq(Ty.T_Var tv)))
+    val fn_sphereMesh_t = polyVar(N.fn_sphere, all([TK, TK], fn [Ty.TYPE tv1, Ty.TYPE tv2] =>
+								[Ty.T_Var tv1, Ty.realTy] --> dynSeq(Ty.T_Var tv2)))
+			       
     end (* local *)
 
   (* Sets of strands *)

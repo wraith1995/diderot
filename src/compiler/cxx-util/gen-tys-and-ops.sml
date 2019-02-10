@@ -901,10 +901,10 @@ structure GenTysAndOps : sig
                       val seqTy = CL.T_Template("diderot::dynseq", [CL.T_Named "strand_array::sid_t"])
                       val (posParam, posExp) = if d > 1
                             then (
-                                CL.PARAM([], TypeToCxx.trType(env, Ty.TensorRefTy[d]), "pos"),
-                                CL.mkDispatch(CL.mkVar "pos", "base", [])
+                                CL.PARAM([], TypeToCxx.trType(env, Ty.TensorRefTy[d]), "_pos"),
+                                CL.mkDispatch(CL.mkVar "_pos", "base", [])
                               )
-                            else (CL.PARAM([], realTy, "pos"), CL.mkAddrOf(CL.mkVar "pos"))
+                            else (CL.PARAM([], realTy, "_pos"), CL.mkAddrOf(CL.mkVar "_pos"))
                       val wrldV = CL.mkVar RN.worldVar
                       val selfParam = CL.PARAM([], CL.constPtrTy(RN.strandTy s), RN.selfVar)
                       val radiusParam = CL.PARAM([], realTy, "radius")

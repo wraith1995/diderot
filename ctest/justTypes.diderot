@@ -39,13 +39,13 @@ strand gg(int i, cell{msh} j){
 
   cell{FUNC} kk = c.funcCell(j);
 
-  pos{msh} yy = a.findPos([0.0, 0.0]);
+  position{msh} pos = a.findPos([0.0, 0.0]);
 
-  tensor[2] ref = yy.refPos();
-  tensor[2] wref = yy.worldPos();
+  tensor[2] ref = pos.refPos();
+  tensor[2] wref = pos.worldPos();
   tensor[2,2,2] qqq = ( ∇⊗(kk.refField))([1,1]);
-  cell{msh} fluf = yy.mc();
-  bool test = yy.isValid();
+  cell{msh} fluf = pos.mc();
+  bool test = pos.isValid();
   tensor[2] smrgh = j.invTransform([0,0]);
   tensor[2,2,2] smrgh2 =  ∇⊗∇⊗(j.invTransform)([0,0]);
   tensor[2,2,2] afsafafa = ∇⊗(kk.transformedRefField)([0,0]);
@@ -54,7 +54,11 @@ strand gg(int i, cell{msh} j){
   int j0 = 2;
 
   update{
-    print("SAFAFAFAFA:", yy, fluf, ref, wref, test, "\n");
+    print("SAFAFAFAFA:", pos, fluf, ref, wref, test, "\n");
+    gg[] asfafa = sphere(0.01);
+    foreach(gg x in asfafa){
+      ref+=x.smrgh;
+    }
     print("Just a test:", stupidTemp,stupidTemp1, "\n");
     print("funcCell:", kk, "\n");
     tensor[FUNC.funcDofShape] b = kk.dofs();

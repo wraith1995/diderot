@@ -142,7 +142,7 @@ structure FloatEin : sig
                 of E.Comp e => e
                 | E.OField(E.CFExp tterm, E.Comp e, dx) => e
 			(*end case*))
-	  (*scan for fem fields... *)
+
           fun iter(sizes, lhs, [], avail) = compSingle(name, params, sx, sx2, args, avail, lhs, D, indexD, sizes, fld)
             | iter(sizes, lhs, (B, indexB)::ns, avail) = let
                 val (_, sizes2, lhs2) = compSingle(name, params, [], [], args, avail, lhs, B, indexB, sizes, fld)
