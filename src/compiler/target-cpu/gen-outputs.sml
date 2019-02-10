@@ -96,6 +96,70 @@ structure GenOutputs : sig
     fun seqLength seq = CL.mkDispatch(seq, "length", [])
     fun seqCopy (seq, dst) = CL.mkDispatch(seq, "copy_to", [dst])
 
+    (*analyze a type to determine the nature of the loop needed to copy it over*)
+    fun tyAnalysis ty =
+	let
+	 fun tyAnalysis'(APITypes.SeqTy(ty', SOME(n)), xs) = tyAnalysis(ty', n::xs)
+	   | tyAnalysis'(APITypes.FemData(_), xs) = (true, List.rev xs)
+	   | tyAnalysis'(_, xs) = (false, List.rev xs)
+	   | tyAnalysis' _ = raise Fail "impossible"
+	in
+	 tyAnalysis'(ty, [])
+	end
+					  
+    (*generates copy code for sequence:
+     For a non fem dynamic sequence, we generate copy_to.
+     For a non fem non-dynamic sequence, we generate memcopy stuff.
+     For a fem anything, we loop over remaining sequence dimensions and copy each 
+     via a copy_to member in the target struct.
+     *)
+    fun copy(dynSeq, ty, copyTarget, nElems, elemCTy) =
+	let
+	 val (fem, seqDims) = tyAnalysis ty
+
+	 fun mkLoop([]) = CL.mkBlock([
+				     CL.mkDispatch(copyTarget, "copy_to", [cpV]),
+				     CL.mkExpStm(CL.mkAssignOp(cpV,
+							       CL.+=,
+								  CL.mkBinOp(mkInt nElems, CL.#*, CL.mkSizeof elemCTy)))
+				    ])
+	   | mkLoop(x::xs) =
+	     let
+	      val n = List.length (x::xs)
+	      val var = "ix"^(Int.toString n)
+	      val rest = mkLoop(xs)
+	     in
+	      CL.mkFor(CL.intTy, [(var, CL.E_Int(IntLit.fromInt 0, CL.intTy))],
+		       CL.E_BinOp(CL.E_Var(var), CL.#<, CL.E_Int(IntLit.fromInt x)),
+		       CL.E_PosOp(CL.E_Var(var), CL.^++),
+		       rest
+		      )
+	     end
+				    
+	 fun copy(true, false) = CL.mkBlock[
+	      CL.mkAssign(cpV, seqCopy(copyTarget, cpV))]
+	   | copy(false, false) =  CL.mkBlock[
+              CL.mkCall("memcpy", [
+                        cpV,
+                        CL.mkUnOp(CL.%&, copyTarget),
+                        CL.mkBinOp(mkInt nElems, CL.#*, CL.mkSizeof elemCTy)
+                       ]),
+              CL.mkExpStm(CL.mkAssignOp(cpV,
+					CL.+=,
+					   CL.mkBinOp(mkInt nElems, CL.#*, CL.mkSizeof elemCTy)))
+             ]
+	   | copy (false, true) = mkLoop([])
+	     CL.mkBlock([
+			CL.mkDispatch(copyTarget, "copy_to", [cpV]),
+			CL.mkExpStm(CL.mkAssignOp(cpV,
+						  CL.+=,
+						     CL.mkBinOp(mkInt nElems, CL.#*, CL.mkSizeof elemCTy)))
+		       ])
+	   | copy (true,true) = mkLoop(seqDims)
+	in
+	 copy(dynSeq, fem)
+	end
+
   (* utility functions for initializing the sizes array *)
     fun sizes i = CL.mkSubscript(sizesV, mkInt i)
     fun setSizes (i, v) = CL.mkAssign(sizes i, v)
