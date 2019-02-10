@@ -37,9 +37,9 @@ strand gg(int i, cell{msh} j){
 
 
 
-  cell{FUNC} kk = c.funcCell(j);
+  output cell{FUNC} kk = c.funcCell(j);
 
-  position{msh} pos = a.findPos([0.0, 0.0]);
+  output position{msh} pos = a.findPos([0.0, 0.0]);
 
   tensor[2] ref = pos.refPos();
   tensor[2] wref = pos.worldPos();

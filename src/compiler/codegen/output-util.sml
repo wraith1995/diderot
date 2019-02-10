@@ -82,7 +82,29 @@ structure OutputUtil : sig
                 val (elemTy, nrrdTy, axisKind, nElems) = infoOf (env, ty)
                 in
                   (elemTy, nrrdTy, Nrrd.KindList, n*nElems)
-                end
+            end
+	    | Ty.FemData(data) =>
+	      (case data
+		of FemData.MeshCell(mesh) => infoOf(env, Ty.IntTy)
+		 | FemData.FuncCell(func) => infoOf(env, Ty.IntTy)
+		 | FemData.MeshPos(mesh) =>
+		   let
+		    (*int, vecDim, vecDim*)
+		    val dim = FemData.meshDim mesh
+		    val nElems = 2 * dim + 1
+		    val axisKind = Nrrd.KindList
+				     
+		    val (realTy, nrrdTy) = if #double(Env.target env)
+				  then (CL.double, Nrrd.TypeDouble)
+				  else (CL.float, Nrrd.TypeFloat)
+		    val arrayTy = CL.T_Array(realTy, SOME(nElems))
+					    
+					    
+		   in
+		    (arrayTy, nrrdTy, axisKind, nElems)
+		   end
+		 | _ => raise Fail(concat["GetOutput.infoOf(", Ty.toString ty, ")"])
+	      (*end case*))
             | _ => raise Fail(concat["GetOutput.infoOf(", Ty.toString ty, ")"])
           (* end case *))
 
