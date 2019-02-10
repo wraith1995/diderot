@@ -115,42 +115,5 @@ Look for them as constants
 -just with funcs,etc - generate arbitrary forloop length function
 
 
-outputs:
-
-output-util.sml
-Add correct nrrdd sizes and what not.
-
-
-gen-outputs in target-cpu - actually builds things
-has the ty -> needs to figure out the sizing
-Build a converter.Add converter method
-Looks like it copies things raw... so what we should do is build new array there... and copy that live
-for meshCell: copy the int part...
-
-Add shadow-output vars..
-
-Take state... svars in translate
-Look through it
-extractCopyNode Trait:
--add copyOp
--add Save at strandSave
--SAME PROBE
-
-ONLY SOLUTION IS TO DO IT IN C DIRECTLY
--If the thing is a strand,
--output must be Seq[][n][m][k]...
-
-If you have a fem sequence - we need to do nested foorloops of memcpy!!!
-
-
-genDynOutput - dynamic sequence outputs
-
-genFixedOutput - add .translation method
-
-Both of these get the type - if it is base, .translation
-if it is a sequence, we need to do a nested thing
-for x in seq
-mem =
-if done
-else
-SOMETHING STUPID BUT OKAY
+NOTE ON OUTPUTS:
+possible int32 to double conversions when converting meshPos
