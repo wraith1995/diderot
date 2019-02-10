@@ -119,15 +119,19 @@ structure CheckGlobals : sig
             | PT.GD_Input(ty, {span, tree=x}, optDesc, optDefn) => let
                 val ty = CheckType.check (env, cxt, ty)
                 val x' = Var.new(x, span, Var.InputVar, ty)
-		val _ = print(Var.nameOf x')
+		val femError = (fn () => err (cxt, [S"Input variable ", V x', S " is finite element data that requires a default definition!"]))
                 val rhs = (case optDefn
 			    of NONE => (case ty
 					 of Ty.T_Named(_,Ty.T_Fem(data, _)) =>
 					    (case data
-					      of FemData.Mesh(_) => (print("agg!\n");SOME(AST.E_LoadFem(data, NONE, NONE)))
-					       | _ => (print("agg\n");NONE))
-					  | _ => (print("smesh\n");NONE))
-                             | SOME e => (print("aha!"); SOME(#2 (chkRHS (env, cxt, true, x', e))))
+					      of FemData.Mesh(_) => (SOME(AST.E_LoadFem(data, NONE, NONE)))
+					       | FemData.RefCell(_) => NONE (*error raised later*)
+					       | FemData.MeshPos(_) => NONE (*error raised later*)
+					       | _ => (femError();NONE)
+					    (*end case*))
+					  | _ => (NONE)
+				       (*end case*))
+                             | SOME e =>  (SOME(#2 (chkRHS (env, cxt, true, x', e))))
                       (* end case *))
                 in
                 (* check that input variables have valid types *)

@@ -705,13 +705,13 @@ structure LowToTree : sig
                   val (rhs, stms') = trOp (env, rator, args)
                   val stms = stms' @ stms
                   val emitBind = (V.useCount lhs > 1) orelse not(Env.isInlineOp env rator)
-		  val _ =  print(concat[
-                              "OP(", LowOps.toString rator, ", [",
-                              String.concatWithMap "," V.toString args, "])\n",
-                              "rhs = ", Env.bindingToString rhs, "\n",
-                              "eqCls = ", eqToString (eqClassRepOf(env, lhs)), "\n",
-                              "emitBind = ", Bool.toString emitBind, "\n"
-                             ]);
+		  (* val _ =  print(concat[ *)
+                  (*             "OP(", LowOps.toString rator, ", [", *)
+                  (*             String.concatWithMap "," V.toString args, "])\n", *)
+                  (*             "rhs = ", Env.bindingToString rhs, "\n", *)
+                  (*             "eqCls = ", eqToString (eqClassRepOf(env, lhs)), "\n", *)
+                  (*             "emitBind = ", Bool.toString emitBind, "\n" *)
+                  (*            ]); *)
                   in
                     case (rhs, eqClassRepOf(env, lhs), emitBind)
                      of (_, NOEQ, false) => (Env.bindVar (env, lhs, rhs); stms)

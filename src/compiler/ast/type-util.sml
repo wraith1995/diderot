@@ -276,6 +276,7 @@ structure TypeUtil : sig
 	(case prune ty
 	  of Ty.T_Fem(data, _) => FemData.validInput data
 	   | Ty.T_Named(_, ty') => isInputFemType ty'
+	   | Ty.T_Sequence(ty', NONE) => isInputFemType ty'
 	   | _ => false)
 
     fun extractFemType ty =
