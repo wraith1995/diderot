@@ -274,10 +274,10 @@ fun hash ty =
       
 fun validInput ty =
     (case ty
-      of Mesh(_) => true
-       | Space(_) => true
-       | Func(_) => true
-       | _ => false)
+      of RefCell(_) => false
+       | MeshPos(_) => false
+       | _ => true)
+
 fun isValue ty =
     (case ty
       of MeshCell(_) => true
@@ -297,7 +297,7 @@ fun toString ty =
     (* end case*))
 fun baseFem ty =
     let
-     val _ = print((toString ty) ^ "\n");
+     val _ = ()
     in
     (case ty
       of Mesh(_) => true
