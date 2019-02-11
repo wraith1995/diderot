@@ -45,6 +45,8 @@ strand gg(int i, cell{msh} j){
   tensor[2] wref = pos.worldPos();
   tensor[2,2,2] qqq = ( ∇⊗(kk.refField))([1,1]);
   cell{msh} fluf = pos.mc();
+  output cell{msh} aafdafafafsfasfdasf = fluf;
+  output cell{msh}[1][] aafdafafafsfasfdasf' = {{fluf}};
   bool test = pos.isValid();
   tensor[2] smrgh = j.invTransform([0,0]);
   tensor[2,2,2] smrgh2 =  ∇⊗∇⊗(j.invTransform)([0,0]);

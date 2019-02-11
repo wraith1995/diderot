@@ -11,17 +11,15 @@ in ast:
 -or do basis vars
 ---spatial querry check--sphere
 New TODO:
-0. FIGURE OUT FUNCTION NAMES ISSUE
-1. Fix pos mechanics: lazyness, use in template, SAVING
-2. Fix precedence.
-3. Figure out portion of functionality completed in correspondence with spec, clean up the names
+LATER:0. FIGURE OUT FUNCTION NAMES ISSUE
+DONE: 1. Fix pos mechanics: lazyness, use in template, SAVING
+LATER:2. Fix precedence.
+DONE: 3. Figure out portion of functionality completed in correspondence with spec, clean up the names
 4. RefCell, MeshPos methods along with C++ code inserts, call backs, mesh file, new variables hanging out of cells, export of mesh struct, verticies.
 5. Loading in meshCells sequences, funcCell Sequences, meshPos: saving out both meshCell, funcCell, and meshPos sequences - meshCell is all that is needed.
 EXPAND: (1(half), 2, 4,5)
--pos var
 -precdence
 -Load in meshCells, sequences of meshCells
--Export meshCells, sequences of meshCells,
 -meshPos, functions - disallow import sequences of meshes, etc?
 -geometrices queries for newton
 -cell connectivity, verticies, other imports
@@ -93,12 +91,36 @@ EXPAND: (1(half), 2, 4,5)
 
 
 
+What I want to do before figures:
+-C code inserts for geometries
+-C code inserts for for Meshpos geometric queries and function coordination
+-Geometric data structure
+-load in meshcells, seqs of mesh cells
+During:
+-Precdence
+-Basis eval better
+-Caching/locality
+-verticies
 
 
+Settled solution to cell seq, pos seq, cell, pos etc loads with an extra argument - assume if default is non-emtpy that there is something
+Expand consts to include these defaults.
+-generate input with two things
+-do the copying work there
+-Figure out how the get works for defaults---fuck---ignore the get function - supress it.
+-All work in the: 
+-generation of dynamic sequence types (gen-tys-ops.sml)
+-gen-inputs (headers and actual functions.)
+--need to be override for fem stuff.
 
+---load the dynamic sequence
+---itter over it.
 
-
-
+GORDON:
+-NO DEFAULTS FOR CELL Inputs (constants issue)
+-$ issue
+-tupple, _ fields, Transform->T
+-Write more for me.
 
 
 
@@ -121,3 +143,6 @@ possible int32 to double conversions when converting meshPos
 
 just restrict cell inputs
 mesh pointer, mesh have id; fixing printing
+Gordon: $, tuple, names Transform -> T
+Parser: Expression .
+
