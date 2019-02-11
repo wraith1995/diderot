@@ -132,10 +132,12 @@ structure GenTysAndOps : sig
 		  val meshPtr =  CL.D_Var([],meshTy,[], "mesh", NONE)
 		  val osty = CL.T_Named("std::ostream &") (*attr doesn't support ty & *)
 		  val printer = CL.mkFuncDcl(osty, "operator<<", [CL.PARAM([], osty, "os"),
-								  CL.PARAM([], meshCellRefTy, "cell")], CL.S_Block([CL.S_Return(SOME(CL.E_BinOp(CL.E_Var("os"),
+								  CL.PARAM(["const"], meshCellRefTy, "cell")], CL.S_Block([CL.S_Return(SOME(CL.E_BinOp(CL.E_Var("os"),
 																		CL.#<<,
 																		   CL.E_Select(CL.E_Var("cell"),"cell"))))]))
-
+		  val printerPrime = CL.mkFuncDcl(osty, "operator<<", [CL.PARAM([], osty, "os")] ,  CL.S_Block([CL.S_Return(SOME(CL.E_BinOp(CL.E_Var("os"),
+																		CL.#<<,
+																		   CL.mkIndirect(CL.E_Var("this"),"cell"))))]))
 		  val builder = CL.mkFuncDcl(meshCellTy, "makeFem",
 					     [CL.PARAM([], meshTy, "mesh"),
 					      CL.PARAM([], intTy, "cellInt")],
@@ -162,7 +164,7 @@ structure GenTysAndOps : sig
 							CL.S_Return(SOME(CL.mkBinOp(CL.E_Var("cp"), CL.#+, CL.E_Var("nbytes"))))
 					    ]))
 
-		  val fields = [int, meshPtr,copy_to]
+		  val fields = [int, meshPtr,copy_to, printerPrime]
 		  val class = CL.D_ClassDef{name=name, args=NONE, from=NONE,public = fields , protected = [], private = []}
 		 in
 		  (class, [printer, builder])
@@ -180,7 +182,7 @@ structure GenTysAndOps : sig
 					
 		  val osty = CL.T_Named("std::ostream &") (*attr doesn't support ty & *)
 		  val printer = CL.mkFuncDcl(osty, "operator<<", [CL.PARAM([], osty, "os"),
-								  CL.PARAM([], funcCellRefTy, "cell")],
+								  CL.PARAM(["const"], funcCellRefTy, "cell")],
 					     CL.S_Block(
 					      [CL.S_Return(SOME(CL.E_BinOp(CL.E_Var("os"),CL.#<<, CL.E_Select(CL.E_Var("cell"),"cell"))))]))
 
@@ -236,7 +238,7 @@ structure GenTysAndOps : sig
 
 
 		  (*TODO: fix meshPos printing*)
-		  val printer = CL.mkFuncDcl(osty, "operator<<", [CL.PARAM([], osty, "os"), CL.PARAM([], meshPosRefTy, "pos")], 
+		  val printer = CL.mkFuncDcl(osty, "operator<<", [CL.PARAM([], osty, "os"), CL.PARAM(["const"], meshPosRefTy, "pos")], 
 					     CL.S_Block([
 							CL.S_Return(SOME(CL.E_BinOp(CL.E_Var("os"),
 										    CL.#<<, 
@@ -638,7 +640,14 @@ structure GenTysAndOps : sig
                       fun scalarSeqTrait ty = trait ({
                                 argTy = argTy, baseTy = ty, elemTy = argTy, nValsPerElem = 1
                               },
-                            dcls)
+						     dcls)
+
+		      fun cellSeqTrait ty = trait ({
+						   argTy = argTy,
+						   baseTy = ty,
+						   elemTy = argTy,
+						   nValsPerElem = 1
+						  }, [])
                       in
                         case elemTy ty
                          of ty as Ty.TensorTy(shp as _::_) => trait ({
@@ -652,7 +661,7 @@ structure GenTysAndOps : sig
                           | ty as Ty.VecTy(1, 1) => scalarSeqTrait ty
 (* QUESTION: strands map to uint32_t and do not support loading; do we need a trait? *)
                           | ty as Ty.StrandIdTy _ => dcls
-			  | ty as Ty.FemData(_) => dcls
+			  | ty as Ty.FemData(FemData.MeshCell(_)) => cellSeqTrait (Ty.IntTy)
                           | ty => raise Fail("unexpected dynamic sequence of " ^ Ty.toString ty)
                         (* end case *)
                       end

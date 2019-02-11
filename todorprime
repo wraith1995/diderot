@@ -117,3 +117,7 @@ Look for them as constants
 
 NOTE ON OUTPUTS:
 possible int32 to double conversions when converting meshPos
+
+
+just restrict cell inputs
+mesh pointer, mesh have id; fixing printing

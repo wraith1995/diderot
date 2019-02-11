@@ -11,7 +11,7 @@ input FUNC c = FUNC(b);
 field(2)[2] F = a.cells()[0].transform;
 refCell{msh} AAA = a.refcell();
 bool randomTest = AAA.isInside([1.2,0.2]);
-
+cell{msh}[] smeg = {}; 
 int[] a1 = {k + 2 | k in {1+j | j in 0..10}};
 real[] a2 = {k + 2.0 | k in {1.0+j | j in 0..10}};
 
@@ -54,6 +54,7 @@ strand gg(int i, cell{msh} j){
   int j0 = 2;
 
   update{
+    print(smeg);
     print("SAFAFAFAFA:", pos, fluf, ref, wref, test, "\n");
     gg[] asfafa = sphere(0.01);
     foreach(gg x in asfafa){
