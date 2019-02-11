@@ -248,6 +248,7 @@ structure TypeUtil : sig
             | Ty.T_Sequence(ty, SOME _) => isValueOrStrandType ty
             | Ty.T_Sequence(ty, NONE) => isFixedSize (true, ty)
             | Ty.T_Strand _ => true
+	    | Ty.T_Fem(data, _) => FemData.isValue data
 	    | Ty.T_Named(_, ty') => isValueOrStrandType ty'
             | Ty.T_Tensor _ => true
             | Ty.T_Error => true

@@ -120,6 +120,7 @@ structure CheckGlobals : sig
                 val ty = CheckType.check (env, cxt, ty)
                 val x' = Var.new(x, span, Var.InputVar, ty)
 		val femError = (fn () => err (cxt, [S"Input variable ", V x', S " is finite element data that requires a default definition!"]))
+		(*check const to do this.*)
                 val rhs = (case optDefn
 			    of NONE => (case ty
 					 of Ty.T_Named(_,Ty.T_Fem(data, _)) =>
