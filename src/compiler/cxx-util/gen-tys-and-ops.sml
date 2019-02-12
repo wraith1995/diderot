@@ -150,7 +150,7 @@ structure GenTysAndOps : sig
 							CL.S_Return(SOME(CL.E_Var("cell")))
 					    ]))
 
-		  val copy_to = CL.mkFuncDcl(CL.charPtr, "copy_to", [CL.PARAM([], CL.charPtr, "cp")],
+		  val copy_to = CL.mkFuncDcl(CL.charPtr, "copy_to", [CL.PARAM(["const"],meshCellTy, "dumb"), CL.PARAM([], CL.charPtr, "cp")],
 					     CL.S_Block([
 							CL.S_Decl([], CL.size_t,
 								  "nbytes",
@@ -158,16 +158,16 @@ structure GenTysAndOps : sig
 							CL.mkCallExp(CL.E_Var("std::memcpy"),
 								     [
 								       CL.E_Var("cp"),
-								       CL.mkAddrOf (CL.E_Grp((CL.E_Indirect(CL.E_Var("this"), "cell")))),
+								       CL.mkAddrOf (CL.E_Grp((CL.E_Select(CL.E_Var("dumb"), "cell")))),
 								       CL.E_Var("nbytes")
 								    ]),
 							CL.S_Return(SOME(CL.mkBinOp(CL.E_Var("cp"), CL.#+, CL.E_Var("nbytes"))))
 					    ]))
 
-		  val fields = [int, meshPtr,copy_to, printerPrime]
+		  val fields = [int, meshPtr, printerPrime]
 		  val class = CL.D_ClassDef{name=name, args=NONE, from=NONE,public = fields , protected = [], private = []}
 		 in
-		  (class, [printer, builder])
+		  (class, [printer, builder, copy_to])
 		 end
 		)
 		| FT.FuncCell(func) => (
@@ -196,7 +196,7 @@ structure GenTysAndOps : sig
 							CL.S_Exp(CL.E_AssignOp(CL.E_Select(CL.E_Var("cell"), "func"), CL.$=,(CL.E_Var("func")))),
 							CL.S_Return(SOME(CL.E_Var("cell")))
 					    ]))
-		  val copy_to = CL.mkFuncDcl(CL.charPtr, "copy_to", [CL.PARAM([], CL.charPtr, "cp")],
+		  val copy_to = CL.mkFuncDcl(CL.charPtr, "copy_to", [CL.PARAM(["const"], funcCellTy, "dumb"), CL.PARAM([], CL.charPtr, "cp")],
 					     CL.S_Block([
 							CL.S_Decl([], CL.size_t,
 								  "nbytes",
@@ -204,20 +204,21 @@ structure GenTysAndOps : sig
 							CL.mkCallExp(CL.E_Var("std::memcpy"),
 								     [
 								       CL.E_Var("cp"),
-								       CL.mkAddrOf (CL.E_Grp((CL.E_Indirect(CL.E_Var("this"), "cell")))),
+								       CL.mkAddrOf (CL.E_Grp((CL.E_Select(CL.E_Var("dumb"), "cell")))),
 								       CL.E_Var("nbytes")
 								    ]),
 							CL.S_Return(SOME(CL.mkBinOp(CL.E_Var("cp"), CL.#+, CL.E_Var("nbytes"))))
 					    ]))
-		  val fields = [int, funcPtr, copy_to]
+		  val fields = [int, funcPtr]
 		  val class = CL.D_ClassDef{name=name, args=NONE, from=NONE,public = fields , protected = [], private = []}
 		 in
-		  (class, [printer, builder])
+		  (class, [printer, builder, copy_to])
 		 end)
 		| FT.MeshPos(mesh) => (
 		 let
 		  val meshPosTy = CL.T_Named(name)
 		  val meshPosRefTy = CL.T_Named(name ^ " & ")
+		  val meshPosPointerTy = CL.T_Ptr meshPosTy
 		  val meshName = Atom.toString (FT.nameOf (FT.meshOf ty))
 		  val meshTy = CL.T_Named(meshName);
 
@@ -334,8 +335,8 @@ structure GenTysAndOps : sig
 		  (* 				 ) *)
 
 		  val arrayTy = CL.T_Array(realTy, SOME(dim*2))
-
-		  val copy_to = CL.mkFuncDcl(CL.charPtr, "copy_to", [CL.PARAM([], CL.charPtr, "cp")],
+		  val thisName = "dumb"
+		  val copy_to = CL.D_Func([], CL.charPtr,[], "copy_to ", [CL.PARAM(["const"], meshPosTy, thisName), CL.PARAM([], CL.charPtr, "cp")],
 					     CL.S_Block([
 							CL.S_Decl([], CL.size_t,
 								  "nbytes1",
@@ -347,24 +348,24 @@ structure GenTysAndOps : sig
 							CL.mkCallExp(CL.E_Var("std::memcpy"),
 								     [
 								       CL.E_Var("cp"),
-								       CL.mkAddrOf (CL.E_Grp((CL.E_Indirect(CL.E_Var("this"), "cell")))),
+								       CL.mkAddrOf (CL.E_Grp((CL.E_Select(CL.E_Var(thisName), "cell")))),
 								       CL.E_Var("nbytes2")
 								    ]),
 							CL.S_Exp(CL.E_AssignOp(CL.E_Var("cp"), CL.+=, CL.E_Var("nbytes2"))),
 							CL.mkIfThenElse (
-							 CL.E_Indirect(CL.E_Var("this"), "valid"),
+							 CL.E_Select(CL.E_Var(thisName), "valid"),
 							 CL.S_Block([
 								    CL.mkCallExp(CL.E_Var("std::memcpy"),
 										 [
 										   CL.E_Var("cp"),
-										   CL.E_Select((CL.E_Indirect(CL.E_Var("this"), "refPos")), "_data"),
+										   CL.E_Select((CL.E_Select(CL.E_Var(thisName), "refPos")), "_data"),
 										   CL.E_Var("nbytes1")
 										]),
 								    CL.S_Exp(CL.E_AssignOp(CL.E_Var("cp"), CL.+=, CL.E_Var("nbytes1"))),
 								    CL.mkCallExp(CL.E_Var("std::memcpy"),
 										 [
 										   CL.E_Var("cp"),
-										   CL.E_Select((CL.E_Indirect(CL.E_Var("this"), "worldPos")), "_data"),
+										   CL.E_Select((CL.E_Select(CL.E_Var(thisName), "worldPos")), "_data"),
 										   CL.E_Var("nbytes1")
 										]),
 								    CL.S_Exp(CL.E_AssignOp(CL.E_Var("cp"), CL.+=, CL.E_Var("nbytes1")))]),
@@ -385,11 +386,11 @@ structure GenTysAndOps : sig
 						
 							CL.S_Return(SOME(CL.E_Var("cp")))
 					    ]))
-		  val fields = [meshParam, intParam, refPosParam, worldPosParam, worldPosCompute, valid, genBuild, defaultBuild,defaultBuild', copy_to]
+		  val fields = [meshParam, intParam, refPosParam, worldPosParam, worldPosCompute, valid, genBuild, defaultBuild,defaultBuild']
 		  val class = CL.D_ClassDef{name=name, args=NONE, from=NONE,public = fields , protected = [], private = []}
 		  
 		 in
-		  (class, [printer,allBuild, invalidBuild])
+		  (class, [printer,allBuild, invalidBuild, copy_to])
 		 end
 		)
 		
@@ -594,8 +595,8 @@ structure GenTysAndOps : sig
                        of Ty.BoolTy => "nrrdILoad"
                         | Ty.IntTy => "nrrdILoad"
                         | Ty.VecTy(1, 1) => if #double(Env.target env)
-                            then "nrrdDLoad"
-                            else "nrrdFLoad"
+					    then "nrrdDLoad"
+					    else "nrrdFLoad"
                         | ty => raise Fail("genSeqTrait.loadFn: unexpected type " ^ Ty.toString ty)
                       (* end case *))
                 val loadTblTy = CL.constPtrTy(CL.T_Named "__details::load_fn_ptr<base_type>")
@@ -642,12 +643,12 @@ structure GenTysAndOps : sig
                               },
 						     dcls)
 
-		      fun cellSeqTrait ty = trait ({
-						   argTy = argTy,
-						   baseTy = ty,
-						   elemTy = argTy,
-						   nValsPerElem = 1
-						  }, [])
+		      fun femSeqTrait ty = trait ({argTy = argTy,
+						baseTy = ty,
+						elemTy = argTy,
+						nValsPerElem = 1
+					       }, dcls)
+					      
                       in
                         case elemTy ty
                          of ty as Ty.TensorTy(shp as _::_) => trait ({
@@ -661,7 +662,9 @@ structure GenTysAndOps : sig
                           | ty as Ty.VecTy(1, 1) => scalarSeqTrait ty
 (* QUESTION: strands map to uint32_t and do not support loading; do we need a trait? *)
                           | ty as Ty.StrandIdTy _ => dcls
-			  | ty as Ty.FemData(FemData.MeshCell(_)) => cellSeqTrait (Ty.IntTy)
+			  | ty as Ty.FemData(FemData.MeshCell(_)) => femSeqTrait Ty.IntTy
+			  | ty as Ty.FemData(FemData.FuncCell(_)) => femSeqTrait Ty.IntTy
+			  | ty as Ty.FemData(FemData.MeshPos(_)) => femSeqTrait Ty.IntTy
                           | ty => raise Fail("unexpected dynamic sequence of " ^ Ty.toString ty)
                         (* end case *)
                       end

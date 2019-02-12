@@ -144,18 +144,21 @@ structure GenLibraryInterface : sig
                       else []
                 val setDcl = let
                     (* prototypes for setting an image or dynamic sequence from a nrrd *)
-                      fun loadPrototypes () = [
+                      fun loadPrototypes (params) = [
                               CL.D_Proto(
                                 [], Env.boolTy env, inputSetByName(spec, name),
-                                [wrldParam, CL.PARAM([], stringTy, "s")]),
+                                List.@([wrldParam, CL.PARAM([], stringTy, "s")], params)),
                               CL.D_Proto(
                                 [], Env.boolTy env, inputSet(spec, name),
-                                [wrldParam, CL.PARAM([], nrrdPtrTy, "data")])
+                                List.@([wrldParam, CL.PARAM([], nrrdPtrTy, "nin")], params))
                             ]
                       in
                         case ty
-                         of Ty.ImageTy _ => loadPrototypes()
-                          | Ty.SeqTy(_, NONE) => loadPrototypes()
+                         of Ty.ImageTy _ => loadPrototypes([])
+                          | Ty.SeqTy(elemTy, NONE) => if APITypes.hasFem elemTy
+						      then loadPrototypes([CL.PARAM([], CL.voidPtr, "data1")])
+						      else loadPrototypes([])
+						
                           | _ => [
                                 CL.D_Proto(
                                   [], Env.boolTy env, inputSet(spec, name),
