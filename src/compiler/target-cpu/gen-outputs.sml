@@ -97,13 +97,15 @@ structure GenOutputs : sig
     fun seqCopy (seq, dst) = CL.mkDispatch(seq, "copy_to", [dst])
 
     (*analyze a type to determine the nature of the loop needed to copy it over*)
-    fun tyAnalysis(ty : APITypes.t) =
+    fun tyAnalysis(ty : APITypes.t, flag) =
 	let
-	 fun tyAnalysis'(APITypes.SeqTy(ty', SOME(n)), xs) = tyAnalysis'(ty', n::xs)
-	   | tyAnalysis'(APITypes.FemData(_), xs) = (true, List.rev xs)
-	   | tyAnalysis'(_, xs) = (false, List.rev xs)
+	 fun tyAnalysis'(APITypes.SeqTy(ty', a), xs, flag) = tyAnalysis'(ty', a::xs, flag)
+	   | tyAnalysis'(APITypes.FemData(_), xs, flag) = if flag
+							  then (true, NONE :: (List.rev xs))
+							  else (true, List.rev xs)
+	   | tyAnalysis'(_, xs, _) = (false, List.rev xs)
 	in
-	 tyAnalysis'(ty, [])
+	 tyAnalysis'(ty, [], flag)
 	end
 					  
     (*generates copy code for sequence:
@@ -114,19 +116,25 @@ structure GenOutputs : sig
      *)
     fun copy(dynSeq, ty, copyTarget, nElems, elemCTy) =
 	let
-	 val (fem, seqDims) = tyAnalysis ty
-
-	 fun mkLoop([]) = CL.mkBlock([
-				     CL.mkExpStm(CL.mkDispatch(copyTarget, "copy_to", [cpV])),
+	 val (fem, seqDims) = tyAnalysis( ty, dynSeq)
+	 fun mkLoop([], vars, copyTarget) =
+	     let
+	      val vars' = List.rev vars
+	      val acc = List.foldr (fn (x,y) => CL.E_Subscript(y, CL.mkVar x)) copyTarget vars'
+	     in
+	      
+	     CL.mkBlock([
+				     CL.mkExpStm(CL.mkApply("copy_to", [acc, cpV])),
 				     CL.mkExpStm(CL.mkAssignOp(cpV,
 							       CL.+=,
 								  CL.mkBinOp(mkInt nElems, CL.#*, CL.mkSizeof elemCTy)))
-				    ])
-	   | mkLoop(x::xs) =
+		       ])
+	     end
+	   | mkLoop(SOME(x)::xs, vars, copyTarget) =
 	     let
-	      val n = List.length (x::xs)
+	      val n = List.length (SOME(x)::xs)
 	      val var = "ix"^(Int.toString n)
-	      val rest = mkLoop(xs)
+	      val rest = mkLoop(xs, var::vars, copyTarget)
 	     in
 	      CL.mkFor(CL.intTy, [(var, CL.E_Int(IntLit.fromInt 0, CL.intTy))],
 		       CL.E_BinOp(CL.E_Var(var), CL.#<, CL.E_Int(IntLit.fromInt x, CL.intTy)),
@@ -134,6 +142,21 @@ structure GenOutputs : sig
 		       rest
 		      )
 	     end
+	   | mkLoop(NONE::xs, vars, copyTarget) =
+	     let
+	      val n = List.length (NONE::xs)
+	      val var = "ix"^(Int.toString n)
+	      val copyTarget' = "seqVar"^(Int.toString n)
+	      val rest = mkLoop(xs, [], CL.E_Subscript(copyTarget, CL.mkVar var))
+	     in
+	      CL.mkFor(CL.intTy, [(var, CL.E_Int(IntLit.fromInt 0, CL.intTy))],
+		       CL.E_BinOp(CL.E_Var(var), CL.#<, CL.mkDispatch(copyTarget, "length", [])),
+		       [CL.E_PostOp(CL.E_Var(var), CL.^++)],
+		       CL.S_Block(
+		       [rest]
+		      ))
+	     end
+	 (*need a case for NONE*)
 				    
 	 fun copy(true, false) = CL.mkBlock[
 	      CL.mkAssign(cpV, seqCopy(copyTarget, cpV))]
@@ -147,14 +170,8 @@ structure GenOutputs : sig
 					CL.+=,
 					   CL.mkBinOp(mkInt nElems, CL.#*, CL.mkSizeof elemCTy)))
              ]
-	   | copy (false, true) = mkLoop([])
-	     (* CL.mkBlock([ *)
-	     (* 		CL.mkDispatch(copyTarget, "copy_to", [cpV]), *)
-	     (* 		CL.mkExpStm(CL.mkAssignOp(cpV, *)
-	     (* 					  CL.+=, *)
-	     (* 					     CL.mkBinOp(mkInt nElems, CL.#*, CL.mkSizeof elemCTy))) *)
-	     (* 	       ]) *)
-	   | copy (true,true) = mkLoop(seqDims)
+	   | copy (false, true) = mkLoop(seqDims, [], copyTarget)
+	   | copy (true,true) = mkLoop(seqDims, [], copyTarget)
 	in
 	 copy(dynSeq, fem)
 	end

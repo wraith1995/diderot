@@ -122,7 +122,7 @@ the tensor type is represented as float[9] (or double[9]), so we could use somet
                   case ty
                    of Ty.SeqTy(_, NONE) => ToC.loadNrrd (global var, gv, NONE) :: stms
                     | Ty.ImageTy _ => ToC.loadNrrd (global var, gv, Inp.proxy init) :: stms
-		    (* | Ty.FemData(FT.Mesh(_)) => raise Fail "No mesh exec inputs yet" *)
+		    | Ty.FemData(_) => raise Fail "No fem execs yet"
 		    (* | Ty.FemData(FT.Space(_)) => raise Fail "No space exec inputs yet" *)
 		    (* | Ty.FemData(FT.Func(_)) => raise Fail "No func exec inputs yet" *)
                     | ty => U.copy{env=env, ty=ty, dst=global var, src=gv} :: stms
@@ -239,7 +239,9 @@ the tensor type is represented as float[9] (or double[9]), so we could use somet
                                       CL.mkUnOp(CL.%*, CL.mkVar "v"),
                                       CL.mkDispatch(global var, "c_str", []))
                                   ])
-*)
+ *)
+			  (*For sequences of fem data, we need to attach a pointer:*)
+
                           val func = (case ty
                                        of Ty.BoolTy => mkFunc(CL.T_Ptr(trType(env, ty)))
 					| Ty.StringTy => mkFunc(CL.T_Ptr CL.charPtr)
@@ -273,7 +275,10 @@ the tensor type is represented as float[9] (or double[9]), so we could use somet
                                     CL.mkReturn(SOME(CL.mkBool false))
                                   ])
                             ]
-                        | Ty.SeqTy(elemTy, NONE) => [
+                        | Ty.SeqTy(elemTy, NONE) =>
+			  if not(TreeTypes.containsFem (TreeTypes.fromAPI elemTy))
+			  then
+			  [
                               cFunc(
                                 CL.boolTy, GenAPI.inputSetByName(spec, name),
                                 [wrldParam, CL.PARAM(["const"], CL.charPtr, "s")],
@@ -292,7 +297,90 @@ the tensor type is represented as float[9] (or double[9]), so we could use somet
                                     ToC.loadNrrd (global var, CL.mkVar "nin", NONE),
                                     CL.mkReturn(SOME(CL.mkBool false))
                                   ])
-                            ]
+                          ]
+			  else
+			   let
+			    val seqDepth = APITypes.depth ty
+			    val treeTy = TreeTypes.fromAPI ty
+			    val treeElemTy = TreeTypes.fromAPI elemTy
+			    val treeElemTyCl = ToC.trType(env, treeElemTy)
+			    val ummTy = TreeGlobalVar.ty var
+			    val ty' = TreeTypes.replaceFem treeTy
+			    val tyName = ToC.trType(env, ty')
+			    val SOME(femType) = TreeTypes.findFem treeTy
+			    val TreeTypes.FemData(data) = femType
+			    val SOME(baseData) = FemData.dependencyOf data
+			    val baseFemType = TreeTypes.FemData(baseData)
+							       
+			    val femTypeCl = ToC.trType(env, baseFemType)
+			    val initIntSeq = CL.S_Decl([], tyName, "tempSeq", NONE);
+			    val globalTarget = global var
+			    val lengths = CL.S_Decl([], CL.uint32, "length", SOME(CL.I_Exp(CL.mkDispatch(CL.mkVar "tempSeq", "length", []))))
+			    val newData = CL.S_Decl([], CL.T_Ptr femTypeCl, "data2", SOME(CL.I_Exp(CL.E_XCast("reinterpret_cast", CL.T_Ptr femTypeCl, CL.mkVar "data1"))))
+			    val dataAcc = CL.S_Decl([], femTypeCl, "fem", SOME(CL.I_Exp(CL.E_UnOp(CL.%*, CL.mkVar("data2")))))
+			    val initSeq = CL.S_Exp(CL.mkAssignOp(globalTarget, CL.$=, CL.E_TApply([], "diderot::dynseq", [treeElemTyCl], [CL.mkVar "length"])))
+
+			    (* fun forLoopInits([]) = [] *)
+			    (*   | forLoopInits (x::xs) = let val i = 1 + List.length xs in ("i"^(Int.toString i), CL.E_Int(IntLit.fromInt 0, CL.intTy))::(forLoopInits(xs)) end *)
+																			 
+			    (* fun forLoopChecks([]) = [] *)
+			    (*   | forLoopChecks(x::xs)  =  let val i = 1 + List.length xs in CL.E_BinOp(CL.mkVar ("i"^(Int.toString(i))), CL.#<, CL.E_Int(IntLit.fromInt x, CL.InTy))::forLoopChecks(xs) end *)
+
+			    (* fun forLoopsItter([]) = [] *)
+			    (*   | forLoopsItter (x::xs) = let val i = 1 + List.length xs in CL.E_PostOp(CL.mkVar ("i"^(Int.toString(i))), CL.^++)::forLoopChecks(xs) end *)
+
+			    (* fun forLoopCheck([]) = CL.E_BinOp(CL.mkVar "i", CL.#<, CL.mkVar "length") *)
+			    (*   | forLoopCheck ([x]) =  *)
+			    val forLoop = CL.S_For(CL.intTy, [("i", CL.E_Int(IntLit.fromInt 0, CL.intTy))] :: forLoopInits(seqDepth),
+						   CL.E_BinOp(CL.mkVar "i", CL.#<, CL.mkVar "length"),
+						   [CL.E_PostOp(CL.mkVar"i", CL.^++)],
+						   CL.S_Block([
+							      CL.S_Exp(CL.mkAssignOp(
+									 CL.E_Subscript(globalTarget, CL.mkVar "i"),
+									 CL.$=,
+									    CL.mkApply("makeFem",
+										       [CL.mkVar "fem",
+											CL.E_Subscript(
+											 CL.mkVar("tempSeq"),
+											 CL.mkVar "i")])))
+						  ]))
+			   in
+			   [
+			     cFunc(
+                                CL.boolTy, GenAPI.inputSetByName(spec, name),
+                                [wrldParam, CL.PARAM(["const"], CL.charPtr, "s"),
+				CL.PARAM([], CL.voidPtr, "data1")],
+                                CL.mkBlock[
+                                 wrldCastStm,
+				 initIntSeq,
+                                    CL.mkAssign(U.defined var, CL.mkBool true),
+                                    CL.S_Exp(CL.mkDispatch (CL.mkVar "tempSeq", "load", [CL.mkVar "wrld", CL.mkVar "s"])),
+				    lengths,
+				    newData,
+				    dataAcc,
+				    initSeq,
+				    forLoop,
+                                    CL.mkReturn(SOME(CL.mkBool false))
+                             ])
+			   ,
+                              cFunc(
+                                CL.boolTy, GenAPI.inputSet(spec, name),
+                                [wrldParam, CL.PARAM([], nrrdPtrTy, "nin"),
+				 CL.PARAM([], CL.voidPtr, "data1")],
+                                CL.mkBlock[
+                                    wrldCastStm,
+                                    CL.mkAssign(U.defined var, CL.mkBool true),
+				    initIntSeq,
+                                    ToC.loadNrrd (CL.mkVar "tempSeq", CL.mkVar "nin", NONE),
+				    lengths,
+				    newData,
+				    dataAcc,
+				    initSeq,
+				    forLoop,
+                                    CL.mkReturn(SOME(CL.mkBool false))
+                                  ])
+			   ]
+			   end
                         | _ => [
                               cFunc(
                                 CL.boolTy, GenAPI.inputSet(spec, name),

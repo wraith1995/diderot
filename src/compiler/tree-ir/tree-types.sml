@@ -32,6 +32,33 @@ structure TreeTypes =
       | StrandIdTy of Atom.atom         (* index into strand-state array *)
       | FemData of FemData.femType
 
+    fun containsFem (FemData(_)) = true
+      | containsFem (SeqTy(ty, _)) = containsFem ty
+      | containsFem (TupleTy(tys)) = List.foldr (fn (x,y) => (containsFem x) orelse y) false tys
+      | containsFem _ = false
+
+    fun findFem (ty as FemData(_)) = SOME(ty)
+      | findFem (SeqTy(ty', _)) = findFem ty'
+      | findFem _ = NONE
+					  
+
+    fun replaceFem (SeqTy(ty, s)) = SeqTy(replaceFem ty, s)
+      | replaceFem (FemData(FemData.MeshCell(_))) = IntTy
+      | replaceFem (FemData(FemData.FuncCell(_))) = IntTy
+      | replaceFem (FemData(FemData.MeshPos(data))) =
+	let val dim = FemData.meshDim data
+	in TensorTy([dim * 2 + 1]) end
+      | replaceFem _ = raise Fail "impossible"
+
+    fun fromAPI (APITypes.IntTy) = IntTy
+      | fromAPI (APITypes.BoolTy) = BoolTy
+      | fromAPI (APITypes.TensorTy(s)) = raise Fail "not needed"
+      | fromAPI (APITypes.StringTy) = StringTy
+      | fromAPI (APITypes.FemData(data)) = FemData(data)
+      | fromAPI (APITypes.SeqTy(ty, opt)) = SeqTy(fromAPI ty, opt)
+      | fromAPI (APITypes.ImageTy _) = raise Fail "impossible"
+		   
+
     val intTy = IntTy
 
     val realTy = VecTy(1, 1)

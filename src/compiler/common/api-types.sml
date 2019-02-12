@@ -23,6 +23,13 @@ structure APITypes =
 
     val realTy = TensorTy[]
 
+    fun hasFem (SeqTy(ty,_)) = hasFem ty
+      | hasFem (FemData(_)) = true
+      | hasFem _ = false
+
+    fun depth(SeqTy(ty, SOME(s)), ds) = s::ds
+      | depth(_, ds) = List.rev ds
+
     fun toString IntTy = "int"
       | toString BoolTy = "bool"
       | toString (TensorTy[]) = "real"

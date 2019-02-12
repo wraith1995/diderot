@@ -205,7 +205,21 @@ structure CollectInfo : sig
                       (* we also need the vector types for the "last" member function *)
                         insert (Ty.TensorTy[d]);
                         insert (Ty.TensorRefTy[d])
-                      end
+                  end
+		fun additionSeq ty =
+		    (case ty
+		      of Ty.SeqTy(ty', s) => (case additionSeq ty'
+					       of SOME(ty'') => SOME(Ty.SeqTy(ty'', s))
+						| NONE => NONE
+					     (*end case*))
+		       | Ty.FemData(FemData.MeshCell(_)) => SOME(Ty.IntTy)
+		       | Ty.FemData(FemData.FuncCell(_)) => SOME(Ty.IntTy)
+		       | Ty.FemData(FemData.MeshPos(mesh)) =>
+			 let val dim = FemData.meshDim mesh
+			 in SOME(Ty.TensorTy([dim*2 + 1])) end
+		       | _ => NONE
+		    (*end case*))
+
                 fun add ty = (case ty
                        of Ty.BoolTy => ()
                         | Ty.IntTy => ()
@@ -215,7 +229,7 @@ structure CollectInfo : sig
                         | Ty.TensorRefTy shp => insertTensorTy shp
                         | Ty.StrandIdTy _ => ()
                         | Ty.TupleTy tys => (insert ty; List.app add tys)
-                        | Ty.SeqTy(ty', _) => (insert ty; add ty')
+                        | Ty.SeqTy(ty', _) => (insert ty; add ty'; Option.app add (additionSeq ty))
                         | _ => insert ty
                       (* end case *))
                 in

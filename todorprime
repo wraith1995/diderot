@@ -96,6 +96,7 @@ What I want to do before figures:
 -C code inserts for for Meshpos geometric queries and function coordination
 -Geometric data structure
 -load in meshcells, seqs of mesh cells
+-border control
 During:
 -Precdence
 -Basis eval better
@@ -143,6 +144,8 @@ possible int32 to double conversions when converting meshPos
 
 just restrict cell inputs
 mesh pointer, mesh have id; fixing printing
-Gordon: $, tuple, names Transform -> T
-Parser: Expression .
 
+gen-inputs.sml
+GenAPI.inputSetbyName....
+make sure builder functions are are exported...
+We will provide ints and other things...
