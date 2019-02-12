@@ -300,7 +300,7 @@ the tensor type is represented as float[9] (or double[9]), so we could use somet
                           ]
 			  else
 			   let
-			    val seqDepth = APITypes.depth ty
+
 			    val treeTy = TreeTypes.fromAPI ty
 			    val treeElemTy = TreeTypes.fromAPI elemTy
 			    val treeElemTyCl = ToC.trType(env, treeElemTy)
@@ -320,6 +320,8 @@ the tensor type is represented as float[9] (or double[9]), so we could use somet
 			    val dataAcc = CL.S_Decl([], femTypeCl, "fem", SOME(CL.I_Exp(CL.E_UnOp(CL.%*, CL.mkVar("data2")))))
 			    val initSeq = CL.S_Exp(CL.mkAssignOp(globalTarget, CL.$=, CL.E_TApply([], "diderot::dynseq", [treeElemTyCl], [CL.mkVar "length"])))
 
+
+
 			    (* fun forLoopInits([]) = [] *)
 			    (*   | forLoopInits (x::xs) = let val i = 1 + List.length xs in ("i"^(Int.toString i), CL.E_Int(IntLit.fromInt 0, CL.intTy))::(forLoopInits(xs)) end *)
 																			 
@@ -331,7 +333,7 @@ the tensor type is represented as float[9] (or double[9]), so we could use somet
 
 			    (* fun forLoopCheck([]) = CL.E_BinOp(CL.mkVar "i", CL.#<, CL.mkVar "length") *)
 			    (*   | forLoopCheck ([x]) =  *)
-			    val forLoop = CL.S_For(CL.intTy, [("i", CL.E_Int(IntLit.fromInt 0, CL.intTy))] :: forLoopInits(seqDepth),
+			    val forLoop = CL.S_For(CL.intTy, [("i", CL.E_Int(IntLit.fromInt 0, CL.intTy))],
 						   CL.E_BinOp(CL.mkVar "i", CL.#<, CL.mkVar "length"),
 						   [CL.E_PostOp(CL.mkVar"i", CL.^++)],
 						   CL.S_Block([
