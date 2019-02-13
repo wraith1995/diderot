@@ -300,7 +300,7 @@ the tensor type is represented as float[9] (or double[9]), so we could use somet
                           ]
 			  else
 			   let
-
+			    val depthSeq = APITypes.depth(elemTy)
 			    val treeTy = TreeTypes.fromAPI ty
 			    val treeElemTy = TreeTypes.fromAPI elemTy
 			    val treeElemTyCl = ToC.trType(env, treeElemTy)
@@ -319,32 +319,31 @@ the tensor type is represented as float[9] (or double[9]), so we could use somet
 			    val newData = CL.S_Decl([], CL.T_Ptr femTypeCl, "data2", SOME(CL.I_Exp(CL.E_XCast("reinterpret_cast", CL.T_Ptr femTypeCl, CL.mkVar "data1"))))
 			    val dataAcc = CL.S_Decl([], femTypeCl, "fem", SOME(CL.I_Exp(CL.E_UnOp(CL.%*, CL.mkVar("data2")))))
 			    val initSeq = CL.S_Exp(CL.mkAssignOp(globalTarget, CL.$=, CL.E_TApply([], "diderot::dynseq", [treeElemTyCl], [CL.mkVar "length"])))
+			    val zero = CL.E_Int(IntLit.fromInt 0, CL.intTy)
 
-
-
-			    (* fun forLoopInits([]) = [] *)
-			    (*   | forLoopInits (x::xs) = let val i = 1 + List.length xs in ("i"^(Int.toString i), CL.E_Int(IntLit.fromInt 0, CL.intTy))::(forLoopInits(xs)) end *)
-																			 
-			    (* fun forLoopChecks([]) = [] *)
-			    (*   | forLoopChecks(x::xs)  =  let val i = 1 + List.length xs in CL.E_BinOp(CL.mkVar ("i"^(Int.toString(i))), CL.#<, CL.E_Int(IntLit.fromInt x, CL.InTy))::forLoopChecks(xs) end *)
-
-			    (* fun forLoopsItter([]) = [] *)
-			    (*   | forLoopsItter (x::xs) = let val i = 1 + List.length xs in CL.E_PostOp(CL.mkVar ("i"^(Int.toString(i))), CL.^++)::forLoopChecks(xs) end *)
-
-			    (* fun forLoopCheck([]) = CL.E_BinOp(CL.mkVar "i", CL.#<, CL.mkVar "length") *)
-			    (*   | forLoopCheck ([x]) =  *)
+			    fun furtherLoops([], accExp, assExp) = CL.S_Exp(CL.mkAssignOp(assExp,
+									 CL.$=,
+									    CL.mkApply("makeFem",
+										       [CL.mkVar "fem", accExp])))
+			      | furtherLoops (x::xs, accExp, assExp) =
+				let
+				 val len = 1 + List.length xs
+				 val newItter = "i"^(Int.toString len)
+				 val newItterVarExp = CL.mkVar newItter
+				 val newAccExp = CL.E_Subscript(accExp, newItterVarExp)
+				 val newAssExp = CL.E_Subscript(assExp, newItterVarExp)
+				 val limit = CL.E_Int(IntLit.fromInt x, CL.intTy)
+				 val test =  CL.E_BinOp(newItterVarExp, CL.#<, limit)
+				 val inc = CL.E_PostOp(newItterVarExp, CL.^++)
+				 val rest = furtherLoops(xs, newAccExp,  newAssExp)
+				in
+				 CL.S_For(CL.intTy, [(newItter, zero)], test, [inc], rest)
+				end
 			    val forLoop = CL.S_For(CL.intTy, [("i", CL.E_Int(IntLit.fromInt 0, CL.intTy))],
 						   CL.E_BinOp(CL.mkVar "i", CL.#<, CL.mkVar "length"),
 						   [CL.E_PostOp(CL.mkVar"i", CL.^++)],
 						   CL.S_Block([
-							      CL.S_Exp(CL.mkAssignOp(
-									 CL.E_Subscript(globalTarget, CL.mkVar "i"),
-									 CL.$=,
-									    CL.mkApply("makeFem",
-										       [CL.mkVar "fem",
-											CL.E_Subscript(
-											 CL.mkVar("tempSeq"),
-											 CL.mkVar "i")])))
+							  furtherLoops(depthSeq, CL.E_Subscript(CL.mkVar "tempSeq", CL.mkVar "i"), CL.E_Subscript(globalTarget, CL.mkVar "i"))
 						  ]))
 			   in
 			   [
