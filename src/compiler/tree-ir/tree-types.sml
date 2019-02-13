@@ -50,6 +50,7 @@ structure TreeTypes =
 	in TensorTy([dim * 2 + 1]) end
       | replaceFem _ = raise Fail "impossible"
 
+			     
     fun fromAPI (APITypes.IntTy) = IntTy
       | fromAPI (APITypes.BoolTy) = BoolTy
       | fromAPI (APITypes.TensorTy(s)) = raise Fail "not needed"
