@@ -1,3 +1,9 @@
+NOTE:Error in set_by_name not registered
+NOTE:no small int, etc pairs for FEM stuff.
+
+Geometric data structures and mesh positions
+
+NOTE: need tensor 7s
 Minor code task:
 make newtoneps return a meshpos - better for error checking?
 Means error code can be inserted when done

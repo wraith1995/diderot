@@ -220,6 +220,8 @@ structure CollectInfo : sig
 		       | _ => NONE
 		    (*end case*))
 
+
+
                 fun add ty = (case ty
                        of Ty.BoolTy => ()
                         | Ty.IntTy => ()
@@ -230,6 +232,9 @@ structure CollectInfo : sig
                         | Ty.StrandIdTy _ => ()
                         | Ty.TupleTy tys => (insert ty; List.app add tys)
                         | Ty.SeqTy(ty', _) => (insert ty; add ty'; Option.app add (additionSeq ty))
+			| Ty.FemData(FemData.MeshPos(mesh)) =>
+			  let val dim = FemData.meshDim mesh
+			  in (add (Ty.TensorTy([dim*2 + 1])) ; insert ty) end
                         | _ => insert ty
                       (* end case *))
                 in

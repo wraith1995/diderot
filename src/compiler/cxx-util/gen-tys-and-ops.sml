@@ -226,6 +226,7 @@ structure GenTysAndOps : sig
 		  val tensorTy = RN.tensorRefTy [dim] (*TODO: maybe tensor ref or vec???? - figure out later.*)
 		  val tensorDataTy = RN.tensorTy [dim] (*to figure out sizing for copies*)
 
+		  val blockedTensorDataTy = RN.tensorRefTy [2*dim + 1]
 		  (*params:*)
 		  val meshParam = CL.D_Var([], meshTy, [], "mesh", NONE)
 		  val intParam = CL.D_Var([], intTy, [], "cell", NONE)
@@ -257,6 +258,22 @@ structure GenTysAndOps : sig
 		  fun expStart name exp = CL.E_Apply(CL.E_Var(name), [exp])
 
 		  fun simpleInit name = (name, CL.I_Exp(CL.E_Var(name)))
+		  (*should we check for > 0 or < 0 and length >*)
+		  val makeFem = CL.mkFuncDcl(meshPosTy, "makeFem", [CL.PARAM([], meshTy, "mesh"), CL.PARAM([], blockedTensorDataTy, "data")],
+					     CL.S_Block([
+							CL.S_Decl([], realTy, "cell", SOME(CL.I_Exp(CL.E_Subscript(CL.mkVar "data", CL.E_Int(IntLit.fromInt 0, intTy))))),
+							CL.S_Decl([], tensorTy, "ref", SOME(CL.I_Exp(CL.mkAddrOf  (CL.E_Subscript(CL.mkVar "data", CL.E_Int(IntLit.fromInt 1, intTy)))))),
+							CL.S_Decl([], tensorTy, "world", SOME(CL.I_Exp(CL.mkAddrOf (CL.E_Subscript(CL.mkVar "data", CL.E_Int(IntLit.fromInt 4, intTy)))))),
+							CL.S_Decl([], intTy, "cellInt", SOME(CL.I_Exp(CL.E_XCast("static_cast", intTy, CL.mkVar "cell")))),
+							CL.S_Decl([], CL.boolTy, "test", SOME(CL.I_Exp(CL.E_BinOp(CL.E_Int(IntLit.fromInt 0, intTy),
+															    CL.#<,
+															       CL.mkVar "cellInt")))),
+							CL.S_Return(SOME(CL.E_Apply(CL.mkVar "allBuild", [CL.mkVar "mesh", CL.mkVar "cellInt", CL.mkVar "ref", CL.mkVar "world", CL.mkVar "test", CL.mkVar "test" ])))
+							
+
+							
+							
+					    ]))
 
 
 		  val allBuild = CL.mkFuncDcl(meshPosTy, "allBuild", [CL.PARAM([], meshTy, "mesh"),
@@ -390,7 +407,7 @@ structure GenTysAndOps : sig
 		  val class = CL.D_ClassDef{name=name, args=NONE, from=NONE,public = fields , protected = [], private = []}
 		  
 		 in
-		  (class, [printer,allBuild, invalidBuild, copy_to])
+		  (class, [printer,allBuild, invalidBuild, copy_to, makeFem])
 		 end
 		)
 		
