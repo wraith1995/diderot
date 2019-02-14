@@ -33,6 +33,7 @@ structure Properties =
       | NeedsBSP                (* present if there is a feature (other than those listed above)
                                  * that requires BSP execution.
                                  *)
+      | NeedsExtraLibs of string list * string list * string list * string list
 
     fun toString HasConsts = "HasConsts"
       | toString HasInputs = "HasInputs"
@@ -52,6 +53,12 @@ structure Properties =
       | toString KillAll = "KillAll"
       | toString StrandSets = "StrandSets"
       | toString NeedsBSP = "NeedsBSP"
+      | toString (NeedsExtraLibs(includes, includeDirs, links, linkDirs)) =
+	"ExtraFlags(-#[" ^ (String.concatWith "," includes) ^"],-I["
+	^ (String.concatWith "," includeDirs) ^ "],-l["
+	^ (String.concatWith "," links) ^ "],-L["
+	^ (String.concatWith "," linkDirs) ^ "])"
+
 
     fun propsToString [] = "none"
       | propsToString [p] = toString p
@@ -59,7 +66,25 @@ structure Properties =
 
     fun hasProp (prop : t) = List.exists (fn p => prop = p)
 
+    fun getProps (prop :t) = List.filter (fn p => prop = p)
+
     fun clearProp (prop : t) = List.filter (fn p => (p <> prop))
+
+    fun collectUserCompileInserts(props : t list) =
+	let
+	 fun f (NeedsExtraLibs(a1,b1,c1,d1), (a,b,c,d)) = (List.@(a1,a),
+							   List.@(b1,b),
+							   List.@(c1,c),
+							   List.@(d1,d))
+	   | f (_, s) = s
+	 val (r1, r2, r3, r4) = List.foldr f ([],[],[],[]) props
+	 fun nub([]) = []
+	   | nub (x::xs) = if List.exists (fn y => y=x) xs
+			   then nub(xs)
+			   else x::nub(xs)
+	in
+	 (nub r1, nub r2, nub r3, nub r4)
+	end
 
   (* NOTE: this function is less precise than the TargetSpec.dualState function *)
     val dualState = hasProp StrandCommunication

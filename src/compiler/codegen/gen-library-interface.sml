@@ -99,6 +99,8 @@ structure GenLibraryInterface : sig
                 }
         (* the world pointer type *)
           val worldPtrTy = worldTy spec
+	  val includes = List.map (fn x => CL.D_Verbatim(["#include " ^ x ^" \n"])) (#includes spec)
+				   
         (* create decls for an input variable *)
           fun mkInputDecls (Inputs.INP{var, name, ty,  desc, init}) = let
                 val wrldParam = CL.PARAM([], worldPtrTy, "wrld")
@@ -188,22 +190,22 @@ structure GenLibraryInterface : sig
           val prDecl = Out.decl outS
           val prFrag = Out.fragment placeholders outS
           val prDecls = List.app prDecl
-          in
-            prFrag Fragments.libHHead;
-            prDecl (CL.D_Verbatim ["\n/**** Functions etc. for input variables ****/\n"]);
-            List.app (fn input => prDecls (mkInputDecls input)) inputs;
-            case rt of SOME rt => prFrag rt | _ => ();
-            prFrag Fragments.libHBody;
-            if (Spec.isParallel spec)
-              then prFrag Fragments.libHParExtras
-              else ();
-            prDecl (CL.D_Verbatim ["\n/**** Getters for output values ****/\n"]);
-            if (#snapshot spec)
-              then List.app (fn output => prDecls (mkGetDecl true output)) outputs
-              else ();
-            List.app (fn output => prDecls (mkGetDecl false output)) outputs;
-            prFrag Fragments.libHFoot;
-            Out.closeOut outS
-          end
+    in
+     prFrag Fragments.libHHead;
+     prDecl (CL.D_Verbatim ["\n/**** Functions etc. for input variables ****/\n"]);
+     List.app (fn input => prDecls (mkInputDecls input)) inputs;
+     case rt of SOME rt => prFrag rt | _ => ();
+     prFrag Fragments.libHBody;
+     if (Spec.isParallel spec)
+     then prFrag Fragments.libHParExtras
+     else ();
+     prDecl (CL.D_Verbatim ["\n/**** Getters for output values ****/\n"]);
+     if (#snapshot spec)
+     then List.app (fn output => prDecls (mkGetDecl true output)) outputs
+     else ();
+     List.app (fn output => prDecls (mkGetDecl false output)) outputs;
+     prFrag Fragments.libHFoot;
+     Out.closeOut outS
+    end
 
   end

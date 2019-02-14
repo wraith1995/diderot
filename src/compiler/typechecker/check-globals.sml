@@ -462,7 +462,7 @@ structure CheckGlobals : sig
 					  
 		   in
 		    (case refCellClass
-		      of FemData.KSimplex =>
+		      of FemData.KSimplex(dim) =>
 			 let
 			  val epsilonVec = AST.E_Tensor(List.tabulate(dim, fn x => epsExpr),
 							insideVec)
@@ -480,7 +480,7 @@ structure CheckGlobals : sig
 			 in
 			  endResult
 			 end
-		       | FemData.KCube =>
+		       | FemData.KCube(_) =>
 			 let
 			  val (tyArgs, Ty.T_Fun(domTy, rngTy)) = TU.instantiate(Var.typeOf BV.op_norm_t)
 			  val norm = makePrim(AST.E_Prim(BV.op_norm_t, tyArgs, [posVar'], Ty.realTy), [insideVec])
@@ -493,8 +493,8 @@ structure CheckGlobals : sig
 	       (*make meshPosSearch*)
 	       fun itterStartPos(cxt, span, refCellClass, vecTy, dim) =
 		   (case refCellClass
-		     of FemData.KCube => AST.E_Tensor(List.tabulate(dim, fn x => AST.E_Lit(Literal.Real(RealLit.zero false))), vecTy)
-		      | FemData.KSimplex =>
+		     of FemData.KCube(dim) => AST.E_Tensor(List.tabulate(dim, fn x => AST.E_Lit(Literal.Real(RealLit.zero false))), vecTy)
+		      | FemData.KSimplex(dim) =>
 			let
 			 val digits = List.tabulate(100, fn x => 3)
 			 val exp = IntInf.fromInt (1)

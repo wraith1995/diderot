@@ -1,7 +1,24 @@
+SIMPLE AS THIS:
+Add check-type-file - Properties.hasMesh, etc
+Add check-expr and property assignemtn
+Add collect info and gen-ty-ops
+Add analysis of inserts
+
+On to meshPos or testing - probably testing if time
+
 NOTE:Error in set_by_name not registered
 NOTE:no small int, etc pairs for FEM stuff.
+PLAN:
 
-Geometric data structures and mesh positions
+-OPs use include with gen functions
+-
+
+AIM TO BE UP AND RUNNING TOWARDS BY FRIDAY: THURSDAY HELL/BE UP LATE/PUSHPUSH
+-Geometric data structures and mesh operatoins
+-First do geometrices via c code insert and changes to json file
+-Changes to type generation
+-Do a fem function via firedrake and pass the damn thing
+-Also do the affine optimization and get that test right.
 
 NOTE: need tensor 7s
 Minor code task:

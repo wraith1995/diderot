@@ -9,8 +9,8 @@
  *)
 
 structure FemData : sig
-	   datatype refCellType = KSimplex | KCube
-	   val fromStr : string -> refCellType option
+	   datatype refCellType = KSimplex of int | KCube of int
+	   val fromStr : string * int -> refCellType option
 	   datatype refCell = RefCellData of {ty : refCellType,
 					      eps : RealLit.t,
 					      newtonControl :
@@ -72,18 +72,18 @@ structure FemData : sig
 
 	   (* placeholders for creating fem data *)
 
-	   val mkMesh : int * int * int  * BasisDataArray.t * Atom.atom * refCell -> femType
+	   val mkMesh : int * int * int  * BasisDataArray.t * Atom.atom * refCell * Atom.atom option -> femType
 	   val mkSpace : int * int list * mesh * BasisDataArray.t * Atom.atom -> femType
 	   val mkFunc : space * int list * Atom.atom -> femType
 
 	  end = struct
 
 structure BD = BasisData
-datatype refCellType = KSimplex | KCube
-fun fromStr(str) = if str = "simplex"
-		   then SOME(KSimplex)
+datatype refCellType = KSimplex of int | KCube of int
+fun fromStr(str,dim) = if str = "simplex"
+		   then SOME(KSimplex(dim))
 		   else if str = "cube"
-		   then SOME(KCube)
+		   then SOME(KCube(dim))
 		   else NONE
 			  
 datatype refCell = RefCellData of {ty : refCellType,
@@ -96,14 +96,14 @@ fun getCellEps(RefCellData{eps,...}) = eps
 				     
 fun sameRefCell(a,b) = RealLit.same(getCellEps(a), getCellEps(b)) andalso
 		       (case (getCellType a, getCellType b)
-			 of (KSimplex, KSimplex) => true
-			  | (KCube, KCube) => true
+			 of (KSimplex(d1), KSimplex(d2)) => d1=d2
+			  | (KCube(d1), KCube(d2)) => d1=d2
 			  | _ => false
 		       (*end case*))
 fun hashRefCell(a) = 0w3 * RealLit.hash(getCellEps(a)) + 
 		     0w5 * (case (getCellType a)
-			     of KSimplex => 0w3
-			      | KCube => 0w5
+			     of KSimplex(d1) => 0w3*(Word.fromInt d1)
+			      | KCube(d2) => 0w5*(Word.fromInt d2)
 			   (*end case*))
 (*refcells are `simplex, gen triangle, quad, *)
 
@@ -113,12 +113,14 @@ datatype mesh = Mesh' of {
 	  degree : int, (* default degree; I don't think we use this; should be removed*)
 	  basis : BasisDataArray.t,
 	  refCell : refCell,
-	  name : Atom.atom
+	  name : Atom.atom,
+	  insert : Atom.atom option
 	 }
 
 fun meshDim (Mesh'({dim, mappingDim, basis, name, ...})) = dim
 fun meshMapDim (Mesh'{dim, mappingDim, basis, name,...}) = mappingDim
 fun meshBasis (Mesh'{dim, mappingDim, basis, name, ...}) = basis
+fun meshAccInsert(Mesh'({insert,...})) = insert
 fun refCell(Mesh'{refCell,...}) = refCell
 				    
 datatype space = Space' of {
@@ -238,6 +240,11 @@ fun sameMesh(m1, m2)
       andalso (meshMapDim(m1) = meshMapDim(m2))
       andalso (BasisDataArray.same ((meshBasis m1), (meshBasis m2)))
       andalso (sameRefCell(refCell(m1), refCell(m2)))
+      andalso (case (meshAccInsert(m1), meshAccInsert(m2))
+		of (SOME(a1), SOME(a2)) => Atom.same(a1,a2)
+		|  (NONE, NONE) => true
+		| _ => false
+	      (*end case*))
 
 fun sameSpace(s1, s2)
     = (spaceDim(s1) = spaceDim(s2)) andalso (BasisDataArray.same (spaceBasis s1, spaceBasis s2)) andalso sameMesh((spaceMesh s1), spaceMesh(s2))
@@ -260,8 +267,13 @@ fun same(t1, t2) =
 
 fun hash ty =
     (case ty
-      of Mesh((Mesh'{dim, degree, mappingDim, basis, name,refCell}))
-	 => 0w1 + 0w3 * (Word.fromInt dim) + 0w5 * (Word.fromInt mappingDim) + BasisDataArray.hash basis + 0w7 * hashRefCell(refCell)
+      of Mesh((Mesh'{dim, degree, mappingDim, basis, name,refCell, insert}))
+	 => 0w1 + 0w3 * (Word.fromInt dim) + 0w5 * (Word.fromInt mappingDim) + BasisDataArray.hash basis + 0w7 * hashRefCell(refCell) +
+	    (case insert
+	      of SOME(a1) => 0w47 * Atom.hash a1
+	       | _ => 0w0
+	    (*end case*)
+	    )
        | Space(Space'({dim, shape, basis, mesh, name}))
        	 => 0w13 + 0w17 * (Word.fromInt dim) + BasisDataArray.hash basis + (hash (Mesh(mesh)))
        | Func(Func'{space, name, shape}) => 0w29 + hash (Space(space)) + 0w31 * (List.foldr (fn (x,y) => y  + 0w41 * (Word.fromInt x)) 0w37 (shape)) (*foldr consistnecy of hashing*)
@@ -334,7 +346,7 @@ fun isInputFemType ty =
        | MeshPos(_) => false
        | _ => true)
       
-fun mkMesh(dim, mDim, maxDegree, basis, name, refCell) = Mesh (Mesh' {dim = dim, mappingDim = mDim, degree = maxDegree, basis = basis, name = name, refCell=refCell})
+fun mkMesh(dim, mDim, maxDegree, basis, name, refCell, insert) = Mesh (Mesh' {dim = dim, mappingDim = mDim, degree = maxDegree, basis = basis, name = name, refCell=refCell, insert=insert})
 
 fun mkSpace(dim, shape, mesh, basis, name) = Space(Space' {dim = dim, shape = shape, basis= basis, mesh = mesh, name = name})
 

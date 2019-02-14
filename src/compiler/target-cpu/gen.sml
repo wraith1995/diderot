@@ -241,8 +241,9 @@ structure Gen : sig
           end
 
     fun compile (spec : TSpec.t, basename) = let
-        (* generate the C compiler flags *)
-          val cflags = ["-I" ^ Paths.diderotInclude(), "-I" ^ Paths.teemInclude()]
+     (* generate the C compiler flags *)
+     val extraIncludes = List.map (fn x => "-I"^ x) (#includeDirs spec)
+          val cflags = List.@(["-I" ^ Paths.diderotInclude(), "-I" ^ Paths.teemInclude()],extraIncludes)
           val cflags = #simd Paths.cxxFlags :: cflags
           val cflags = condCons (TSpec.isParallel spec, #parallel Paths.cxxFlags, cflags)
           val cflags = if #debug spec
@@ -253,7 +254,13 @@ structure Gen : sig
             RunCC.compile (basename, cflags)
           end
 
-    fun ldFlags (spec : TSpec.t) = if #exec spec
+    fun ldFlags (spec : TSpec.t) =
+	let
+	 val extraLinkDirs = List.map (fn x => " -L"^x^" ") (#libDirs spec)
+	 val extraLinks = List.map (fn x => " -"^x^" ") (#libs spec)
+	 val extraCommands = extraLinkDirs @ extraLinks
+	in
+	if #exec spec
           then let
             val extraLibs = condCons (TSpec.isParallel spec, #parallel Paths.extraLibs, [])
             val extraLibs = Paths.teemLinkFlags() @ #base Paths.extraLibs :: extraLibs
@@ -261,8 +268,8 @@ structure Gen : sig
             in
               condCons (TSpec.isParallel spec, #parallel Paths.cxxFlags, rtLib :: extraLibs)
             end
-          else TSpec.runtimeLibName spec :: Paths.teemLinkFlags()
-
+          else TSpec.runtimeLibName spec :: (Paths.teemLinkFlags() @ extraCommands)
+	end
   (* generate defines that control specialization of the code for various features (e.g.,
    * parallelism, global updates, ...
    *)
@@ -377,7 +384,8 @@ structure Gen : sig
           end
 
     fun library (spec : TSpec.t, defs, prog) = let
-          val IR.Program{inputs, strand, create, ...} = prog
+     val IR.Program{inputs, strand, create, ...} = prog
+     val includes = List.map (fn x => CL.D_Verbatim(["#include " ^ x ^" \n"])) (#includes spec)
           val env = mkEnv spec
           val baseName = OS.Path.joinDirFile{dir = #outDir spec, file = #outBase spec}
           val substitutions = mkSubs (spec, strand, create)
@@ -411,6 +419,9 @@ structure Gen : sig
                 }
               else ();
             ppDecl (CL.verbatimDcl [CxxFragments.cxxHead] substitutions);
+	    ppDecl (CL.D_Verbatim ["\n/**** User mandated includes ****/\n"]);
+	    List.app (ppDecl) includes;
+	    ppDecl (CL.D_Verbatim ["\n/**** Diderot defs and includes ****/\n"]);
             outputDefines (outS, spec, defs, substitutions);
             if (TSpec.isDebugger spec)
               then ppDecl (CL.verbatimDcl [CxxFragments.debugIncl] substitutions)
