@@ -22,7 +22,6 @@ structure CheckTypeFile  : sig
 											    
 
 
-
 	  end = struct
 type constant = (Types.ty * ConstExpr.t * string)
 
@@ -430,7 +429,7 @@ fun paresRefCell(env, cxt, refCellJson, dim, machinePres) =
 		 of SOME(e) => e
 		  | _ => makeParseError(err,cxt, "epsilon", "field doesn't exist or isn't a real number.",  realToRealLit machinePres))
      val cellClass = Option.mapPartial (oE JU.asString) tyOption
-     val cell = Option.mapPartial FemData.fromStr cellClass
+     val cell = Option.mapPartial (fn  x => FemData.fromStr(x, dim)) cellClass
 
      val newtonParamsJson = (findField "newtonParams") refCellJson
      val newtonParamsDict = (case newtonParamsJson
@@ -453,6 +452,53 @@ fun paresRefCell(env, cxt, refCellJson, dim, machinePres) =
        of SOME(cellVal) => SOME(FemData.RefCellData({ty=cellVal, eps = eps, newtonControl = newtonParamsDict}))
 	| NONE => makeParseError(err, cxt, "cell:type", "field doesn't exsist, isn't a string, or string is stupid", NONE)
      (*end case*))
+    end
+
+fun warnIfNo(env, cxt, field1, field2, tyName) json =
+    (case json
+      of NONE => NONE
+       | SOME(json') => (case findField field1 json'
+			  of SOME(a) => SOME(a)
+			   | NONE => (TypeError.warning(cxt,
+							[S "Expected field, ", S(field1),
+							 S", in parsing of another field", S(field2),
+							 S", in the pasing of type", A(tyName), S"."]);
+				      NONE)
+			(*end case*))
+     (*end case*))
+    
+      
+fun parseAccelerate(env, cxt, json, meshName) =
+    let
+     val acc = findField "accelerate" json
+
+     val insert = warnIfNo(env, cxt, "insert", "accelerate", meshName) acc
+     val includes = warnIfNo(env, cxt, "includes", "accelerate", meshName) acc
+     val linkDirs =  warnIfNo(env, cxt, "linkDirs", "accelerate", meshName) acc
+     val includeDirs =  warnIfNo(env, cxt, "includeDirs", "accelerate", meshName) acc
+     val libs =  warnIfNo(env, cxt, "libs", "accelerate", meshName) acc;
+
+     fun getStrings(json) = (case json
+			      of SOME(json') => JU.arrayMap (JU.asString) json'			
+			       | NONE => []
+			    )
+			    handle exn => []
+     val includes' = getStrings(includes)
+     val linkDirs' = getStrings(linkDirs)
+     val includeDirs' = getStrings(includeDirs)
+     val libs' = getStrings(libs)
+     (*store properties*)
+     val newProp = Properties.NeedsExtraLibs(includes', includeDirs', libs', linkDirs')
+     val _ = Env.recordProp(env, newProp);
+     (*check if the env exists*)
+     val parseInsert = Option.map JU.asString insert handle exn => NONE
+    in
+     (case parseInsert
+       of SOME(file) => if OS.FileSys.access(file, [])
+			then SOME(Atom.atom file)
+			else
+			 (TypeError.warning(cxt, [S"File ", S(file), S" does not exist."]);
+			  NONE))
     end
       
 fun parseMesh(env, cxt, tyName, json) =
@@ -493,9 +539,10 @@ fun parseMesh(env, cxt, tyName, json) =
      val refCellData = Option.mapPartial (fn (x,y) => paresRefCell(env, cxt,x,y, 0.0000001))
 					 (optionTuple(refCellField, dim))
 
+     val optionalAcceleration = Option.mapPartial (fn  x => parseAccelerate(env, cxt, x, tyName)) mesh
      val meshVal = Option.map (fn (x,y,z,basis, cell) => FT.mkMesh(x,y,z,
 							     basis,
-							     tyName, cell))
+							     tyName, cell, optionalAcceleration))
 			      (case (dim, spaceDim, degree, parsedBasis, refCellData)
 				of (SOME(a), SOME(b), SOME(c), SOME(d), SOME(e)) => SOME((a,b,c,d,e))
 				 | _ => NONE (* end case*))

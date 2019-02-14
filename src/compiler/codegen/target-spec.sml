@@ -63,7 +63,11 @@ structure TargetSpec =
         hasGlobalUpdate : bool,         (* true for programs that have a global update block *)
         hasKillAll : bool,              (* true for programs that have a global die statement *)
         hasStabilizeAll : bool,         (* true for programs that have a global stabilize statement *)
-        hasReduce : bool                (* true for programs that have global reduce *)
+        hasReduce : bool,               (* true for programs that have global reduce *)
+	includes : string list,         (* extra #includes to place in the .h file*)
+	libs : string list,             (* extra libs to link against*)
+	includeDirs : string list,      (* places to look for extra includes*)
+	libDirs : string list           (* places to look for extra libs*)
       }
 
     local
@@ -74,6 +78,7 @@ structure TargetSpec =
     fun mk (tgt : TargetOptions.t, prog) : t = let
           val TreeIR.Program{props, strand=TreeIR.Strand{state, spatialDim, ...}, ...} = prog
           val hasCom = P.hasProp P.StrandCommunication props
+	  val (includes : string list, includeDirs, libs, libDirs) = P.collectUserCompileInserts props
           in {
             diderotc = CommandLine.name(),
             argv = CommandLine.arguments(),
@@ -112,7 +117,11 @@ structure TargetSpec =
             hasGlobalUpdate = P.hasProp P.GlobalUpdate props,
             hasKillAll = P.hasProp P.KillAll props,
             hasStabilizeAll = P.hasProp P.StabilizeAll props,
-            hasReduce = P.hasProp P.GlobalReduce props
+            hasReduce = P.hasProp P.GlobalReduce props,
+	    includes = includes,
+	    libs = libs,
+	    includeDirs = includeDirs,
+	    libDirs = libDirs
           } end
 
     end (* local *)
