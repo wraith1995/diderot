@@ -766,9 +766,6 @@ structure LowToTree : sig
               | IR.APPLY(f, args) => let
                val (es, stms') = singleArgs (env, args)
 	       val f' = getFuncVar f
-
-	       val (treeResultTy, _) = TreeFunc.ty f'
-						   
 	       val newAssign = mkDefn'(newLocal(env, lhs), T.E_Apply(f', es))
 	       val stms'' = newAssign::stms'
                   in
