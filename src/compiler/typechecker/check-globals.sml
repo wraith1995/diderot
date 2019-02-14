@@ -735,7 +735,12 @@ structure CheckGlobals : sig
 						       AST.S_Block([failReturn]),
 						       emptyBlock)]), emptyBlock)
 
-						    (*incrementN, icrementC, *)
+		    (*incrementN, icrementC, *)
+		    (*reoriegnet: extraSetup, updateDetlaStm, updateCurrentPosStm*)
+		    (*if data, buildFirstForloop: needs mesh and original pos*)
+		    (*if conservative, build second capable*)
+
+		    fun geomtricTest(updateDeltaStm, updateCurrentPosStm, ifStm)
 
 		    val bodyStms =
 			if contraction
