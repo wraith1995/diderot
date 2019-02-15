@@ -44,6 +44,7 @@ structure CollectInfo : sig
       | EigenVecs3x3
       | SphereQuery of int * string
       | RIfWrap
+      | MeshGeometryQueryInsert of string * string
       
     val collect : TreeIR.program -> t
 
@@ -80,6 +81,7 @@ structure CollectInfo : sig
       | EigenVecs3x3
       | SphereQuery of int * string
       | RIfWrap
+      | MeshGeometryQueryInsert of string * string
             
 
    (* operator to string (for debugging) *)
@@ -115,6 +117,7 @@ structure CollectInfo : sig
             | EigenVecs3x3 => "EigenVecs3x3"
             | SphereQuery(d, s) => concat["SphereQuery", Int.toString d, "<", s, ">"]
             | RIfWrap  => "RIfWrap"
+	    | MeshGeometryQueryInsert(s1,s2) => "MeshAcc(file="^s1^",mesh="^s2^")"
           (* end case *))
     end (* local *)
 
@@ -146,7 +149,9 @@ structure CollectInfo : sig
                 | EigenVecs2x2 => 0w109
                 | EigenVecs3x3 => 0w113
                 | SphereQuery(d, s) => 0w117 + 0w7 * Word.fromInt d + HashString.hashString s
-                | RIfWrap  => 0w123
+                | RIfWrap  => 0w127
+		| MeshGeometryQueryInsert(s1,s2) => 0w131 + (HashString.hashString s1)
+						    + (HashString.hashString s2)
               (* end case *))
         fun sameKey (op1, op2) = (case (op1, op2)
                of (Print ty1, Print ty2) => TreeTypes.same(ty1, ty2)
@@ -174,6 +179,8 @@ structure CollectInfo : sig
                 | (EigenVecs3x3, EigenVecs3x3) => true
                 | (SphereQuery(d1, s1), SphereQuery(d2, s2)) => (d1 = d2) andalso (s1 = s2)
                 | (RIfWrap,RIfWrap) => true
+		| (MeshGeometryQueryInsert(s11,s12), MeshGeometryQueryInsert(s21,s22)) =>
+		  (s11=s21) andalso (s12=s22)
                 | _ => false
               (* end case *))
       end)
@@ -282,6 +289,8 @@ structure CollectInfo : sig
                   | Op.Translate info => insert (Translate(ImageInfo.dim info))
                   | Op.Inside(layout, _, s) => insert (Inside(layout, s))
                   | Op.IfWrap => insert RIfWrap
+		  | Op.ExtractFemItem2(t1,t2, (FemOpt.NearbyCellQuery(file),data as FemData.Mesh(mesh))) =>
+		    insert (MeshGeometryQueryInsert(Atom.toString file, Atom.toString (FemData.nameOf data)))
                   | _ => ()
                 (* end case *))
           in

@@ -20,6 +20,7 @@ structure FemData : sig
 	   val meshDim : mesh -> int
 	   val meshBasis : mesh -> BasisDataArray.t
 	   val refCell : mesh -> refCell
+	   val meshAccInsert : mesh -> (Atom.atom * bool) option
 		  
 	   type space
 	   val spaceShape : space -> int list
@@ -72,7 +73,7 @@ structure FemData : sig
 
 	   (* placeholders for creating fem data *)
 
-	   val mkMesh : int * int * int  * BasisDataArray.t * Atom.atom * refCell * Atom.atom option -> femType
+	   val mkMesh : int * int * int  * BasisDataArray.t * Atom.atom * refCell * (Atom.atom * bool) option -> femType
 	   val mkSpace : int * int list * mesh * BasisDataArray.t * Atom.atom -> femType
 	   val mkFunc : space * int list * Atom.atom -> femType
 
@@ -114,7 +115,7 @@ datatype mesh = Mesh' of {
 	  basis : BasisDataArray.t,
 	  refCell : refCell,
 	  name : Atom.atom,
-	  insert : Atom.atom option
+	  insert : (Atom.atom * bool) option
 	 }
 
 fun meshDim (Mesh'({dim, mappingDim, basis, name, ...})) = dim
@@ -241,7 +242,7 @@ fun sameMesh(m1, m2)
       andalso (BasisDataArray.same ((meshBasis m1), (meshBasis m2)))
       andalso (sameRefCell(refCell(m1), refCell(m2)))
       andalso (case (meshAccInsert(m1), meshAccInsert(m2))
-		of (SOME(a1), SOME(a2)) => Atom.same(a1,a2)
+		of (SOME(a1,b1), SOME(a2,b2)) => Atom.same(a1,a2) andalso b1=b2
 		|  (NONE, NONE) => true
 		| _ => false
 	      (*end case*))
@@ -270,7 +271,9 @@ fun hash ty =
       of Mesh((Mesh'{dim, degree, mappingDim, basis, name,refCell, insert}))
 	 => 0w1 + 0w3 * (Word.fromInt dim) + 0w5 * (Word.fromInt mappingDim) + BasisDataArray.hash basis + 0w7 * hashRefCell(refCell) +
 	    (case insert
-	      of SOME(a1) => 0w47 * Atom.hash a1
+	      of SOME(a1,b1) => 0w47 * Atom.hash a1 * (if b1
+						       then 0w2
+						       else 0w3)
 	       | _ => 0w0
 	    (*end case*)
 	    )

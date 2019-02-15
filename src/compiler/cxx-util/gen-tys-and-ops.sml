@@ -66,6 +66,17 @@ structure GenTysAndOps : sig
 		  val dimConst = CL.D_Var([], intTy,[], "dim", NONE)
 		  val mapDimConst = CL.D_Var([], intTy,[], "mapDim", NONE)
 		  val numCells = CL.D_Var([], intTy,[], "numCells", NONE)
+		  val indexPtr = CL.D_Var([], CL.voidPtr,[], "index", NONE)
+
+		  val extra =
+		      let
+		       val results = []
+		       val results = if (Option.isSome (FemData.meshAccInsert(m)))
+				     then indexPtr::results
+				     else results
+		      in
+		       results
+		      end
 
 
 		  (* We need to add a load function via string*)
@@ -74,7 +85,7 @@ structure GenTysAndOps : sig
 		  val load = CL.mkFuncDcl(CL.T_Named(name),"operator=", [CL.PARAM([],CL.T_Named("std::string"), "file")], block)
 
 
-		  val fields = [indexMap, coordinatesMap, dimConst, mapDimConst, numCells, load]
+		  val fields = [indexMap, coordinatesMap, dimConst, mapDimConst, numCells]@extra@[load]
 
 		  val class = CL.D_ClassDef{name=name, args=NONE, from=NONE,public = fields , protected = [], private = []} (*add public declerations*)
 		 in
@@ -776,7 +787,8 @@ structure GenTysAndOps : sig
           CL.T_Template(RN.qImageTyName d, [realTy, CL.T_Named "TY", CL.T_Named "VOXSZ"])
 
     fun doOp env (rator, dcls) = let
-          val realTy = Env.realTy env
+     val realTy = Env.realTy env
+     val intTy = Env.intTy env
           fun mkVec (w, pw, f) = CL.mkVec(
                 RN.vecTy w,
                 List.tabulate(pw, fn i => if i < w then f i else CL.mkFlt(zero, realTy)))
@@ -1034,7 +1046,32 @@ structure GenTysAndOps : sig
                       val t4 = "\n\t\t    else{return e4;}"
                       val t5 = "\n\t}"
                       val es = [t1,t2,t3,t4,t5]
-                      in CL.D_Verbatim es end
+                  in CL.D_Verbatim es end
+		  | MeshGeometryQueryInsert(file, ty) =>
+		    let
+		     val file = TextIO.openIn file
+		     fun loop ins = 
+			 (case TextIO.inputLine ins of 
+			     SOME line => line :: loop ins 
+
+			   | NONE      => []
+			 (*end case*))
+		     val lines = loop file
+		     val (rawReal, rawInt) = (Env.rawRealTy env, Env.rawIntTy env)
+		     val (rawRealStr, rawIntTy) = (PrintAsCxx.rawTyName rawReal,
+						   PrintAsCxx.rawTyName rawInt
+						  )
+		     val subs = [("meshTy", ty), ("realTy", rawRealStr), ("intTy", rawIntTy)]
+		     val stm = CL.S_Verbatim(List.map (StringSubst.expand subs) lines)
+		     val seqTy = CL.T_Template("diderot::dynseq", [intTy])
+		     val fin = CL.D_Func([], seqTy, [], "mesh_geom_"^ty,
+					 [CL.PARAM([], CL.voidPtr, "index"),
+					  CL.PARAM([], CL.T_Ptr(CL.T_Named(ty)), "mesh"),
+					  CL.PARAM(["const"], CL.T_Ptr(realTy), "data")],
+					 stm)
+		    in
+		     fin
+		    end
                 (* end case *))
           in
             dcl :: dcls

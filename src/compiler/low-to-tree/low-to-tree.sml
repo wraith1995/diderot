@@ -302,7 +302,16 @@ structure LowToTree : sig
                 val (args, stms) = singleArgs (env, args)
                 in
                   (Env.TREE(T.E_Op(rator, args)), stms)
-                end
+          end
+	  (* fun bindTreeWithIntermediate' rator = *)
+	  (*     let *)
+          (*      val (args, stms) = singleArgs (env, args) *)
+	  (*      val localVar = newLocal(env, ); *)
+	  (*      val newStm = mkDefn(localVar,T.E_Op(rator, args)) *)
+				  
+          (*  in *)
+          (*   (Env.TREE(T.E_Var(localVar)), newStm::stms) *)
+          (*  end *)
           fun bindRHS (ty, rator) = let
                 val (args, stms) = simpleArgs (env, args)
                 in
@@ -500,7 +509,7 @@ structure LowToTree : sig
 	      | Op.LoadFem(ty) => bindTREE (TOp.LoadFem(U.trType ty))
 	      | Op.ExtractFemItem(ty, opt) => bindTREE (TOp.ExtractFemItem(U.trType ty, opt))
 	      | Op.ExtractFem(ty, inTy) => bindTREE (TOp.ExtractFem (U.trType ty, U.trType inTy))
-	      | Op.ExtractFemItem2(ty, outTy, opt) => bindTREE (TOp.ExtractFemItem2(U.trType ty, U.trType outTy, opt))
+	      | Op.ExtractFemItem2(ty, outTy, opt) => bindRHS (U.trType outTy, TOp.ExtractFemItem2(U.trType ty, U.trType outTy, opt))
 	      | Op.ExtractFemItemN(tys, outTy, opt, stamp, name, fTys, fTy) =>
 		let
 		 val newFuncFV = LowIR.FV{id=stamp,
