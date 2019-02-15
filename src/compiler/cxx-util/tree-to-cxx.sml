@@ -316,6 +316,15 @@ structure TreeToCxx : sig
 		 | Ty.TensorTy(_) => CL.mkUnOp(CL.%&, CL.E_Subscript(CL.E_Select(a, "coordMap"), b))
 	      (* end case*))
 	    | (Op.ExtractFemItem2(ty,ty', (FemOpt.ExtractIndex, _)), [a,b]) => CL.E_Subscript(CL.E_Select(a, "indexMap"), b)
+	    | (Op.ExtractFemItem2(ty, ty', (FemOpt.NearbyCellQuery(_), mesh as FemData.Mesh(meshData))), [mesh', point]) =>
+	      let
+	       val meshName = FemData.nameOf (mesh)
+	       val funcName =  "mesh_geom_"^(Atom.toString meshName)
+	       val params = [CL.E_Select(mesh', "index"), CL.mkAddrOf mesh', CL.E_Select(point, "_data")]
+	      in
+	       CL.E_Apply(CL.mkVar funcName, params)
+	      end
+
 	    | (Op.ExtractFemItemN(tys, outTy, opt,name, qfname, fTys, fTy), args) =>
 	      let
 	       val _ = ()

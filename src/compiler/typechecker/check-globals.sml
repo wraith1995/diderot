@@ -728,6 +728,14 @@ structure CheckGlobals : sig
 						      emptyBlock)
 				    ]),
 			 AST.S_Block([incC,newtonReset]))
+
+		    val ifStm' = AST.S_IfThenElse(
+			 deltaNormTest,
+			 AST.S_Block([
+				     AST.S_IfThenElse(insideTest,
+						      AST.S_Block([succesReturn]),
+						      emptyBlock)
+				    ]), emptyBlock)
 		    val cellNTest = AST.S_IfThenElse(
 			 nTest,
 			 AST.S_Block([newtonReset,
@@ -740,13 +748,10 @@ structure CheckGlobals : sig
 		    (*if data, buildFirstForloop: needs mesh and original pos*)
 		    (*if conservative, build second capable*)
 
-		    fun geomtricTest(updateDeltaStm, updateCurrentPosStm, ifStm)
-
-		    val bodyStms =
+		    val (setupVars, updateDeltaStm, updateCurrentPosStm) =
 			if contraction
 			then
 			 let
-
 			  val probeD = makePrim'(BV.op_probe, [invDTransformField, startPosition], [dTransformFieldTy, insideVec], insideMat)
 			  val matVar = Var.new(Atom.atom "A", span, AST.LocalVar, insideMat)
 			  val probeDAssign = AST.S_Assign((matVar,span), probeD)
@@ -755,36 +760,72 @@ structure CheckGlobals : sig
 			  val updateDeltaStm = AST.S_Assign((updateVar, span), probeUpdate)
 			  val updateCurrentPosExpr = makePrim'(BV.sub_tt, [AST.E_Var(newPosVar,span), AST.E_Var(updateVar, span)], [insideVec, insideVec], insideVec)
 			  val updateCurrentPosStm = AST.S_Assign((newPosVar,span), updateCurrentPosExpr)
-
-			  val forLoop = AST.S_Foreach(itter, AST.S_Block([
-									 updateDeltaStm,
-									 updateCurrentPosStm,
-									 ifStm,
-									 cellNTest]))
 			 in
-			  [probeDAssign,
-			    forLoop,
-			    failReturn]
+			  ([probeDAssign],updateDeltaStm,updateCurrentPosStm)
 			 end
 			else
 			 let
 			  val dotFields' = makePrim'(BV.op_inner_ff,  [invDTransformField, transformFieldModPos], [dTransformFieldTy, transformFieldTy], transformFieldTy) 
-						   
 			  val probeUpdate = makePrim'(BV.op_probe, [dotFields', newPosVarExpr], [transformFieldTy, insideVec], insideVec) 
 			  val updateDeltaStm = AST.S_Assign((updateVar, span), probeUpdate)
 			  val updateCurrentPosExpr = makePrim'(BV.sub_tt, [AST.E_Var(newPosVar,span), AST.E_Var(updateVar, span)], [insideVec, insideVec], insideVec)
 			  val updateCurrentPosStm = AST.S_Assign((newPosVar,span), updateCurrentPosExpr)
 
-			  val forLoop = AST.S_Foreach(itter, AST.S_Block( [
+			 in
+			  ([], updateDeltaStm, updateCurrentPosStm)
+			 end
+
+		    val secondForLoop = AST.S_Foreach(itter, AST.S_Block([
 									 updateDeltaStm,
 									 updateCurrentPosStm,
 									 ifStm,
 									 cellNTest]))
-			 in
-			  [forLoop,
-			   failReturn]
-			 end
+		    val loopStms =
+			(case FemData.meshAccInsert mesh
+			  of NONE => [secondForLoop]
+			   | SOME(insert, cons) =>
+			     let
+			      val opt = (FemOpt.NearbyCellQuery(insert), FemData.Mesh(mesh))
+			      val intSeq = Ty.T_Sequence(Ty.T_Int, NONE)
+			      val cellExpr = AST.E_ExtractFemItem2(meshExpr,posExpr,insideVec,intSeq, opt);
+			      val newCellsVar = Var.new(Atom.atom "yayCells", span, AST.LocalVar, Ty.T_Sequence(Ty.T_Int, NONE))
+			      val newAssign = AST.S_Assign((newCellsVar, span), cellExpr)
+			      (*init cell, cellCount, n, n=0*)
+			      (*increment...*)
+			      (*Take length of sequence, itter over that * resets, do the same damn thing as above*)
+			      (*NOTE TO SELF: if this loop fails, we will probably end up using most itterations... you either get it or you don't*)
+			      val itterVar = Var.new(Atom.atom "cellItter", span, AST.IterVar, Ty.T_Int)
+			      val newtonItterVar = Var.new(Atom.atom "newtonItter", span, AST.IterVar, Ty.T_Int)
+			      val itter1 = (itterVar, AST.E_Var(newCellsVar, span))
+			      val itter2 = (newtonItterVar, makePrim'(BV.range, [zero, maxNewtonExpr], [Ty.T_Int, Ty.T_Int], Ty.T_Sequence(Ty.T_Int, NONE)))
 
+			      val tempAssignment = AST.S_Assign((cellItterVar, span), AST.E_Var(itterVar,span))
+			      val tempAssignment' = AST.S_Assign((cellItterVar, span), zero)
+							       
+			      (*TODO: rewrite as above maybe - interesting to compare these two*)
+			      val loop = AST.S_Foreach(
+				   itter1,
+				   AST.S_Block([tempAssignment,
+						AST.S_Foreach(itter2,
+							      AST.S_Block([
+									  updateDeltaStm,
+									  updateCurrentPosStm,
+									  ifStm'
+					       ]))]
+				  ))
+						      (*mesh, pos, vecd, intSeq, femopt*)
+						      (*on the death of visualization*)
+			     in
+			      if cons
+			      then [newAssign, loop]
+			      else [newAssign, loop, tempAssignment', secondForLoop]
+			     end
+			(*end case*))
+		   
+
+
+		    val bodyStms = setupVars@loopStms@[failReturn]
+			 
 		    val bodyStms' = initStms@bodyStms
 		    val body = AST.S_Block(bodyStms')
 

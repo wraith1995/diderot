@@ -33,7 +33,8 @@ structure PrintAsCxx : sig
             | RawTypes.RT_UInt64 => "uint64_t"
             | RawTypes.RT_Float => "float"
             | RawTypes.RT_Double => "double"
-          (* end case *))
+			(* end case *))
+			  
 
     fun output (_, CL.D_Verbatim[]) = ()
       | output (strm, decl) = let

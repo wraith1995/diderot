@@ -477,6 +477,7 @@ fun parseAccelerate(env, cxt, json, meshName) =
      val linkDirs =  warnIfNo(env, cxt, "linkDirs", "accelerate", meshName) acc
      val includeDirs =  warnIfNo(env, cxt, "includeDirs", "accelerate", meshName) acc
      val libs =  warnIfNo(env, cxt, "libs", "accelerate", meshName) acc;
+     val conservative =  warnIfNo(env, cxt, "conservative", "accelerate", meshName) acc
 
      fun getStrings(json) = (case json
 			      of SOME(json') => JU.arrayMap (JU.asString) json'			
@@ -492,10 +493,11 @@ fun parseAccelerate(env, cxt, json, meshName) =
      val _ = Env.recordProp(env, newProp);
      (*check if the env exists*)
      val parseInsert = Option.map JU.asString insert handle exn => NONE
+     val conservative' = (JU.asBool) (Option.valOf conservative) handle exn => false
     in
      (case parseInsert
        of SOME(file) => if OS.FileSys.access(file, [])
-			then SOME(Atom.atom file)
+			then SOME(Atom.atom file, conservative')
 			else
 			 (TypeError.warning(cxt, [S"File ", S(file), S" does not exist."]);
 			  NONE))
