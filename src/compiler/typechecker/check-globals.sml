@@ -351,7 +351,7 @@ structure CheckGlobals : sig
 		    (case (femTyDef, parsedJson)
 		      of (PT.T_Mesh, SOME(parsed)) =>
 			 let
-			  val (tempMesh, consts) = CheckTypeFile.parseMesh(env, cxt, tyName, parsed)
+			  val (tempMesh, consts, methoods) = CheckTypeFile.parseMesh(env, cxt, tyName, parsed)
 			 in
 			   (Option.mapPartial (fn x => SOME(x, NONE)) tempMesh, consts)
 			 end

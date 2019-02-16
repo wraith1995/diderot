@@ -1,17 +1,13 @@
-SIMPLE AS THIS:
-Add check-type-file - Properties.hasMesh, etc
-Add check-expr and property assignemtn
-Add collect info and gen-ty-ops
-Add analysis of inserts
+Next step:
+Parse refCell data with possible .in
+--read nds
+--analyze to build plane normals, transforms.
+--extend constant evaluation as needed.
+--connectivity information required.
+--build the two methods
+--how do we combination?
+--fix reallit bug
 
-On to meshPos or testing - probably testing if time
-
-NOTE:Error in set_by_name not registered
-NOTE:no small int, etc pairs for FEM stuff.
-PLAN:
-
--OPs use include with gen functions
--
 
 AIM TO BE UP AND RUNNING TOWARDS BY FRIDAY: THURSDAY HELL/BE UP LATE/PUSHPUSH
 -Geometric data structures and mesh operatoins

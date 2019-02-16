@@ -7,12 +7,15 @@
  *)
 structure CheckTypeFile  : sig
 	   type constant = (Types.ty * ConstExpr.t * string)
+	   datatype dimensionalObjects = Points of (int * RealLit.t list) list
+				       | Higher of int * ((int * IntInf.int list * IntInf.int list) list)
+				       | Mapping of int * string
 	   val loadJson : string *  Env.context -> JSON.value option
 	   val matchType : string -> (Types.ty * int list * int list) option
 	   val parseConstant : Env.t * Env.context * Atom.atom * Types.ty option *  JSON.value  -> constant
 	   val parseConstants : Env.t * Env.context * Atom.atom * JSON.value -> constant list
 												      
-	   val parseMesh : Env.t * Env.context * Atom.atom * JSON.value -> (FemData.femType option * constant list)
+	   val parseMesh : Env.t * Env.context * Atom.atom * JSON.value -> (FemData.femType option * constant list * dimensionalObjects list)
 												
            val parseSpace : Env.t * Env.context * Atom.atom * int list * int list * FemData.mesh * JSON.value -> FemData.femType option * constant list
 																	  (* basis function shape, range shape*)
@@ -24,7 +27,9 @@ structure CheckTypeFile  : sig
 
 	  end = struct
 type constant = (Types.ty * ConstExpr.t * string)
-
+datatype dimensionalObjects = Points of (int * RealLit.t list) list | Higher of int * ((int * IntInf.int list * IntInf.int list) list) | Mapping of int * string
+(*index of a point and its coords 
+| dim of objects and index to higher dimensional objects with addtional objects with index to points for figuring out the plane!= *)
 
 structure PT = ParseTree
 structure FT = FemData
@@ -420,7 +425,125 @@ fun parseScalarBasis(env, cxt, tyName, json, dim, degree, spaceDim) =
      		   error)
     end
 (* I don't like this.... maybe turn it into specs and process this.*)
-fun paresRefCell(env, cxt, refCellJson, dim, machinePres) =
+
+fun warnIfNo(env, cxt, field1, field2, tyName) json =
+    (case json
+      of NONE => NONE
+       | SOME(json') => (case findField field1 json'
+			  of SOME(a) => SOME(a)
+			   | NONE => (TypeError.warning(cxt,
+							[S "Expected field, ", S(field1),
+							 S", in parsing of another field", S(field2),
+							 S", in the pasing of type", A(tyName), S"."]);
+				      NONE)
+			(*end case*))
+    (*end case*))
+
+fun errIfNo(env, cxt, field1, field2, tyName) json =
+    (case json
+      of NONE => NONE
+       | SOME(json') => (case findField field1 json'
+			  of SOME(a) => SOME(a)
+			   | NONE => (TypeError.error(cxt,
+							[S "Expected field, ", S(field1),
+							 S", in parsing of another field", S(field2),
+							 S", in the pasing of type", A(tyName), S"."]);
+				      NONE)
+			(*end case*))
+     (*end case*))       
+
+fun parseGeometryOfRefCell(env, cxt, dim, json, meshName) =
+    let
+     val geometry = errIfNo(env, cxt, "geometry", "refCell", meshName) json
+     val verticies = errIfNo(env, cxt, "verticies", "geometry", meshName) geometry
+
+			    
+
+     val zero = List.tabulate(dim, fn x => RealLit.zero true)
+     fun parsePoint (idx, jsonPoint) =
+	 let
+	  val array = JU.arrayMap (realToRealLit o JU.asNumber) jsonPoint
+	  val _ = if List.length array = dim
+		  then ()
+		  else raise (Fail "...")
+			     
+	 in
+	  (idx,array)
+	  handle exn => ((TypeError.error(cxt,[S "Unable to process point ",
+					       S(Int.toString idx),
+					       S" for mesh ", A(meshName),
+					       S". Chechk that all verticies have the correct dim and are arrays of reals."]); (idx, zero)))
+	 end
+
+     fun parseVerticies'(SOME(verts)) = Vector.foldr (op ::) [] (JU.asArray(verts))
+       | parseVerticies'(NONE) = []
+				 handle exn => ((TypeError.error(cxt,[S "Unable to process verticies for mesh named", A(meshName), S"."]); []))
+											
+
+     fun parseVerticies(verts) = let val len = List.length verts
+				 in
+				  Points(ListPair.map parsePoint (List.tabulate(len, fn x =>x ), verts))  
+				 end
+     val verts = parseVerticies(parseVerticies'(verticies))
+
+     val higherObjects = List.tabulate(dim - 1 , fn x => (x, errIfNo(env, cxt, "object"^(Int.toString (x+1)), "geometry", meshName) json))
+     fun parserHigherEntry(subDim, json, index) =
+	 let
+	  val name = "object"^(Int.toString subDim)
+	  val lowerObjects = errIfNo(env, cxt, "entity", name, meshName) (SOME(json))
+	  val planePoints = errIfNo(env, cxt, "plane", name, meshName) (SOME(json))
+
+	  fun arrayOfInts(json, ty) = JU.arrayMap (JU.asIntInf) json
+				      handle exn => (TypeError.error(cxt, [S "Unable to process ", S ty, S" of ", S(name),
+									   S(" entry "^(Int.toString index)),
+									   S" in ", A(meshName), S"."]); [])
+
+	  val entities = Option.getOpt(Option.map (fn x => arrayOfInts(x, "entity")) lowerObjects, [])
+	  val planeDef =  Option.getOpt(Option.map (fn x => arrayOfInts(x, "plane")) planePoints, List.tabulate(subDim + 1, fn x => IntInf.fromInt 0))
+	  (*points to define a subdimensional object is that dim*)
+	  val _ = if List.length planeDef = subDim + 1
+		  then ()
+		  else TypeError.error(cxt, [S"Unable to process ", S(name), S (" entry" ^(Int.toString index)),
+					     S" because plane has wrong number of points."])
+
+
+	 in
+	  (index, entities, planeDef)
+	 end
+
+     fun parseHigher(subDim, SOME(json)) =
+	 let
+	  val listOfJson =  Vector.foldr (op ::) [] (JU.asArray(json))
+	  val count = List.length listOfJson
+	  val results = ListPair.map (fn (x,y) => parserHigherEntry(subDim, x, y)) (listOfJson, List.tabulate(count, fn x => x))
+				     
+	 in
+	  Higher(subDim, results)
+	 end
+       | parseHigher (subDim, NONE) = Higher(subDim, [])
+
+     val higher = List.map parseHigher higherObjects
+
+     fun mappingInserts(json) =
+	 let
+	  val possibleFields = List.tabulate(dim - 1, fn x => ("map"^(Int.toString (x+1)), x))
+	  val grabField = fn x => (Option.map JU.asString) (JU.findField json x)
+	  val possible = (List.filter (fn (x,y) =>Option.isSome y)) (List.map (fn (f,i) => (i, grabField f)) possibleFields)
+	  val possible' = List.map (fn (x,SOME(y)) => Mapping(x,y)) possible
+	 in
+	  possible'
+	  handle exn => []
+	 end
+     val maps = Option.getOpt((Option.map mappingInserts json),[])
+	   (*do basis version*)
+	   (*tabulate over it...*)
+	 
+    in
+     verts::(List.@(higher, maps))
+    end
+
+      
+fun paresRefCell(env, cxt, refCellJson, dim, machinePres, meshName) =
     let
      val tyOption = (findField "type") refCellJson
      val epsilonOption = (findField "epsilon") refCellJson
@@ -447,25 +570,16 @@ fun paresRefCell(env, cxt, refCellJson, dim, machinePres) =
 				 end
 			    (*end case*))
      val _ = print("epsilon: " ^ (RealLit.toString eps) ^ "\n");
+     val geometry = parseGeometryOfRefCell(env, cxt, dim, SOME(refCellJson), meshName)
     in
      (case cell
-       of SOME(cellVal) => SOME(FemData.RefCellData({ty=cellVal, eps = eps, newtonControl = newtonParamsDict}))
+       of SOME(cellVal) => SOME(FemData.RefCellData({ty=cellVal, eps = eps, newtonControl = newtonParamsDict}), geometry)
 	| NONE => makeParseError(err, cxt, "cell:type", "field doesn't exsist, isn't a string, or string is stupid", NONE)
+				
      (*end case*))
     end
 
-fun warnIfNo(env, cxt, field1, field2, tyName) json =
-    (case json
-      of NONE => NONE
-       | SOME(json') => (case findField field1 json'
-			  of SOME(a) => SOME(a)
-			   | NONE => (TypeError.warning(cxt,
-							[S "Expected field, ", S(field1),
-							 S", in parsing of another field", S(field2),
-							 S", in the pasing of type", A(tyName), S"."]);
-				      NONE)
-			(*end case*))
-     (*end case*))
+
     
       
 fun parseAccelerate(env, cxt, json, meshName) =
@@ -538,19 +652,21 @@ fun parseMesh(env, cxt, tyName, json) =
 			    | _ => NONE (*end case *))
 
      val refCellField = Option.mapPartial (findField "refCell") mesh
-     val refCellData = Option.mapPartial (fn (x,y) => paresRefCell(env, cxt,x,y, 0.0000001))
+     val refCellData = Option.mapPartial (fn (x,y) => paresRefCell(env, cxt,x,y, 0.0000001, tyName))
 					 (optionTuple(refCellField, dim))
+
+     val dimMethods = Option.getOpt(Option.map (fn (x,y) => y) refCellData, [])
 
      val optionalAcceleration = Option.mapPartial (fn  x => parseAccelerate(env, cxt, x, tyName)) mesh
      val meshVal = Option.map (fn (x,y,z,basis, cell) => FT.mkMesh(x,y,z,
 							     basis,
 							     tyName, cell, optionalAcceleration))
 			      (case (dim, spaceDim, degree, parsedBasis, refCellData)
-				of (SOME(a), SOME(b), SOME(c), SOME(d), SOME(e)) => SOME((a,b,c,d,e))
+				of (SOME(a), SOME(b), SOME(c), SOME(d), SOME(e, _)) => SOME((a,b,c,d,e))
 				 | _ => NONE (* end case*))
      val newConstants' = Option.getOpt(newConstants, [])
     in
-     (meshVal, newConstants')
+     (meshVal, newConstants', dimMethods)
     end
 
 
