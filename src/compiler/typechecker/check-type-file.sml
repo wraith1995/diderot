@@ -7,7 +7,7 @@
  *)
 structure CheckTypeFile  : sig
 	   type constant = (Types.ty * ConstExpr.t * string)
-	   datatype dimensionalObjects = Points of (int * RealLit.t list) list
+	   datatype dimensionalObjects = Points of (int * real list) list
 				       | Higher of int * ((int * IntInf.int list * IntInf.int list) list)
 				       | Mapping of int * string
 	   val loadJson : string *  Env.context -> JSON.value option
@@ -27,7 +27,8 @@ structure CheckTypeFile  : sig
 
 	  end = struct
 type constant = (Types.ty * ConstExpr.t * string)
-datatype dimensionalObjects = Points of (int * RealLit.t list) list | Higher of int * ((int * IntInf.int list * IntInf.int list) list) | Mapping of int * string
+datatype dimensionalObjects = Points of (int * real list) list | Higher of int * ((int * IntInf.int list * IntInf.int list) list) | Mapping of int * string
+
 (*index of a point and its coords 
 | dim of objects and index to higher dimensional objects with addtional objects with index to points for figuring out the plane!= *)
 
@@ -459,10 +460,10 @@ fun parseGeometryOfRefCell(env, cxt, dim, json, meshName) =
 
 			    
 
-     val zero = List.tabulate(dim, fn x => RealLit.zero true)
+     val zero = List.tabulate(dim, fn x => 0.0)
      fun parsePoint (idx, jsonPoint) =
 	 let
-	  val array = JU.arrayMap (realToRealLit o JU.asNumber) jsonPoint
+	  val array = JU.arrayMap (JU.asNumber) jsonPoint
 	  val _ = if List.length array = dim
 		  then ()
 		  else raise (Fail "...")
@@ -542,6 +543,107 @@ fun parseGeometryOfRefCell(env, cxt, dim, json, meshName) =
      verts::(List.@(higher, maps))
     end
 
+(*NOTE: this is only needed because there is no RealLit.t or Rational.t arithemtic...*)
+fun subtractSeg([x,y]) = (ListPair.map (Real.-) (y,x), x)
+  | subtractSeg _ = raise Fail "invalid usbtract"
+fun analyzeGeometry1(points, higher1) =
+    let
+     val Points(xs) = points
+     val vecs = List.map (fn (x,y) => y) xs
+     fun getVector i = List.nth(vecs, i)
+     val Higher(2, xs) = higher1
+     val segs = List.map (fn (x,y,z) => z) xs
+     val segs' = List.map (List.map IntInf.toInt) segs
+     val pairSegs' = List.map (subtractSeg o (List.map getVector)) segs'
+			      (*To do *)
+    in
+     pairSegs'
+    end
+fun subtract(a,b) = (ListPair.map (Real.-)(a,b))
+fun crossProduct ([a1,a2,a3] : real list, [b1, b2, b3]) =
+    [a2*b3 - a3*b2, a1*b3 - a3*b1, a1*b2 - a2*b1]
+fun planeNormal([p1,p2,p3]) =
+    let
+     val n =  crossProduct(subtract(p2,p1), subtract(p3,p1))
+     val norm =  Math.sqrt(List.foldr (op+) 0.0 (List.map (fn x => x*x) n))
+     val n' = List.map (fn x => x/norm) n
+     val dot = List.foldr (op+) 0.0 (ListPair.map Real.* (n', p1))
+     val p4 = ListPair.map Real.+ (n', p1)
+    in
+     (n,dot, p4) (*plane of the form x\in P iff n*x = dot*)
+    end
+
+fun buildTansform(pl1 : real list list, pl2 : real list list) =
+    let
+     val [p1,p2,p3,p4] = pl1
+     val [q1,q2,q3,q4] = pl2
+     val [a11,a21,a31] = p1
+     val [a12,a22,a32] = p2
+     val [a13,a23,a33] = p3
+     val [a14,a24,a34] = p4
+     val [b11,b21,b31] = q1
+     val [b12,b22,b32] = q2
+     val [b13,b23,b33] = q3
+     val [b14,b24,b34] = q4
+
+     val result = [[((~(a23*a32) + a22*a33)*b11)/(~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33) + 
+     ((a23*a31 - a21*a33)*b12)/(~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33) + 
+     ((~(a22*a31) + a21*a32)*b13)/(~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33),
+    ((a13*a32 - a12*a33)*b11)/(~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33) + 
+     ((~(a13*a31) + a11*a33)*b12)/(~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33) + 
+     ((a12*a31 - a11*a32)*b13)/(~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33),
+    ((~(a13*a22) + a12*a23)*b11)/(~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33) + 
+     ((a13*a21 - a11*a23)*b12)/(~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33) + 
+     ((~(a12*a21) + a11*a22)*b13)/(~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33),
+    ((a14*a23*a32 - a13*a24*a32 - a14*a22*a33 + a12*a24*a33 + a13*a22*a34 - a12*a23*a34)*b11)/(~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33) + 
+     ((~(a14*a23*a31) + a13*a24*a31 + a14*a21*a33 - a11*a24*a33 - a13*a21*a34 + a11*a23*a34)*b12)/(~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33) + 
+     ((a14*a22*a31 - a12*a24*a31 - a14*a21*a32 + a11*a24*a32 + a12*a21*a34 - a11*a22*a34)*b13)/(~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33) + b14],
+   [((~(a23*a32) + a22*a33)*b21)/(~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33) + 
+     ((a23*a31 - a21*a33)*b22)/(~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33) + 
+     ((~(a22*a31) + a21*a32)*b23)/(~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33),
+    ((a13*a32 - a12*a33)*b21)/(~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33) + 
+     ((~(a13*a31) + a11*a33)*b22)/(~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33) + 
+     ((a12*a31 - a11*a32)*b23)/(~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33),
+    ((~(a13*a22) + a12*a23)*b21)/(~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33) + 
+     ((a13*a21 - a11*a23)*b22)/(~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33) + 
+     ((~(a12*a21) + a11*a22)*b23)/(~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33),
+    ((a14*a23*a32 - a13*a24*a32 - a14*a22*a33 + a12*a24*a33 + a13*a22*a34 - a12*a23*a34)*b21)/(~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33) + 
+     ((~(a14*a23*a31) + a13*a24*a31 + a14*a21*a33 - a11*a24*a33 - a13*a21*a34 + a11*a23*a34)*b22)/(~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33) + 
+     ((a14*a22*a31 - a12*a24*a31 - a14*a21*a32 + a11*a24*a32 + a12*a21*a34 - a11*a22*a34)*b23)/(~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33) + b24],
+   [((~(a23*a32) + a22*a33)*b31)/(~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33) + 
+     ((a23*a31 - a21*a33)*b32)/(~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33) + 
+     ((~(a22*a31) + a21*a32)*b33)/(~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33),
+    ((a13*a32 - a12*a33)*b31)/(~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33) + 
+     ((~(a13*a31) + a11*a33)*b32)/(~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33) + 
+     ((a12*a31 - a11*a32)*b33)/(~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33),
+    ((~(a13*a22) + a12*a23)*b31)/(~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33) + 
+     ((a13*a21 - a11*a23)*b32)/(~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33) + 
+     ((~(a12*a21) + a11*a22)*b33)/(~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33),
+    ((a14*a23*a32 - a13*a24*a32 - a14*a22*a33 + a12*a24*a33 + a13*a22*a34 - a12*a23*a34)*b31)/(~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33) + 
+     ((~(a14*a23*a31) + a13*a24*a31 + a14*a21*a33 - a11*a24*a33 - a13*a21*a34 + a11*a23*a34)*b32)/(~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33) + 
+     ((a14*a22*a31 - a12*a24*a31 - a14*a21*a32 + a11*a24*a32 + a12*a21*a34 - a11*a22*a34)*b33)/(~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33) + b34],[0.0,0.0,0.0,1.0]]
+    in
+     result
+    end
+					  
+fun analyzeGeometry2(points, higher2) =
+    let
+     val Points(xs) = points
+     val vecs = List.map (fn (x,y) => y) xs
+     fun getVector i = List.nth(vecs, i)
+
+     val Higher(3, xs) = higher2
+     val planes = List.map (fn (x,y,z) => (List.map (getVector o IntInf.toInt)) z) xs
+     val numPlanes = List.length planes
+     val computedInfo = List.map planeNormal planes
+     val extraPoints = List.map (fn (x,y,z) => z) computedInfo
+     val affineDefs = ListPair.map (fn ([x,y,z], a) => [x,y,z,a]) (planes, extraPoints)
+
+     (*need point and *)
+    in
+     ()
+    end
+      
       
 fun paresRefCell(env, cxt, refCellJson, dim, machinePres, meshName) =
     let
