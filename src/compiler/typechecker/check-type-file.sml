@@ -10,7 +10,7 @@ structure CheckTypeFile  : sig
 	   datatype dimensionalObjects = Points of (int * real list) list
 				       | Higher of int * ((int * IntInf.int list * IntInf.int list) list)
 				       | Mapping of int * string
-				       | LineParam of (real list * real list) list
+				       | LineParam of (real list * real list * real) list
 				       (*b-a, a*)
 				       | PlaneParam of (real * real list) list * real list list list list (*d, normal, matrix of matrices*)
 	   
@@ -34,7 +34,7 @@ type constant = (Types.ty * ConstExpr.t * string)
 datatype dimensionalObjects = Points of (int * real list) list
 			    | Higher of int * ((int * IntInf.int list * IntInf.int list) list)
 			    | Mapping of int * string
-			    | LineParam of (real list * real list) list
+			    | LineParam of (real list * real list * real) list
 			    (*b-a, a*)
 			    | PlaneParam of (real * real list) list * real list list list list (*d, normal, matrix of matrices*)
 
@@ -462,95 +462,6 @@ fun errIfNo(env, cxt, field1, field2, tyName) json =
 			(*end case*))
      (*end case*))       
 
-fun parseGeometryOfRefCell(env, cxt, dim, json, meshName) =
-    let
-     val geometry = errIfNo(env, cxt, "geometry", "refCell", meshName) json
-     val verticies = errIfNo(env, cxt, "verticies", "geometry", meshName) geometry
-
-			    
-
-     val zero = List.tabulate(dim, fn x => 0.0)
-     fun parsePoint (idx, jsonPoint) =
-	 let
-	  val array = JU.arrayMap (JU.asNumber) jsonPoint
-	  val _ = if List.length array = dim
-		  then ()
-		  else raise (Fail "...")
-			     
-	 in
-	  (idx,array)
-	  handle exn => ((TypeError.error(cxt,[S "Unable to process point ",
-					       S(Int.toString idx),
-					       S" for mesh ", A(meshName),
-					       S". Chechk that all verticies have the correct dim and are arrays of reals."]); (idx, zero)))
-	 end
-
-     fun parseVerticies'(SOME(verts)) = Vector.foldr (op ::) [] (JU.asArray(verts))
-       | parseVerticies'(NONE) = []
-				 handle exn => ((TypeError.error(cxt,[S "Unable to process verticies for mesh named", A(meshName), S"."]); []))
-											
-
-     fun parseVerticies(verts) = let val len = List.length verts
-				 in
-				  Points(ListPair.map parsePoint (List.tabulate(len, fn x =>x ), verts))  
-				 end
-     val verts = parseVerticies(parseVerticies'(verticies))
-
-     val higherObjects = List.tabulate(dim - 1 , fn x => (x, errIfNo(env, cxt, "object"^(Int.toString (x+1)), "geometry", meshName) json))
-     fun parserHigherEntry(subDim, json, index) =
-	 let
-	  val name = "object"^(Int.toString subDim)
-	  val lowerObjects = errIfNo(env, cxt, "entity", name, meshName) (SOME(json))
-	  val planePoints = errIfNo(env, cxt, "plane", name, meshName) (SOME(json))
-
-	  fun arrayOfInts(json, ty) = JU.arrayMap (JU.asIntInf) json
-				      handle exn => (TypeError.error(cxt, [S "Unable to process ", S ty, S" of ", S(name),
-									   S(" entry "^(Int.toString index)),
-									   S" in ", A(meshName), S"."]); [])
-
-	  val entities = Option.getOpt(Option.map (fn x => arrayOfInts(x, "entity")) lowerObjects, [])
-	  val planeDef =  Option.getOpt(Option.map (fn x => arrayOfInts(x, "plane")) planePoints, List.tabulate(subDim + 1, fn x => IntInf.fromInt 0))
-	  (*points to define a subdimensional object is that dim*)
-	  val _ = if List.length planeDef = subDim + 1
-		  then ()
-		  else TypeError.error(cxt, [S"Unable to process ", S(name), S (" entry" ^(Int.toString index)),
-					     S" because plane has wrong number of points."])
-
-
-	 in
-	  (index, entities, planeDef)
-	 end
-
-     fun parseHigher(subDim, SOME(json)) =
-	 let
-	  val listOfJson =  Vector.foldr (op ::) [] (JU.asArray(json))
-	  val count = List.length listOfJson
-	  val results = ListPair.map (fn (x,y) => parserHigherEntry(subDim, x, y)) (listOfJson, List.tabulate(count, fn x => x))
-				     
-	 in
-	  Higher(subDim, results)
-	 end
-       | parseHigher (subDim, NONE) = Higher(subDim, [])
-
-     val higher = List.map parseHigher higherObjects
-
-     fun mappingInserts(json) =
-	 let
-	  val possibleFields = List.tabulate(dim - 1, fn x => ("map"^(Int.toString (x+1)), x))
-	  val grabField = fn x => (Option.map JU.asString) (JU.findField json x)
-	  val possible = (List.filter (fn (x,y) =>Option.isSome y)) (List.map (fn (f,i) => (i, grabField f)) possibleFields)
-	  val possible' = List.map (fn (x,SOME(y)) => Mapping(x,y)) possible
-	 in
-	  possible'
-	  handle exn => []
-	 end
-     val maps = Option.getOpt((Option.map mappingInserts json),[])
-	   (*do basis version*)
-	   (*tabulate over it...*)
-	 
-    in
-     verts::(List.@(higher, maps))
-    end
 
 (*NOTE: this is only needed because there is no RealLit.t or Rational.t arithemtic...*)
 fun ugg(f, [], _)= []
@@ -568,13 +479,15 @@ fun analyzeGeometry1(points, higher1) =
      val Points(xs) = points
      val vecs = List.map (fn (x,y) => y) xs
      fun getVector i = List.nth(vecs, i)
-     val Higher(2, xs) = higher1
+     val Higher(1, xs) = higher1
      val segs = List.map (fn (x,y,z) => z) xs
      val segs' = List.map (List.map IntInf.toInt) segs
      val pairSegs' = List.map (subtractSeg o (List.map getVector)) segs'
 			      (*To do *)
+     fun norm xs = Math.sqrt(List.foldr (fn (x,y) => x*x + y) 0.0 xs)
+     val pairSegs'' = List.map (fn (x,y)=> (x, y, norm x)) pairSegs'
     in
-     LineParam(pairSegs')
+     LineParam(pairSegs'')
     end
 fun subtract(a,b) = (ListPair.map (Real.-)(a,b))
 fun crossProduct ([a1,a2,a3] : real list, [b1, b2, b3]) =
@@ -649,7 +562,7 @@ fun analyzeGeometry2(points, higher2) =
      val vecs = List.map (fn (x,y) => y) xs
      fun getVector i = List.nth(vecs, i)
 
-     val Higher(3, xs) = higher2
+     val Higher(2, xs) = higher2
      val planes = List.map (fn (x,y,z) => (List.map (getVector o IntInf.toInt)) z) xs
      val numPlanes = List.length planes
      val computedInfo = List.map planeNormal planes
@@ -662,6 +575,110 @@ fun analyzeGeometry2(points, higher2) =
     in
      PlaneParam(dNormPairs, transforms)
     end
+
+
+      
+fun parseGeometryOfRefCell(env, cxt, dim, json, meshName) =
+    let
+     val geometry = errIfNo(env, cxt, "geometry", "refCell", meshName) json
+     val verticies = errIfNo(env, cxt, "verticies", "geometry", meshName) geometry
+
+			    
+
+     val zero = List.tabulate(dim, fn x => 0.0)
+     fun parsePoint (idx, jsonPoint) =
+	 let
+	  val array = JU.arrayMap (JU.asNumber) jsonPoint
+	  val _ = if List.length array = dim
+		  then ()
+		  else raise (Fail "...")
+			     
+	 in
+	  (idx,array)
+	  handle exn => ((TypeError.error(cxt,[S "Unable to process point ",
+					       S(Int.toString idx),
+					       S" for mesh ", A(meshName),
+					       S". Chechk that all verticies have the correct dim and are arrays of reals."]); (idx, zero)))
+	 end
+
+     fun parseVerticies'(SOME(verts)) = Vector.foldr (op ::) [] (JU.asArray(verts))
+       | parseVerticies'(NONE) = []
+				 handle exn => ((TypeError.error(cxt,[S "Unable to process verticies for mesh named", A(meshName), S"."]); []))
+											
+
+     fun parseVerticies(verts) = let val len = List.length verts
+				 in
+				  Points(ListPair.map parsePoint (List.tabulate(len, fn x =>x ), verts))  
+				 end
+     val verts = parseVerticies(parseVerticies'(verticies))
+
+     val higherObjects = List.tabulate(dim - 1 , fn x => (x+1, errIfNo(env, cxt, "object"^(Int.toString (x+1)), "geometry", meshName) json))
+     fun parserHigherEntry(subDim, json, index) =
+	 let
+	  val name = "object"^(Int.toString subDim)
+	  val lowerObjects = errIfNo(env, cxt, "entity", name, meshName) (SOME(json))
+	  val planePoints = errIfNo(env, cxt, "plane", name, meshName) (SOME(json))
+
+	  fun arrayOfInts(json, ty) = JU.arrayMap (JU.asIntInf) json
+				      handle exn => (TypeError.error(cxt, [S "Unable to process ", S ty, S" of ", S(name),
+									   S(" entry "^(Int.toString index)),
+									   S" in ", A(meshName), S"."]); [])
+
+	  val entities = Option.getOpt(Option.map (fn x => arrayOfInts(x, "entity")) lowerObjects, [])
+	  val planeDef =  Option.getOpt(Option.map (fn x => arrayOfInts(x, "plane")) planePoints, List.tabulate(subDim + 1, fn x => IntInf.fromInt 0))
+	  (*points to define a subdimensional object is that dim*)
+	  val _ = if List.length planeDef = subDim + 1 (*TODO: get indexs hight.*)
+		  then ()
+		  else TypeError.error(cxt, [S"Unable to process ", S(name), S (" entry" ^(Int.toString index)),
+					     S" because plane has wrong number of points."])
+
+
+	 in
+	  (index, entities, planeDef)
+	 end
+
+     fun parseHigher(subDim, SOME(json)) =
+	 let
+	  val listOfJson =  Vector.foldr (op ::) [] (JU.asArray(json))
+	  val count = List.length listOfJson
+	  val results = ListPair.map (fn (x,y) => parserHigherEntry(subDim, x, y)) (listOfJson, List.tabulate(count, fn x => x))
+				     
+	 in
+	  Higher(subDim, results)
+	 end
+       | parseHigher (subDim, NONE) = Higher(subDim, [])
+
+     val higher = List.map parseHigher higherObjects
+
+     fun mappingInserts(json) =
+	 let
+	  val possibleFields = List.tabulate(dim - 1, fn x => ("map"^(Int.toString (x+1)), x))
+	  val grabField = fn x => (Option.map JU.asString) (JU.findField json x)
+	  val possible = (List.filter (fn (x,y) =>Option.isSome y)) (List.map (fn (f,i) => (i, grabField f)) possibleFields)
+	  val possible' = List.map (fn (x,SOME(y)) => Mapping(x,y)) possible
+	 in
+	  possible'
+	  handle exn => []
+	 end
+     val maps = Option.getOpt((Option.map mappingInserts json),[])
+	   (*do basis version*)
+			     (*tabulate over it...*)
+
+     val parameterized = if dim = 2
+			 then
+			  (case List.find(fn Higher(1, _) => true | _ => false) higher
+			    of SOME(h) => analyzeGeometry1(verts, h)
+			     | _ => raise Fail "case not covered but insert C")
+			 else if dim = 3
+			 then (case List.find (fn Higher(2, _) => true | _ => false) higher
+				of SOME(h) => analyzeGeometry2(verts, h)
+				 | _ => raise Fail "case not covered but insert C")
+			 else raise Fail "invalid dim"
+	 
+    in
+     parameterized::verts::(List.@(higher, maps))
+    end
+
       
       
 fun paresRefCell(env, cxt, refCellJson, dim, machinePres, meshName) =

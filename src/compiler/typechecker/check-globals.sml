@@ -351,9 +351,9 @@ structure CheckGlobals : sig
 		    (case (femTyDef, parsedJson)
 		      of (PT.T_Mesh, SOME(parsed)) =>
 			 let
-			  val (tempMesh, consts, methoods) = CheckTypeFile.parseMesh(env, cxt, tyName, parsed)
+			  val (tempMesh, consts, geometry) = CF.parseMesh(env, cxt, tyName, parsed)
 			 in
-			   (Option.mapPartial (fn x => SOME(x, NONE)) tempMesh, consts)
+			   (Option.mapPartial (fn x => SOME(x, NONE)) tempMesh, consts, geometry)
 			 end
 		       | (PT.T_Space(mesh, shape), SOME(parsed)) =>
 			 let
@@ -384,14 +384,14 @@ structure CheckGlobals : sig
 							   
 			 in
 			  (case (spaceType, meshType)
-			    of (SOME(SOME(space''), consts), SOME(meshType')) => (SOME(space'', SOME(mesh)), consts)
+			    of (SOME(SOME(space''), consts), SOME(meshType')) => (SOME(space'', SOME(mesh)), consts, [])
 			     (*NOTE: these errors could be improved.*)
 			     | (_, SOME(_)) => ((err (cxt, [
 				S "Declared a function space type ",
-				A(tyName), S" with an invalid space "])); (NONE, []))
+				A(tyName), S" with an invalid space "])); (NONE, [],[]))
 			    | (_, NONE) => ((err (cxt, [
 				S "Declared a function space type ",
-				A(tyName), S" with an underlying type that is not a mesh or not defined", A(mesh)])); (NONE, []))
+				A(tyName), S" with an underlying type that is not a mesh or not defined", A(mesh)])); (NONE, [], []))
 			  (*end case*))
 			 end
 
@@ -404,16 +404,16 @@ structure CheckGlobals : sig
 			  val funcType = Option.map (fn s => CF.parseFunc(env, cxt, tyName, NONE, s, parsed)) spaceType
 			 in
 			  (case (funcType,spaceType)
-			    of (SOME(SOME(func), consts),SOME(space')) => (SOME(func, SOME(space)), consts)
+			    of (SOME(SOME(func), consts),SOME(space')) => (SOME(func, SOME(space)), consts, [])
 			     | (SOME(NONE,_), SOME(_)) => ((err (cxt, [
 				S "Declared a femFunction type ",
-				A(tyName), S" with an invalid definition in the file or incompatability with the space.", A(space)])); (NONE, []))
+				A(tyName), S" with an invalid definition in the file or incompatability with the space.", A(space)])); (NONE, [],[]))
 			    |  (_, NONE) =>  ((err (cxt, [
 				S "Declared a femFunction type ",
-				A(tyName), S" with an underlying type that is not a space or not defined", A(space)])); (NONE, []))
+				A(tyName), S" with an underlying type that is not a space or not defined", A(space)])); (NONE, [],[]))
 			  (* end case *))
 			 end
-		       | (_, NONE) => (err (cxt, [S "Unable to parse file for declared fem type:", A(tyName) ]); (NONE, []))
+		       | (_, NONE) => (err (cxt, [S "Unable to parse file for declared fem type:", A(tyName) ]); (NONE, [],[]))
 		       | _ => raise Fail ("Non fem type passed to validateFemType: " ^ Atom.toString(tyName))
 		    (* end case *))
 		   end
@@ -1216,7 +1216,7 @@ structure CheckGlobals : sig
 		Env.insertNamedType(env, cxt, meshPosName, meshPosTy, constants, methods, hiddenFuns)
 	       end
 
-	       fun makeDescendentFemTypes(env, femType) =
+	       fun makeDescendentFemTypes geometry (env, femType) =
 		   let
 		    val constants = []
 		    val methods = []
@@ -1461,7 +1461,7 @@ structure CheckGlobals : sig
 
 	       fun makeFemType femTyDef file =
 		   let
-		    val (femType, constants) : (FT.femType * Atom.atom option) option *  (Types.ty * ConstExpr.t * string) list = validateFemType femTyDef file
+		    val (femType, constants, geometry) = validateFemType femTyDef file
 		    val (methodRefs, methods, newVars) = Option.getOpt (Option.map (makeFemMethods femTyDef file) femType, ([],[],[]))
 		    val constants' = reformatConstants constants
 		    val envI =  Option.map (fn x => Env.insertNamedType(env, cxt, tyName, Ty.T_Fem(x), constants', methodRefs, newVars)) femType
@@ -1469,7 +1469,7 @@ structure CheckGlobals : sig
 		    val argsOption = (case (envI, femType)
 				       of (SOME(envI'), SOME((femTy', _))) => SOME((envI', femTy'))
 					| _ => NONE)
-		    val env' = Option.map makeDescendentFemTypes argsOption
+		    val env' = Option.map (makeDescendentFemTypes geometry) argsOption
 		   in
 		    (case env'
 		      of SOME(env'', methods') => (OTHERS(List.@(methods', methods)), env'')
