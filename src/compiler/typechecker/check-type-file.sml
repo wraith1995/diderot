@@ -10,6 +10,10 @@ structure CheckTypeFile  : sig
 	   datatype dimensionalObjects = Points of (int * real list) list
 				       | Higher of int * ((int * IntInf.int list * IntInf.int list) list)
 				       | Mapping of int * string
+				       | LineParam of (real list * real list) list
+				       (*b-a, a*)
+				       | PlaneParam of (real * real list) list * real list list list list (*d, normal, matrix of matrices*)
+	   
 	   val loadJson : string *  Env.context -> JSON.value option
 	   val matchType : string -> (Types.ty * int list * int list) option
 	   val parseConstant : Env.t * Env.context * Atom.atom * Types.ty option *  JSON.value  -> constant
@@ -27,7 +31,12 @@ structure CheckTypeFile  : sig
 
 	  end = struct
 type constant = (Types.ty * ConstExpr.t * string)
-datatype dimensionalObjects = Points of (int * real list) list | Higher of int * ((int * IntInf.int list * IntInf.int list) list) | Mapping of int * string
+datatype dimensionalObjects = Points of (int * real list) list
+			    | Higher of int * ((int * IntInf.int list * IntInf.int list) list)
+			    | Mapping of int * string
+			    | LineParam of (real list * real list) list
+			    (*b-a, a*)
+			    | PlaneParam of (real * real list) list * real list list list list (*d, normal, matrix of matrices*)
 
 (*index of a point and its coords 
 | dim of objects and index to higher dimensional objects with addtional objects with index to points for figuring out the plane!= *)
@@ -544,6 +553,14 @@ fun parseGeometryOfRefCell(env, cxt, dim, json, meshName) =
     end
 
 (*NOTE: this is only needed because there is no RealLit.t or Rational.t arithemtic...*)
+fun ugg(f, [], _)= []
+  | ugg(f : 'x * 'y -> 'z, (x::xs) : 'x list, (y::ys) : 'y list) =
+    let
+     val temp1 = (List.map (fn y => f(x,y)) ys)
+     val temp2 = ugg(f,xs, (y::ys))
+    in
+     temp1::temp2
+    end
 fun subtractSeg([x,y]) = (ListPair.map (Real.-) (y,x), x)
   | subtractSeg _ = raise Fail "invalid usbtract"
 fun analyzeGeometry1(points, higher1) =
@@ -557,7 +574,7 @@ fun analyzeGeometry1(points, higher1) =
      val pairSegs' = List.map (subtractSeg o (List.map getVector)) segs'
 			      (*To do *)
     in
-     pairSegs'
+     LineParam(pairSegs')
     end
 fun subtract(a,b) = (ListPair.map (Real.-)(a,b))
 fun crossProduct ([a1,a2,a3] : real list, [b1, b2, b3]) =
@@ -570,13 +587,13 @@ fun planeNormal([p1,p2,p3]) =
      val dot = List.foldr (op+) 0.0 (ListPair.map Real.* (n', p1))
      val p4 = ListPair.map Real.+ (n', p1)
     in
-     (n,dot, p4) (*plane of the form x\in P iff n*x = dot*)
+     (n',dot, p4) (*plane of the form x\in P iff n*x = dot*)
     end
 
 fun buildTansform(pl1 : real list list, pl2 : real list list) =
     let
-     val [p1,p2,p3,p4] = pl1
-     val [q1,q2,q3,q4] = pl2
+     val [p1,p2,p3,p4] = pl1 (*from i.e inverted*)
+     val [q1,q2,q3,q4] = pl2 (*to i.e not inverted*)
      val [a11,a21,a31] = p1
      val [a12,a22,a32] = p2
      val [a13,a23,a33] = p3
@@ -637,11 +654,13 @@ fun analyzeGeometry2(points, higher2) =
      val numPlanes = List.length planes
      val computedInfo = List.map planeNormal planes
      val extraPoints = List.map (fn (x,y,z) => z) computedInfo
+     val dNormPairs = List.map (fn (x,y,z) => (y, x)) computedInfo
      val affineDefs = ListPair.map (fn ([x,y,z], a) => [x,y,z,a]) (planes, extraPoints)
+     (*for x in affineDef, for y in affineDef: *)
 
-     (*need point and *)
+     val transforms : real list list list list = ugg(buildTansform, affineDefs, affineDefs) (*[x][y] maps from facet x to facet y*)
     in
-     ()
+     PlaneParam(dNormPairs, transforms)
     end
       
       
