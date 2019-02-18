@@ -1198,6 +1198,17 @@ structure CheckGlobals : sig
 		     (cross2, cross1) (*the first is the time and the second is in case we need to check for nan problems*)
 		    end
 
+		fun linePlaneIntersect(refBasis, refD, normal, dScalar) =
+		    let
+		     val dot1 = makePrim'(BV.op_inner_tt, [normal, refBasis], [vecTy, vecTy], Ty.realTy)
+		     val num = makePrim'(BV.sub_tt, [dScalar, dot1], [Ty.realTy, Ty.realTy], Ty.realTy)
+		     val dot2 = makePrim'(BV.op_inner_tt, [normal, refD], [vecTy, vecTy], Ty.realTy)
+		     val result = makePrim'(BV.div_rr, [num, dot2], [Ty.realTy, Ty.realTy], Ty.realTy)
+					 
+		    in
+		     (result, dot2)
+		    end
+
 		fun makeRealExpr x = AST.E_Lit(Literal.Real(CF.realToRealLit x))
 		fun twoDimTests(refPosExp, dPosExp, geometry) =
 		    let
@@ -1212,6 +1223,19 @@ structure CheckGlobals : sig
 		    in
 		     intersectionExprs
 		    end
+
+		fun threeDimTests(refPosExp, dPosExp, geometry) =
+		    let
+		     fun planeIntersect(d, normal) = linePlaneIntersect(refPosExp, dPosExp, normal, d)
+
+		     val planeParams = Option.valOf (List.find (fn CF.PlaneParam(_) => true | _ => false) geometry)
+		     val CF.PlaneParam(xs, _) = planeParams
+		     val planeParamExprs = List.map (fn (x, ys) => (makeRealExpr x, AST.E_Tensor(List.map makeRealExpr ys, vecTy))) xs
+		     val intersectionExprs = List.map planeIntersect planeParamExprs
+		    in
+		     intersectionExprs
+		    end
+
 		(*create local vars with +Inf, -1; Store compute in local var, if >=0 and <= current, update  *)
 		fun intersectionTesting intersectionExprs =
 		    let
@@ -1272,7 +1296,10 @@ structure CheckGlobals : sig
 		 val funVar = Var.new (funAtom, span, Var.FunVar, funType)
 		 val tests = if dim = 2
 			     then twoDimTests(refPosExp, dPosExp, geometry)
-			     else raise Fail "later"
+			     else if dim = 3
+			     then threeDimTests(refPosExp, dPosExp, geometry)
+			     else
+			      raise Fail "Dim ought to be 2 or 3 in check-global.sml; this should not have been called at this point."
 		 val body = AST.S_Block(intersectionTesting tests)
 		 val result = ((funAtom, funVar), AST.D_Func(funVar, [refPosParam, dposParam], body))
 					(*make type, var*)
@@ -1298,8 +1325,19 @@ structure CheckGlobals : sig
 		val hiddenExitFuncResult = result
 		val exitFuncResult = funcResult
 		end
-		(*exit replace*)
-		(*_cell function*)
+		(*_cell1 function: takes the realTy that holds the facet, 
+		  takes the nearby list of cells,
+		  For each cell, grab the nodes; check the possible facets;
+                  Do analysis of the facets to figure this out
+		  takes the int that holds the cell;
+		  make a connectivity call*)
+		(*_cell 2 function: *)
+		(* local *)
+
+		(* in *)
+		(* end *)
+
+
 		(*_transform function*)
 		(*exitPos replace*)
 		(*verticies replace*)
