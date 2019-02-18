@@ -1164,6 +1164,156 @@ structure CheckGlobals : sig
 
 		   (*end case*))
 
+
+	       fun makeGeometryFuncs(env, cxt, span, meshData, geometry) = let
+		(*Make types and associated data*)
+		val FT.Mesh(mesh) = meshData
+		val cellData = FT.MeshCell(mesh)
+		val posData = FT.MeshPos(mesh)
+		val refData = FT.RefCell(mesh)
+
+		val meshName = FT.nameOf meshData
+
+		val cellTy = Ty.T_Fem(cellData, SOME(meshName))
+		val posTy = Ty.T_Fem(posData, SOME(meshName))
+		val refTy = Ty.T_Fem(refData, SOME(meshName))
+				    
+		val dim = FT.meshDim mesh
+				     
+		val vecTy = Ty.vecTy dim
+		val vec2Ty = Ty.vecTy 2
+		(*for the case where we need to make 4d vecs and mats to do transforms*)
+		val vecTyExtra = Ty.vecTy (dim + 1) 
+		val matTyExtra = Ty.matTy (dim + 1);
+
+		(*if dim=2, line-line intersection; if dim=3 - line-plane intersection*)
+		fun lineLineIntersect( targetBasis, targetD, refBasis, refD) =
+		    let
+		     val sub1 = makePrim'(BV.sub_tt, [refBasis, targetBasis], [vecTy, vecTy], vecTy)
+		     val cross1 = makePrim'(BV.op_cross2_tt, [targetD, refD], [vecTy, vecTy], Ty.realTy)
+		     val div1 = makePrim'(BV.div_tr, [refD, cross1], [vecTy, Ty.realTy], vecTy)
+		     val cross2 = makePrim'(BV.op_cross2_tt, [sub1, div1], [vecTy, vecTy], Ty.realTy)
+					 
+		    in
+		     (cross2, cross1) (*the first is the time and the second is in case we need to check for nan problems*)
+		    end
+
+		fun makeRealExpr x = AST.E_Lit(Literal.Real(CF.realToRealLit x))
+		fun twoDimTests(refPosExp, dPosExp, geometry) =
+		    let
+		     fun lineIntersect(bma, a) = lineLineIntersect(refPosExp, dPosExp, a, bma)
+		     val lineParams = Option.valOf (List.find (fn CF.LineParam(xs) => true | _ => false) geometry)
+		     val CF.LineParam(lineData) = lineParams
+		     (*convert to realLits - thankfully only vectors*)
+
+		     val vecExprs = List.map (fn (x,y,z) => (AST.E_Tensor(List.map makeRealExpr x, vecTy),
+							     AST.E_Tensor(List.map makeRealExpr y, vecTy))) lineData
+		     val intersectionExprs = List.map lineIntersect vecExprs
+		    in
+		     intersectionExprs
+		    end
+		(*create local vars with +Inf, -1; Store compute in local var, if >=0 and <= current, update  *)
+		fun intersectionTesting intersectionExprs =
+		    let
+		     val tempVar = Var.new (Atom.atom "time", span, AST.LocalVar, Ty.realTy)
+		     val tempVar' = Var.new (Atom.atom "cell", span, AST.LocalVar, Ty.T_Int)
+		     val tempExp = AST.E_Var(tempVar, span)
+		     val tempExp' = AST.E_Var(tempVar', span)
+		     val tempStart = AST.S_Assign((tempVar, span), AST.E_Lit(Literal.Real(RealLit.posInf)))
+		     val neg1 = AST.E_Lit(Literal.Int(IntLit.fromInt (~1)))
+		     val tempStart' = AST.S_Assign((tempVar', span), neg1)
+		     val zero = AST.E_Lit(Literal.Real(RealLit.zero true))
+		     fun buildIf(test1, test2, intExpr) =
+			 let
+			  (*compute special test, int*)
+			  val positiveTest = makePrim'(BV.gt_rr, [test1, zero], [Ty.realTy, Ty.realTy], Ty.T_Bool)
+			  val newUpdateTest = makePrim'(BV.gt_rr, [tempExp', test1], [Ty.realTy, Ty.realTy], Ty.T_Bool)
+			  val combined = makePrim'(BV.and_b, [positiveTest, newUpdateTest], [Ty.T_Bool, Ty.T_Bool], Ty.T_Bool)
+			  val fin = AST.S_IfThenElse(combined, AST.S_Block([
+									   AST.S_Assign((tempVar, span), test1),
+									   AST.S_Assign((tempVar', span), intExpr)
+									  ]),
+						     AST.S_Block([]))
+			 in
+			  fin
+			 end
+		     
+		     val tests = List.length intersectionExprs
+		     val intLits = List.tabulate(tests, fn x => AST.E_Lit(Literal.intLit x))
+		     val zip = ListPair.map (fn ((x,y), z) => (x,y,z)) (intersectionExprs, intLits)
+					    
+		     val ifs = List.map buildIf zip
+
+		     val workedTest = makePrim'(BV.neq_ii, [tempExp', neg1], [Ty.T_Int, Ty.T_Int], Ty.T_Bool)
+		     fun coerce e = AST.E_Coerce({srcTy=Ty.T_Int, dstTy=Ty.realTy, e= e})
+
+		     val ifReturn = AST.S_IfThenElse(workedTest,
+						     AST.S_Block([
+								 AST.S_Return(AST.E_Tensor([tempExp, coerce tempExp'], vec2Ty))
+								]),
+						     AST.S_Block([
+								 AST.S_Return(AST.E_Tensor([zero, coerce (AST.E_Lit(Literal.intLit (~1)))], vec2Ty))
+						    ]))
+
+		     val stms = [tempStart, tempStart']@ifs@[ifReturn]
+
+		    in
+		     stms
+		    end
+					 
+		local
+		 (*_exit and exit*)
+		 val refPosParam = Var.new(Atom.atom "refPos", span, AST.FunParam, vecTy)
+		 val dposParam = Var.new(Atom.atom "dPos", span, AST.FunParam, vecTy)
+		 val refPosExp = AST.E_Var(refPosParam, span)
+		 val dPosExp = AST.E_Var(dposParam, span)
+		 val funType = Ty.T_Fun([vecTy, vecTy], vec2Ty)
+		 val funAtom = Atom.atom "_exit"
+		 val funVar = Var.new (funAtom, span, Var.FunVar, funType)
+		 val tests = if dim = 2
+			     then twoDimTests(refPosExp, dPosExp, geometry)
+			     else raise Fail "later"
+		 val body = AST.S_Block(intersectionTesting tests)
+		 val result = ((funAtom, funVar), AST.D_Func(funVar, [refPosParam, dposParam], body))
+					(*make type, var*)
+					(*build intersections based on dim*)
+					(*build stms*)
+		 (*build function*)
+
+		 val exitFuncTy = Ty.T_Fun([refTy, posTy, vecTy], Ty.realTy)
+		 val exitFuncName = Atom.atom "exit"
+		 fun replaceExit ([re, pos, vec]) =
+		     let
+		      (*get refPos, call the function, etc*)
+		      val refPos = AST.E_ExtractFemItem(pos, vecTy, (FemOpt.RefPos, meshData))
+		      val res = AST.E_Apply((funVar, span), [refPos, vec], vec2Ty)
+		      val ret = AST.E_Slice(res, [SOME(AST.E_Lit(Literal.intLit 0))], Ty.realTy )
+		     in
+		      ret
+
+		     end
+		 val funcResult = (exitFuncName, replaceExit, exitFuncTy)				      
+		 
+		in
+		val hiddenExitFuncResult = result
+		val exitFuncResult = funcResult
+		end
+		(*exit replace*)
+		(*_cell function*)
+		(*_transform function*)
+		(*exitPos replace*)
+		(*verticies replace*)
+
+		val refActualFuncs = [hiddenExitFuncResult]
+		val (refActualFuncsInfo, refActualFuncDcls) = ListPair.unzip refActualFuncs
+		val refReplaceFuncs = [exitFuncResult]
+		val results = {ref = (refActualFuncsInfo, refActualFuncDcls, refReplaceFuncs), pos = ([],[],[])}			  
+
+
+	       in
+		results
+	       end
+
 	       fun makeMeshPos(env, cxt, span, meshData, transformVars, (_, worldPosMakerVar, _), dumb) = let
 		val results = []
 		val meshName = FT.nameOf meshData
@@ -1228,6 +1378,7 @@ structure CheckGlobals : sig
 		    (case femType
 		      of FT.Mesh(m) =>
 			 let
+			  val meshData = femType
 			  val meshName = FT.nameOf femType
 			  val meshTy = Ty.T_Fem(femType, NONE)
 			  val mapDim = FT.meshDim m
@@ -1351,21 +1502,25 @@ structure CheckGlobals : sig
 			  val worldMeshPosDef = (fn (x,y,z) => z) worldMeshPos
 			  val dumbDef = (fn (x,y,z) => z) dumb
 
+			  val geometryInfo = makeGeometryFuncs(env, cxt, span, meshData, geometry)
+
 
 			  val env' = Env.insertNamedType(env, cxt, cellName, cellTy, constants, cellMethods, transformFuncs)
 
-			  
+			  val refCellTransformFuncs = [(refCellInside, makeRefCellInsideFunc, refCellInsideTy)]
+			  val (refActualFuncI, refActualFuncDcls, refReplaceFunc) = #ref geometryInfo
+			  val refCellTransformFuncs' = refReplaceFunc@refCellTransformFuncs
 			 
 
-			  val refCellTransformFuncs = [(refCellInside, makeRefCellInsideFunc, refCellInsideTy)]
-			  val env'' = Env.insertNamedType(env', cxt, refCellName, refCellTy, constants, methods, refCellTransformFuncs)
+
+			  val env'' = Env.insertNamedType(env', cxt, refCellName, refCellTy, constants, refActualFuncI, refCellTransformFuncs')
 
 			  (*get the appropraite transform vars*)
 
 			  val env''' = makeMeshPos(env, cxt, span, FT.Mesh(m), vars, worldMeshPos, dumb)
 							 
 			 in
-			  (env''', dumbDef::worldMeshPosDef::newtonFunc::dTFuncDcls)
+			  (env''', refActualFuncDcls@(dumbDef::worldMeshPosDef::newtonFunc::dTFuncDcls))
 			 end
 		       | FT.Func(f) =>
 			 let

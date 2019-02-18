@@ -11,7 +11,7 @@ structure CheckTypeFile  : sig
 				       | Higher of int * ((int * IntInf.int list * IntInf.int list) list)
 				       | Mapping of int * string
 				       | LineParam of (real list * real list * real) list
-				       (*b-a, a*)
+				       (*b-a, a, |b-a|*)
 				       | PlaneParam of (real * real list) list * real list list list list (*d, normal, matrix of matrices*)
 	   
 	   val loadJson : string *  Env.context -> JSON.value option
@@ -26,7 +26,7 @@ structure CheckTypeFile  : sig
 	   val parseFunc : Env.t * Env.context * Atom.atom * int list option * FemData.space * JSON.value -> FemData.femType option * constant list
 															       (*function space shape*)
 															       
-											    
+	   val realToRealLit : real -> RealLit.t								    
 
 
 	  end = struct
