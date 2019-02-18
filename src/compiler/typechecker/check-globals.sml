@@ -1314,7 +1314,7 @@ structure CheckGlobals : sig
 		results
 	       end
 
-	       fun makeMeshPos(env, cxt, span, meshData, transformVars, (_, worldPosMakerVar, _), dumb) = let
+	       fun makeMeshPos(env, cxt, span, meshData, transformVars, (_, worldPosMakerVar, _), dumb, extraFuns, extraReplace) = let
 		val results = []
 		val meshName = FT.nameOf meshData
 		val FT.Mesh(mesh) = meshData
@@ -1363,7 +1363,7 @@ structure CheckGlobals : sig
 							
 				     
 	       in
-		Env.insertNamedType(env, cxt, meshPosName, meshPosTy, constants, methods, hiddenFuns)
+		Env.insertNamedType(env, cxt, meshPosName, meshPosTy, constants, extraFuns@methods, extraReplace@hiddenFuns)
 	       end
 
 	       fun makeDescendentFemTypes geometry (env, femType) =
@@ -1516,11 +1516,12 @@ structure CheckGlobals : sig
 			  val env'' = Env.insertNamedType(env', cxt, refCellName, refCellTy, constants, refActualFuncI, refCellTransformFuncs')
 
 			  (*get the appropraite transform vars*)
+			  val (posActualFuncI, posActualFuncDcls, posReplaceFunc) = #pos geometryInfo
 
-			  val env''' = makeMeshPos(env, cxt, span, FT.Mesh(m), vars, worldMeshPos, dumb)
+			  val env''' = makeMeshPos(env, cxt, span, FT.Mesh(m), vars, worldMeshPos, dumb, posActualFuncI, posReplaceFunc)
 							 
 			 in
-			  (env''', refActualFuncDcls@(dumbDef::worldMeshPosDef::newtonFunc::dTFuncDcls))
+			  (env''', posActualFuncDcls@refActualFuncDcls@(dumbDef::worldMeshPosDef::newtonFunc::dTFuncDcls))
 			 end
 		       | FT.Func(f) =>
 			 let
