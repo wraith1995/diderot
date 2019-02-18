@@ -1,12 +1,16 @@
+MORNING: WHAT IS NEXT????
+NEED AN ACCONTING OF WHAT IS UP AFTER WE DO THIS.
+
 Next step:
 Parse refCell data with possible .in
---read nds
---analyze to build plane normals, transforms.
---extend constant evaluation as needed.
---connectivity information required.
+--connectivity information required --- see other file
 --build the two methods
---how do we combination?
+--how do we combination -- see the file
 --fix reallit bug
+--realize potential for failures in checktype file shit and catch more exceptions.
+
+Gordon:
+names,kirby, testing on data
 
 
 AIM TO BE UP AND RUNNING TOWARDS BY FRIDAY: THURSDAY HELL/BE UP LATE/PUSHPUSH
