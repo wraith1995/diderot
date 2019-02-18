@@ -99,7 +99,7 @@ structure GenLibraryInterface : sig
                 }
         (* the world pointer type *)
           val worldPtrTy = worldTy spec
-	  val includes = List.map (fn x => CL.D_Verbatim(["#include " ^ x ^" \n"])) (#includes spec)
+
 				   
         (* create decls for an input variable *)
           fun mkInputDecls (Inputs.INP{var, name, ty,  desc, init}) = let
