@@ -1529,9 +1529,10 @@ structure CheckGlobals : sig
 		(*function: if invalidFacet 1 or invalidFacet 2... return invalid build...  *)
 		(*inside valid -> dot or division -> to solve based on new pos -> *)
 
-
+		(*build a function body; build replace that coordinates everything else.*)
 		fun buildSolveBlock(dim, srcFacetExp, dstFacetExpr, meshExp, newCellExp, refPosExp, geometry) =
 		    let
+		     (*Check the src,dst,and cell for valid; if yes, we do this; otherwise, return an invalid one*)
 		     fun buildSolveOperation(CF.LineParam(xs)) =
 			 let
 			  val correctIndexes = List.map (fn ([a,b],y,z) => if Real.<=(Real.abs(b),0.000001)
@@ -1582,10 +1583,7 @@ structure CheckGlobals : sig
 			 end
 		  (* | buildSolveOperation  =  *)
 
-		     (*build line to index*)
-		     (*buuild array of alpha, beta with non-zero entry in beta*)
-		     (*select correct gamma*)
-		     (**)
+
 		    in
 		     ()
 		    end
