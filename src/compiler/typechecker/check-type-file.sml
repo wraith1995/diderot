@@ -7,7 +7,7 @@
  *)
 structure CheckTypeFile  : sig
 	   type constant = (Types.ty * ConstExpr.t * string)
-	   datatype dimensionalObjects = Points of (int * real list) list
+	   datatype dimensionalObjects = Points of (int * real list) list * int list option
 				       | Higher of int * ((int * IntInf.int list * IntInf.int list) list)
 				       | Mapping of int * string
 				       | LineParam of (real list * real list * real) list
@@ -31,7 +31,7 @@ structure CheckTypeFile  : sig
 
 	  end = struct
 type constant = (Types.ty * ConstExpr.t * string)
-datatype dimensionalObjects = Points of (int * real list) list
+datatype dimensionalObjects = Points of (int * real list) list * int list option
 			    | Higher of int * ((int * IntInf.int list * IntInf.int list) list)
 			    | Mapping of int * string
 			    | LineParam of (real list * real list * real) list
@@ -476,7 +476,7 @@ fun subtractSeg([x,y]) = (ListPair.map (Real.-) (y,x), x)
   | subtractSeg _ = raise Fail "invalid usbtract"
 fun analyzeGeometry1(points, higher1) =
     let
-     val Points(xs) = points
+     val Points(xs, _) = points
      val vecs = List.map (fn (x,y) => y) xs
      fun getVector i = List.nth(vecs, i)
      val Higher(1, xs) = higher1
@@ -558,7 +558,7 @@ fun buildTansform(pl1 : real list list, pl2 : real list list) =
 					  
 fun analyzeGeometry2(points, higher2) =
     let
-     val Points(xs) = points
+     val Points(xs, _) = points
      val vecs = List.map (fn (x,y) => y) xs
      fun getVector i = List.nth(vecs, i)
 
@@ -582,8 +582,18 @@ fun parseGeometryOfRefCell(env, cxt, dim, json, meshName) =
     let
      val geometry = errIfNo(env, cxt, "geometry", "refCell", meshName) json
      val verticies = errIfNo(env, cxt, "verticies", "geometry", meshName) geometry
+     val vertToNode = errIfNo(env, cxt, "toNode", "geometry", meshName) geometry
 
-			    
+
+     fun parseToNode(SOME(json)) =
+	 let
+	  val array = (JU.arrayMap (IntInf.toInt o JU.asIntInf)) json
+	 in
+	  SOME(array)
+	  handle exn => NONE
+	 end
+       | parseToNode (NONE) = NONE
+     val vertToNode' = parseToNode(vertToNode)
 
      val zero = List.tabulate(dim, fn x => 0.0)
      fun parsePoint (idx, jsonPoint) =
@@ -608,7 +618,7 @@ fun parseGeometryOfRefCell(env, cxt, dim, json, meshName) =
 
      fun parseVerticies(verts) = let val len = List.length verts
 				 in
-				  Points(ListPair.map parsePoint (List.tabulate(len, fn x =>x ), verts))  
+				  Points(ListPair.map parsePoint (List.tabulate(len, fn x =>x ), verts), vertToNode')
 				 end
      val verts = parseVerticies(parseVerticies'(verticies))
 

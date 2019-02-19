@@ -446,6 +446,7 @@ structure TranslateBasis : sig
                 (BV.fn_min_i,           simpleOp (Op.Min DstTy.IntTy)),
                 (BV.fn_min_r,           simpleOp (Op.Min DstTy.realTy)),
                 (BV.i2r,                simpleOp Op.IntToReal),
+		(BV.floor,              simpleOp Op.FloorToInt),
                 (BV.identity,           fn (y, [Ty.DIM d], xs) =>
                                           [assignEin(y, Mk.identity d, xs)]),
                 (BV.zero,               fn (y, [Ty.SHAPE dd], []) =>

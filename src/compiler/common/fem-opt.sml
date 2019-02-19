@@ -20,7 +20,7 @@ structure FemOpt : sig
 			      | RefBuild | WorldBuild of Atom.atom option * Stamp.t option | AllBuild
 			      | NewWorld
 			      | InvalidBuild | WorldTest | NearbyCellQuery of Atom.atom
-
+		   |CellConnectivity
 
 	   type femOption = femOpts * FemData.femType
 					    
@@ -51,6 +51,7 @@ datatype femOpts = Cells | RefCell
 		 | RefBuild | WorldBuild of Atom.atom option * Stamp.t option | AllBuild | NewWorld (*function to do inverse, but not needed*)
 		 | InvalidBuild | WorldTest (*internal use only*)
 		 | NearbyCellQuery of Atom.atom
+		 | CellConnectivity
 
 datatype femField =  Transform | RefField | InvTransform 
 
@@ -91,6 +92,7 @@ fun toStringOpt v =
        | UWorldPos => "UWorldPos"
        | NewWorld => "NewWorld"
        | NearbyCellQuery(a) => "NearbyCell(File="^(Atom.toString a)^")"
+       | CellConnectivity => "CellConnectivity"
     (* end case*))
 
 fun toString (v, d) = toStringOpt(v) ^ "(" ^ (FT.toString d) ^ ")"
@@ -117,6 +119,7 @@ fun arity (NumCell) = 1
   | arity (AllBuild) = 4
   | arity (NewWorld) = 2
   | arity (NearbyCellQuery(_)) = 2
+  | arity (CellConnectivity) = 2
 
 
 fun hash (NumCell, d) = 0w1 + FT.hash d
@@ -140,7 +143,7 @@ fun hash (NumCell, d) = 0w1 + FT.hash d
   | hash (AllBuild, d) = 0w73 + FT.hash d
   | hash (NewWorld, d) = 0w79 + FT.hash d
   | hash (NearbyCellQuery(a), d) = 0w83 + (Atom.hash a) * 0w89 + FT.hash d
-
+  | hash (CellConnectivity, d) = 0w89 + FT.hash d
 fun sameR ((a1,s1), (a2,s2)) = (case (a1, a2)
 				 of (SOME(a1'), SOME(a2')) => Atom.same(a1', a2')
 				  | (SOME(_), NONE) => false
@@ -174,6 +177,7 @@ fun same ((v1, d1),(v2, d2)) = FT.same(d1,d2) andalso
        | (AllBuild, AllBuild) => true
        | (NewWorld, NewWorld) => true
        | (NearbyCellQuery(a1), NearbyCellQuery(a2)) => Atom.same(a1, a2)
+       | (CellConnectivity, CellConnectivity) => true
        | _ => false
     (*end case*))
 
