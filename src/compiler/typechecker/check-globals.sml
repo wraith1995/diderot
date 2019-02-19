@@ -1275,8 +1275,8 @@ structure CheckGlobals : sig
 						     AST.S_Block([
 								 AST.S_Return(AST.E_Tensor([tempExp, coerce tempExp'], vec2Ty))
 								]),
-						     AST.S_Block([
-								 AST.S_Return(AST.E_Tensor([zero, coerce (AST.E_Lit(Literal.intLit (~1)))], vec2Ty))
+						     AST.S_Block([ (*TODO: should this be ~1? What is the exact standard for this function?*)
+								 AST.S_Return(AST.E_Tensor([coerce neg1, coerce neg1], vec2Ty))
 						    ]))
 
 		     val stms = [tempStart, tempStart']@ifs@[ifReturn]
@@ -1474,9 +1474,6 @@ structure CheckGlobals : sig
 			 in
 			  nearbyCellVarAssign::numUknownKnownsAssign::loops@[failRet]
 			 end
-			   
-
-						       
 		    in
 		     buildFunction
 		    end
@@ -1503,10 +1500,6 @@ structure CheckGlobals : sig
 		      val meshExp = AST.E_ExtractFem(meshPosExp, meshData)
 		      val cellExpr = AST.E_ExtractFemItem(meshPosExp,Ty.T_Int, (FemOpt.CellIndex, meshData))
 		      val facetIdExpr = makePrim'(BV.floor, [AST.E_Slice(seqExp, [SOME(AST.E_Lit(Literal.intLit 1))], Ty.realTy)], [Ty.realTy], Ty.T_Int)
-						 
-		      (*extract seq members*)
-		      (*convert 1, be done.*)
-		      
 		     in
 		      AST.E_Apply((nextCellFuncVar, span), [facetIdExpr, cellExpr, meshExp], Ty.T_Sequence(Ty.T_Int, SOME(Ty.DimConst 2)))
 		     end
@@ -1600,28 +1593,92 @@ structure CheckGlobals : sig
 			  val resultVec4 = makePrim'(BV.op_inner_tt, [selectedTensor, vec4refPos], [mat4, vec4], vec4)
 			  val newRefPos = AST.E_Tensor(List.tabulate(3, fn x => AST.E_Slice(resultVec4, [SOME(AST.E_Lit(Literal.intLit x))], Ty.realTy)), vecTy)
 			  val result =  AST.E_ExtractFemItemN([meshExp, newCellExp, newRefPos], [meshTy, Ty.T_Int, vecTy], posTy, (FemOpt.RefBuild, meshData), NONE)
-
-
-			  (*build 4-vec*)
-			  (*build if-statement*)
-			  (*in each if statement vs dynamic seq... *)
-			  (*if statements vs *)
-			  (*turn our facet by facet by 4 by 4 matrix into a tensor*)
-			  (*Select out a dynamic sequence and do multiplication... because no *)
-
 			 in
 			  result
 			 end
-		  (* | buildSolveOperation  =  *)
 
+
+		     val geometryPass = if dim=2
+					then Option.valOf (List.find (fn CF.LineParam(_) => true | _ => false) geometry)
+					else if dim = 3
+					then Option.valOf (List.find (fn CF.PlaneParam(_) => true | _ => false) geometry)
+					else raise Fail "ops"
+		     val solveCall = buildSolveOperation(geometryPass)
 
 		    in
-		     ()
+		     solveCall
 		    end
-		(* local *)
+
+		fun makeRefExitPosBody(meshExp, cellExp, refPosExp, dPosExp, timeAndFaceExp, dim, geometry, debug) =
+		    let
+		     (*first, build new expression*)
+		     val time = AST.E_Slice(timeAndFaceExp, [SOME(AST.E_Lit(Literal.intLit 0))], Ty.realTy)
+		     val srcFacet = makePrim'(BV.floor, [AST.E_Slice(timeAndFaceExp, [SOME(AST.E_Lit(Literal.intLit 1))], Ty.realTy)], [Ty.realTy], Ty.T_Int)
+		     val newVec = makePrim'(BV.add_tt, [makePrim'(BV.mul_rt, [time, dPosExp], [Ty.realTy, vecTy], vecTy), refPosExp], [vecTy, vecTy], vecTy)
+		     val ((_, nextCellFuncVar),_) = cellFunc
+		     val nextCellAndFace = AST.E_Apply((nextCellFuncVar, span), [srcFacet, cellExp, meshExp], Ty.T_Sequence(Ty.T_Int, SOME(Ty.DimConst 2)))
+		     val newCell = makePrim'(BV.subscript, [nextCellAndFace, AST.E_Lit(Literal.intLit 0)], [Ty.T_Sequence(Ty.T_Int, SOME(Ty.DimConst 2)), Ty.T_Int], Ty.T_Int)
+		     val dstFace = makePrim'(BV.subscript, [nextCellAndFace, AST.E_Lit(Literal.intLit 1)], [Ty.T_Sequence(Ty.T_Int, SOME(Ty.DimConst 2)), Ty.T_Int], Ty.T_Int)
+		     val solveBody = buildSolveBlock(dim, srcFacet, dstFace, meshExp, newCell, newVec, geometry)
+		     val return = AST.S_Return(solveBody);
+		     val boundaryMeshPos = AST.E_ExtractFemItemN([meshExp, newVec], [meshTy, vecTy], posTy, (FemOpt.InvalidBuildBoundary, posData), NONE)
+		     val failReturnMesh = AST.S_Return(boundaryMeshPos)
+		     val condition = makePrim'(BV.equ_ii, [AST.E_Lit(Literal.intLit (~1)), newCell], [Ty.T_Int, Ty.T_Int], Ty.T_Bool)
+		     val stm = AST.S_IfThenElse(condition, return, failReturnMesh);
+		     (*TODO:This code does not check if the time is invalid; assumption is won't be called without time for now.*)
+		    in
+		     stm
+		    end
+		local
+		 (*build complete function that depends on nothing:*)
+		 (**)
+		 val ((_, exitFuncVar), _) = hiddenExitFuncResult
+		 val vec2SeqTy = Ty.T_Sequence(Ty.realTy, SOME(Ty.DimConst 2))
+		 val meshParam = Var.new (Atom.atom "mesh", span, AST.FunParam, meshTy)
+		 val cellParam = Var.new (Atom.atom "cellId", span, AST.FunParam, Ty.T_Int)
+		 val refPosParam = Var.new (Atom.atom "refPos", span, AST.FunParam, vecTy)
+		 val dPosParam = Var.new (Atom.atom "dPos", span, AST.FunParam, vecTy)
+		 val timeAndFace = Var.new(Atom.atom "time", span, AST.FunParam, vec2SeqTy)
+
+		 fun mkVar v = AST.E_Var(v,span)
+					
+		 val meshExp = mkVar meshParam
+		 val cellExp = mkVar cellParam
+		 val refExp = mkVar refPosParam
+		 val dExp = mkVar dPosParam
+		 val tfExp = mkVar timeAndFace;
+				   
+		 val catchFacetIssue = true
+		 val hiddenExitPosAtom = Atom.atom "$exitPos"
+		 val hiddenExitPosTy = Ty.T_Fun([meshTy, Ty.T_Int, vecTy, vecTy, vec2SeqTy], posTy)
+		 val hiddenExitPosVar = Var.new (hiddenExitPosAtom, span, Var.FunVar, hiddenExitPosTy)
+		 val bodyStm = makeRefExitPosBody(meshExp, cellExp, refExp, dExp, tfExp, dim, geometry, catchFacetIssue)
+		 val hiddeExitPosFunc = AST.D_Func(hiddenExitPosVar, [meshParam, cellParam, refPosParam, dPosParam, timeAndFace], bodyStm)
+		 val hiddenExitFuncPosResult = ((hiddenExitPosAtom, hiddenExitPosVar), hiddeExitPosFunc)
+
+		 val exitPos = Atom.atom "exitPos"
+		 val exitPosTy = Ty.T_Fun([refTy, posTy, vecTy], posTy)
+		 fun exitPosReplace([re, pos, vec]) =
+		     let
+		      val mesh = AST.E_ExtractFem(pos, meshData)
+		      val cell = AST.E_ExtractFemItem(pos, Ty.T_Int, (FemOpt.CellIndex, meshData))
+		      val refPos = AST.E_ExtractFemItem(pos, vecTy, (FemOpt.RefPos, meshData))
+		      val seq = AST.E_Apply((exitFuncVar, span), [refPos, vec], vec2SeqTy) (*ugg*)
+					   (*apply func*)
+		      val result = AST.E_Apply((hiddenExitPosVar,span), [mesh, cell, refPos, vec, seq], posTy)
+		     in
+		      result
+		     end
+		   | exitPosReplace(_) = raise Fail "impossible got past type checking."
+
+		 val refExitPosReplace = (exitPos, exitPosReplace, exitPosTy)
+
+		       
 		 
-		(* in *)
-		(* end *)
+		in
+		val refPosExitFunc = hiddenExitFuncPosResult
+		val refExitPosReplace = refExitPosReplace
+		end
 
 		(*build transforms between reference cells...*)
 		(*modify others to produce correct division scheme.*)
@@ -1630,9 +1687,9 @@ structure CheckGlobals : sig
 
 	
 
-		val refActualFuncs = [hiddenExitFuncResult, cellFunc]
+		val refActualFuncs = [hiddenExitFuncResult, cellFunc, refPosExitFunc]
 		val (refActualFuncsInfo, refActualFuncDcls) = ListPair.unzip refActualFuncs
-		val refReplaceFuncs = [exitFuncResult]
+		val refReplaceFuncs = [exitFuncResult, refExitPosReplace]
 		val results = {ref = (refActualFuncsInfo, refActualFuncDcls, refReplaceFuncs), pos = ([],[],[])}			  
 
 
