@@ -955,6 +955,7 @@ structure BasisVars =
 
   (* integer to real conversion *)
     val i2r = monoVar (Atom.atom "$i2r", [Ty.T_Int] --> Ty.realTy)
+    val floor = monoVar (Atom.atom "$r2i", [Ty.realTy] --> Ty.T_Int)
 
   (* identity matrix *)
     val identity = polyVar (Atom.atom "$id", allNK (fn dv => [] --> matrix(Ty.DimVar dv)))
