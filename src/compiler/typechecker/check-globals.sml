@@ -1511,56 +1511,95 @@ structure CheckGlobals : sig
 		      AST.E_Apply((nextCellFuncVar, span), [facetIdExpr, cellExpr, meshExp], Ty.T_Sequence(Ty.T_Int, SOME(Ty.DimConst 2)))
 		     end
 
-					      
-					       (*take the geometry function as is*)
-					       (*make the replacement function with params being passed through opts, yay.*)
-					       (*get the mesh through the meshpos...*)
-
-
-		 (*step 0: if anything invalid, get out -> nah??*)
-		 (* val doubleSeqTy = Ty.T_Sequence(Ty.T_Sequence(Ty.T_Int, NONE), NONE) *)
-		 (* val planeIndeciesVar = Var.new (Atom.atom "planeIndecies", span, AST.LocalVar, doubleSeqTy) *)
-		 (* val planeIndecesVarExp = AST.E_Var(planeIndeciesVar, span) *)
-		 (* val planeIndeciesVarAssign = AST.S_Assign((planeIndeciesVar, span), planeIndexExpr) *)
-
-		 (* val facetIntsVar = Var.new (Atom.atom "cellFacetInts", span, AST.LocalVar,Ty.T_Sequence(Ty.T_Int, NONE)) *)
-		 (* val facetIntLengthVar = Var.new(Atom.atom "cellFacetIntLength", span, AST.LocalVar, Ty.T_Int) *)
-		 (* val faceIntsGet = AST.S_Assign((facetIntsVar, span), makePrim'(BV.dynSubscript, [planeIndeciesVar, facetIntExp], [])) *)
-										       (*step 1: grab facet ints and size*)
-										       (*step 2: if stms*)
-										       (*step 3: for loops with returns*)
-										       (*step 5: get out*)
-		 (*build size *)
-
-
 		in
 		val cellFunc = ((nextCellAtom,nextCellFuncVar), nextCellFunc)
 		val internalCellFuncReplace = internalCellFuncReplace
-		end		
-		(*given cell, facet id*)
-		(*step 1: make map from facet to node index array*)
-		(*step 2: get current nodes indecies*)
-		(*step 3: grab correct nodes for facets*)
-		(*step 4: base on length, call a loop*)
-		(*step 5: for each cell, grab the other nodes and check equality*)
-		(*step 6: for each facet, we check the correct nodes*)
-		(*return the relevant index and facet id*)
-		(*make higher have nodal indexing.*)
-		(*So the problem is the coordination of nodes and verticies;*)
-		(*add to higher: indexing into nodes, true or false*)
-		(*_cell1 function: takes the realTy that holds the facet, 
-		  takes the nearby list of cells,
-		  For each cell, grab the nodes; check the possible facets;
-                  Do analysis of the facets to figure this out
-		  takes the int that holds the cell;
-		  make a connectivity call*)
-		(*_cell 2 function: *)
+		end
+
+		(*let's think about validity here and what not 
+		  - calling on an invalid cell means everything breaks; we do have an option of an invalid facet-then no need to do either of the above
+-		  - should be caught here *)
+		(*call first function - args go to this one - if facet valid, call next one - get new one, extract tensor, translate, return *)
+		(*wait - if facet is invalid, it means soething went wrong in intersection.... - means in boundary*)
+		(*on boundary and coordinates problem...*)
+		(*correct - is-inside issue*)
+		(*invalid facet is probably impossible because a line has to intersect one of them... assuming no nans or bs like that...put the if condition just in case and comment it in later.
+		 also need to check if planes could be invalid - i.e if all three points are co-line - either sub-det is 0...*)
+		(*do build new pos outside*)
+		(*function: if invalidFacet 1 or invalidFacet 2... return invalid build...  *)
+		(*inside valid -> dot or division -> to solve based on new pos -> *)
 
 
+		fun buildSolveBlock(dim, srcFacetExp, dstFacetExpr, meshExp, newCellExp, refPosExp, geometry) =
+		    let
+		     fun buildSolveOperation(CF.LineParam(xs)) =
+			 let
+			  val correctIndexes = List.map (fn ([a,b],y,z) => if Real.<=(Real.abs(b),0.000001)
+									 then AST.E_Lit(Literal.intLit 0)
+									   else AST.E_Lit(Literal.intLit 1)) xs
+			  val count = List.length correctIndexes
+			  val selectTy = Ty.T_Sequence(Ty.T_Int, SOME(Ty.DimConst count))
+			  val seqVecTy = Ty.T_Sequence(Ty.realTy, SOME(Ty.DimConst(2)));
+			  val selectTy' = Ty.T_Sequence(seqVecTy, SOME(Ty.DimConst count))
+			  val selectTy'' = Ty.T_Sequence(vecTy, SOME(Ty.DimConst count))
 
-		(*_transform function*)
-		(*exitPos replace*)
-		(*verticies replace*)
+			  val (betaSeqs, betaTensor) = ListPair.unzip (List.map (fn (xs, _, _) => let val x = List.map makeRealExpr xs in 
+												   (AST.E_Seq(x, seqVecTy), AST.E_Tensor(x, vecTy)) end ) xs)
+			  val betas = AST.E_Seq(betaSeqs, selectTy')
+			  val betasTensors = AST.E_Seq(betaTensor, selectTy'')
+			  val (alphaSeqs, alphaTensor) = ListPair.unzip (List.map (fn (_, xs, _) => let val x = List.map makeRealExpr xs in 
+												   (AST.E_Seq(x, seqVecTy), AST.E_Tensor(x, vecTy)) end ) xs)
+			  val alphas = AST.E_Seq(alphaSeqs, selectTy')
+			  val alphasTensor = AST.E_Seq(alphaTensor, selectTy'')
+			
+			  val solveIndex = makePrim'(BV.subscript, [AST.E_Seq(correctIndexes, selectTy), srcFacetExp], [selectTy, Ty.T_Int], Ty.T_Int)
+			  (*a_dst[i] + (b-a)_dst[i] t = refPosExp[i]*)
+			  (*alpha + tbeta = gamma -> gamma-alpha/beta*)
+			  val (alphaSeq, betaSeq, targetSeq) =
+			      (
+				makePrim'(BV.subscript, [alphas, srcFacetExp], [selectTy', Ty.T_Int], seqVecTy),
+				makePrim'(BV.subscript, [betas, srcFacetExp], [selectTy', Ty.T_Int], seqVecTy),
+				AST.E_Seq([AST.E_Slice(refPosExp, [SOME(AST.E_Lit(Literal.intLit 0))], Ty.realTy),
+					   AST.E_Slice(refPosExp, [SOME(AST.E_Lit(Literal.intLit 1))], Ty.realTy)], seqVecTy))
+				
+			  val (alpha, beta, target) =
+			      (
+				makePrim'(BV.subscript, [alphaSeq, solveIndex], [seqVecTy, Ty.T_Int], Ty.realTy),
+				makePrim'(BV.subscript, [betaSeq, solveIndex], [seqVecTy, Ty.T_Int], Ty.realTy),
+				makePrim'(BV.subscript, [targetSeq, solveIndex], [seqVecTy, Ty.T_Int], Ty.realTy)
+			      )
+
+			  val sub1 = makePrim'(BV.sub_tt, [target, alpha], [Ty.realTy, Ty.realTy], Ty.realTy)
+			  val timeAlongLine = makePrim'(BV.div_rr, [sub1, beta], [Ty.realTy, Ty.realTy], Ty.realTy)
+
+			  val (newAlpha, newBeta) = (makePrim'(BV.subscript, [alphasTensor, dstFacetExpr], [selectTy'', Ty.T_Int], vecTy),
+						     makePrim'(BV.subscript, [betasTensors, dstFacetExpr], [selectTy'', Ty.T_Int], vecTy))
+			  val newRefPos = makePrim'(BV.add_tt, [newAlpha, makePrim'(BV.mul_tr, [newBeta, timeAlongLine], [vecTy, Ty.realTy], vecTy)],
+						    [vecTy, vecTy], vecTy)
+			 in
+			  (*meshExp,cellExpr, posExpr*)
+			  AST.E_ExtractFemItemN([meshExp, newCellExp, newRefPos], [meshTy, Ty.T_Int, vecTy], posTy, (FemOpt.RefBuild, meshData), NONE)
+			 end
+		  (* | buildSolveOperation  =  *)
+
+		     (*build line to index*)
+		     (*buuild array of alpha, beta with non-zero entry in beta*)
+		     (*select correct gamma*)
+		     (**)
+		    in
+		     ()
+		    end
+		(* local *)
+		 
+		(* in *)
+		(* end *)
+
+		(*build transforms between reference cells...*)
+		(*modify others to produce correct division scheme.*)
+		(*one function that selects transform and does it.*)
+		(*emebds all results in the building of mesh pos - call first function, give results to second function, give results to third, which builds and gets inlined*)
+
+	
 
 		val refActualFuncs = [hiddenExitFuncResult, cellFunc]
 		val (refActualFuncsInfo, refActualFuncDcls) = ListPair.unzip refActualFuncs
