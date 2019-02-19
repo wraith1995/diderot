@@ -1581,6 +1581,37 @@ structure CheckGlobals : sig
 			  (*meshExp,cellExpr, posExpr*)
 			  AST.E_ExtractFemItemN([meshExp, newCellExp, newRefPos], [meshTy, Ty.T_Int, vecTy], posTy, (FemOpt.RefBuild, meshData), NONE)
 			 end
+		       | buildSolveOperation(CF.PlaneParam(_, xs)) =
+			 let
+			  val mat4 = Ty.matTy 4
+			  val vec4 = Ty.vecTy 4
+			  fun buildTensor(a) = AST.E_Tensor(List.map (fn x => AST.E_Tensor(List.map makeRealExpr x , vec4)) a, mat4)
+			  val count = List.length xs
+			  val seqTy1 = Ty.T_Sequence(mat4, (SOME(Ty.DimConst count)))
+			  val seqTy2 = Ty.T_Sequence(seqTy1, SOME(Ty.DimConst count))
+			  fun buildSeq(xs') = AST.E_Seq(List.map (fn x => AST.E_Seq(List.map buildTensor x, seqTy1)) xs', seqTy2)
+			  val seqExp = buildSeq xs
+
+			  val selectedSeq = makePrim'(BV.subscript, [seqExp, srcFacetExp], [seqTy2, Ty.T_Int], seqTy1)
+			  val selectedTensor = makePrim'(BV.subscript, [selectedSeq, dstFacetExpr], [seqTy1, Ty.T_Int], mat4)
+			  val vec4refPos = AST.E_Tensor(List.tabulate(3, fn x => AST.E_Slice(refPosExp, [SOME(AST.E_Lit(Literal.intLit x))], Ty.realTy))@[AST.E_Lit(Literal.Real(RealLit.one))],
+							vec4)
+						       
+			  val resultVec4 = makePrim'(BV.op_inner_tt, [selectedTensor, vec4refPos], [mat4, vec4], vec4)
+			  val newRefPos = AST.E_Tensor(List.tabulate(3, fn x => AST.E_Slice(resultVec4, [SOME(AST.E_Lit(Literal.intLit x))], Ty.realTy)), vecTy)
+			  val result =  AST.E_ExtractFemItemN([meshExp, newCellExp, newRefPos], [meshTy, Ty.T_Int, vecTy], posTy, (FemOpt.RefBuild, meshData), NONE)
+
+
+			  (*build 4-vec*)
+			  (*build if-statement*)
+			  (*in each if statement vs dynamic seq... *)
+			  (*if statements vs *)
+			  (*turn our facet by facet by 4 by 4 matrix into a tensor*)
+			  (*Select out a dynamic sequence and do multiplication... because no *)
+
+			 in
+			  result
+			 end
 		  (* | buildSolveOperation  =  *)
 
 
