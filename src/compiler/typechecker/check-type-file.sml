@@ -474,7 +474,7 @@ fun ugg(f, [], _)= []
     end
 fun subtractSeg([x,y]) = (ListPair.map (Real.-) (y,x), x)
   | subtractSeg _ = raise Fail "invalid usbtract"
-fun analyzeGeometry1(points, higher1) =
+fun analyzeGeometry1(cxt, points, higher1) =
     let
      val Points(xs, _) = points
      val vecs = List.map (fn (x,y) => y) xs
@@ -486,6 +486,10 @@ fun analyzeGeometry1(points, higher1) =
 			      (*To do *)
      fun norm xs = Math.sqrt(List.foldr (fn (x,y) => x*x + y) 0.0 xs)
      val pairSegs'' = List.map (fn (x,y)=> (x, y, norm x)) pairSegs'
+     val testNorms = (List.exists (fn (x,y,z) => Real.<=(z, 0.00001)) pairSegs'')
+     val _ = if testNorms
+	     then TypeError.warning(cxt, [S"A line defined in a json file is probably degenerate!"])
+	     else ()
     in
      LineParam(pairSegs'')
     end
@@ -677,7 +681,7 @@ fun parseGeometryOfRefCell(env, cxt, dim, json, meshName) =
      val parameterized = if dim = 2
 			 then
 			  (case List.find(fn Higher(1, _) => true | _ => false) higher
-			    of SOME(h) => analyzeGeometry1(verts, h)
+			    of SOME(h) => analyzeGeometry1(cxt, verts, h)
 			     | _ => raise Fail "case not covered but insert C")
 			 else if dim = 3
 			 then (case List.find (fn Higher(2, _) => true | _ => false) higher
