@@ -1243,9 +1243,9 @@ structure CheckGlobals : sig
 		     val tempVar' = Var.new (Atom.atom "cell", span, AST.LocalVar, Ty.T_Int)
 		     val tempExp = AST.E_Var(tempVar, span)
 		     val tempExp' = AST.E_Var(tempVar', span)
-		     val tempStart = AST.S_Assign((tempVar, span), AST.E_Lit(Literal.Real(RealLit.posInf)))
+		     val tempStart = AST.S_Decl(tempVar, SOME(AST.E_Lit(Literal.Real(RealLit.posInf))))
 		     val neg1 = AST.E_Lit(Literal.Int(IntLit.fromInt (~1)))
-		     val tempStart' = AST.S_Assign((tempVar', span), neg1)
+		     val tempStart' = AST.S_Decl(tempVar', SOME(neg1))
 		     val zero = AST.E_Lit(Literal.Real(RealLit.zero true))
 		     fun buildIf(test1, test2, intExpr) =
 			 let
@@ -1329,7 +1329,7 @@ structure CheckGlobals : sig
 		fun buildIndexAnalysis(dim, geometry) =
 		    let
 		     val SOME(CF.Points(_,SOME(buildIndex))) = (List.find (fn CF.Points(_) => true | _ => false) geometry)
-		     val SOME(CF.Higher(_, xs)) = (List.find (fn CF.Higher(dim', _) => dim'=dim | _ => false) geometry)
+		     val SOME(CF.Higher(_, xs)) = (List.find (fn CF.Higher(dim', _) => dim'=dim -1 | _ => false) geometry)
 		     fun buildNodeIndex(idx) = List.nth(buildIndex, idx)
 		     val planeIndecies : int list list = List.map (fn (x,y,z) => List.map (buildNodeIndex o IntInf.toInt) z) xs;
 
@@ -1704,16 +1704,16 @@ structure CheckGlobals : sig
 					  (*check points exist*)
 					  (*check correct dim wrappers exist*)
 		    val test1 = List.exists (fn CF.Points(_) => true | _ => false ) geometry
-		    val test2 = List.exists (fn CF.Higher(dim', _) => dim' = dim | _ => false) geometry
+		    val test2 = List.exists (fn CF.Higher(dim', _) => dim'  = dim - 1 | _ => false) geometry
 		    val test3 = if dim = 2
 				then List.exists (fn CF.LineParam(_) => true | _ => false) geometry
 				else
 				 if dim = 3
 				 then List.exists (fn CF.PlaneParam(_) => true | _ => false) geometry
 				 else false
-					
+		    val test = test3 andalso test2 andalso test1
 		   in
-		    if test3 andalso test2 andalso test1
+		    if test
 		    then makeGeometryFuncs(env, cxt, span, meshData, geometry)
 		    else {ref = ([],[],[]), pos = ([],[],[])}
 		   end
@@ -1906,7 +1906,7 @@ structure CheckGlobals : sig
 			  val worldMeshPosDef = (fn (x,y,z) => z) worldMeshPos
 			  val dumbDef = (fn (x,y,z) => z) dumb
 
-			  val geometryInfo = makeGeometryFuncs(env, cxt, span, meshData, geometry)
+			  val geometryInfo = makeGeometryFuncsWrap(env, cxt, span, meshData, geometry)
 
 
 			  val env' = Env.insertNamedType(env, cxt, cellName, cellTy, constants, cellMethods, transformFuncs)

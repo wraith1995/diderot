@@ -8,13 +8,13 @@ input msh a;
 input fns b = fns(a);
 input FUNC c = FUNC(b);
 refCell{msh} AAA = a.refcell();
-
+int[] umm = {1,2,3};
 strand gg(int i, cell{msh} j){
   output position{msh} pos = a.findPos([0.0,0.0]);
-  position{msh} meh = AAA.exit(pos, [0.5,0.5]);
+  real smesh = AAA.exit(pos, [0.5,0.5]);
 
   update{
-    print(meh.refPos);
+    print(smesh);
     stabilize;
   }
-} create_collection {gg(j,k) | j in a1, k in a.cells()};
+} create_collection {gg(j,k) | j in umm, k in a.cells()};
