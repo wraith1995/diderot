@@ -443,7 +443,7 @@ fun warnIfNo(env, cxt, field1, field2, tyName) json =
 			  of SOME(a) => SOME(a)
 			   | NONE => (TypeError.warning(cxt,
 							[S "Expected field, ", S(field1),
-							 S", in parsing of another field", S(field2),
+							 S", in parsing of another field, ", S(field2),
 							 S", in the pasing of type", A(tyName), S"."]);
 				      NONE)
 			(*end case*))
@@ -456,7 +456,7 @@ fun errIfNo(env, cxt, field1, field2, tyName) json =
 			  of SOME(a) => SOME(a)
 			   | NONE => (TypeError.error(cxt,
 							[S "Expected field, ", S(field1),
-							 S", in parsing of another field", S(field2),
+							 S", in parsing of another field, ", S(field2),
 							 S", in the pasing of type", A(tyName), S"."]);
 				      NONE)
 			(*end case*))
@@ -576,6 +576,7 @@ fun analyzeGeometry2(points, higher2) =
      (*for x in affineDef, for y in affineDef: *)
 
      val transforms : real list list list list = ugg(buildTansform, affineDefs, affineDefs) (*[x][y] maps from facet x to facet y*)
+						    (*todo: build *)
     in
      PlaneParam(dNormPairs, transforms)
     end
@@ -585,7 +586,7 @@ fun analyzeGeometry2(points, higher2) =
 fun parseGeometryOfRefCell(env, cxt, dim, json, meshName) =
     let
      val geometry = errIfNo(env, cxt, "geometry", "refCell", meshName) json
-     val verticies = errIfNo(env, cxt, "verticies", "geometry", meshName) geometry
+     val verticies = errIfNo(env, cxt, "vertices", "geometry", meshName) geometry
      val vertToNode = errIfNo(env, cxt, "toNode", "geometry", meshName) geometry
 
 
@@ -626,7 +627,7 @@ fun parseGeometryOfRefCell(env, cxt, dim, json, meshName) =
 				 end
      val verts = parseVerticies(parseVerticies'(verticies))
 
-     val higherObjects = List.tabulate(dim - 1 , fn x => (x+1, errIfNo(env, cxt, "object"^(Int.toString (x+1)), "geometry", meshName) json))
+     val higherObjects = List.tabulate(dim - 1 , fn x => (x+1, errIfNo(env, cxt, "object"^(Int.toString (x+1)), "geometry", meshName) geometry))
      fun parserHigherEntry(subDim, json, index) =
 	 let
 	  val name = "object"^(Int.toString subDim)
@@ -650,13 +651,15 @@ fun parseGeometryOfRefCell(env, cxt, dim, json, meshName) =
 	 in
 	  (index, entities, planeDef)
 	 end
+	 handle exn => raise exn
 
      fun parseHigher(subDim, SOME(json)) =
 	 let
+	  val _ = print("Ummm:"^(Int.toString subDim))
 	  val listOfJson =  Vector.foldr (op ::) [] (JU.asArray(json))
 	  val count = List.length listOfJson
+
 	  val results = ListPair.map (fn (x,y) => parserHigherEntry(subDim, x, y)) (listOfJson, List.tabulate(count, fn x => x))
-				     
 	 in
 	  Higher(subDim, results)
 	 end
@@ -688,9 +691,9 @@ fun parseGeometryOfRefCell(env, cxt, dim, json, meshName) =
 				of SOME(h) => analyzeGeometry2(verts, h)
 				 | _ => raise Fail "case not covered but insert C")
 			 else raise Fail "invalid dim"
-	 
+     val result = parameterized::verts::(List.@(higher, maps))
     in
-     parameterized::verts::(List.@(higher, maps))
+     result
     end
 
       
