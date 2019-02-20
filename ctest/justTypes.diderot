@@ -5,81 +5,16 @@ type functionSpace{msh}[2,2] fns = file("firstMesh.json");
 type femFunction{fns} FUNC = file("firstMesh.json");
 
 input msh a;
-
 input fns b = fns(a);
 input FUNC c = FUNC(b);
-field(2)[2] F = a.cells()[0].transform;
 refCell{msh} AAA = a.refcell();
-bool randomTest = AAA.isInside([1.2,0.2]);
-input cell{msh}[2][] smeg = {};
-input position{msh}[2][] regs = {}; 
-int[] a1 = {k + 2 | k in {1+j | j in 0..10}};
-real[] a2 = {k + 2.0 | k in {1.0+j | j in 0..10}};
-
-function real f(real g, int j){
-  return(g*j);
-}
-
-function real s(real k){
-  print(a1);
-  return(k);
-}
-
-field(2)[2,2] FFF = c.F;
 
 strand gg(int i, cell{msh} j){
-
-  output real result = 1.0*i;
-  output tensor[2,2] z = ∇⊗F([1,1]);
-  real gug = ∇•F([1,1]);
-
-  tensor[2,2] stupidTemp = FFF([0.0,0.0]);
-  tensor[2,2,2] stupidTemp1 = ∇⊗FFF([0.0,0.0]);
-
-
-
-  output cell{FUNC} kk = c.funcCell(j);
-
-  output position{msh} pos = a.findPos([0.0, 0.0]);
-
-  tensor[2] ref = pos.refPos();
-  tensor[2] wref = pos.worldPos();
-  tensor[2,2,2] qqq = ( ∇⊗(kk.refField))([1,1]);
-  cell{msh} fluf = pos.mc();
-  output cell{msh} aafdafafafsfasfdasf = fluf;
-  output cell{msh}[1][] aafdafafafsfasfdasf' = {{fluf}};
-  bool test = pos.isValid();
-  tensor[2] smrgh = j.invTransform([0,0]);
-  tensor[2,2,2] smrgh2 =  ∇⊗∇⊗(j.invTransform)([0,0]);
-  tensor[2,2,2] afsafafa = ∇⊗(kk.transformedRefField)([0,0]);
-
-
-  int j0 = 2;
+  output position{msh} pos = a.findPos([0.0,0.0]);
+  position{msh} meh = AAA.exit(pos, [0.5,0.5]);
 
   update{
-    print(smeg,regs);
-    print("SAFAFAFAFA:", pos, fluf, ref, wref, test, "\n");
-    gg[] asfafa = sphere(0.01);
-    pos = a.findPos([0.0, 1.0 * i]);
-    foreach(gg x in asfafa){
-      ref+=x.smrgh;
-    }
-    print("Just a test:", stupidTemp,stupidTemp1, "\n");
-    print("funcCell:", kk, "\n");
-    tensor[FUNC.funcDofShape] b = kk.dofs();
-    print("funcCellDofs: ", b, "\n");
-    print("FuncCellVal:",qqq , "\n");
-    result = f(result, i*10);
-    int cellCount = a.numCell();
-    print("cell:", j,"\n");
-    tensor[msh.transformDofShape] a = j.transformDofs();
-    print("Dof:",a,"\n");
-    print("Inv1: ", smrgh,smrgh2,afsafafa, "\n");
-    print("result:", z, "\n");
-    print("other result:", F([0,0]), "\n");
-    print("fin result:", gug, "\n");
-    print("uummm:", randomTest, "\n");
-
+    print(meh.refPos);
     stabilize;
   }
 } create_collection {gg(j,k) | j in a1, k in a.cells()};
