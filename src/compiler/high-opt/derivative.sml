@@ -254,7 +254,7 @@ structure Derivative : sig
 	    | E.Fem((E.Plain(bda, n, f)), id1, id2, id3, alpha, dxes)  => SOME(E.Fem(E.Plain( BasisDataArray.D(bda), n, f), id1, id2, id3, alpha, dxes@dx))
 	    | E.Fem((E.Invert(bda, n, f)), id1, id2, id3, [mu1], [])  =>
 	      let
-	       (*QUESTION: What to do about 1D? THIS CODE fucks shit up*)
+	       (*QUESTION: What to do about 1D? THIS CODE f***s shit up*)
 
 	       fun fact 0 = 1
 		 | fact 1 = 1
@@ -278,7 +278,7 @@ structure Derivative : sig
 		 | makeEps([a,b,c]) = E.Epsilon(a,b,c)
 	       val eps = makeEps sumMus
 	       val detAcces = List.map probeAtIndex (ListPair.zip(accRanges, sumMus))
-	       val det = E.Op2(E.Div, E.Sum(sumRanges, E.Opn(E.Prod, eps::detAcces)), E.Const(fact dim))
+	       val det = E.Sum(sumRanges, E.Opn(E.Prod, eps::detAcces))
 	       (* fix sum indecies*)
 	       val sumStartAdj = sumX + dim
 	       val adjSumItter1 = List.tabulate(dim - 1, fn x => x + sumStartAdj + 1)

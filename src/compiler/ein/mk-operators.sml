@@ -94,6 +94,8 @@ structure MkOperators : sig
     val invS : dim -> Ein.ein
     val inv2T : Ein.ein
     val inv2F : dim -> Ein.ein
+    val inv3T : Ein.ein
+    val inv3F : dim -> Ein.ein
 
     val expF : dim -> Ein.ein
     val expT : Ein.ein
@@ -858,27 +860,74 @@ structure MkOperators : sig
     fun invS dim = E.EIN{params = [E.FLD dim], index= [], body =  mkInvS E.Field}
     val invR = E.EIN{params = [mkTEN([])], index= [], body =  mkInvS E.Tensor}
 
-    fun mkInv2x2 f = let
-          fun mkFCx (ix, jx) = f (0, [E.C ix, E.C jx])
-          fun mkFVx (ix, jx) = f (0, [E.V ix, E.V jx])
-          val f00 = mkFCx (0, 0)
-          val f11 = mkFCx (1, 1)
-          val f01 = mkFCx (0, 1)
-          val f10 = mkFCx (1, 0)
-          val i = 0 and j = 1 and k = 2
-          val fij = mkFVx (i, j)
-          val fkk = mkFVx (k, k)
-        (* numerator*)
-          val en = E.Op2(E.Sub,
-                E.Opn(E.Prod, [E.Sum([(k, 0, 1)], fkk), E.Delta(E.V i, E.V j)]),
-                fij)
-        (* denominator *)
-          val d1 = E.Opn(E.Prod, [f00, f11])
-          val d2 = E.Opn(E.Prod, [f01, f10])
-          val dn = E.Op2(E.Sub, d1, d2)
-          in
-            E.Op2(E.Div, en, dn)
-          end
+
+
+    fun mkInverse dim f =
+	let
+	 fun fact 0 = 1
+		 | fact 1 = 1
+		 | fact n = n * ( fact (n-1))
+	 val makeEps = if dim = 1
+		       then raise Fail "1 dim should not use mkInverse"
+		       else if dim = 2
+		       then (fn [x,y] => E.Eps2(x,y))
+		       else if dim = 3
+		       then (fn [x,y,z] => E.Epsilon(x,y,z))
+		       else raise Fail "dims other than 2 and 3 not supported."
+	 fun makeProbe(mu1, mu2) = f(0, [mu1, mu2])
+	 val mu1 = E.V 0
+	 val mu2 = E.V 1
+	 val sumX = 2
+	 val sumStart = sumX
+	 val sumItter = List.tabulate(dim, fn x => x +  sumStart + 1)
+	 val sumMus = List.map E.V sumItter
+	 val sumRanges = List.map (fn x => (x, 0, dim - 1 )) sumItter (*QUESTION: dim - 1correct?*)
+
+				  
+	 val accRanges = List.tabulate(dim, fn x => E.C x)
+	 val eps = makeEps sumMus
+	 val detAcces = List.map makeProbe (ListPair.zip(accRanges, sumMus))
+	 val det = E.Sum(sumRanges, E.Opn(E.Prod, eps::detAcces))
+			
+	 val sumStartAdj = sumX + dim
+	 val adjSumItter1 = List.tabulate(dim - 1, fn x => x + sumStartAdj + 1)
+	 val adjSumItter2 = List.tabulate(dim - 1, fn x => x + sumStartAdj + dim + 1)
+	 val adjSumMus1 = List.map E.V adjSumItter1
+	 val adjSumMus2 = List.map E.V adjSumItter2
+	 val adjSumRanges = List.map (fn x => (x, 0, dim - 1)) (List.@(adjSumItter1, adjSumItter2))
+	 val finalSumX = sumStartAdj + 2 * (dim - 1) 
+	 val eps1 = makeEps (List.@(adjSumMus1, [mu1]))
+	 val eps2 = makeEps (List.@(adjSumMus2, [mu2]))
+	 val adjAccess = List.map makeProbe (ListPair.zip(adjSumMus1, adjSumMus2))
+	 val adj = E.Op2(E.Div, E.Sum(adjSumRanges, E.Opn(E.Prod, eps1::eps2::adjAccess)), E.Const(fact (dim - 1)))
+	 val inv = E.Op2(E.Div, adj, det)
+	in
+	 inv
+	end
+
+    fun mkInv2x2 f = mkInverse 2 f
+    fun mkInv3x3 f = mkInverse 3 f
+    (* let *)
+        (*   fun mkFCx (ix, jx) = f (0, [E.C ix, E.C jx]) *)
+        (*   fun mkFVx (ix, jx) = f (0, [E.V ix, E.V jx]) *)
+        (*   val f00 = mkFCx (0, 0) *)
+        (*   val f11 = mkFCx (1, 1) *)
+        (*   val f01 = mkFCx (0, 1) *)
+        (*   val f10 = mkFCx (1, 0) *)
+        (*   val i = 0 and j = 1 and k = 2 *)
+        (*   val fij = mkFVx (i, j) *)
+        (*   val fkk = mkFVx (k, k) *)
+        (* (* numerator*) *)
+        (*   val en = E.Op2(E.Sub, *)
+        (*         E.Opn(E.Prod, [E.Sum([(k, 0, 1)], fkk), E.Delta(E.V i, E.V j)]), *)
+        (*         fij) *)
+        (* (* denominator *) *)
+        (*   val d1 = E.Opn(E.Prod, [f00, f11]) *)
+        (*   val d2 = E.Opn(E.Prod, [f01, f10]) *)
+        (*   val dn = E.Op2(E.Sub, d1, d2) *)
+        (*   in *)
+        (*     E.Op2(E.Div, en, dn) *)
+        (*   end *)
 
     fun inv2F dim = E.EIN{params = [E.FLD dim], index= [2, 2], body = mkInv2x2 E.Field}
 
@@ -886,8 +935,15 @@ structure MkOperators : sig
           val shape = [2, 2]
           in
             E.EIN{params = [mkTEN shape], index = shape, body = mkInv2x2 E.Tensor}
-          end
+    end
 
+    fun inv3F dim = E.EIN{params = [E.FLD dim], index= [3, 3], body = mkInv3x3 E.Field}
+    val inv3T = let
+     val shape = [3, 3]
+    in
+     E.EIN{params = [mkTEN shape], index = shape, body = mkInv3x3 E.Tensor}
+    end		  
+		  
   (************************* Exponential **************************)
     fun expF dim = E.EIN{params = [E.FLD dim], index = [], body = E.Op1(E.Exp, E.Field(0, []))}
     val expT = E.EIN{params = [mkNoSubstTEN []], index = [], body = E.Op1(E.Exp, E.Tensor(0, []))}
