@@ -1697,6 +1697,27 @@ structure CheckGlobals : sig
 		results
 	       end
 
+	       fun makeGeometryFuncsWrap(env, cxt, span, meshData, geometry) =
+		   let
+		    val FT.Mesh(mesh) = meshData
+		    val dim = FT.meshDim mesh
+					  (*check points exist*)
+					  (*check correct dim wrappers exist*)
+		    val test1 = List.exists (fn CF.Points(_) => true | _ => false ) geometry
+		    val test2 = List.exists (fn CF.Higher(dim', _) => dim' = dim | _ => false) geometry
+		    val test3 = if dim = 2
+				then List.exists (fn CF.LineParam(_) => true | _ => false) geometry
+				else
+				 if dim = 3
+				 then List.exists (fn CF.PlaneParam(_) => true | _ => false) geometry
+				 else false
+					
+		   in
+		    if test3 andalso test2 andalso test1
+		    then makeGeometryFuncs(env, cxt, span, meshData, geometry)
+		    else {ref = ([],[],[]), pos = ([],[],[])}
+		   end
+
 	       fun makeMeshPos(env, cxt, span, meshData, transformVars, (_, worldPosMakerVar, _), dumb, extraFuns, extraReplace) = let
 		val results = []
 		val meshName = FT.nameOf meshData
