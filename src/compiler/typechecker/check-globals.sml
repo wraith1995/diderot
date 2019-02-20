@@ -1240,7 +1240,7 @@ structure CheckGlobals : sig
 		fun intersectionTesting intersectionExprs =
 		    let
 		     val tempVar = Var.new (Atom.atom "time", span, AST.LocalVar, Ty.realTy)
-		     val tempVar' = Var.new (Atom.atom "cell", span, AST.LocalVar, Ty.T_Int)
+		     val tempVar' = Var.new (Atom.atom "face", span, AST.LocalVar, Ty.T_Int)
 		     val tempExp = AST.E_Var(tempVar, span)
 		     val tempExp' = AST.E_Var(tempVar', span)
 		     val tempStart = AST.S_Decl(tempVar, SOME(AST.E_Lit(Literal.Real(RealLit.posInf))))
@@ -1251,7 +1251,7 @@ structure CheckGlobals : sig
 			 let
 			  (*compute special test, int*)
 			  val positiveTest = makePrim'(BV.gt_rr, [test1, zero], [Ty.realTy, Ty.realTy], Ty.T_Bool)
-			  val newUpdateTest = makePrim'(BV.gt_rr, [tempExp', test1], [Ty.realTy, Ty.realTy], Ty.T_Bool)
+			  val newUpdateTest = makePrim'(BV.gt_rr, [tempExp, test1], [Ty.realTy, Ty.realTy], Ty.T_Bool)
 			  val combined = makePrim'(BV.and_b, [positiveTest, newUpdateTest], [Ty.T_Bool, Ty.T_Bool], Ty.T_Bool)
 			  val fin = AST.S_IfThenElse(combined, AST.S_Block([
 									   AST.S_Assign((tempVar, span), test1),
