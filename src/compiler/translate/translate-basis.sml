@@ -318,76 +318,13 @@ structure TranslateBasis : sig
                                           [assignEin(y, (Mk.det3F (d1)), xs)]),
                 (BV.fn_inv1_t,          simpleEOp Mk.invR),
                 (BV.fn_inv2_t,          simpleEOp Mk.inv2T),
-                (BV.fn_inv3_t,          fn (y, _ , [x]) => let
-                                          val shape = [3, 3]
-                                          val trace = IR.Var.new("t1", DstTy.TensorTy [])
-                                          val trace_sq = IR.Var.new("t2", DstTy.TensorTy[])
-                                          val dotT = IR.Var.new("t3", DstTy.TensorTy shape)
-                                          val dot_trace = IR.Var.new("t4", DstTy.TensorTy [])
-                                          val t5 = IR.Var.new("t5", DstTy.TensorTy [])
-                                          val t6 = IR.Var.new("t6", DstTy.TensorTy shape)
-                                          val t7 = IR.Var.new("t7", DstTy.TensorTy shape)
-                                          val t8 = IR.Var.new("t8", DstTy.TensorTy shape)
-                                          val t9 = IR.Var.new("t9", DstTy.TensorTy shape)
-                                          val id = IR.Var.new("t9", DstTy.TensorTy shape)
-                                          val num = IR.Var.new("t10", DstTy.TensorTy shape)
-                                          val denom = IR.Var.new("t11", DstTy.TensorTy [])
-                                          val trace_op = Mk.traceT 3
-                                          val scaleRT = Mk.mulRT shape
-                                          val scaleRR = Mk.mulRR
-                                          val subRR  = Mk.subRR
-                                          in [
-                                            assignEin(trace, trace_op, [x]),
-                                            assignEin(trace_sq, scaleRR, [trace, trace]),
-                                            assignEin(dotT, Mk.innerTT(shape, shape), [x, x]),
-                                            assignEin(dot_trace, trace_op, [dotT]),
-                                            assignEin(t5, subRR, [trace_sq, dot_trace]),
-                                            assignEin(t6, Mk.scaleIdT 3, [t5]),
-                                            assignEin(t7,  Mk.halfT 3, [t6]),
-                                            assignEin(t8, scaleRT, [trace, x]),
-                                            assignEin(t9, Mk.subTT shape, [t7, t8]),
-                                            assignEin(num, Mk.addTT shape, [t9, dotT]),
-                                            assignEin(denom, Mk.det3T, [x]),
-                                            assignEin(y, Mk.divTR shape, [num, denom])
-                                          ] end),
+                (BV.fn_inv3_t,          simpleEOp Mk.inv3T),
                 (BV.fn_inv1_f,          fn (y, [_, Ty.DIM dim], xs) =>
                                             [assignEin(y, Mk.invS dim, xs)]),
                 (BV.fn_inv2_f,          fn (y, [_, Ty.DIM dim], xs) =>
                                           [assignEin(y, Mk.inv2F dim, xs)]),
-                (BV.fn_inv3_f,          fn (y, [_, Ty.DIM dim], [x]) => let
-                                          val shape = [3, 3]
-                                          val l = 3
-                                          val fty = DstTy.FieldTy
-                                          val trace = IR.Var.new("t1", fty)
-                                          val trace_sq = IR.Var.new("t2", fty)
-                                          val dotT = IR.Var.new("t3", fty)
-                                          val dot_trace = IR.Var.new("t4", fty)
-                                          val t5 = IR.Var.new("t5", fty)
-                                          val t6 = IR.Var.new("t6", fty)
-                                          val t7 = IR.Var.new("t7", fty)
-                                          val t8 = IR.Var.new("t8", fty)
-                                          val t9 = IR.Var.new("t9", fty)
-                                          val id = IR.Var.new("t9", fty)
-                                          val num = IR.Var.new("t10", fty)
-                                          val denom = IR.Var.new("t11", fty)
-                                          val trace_op = Mk.traceF(dim, l, [])
-                                          val scaleSF = Mk.mulSF(dim, shape)
-                                          val scaleSS = Mk.mulSS dim
-                                          val subSS  = Mk.subFF(dim, [])
-                                          in [
-                                            assignEin(trace, trace_op, [x]),
-                                            assignEin(trace_sq, scaleSS, [trace, trace]),
-                                            assignEin(dotT, Mk.innerFF(shape,dim, shape), [x, x]),
-                                            assignEin(dot_trace, trace_op, [dotT]),
-                                            assignEin(t5, subSS, [trace_sq, dot_trace]),
-                                            assignEin(t6, Mk.scaleIdF(dim, l), [t5]),
-                                            assignEin(t7, Mk.halfF(dim, l), [t6]),
-                                            assignEin(t8, scaleSF, [trace, x]),
-                                            assignEin(t9, Mk.subFF(dim, shape), [t7, t8]),
-                                            assignEin(num, Mk.addFF(dim, shape), [t9, dotT]),
-                                            assignEin(denom, Mk.det3F dim, [x]),
-                                            assignEin(y, Mk.divFS(dim, shape), [num, denom])
-                                          ] end),
+                (BV.fn_inv3_f,         fn (y, [_, Ty.DIM dim], xs) =>
+					  [assignEin(y, Mk.inv3F dim, xs)]),
                 (BV.comp,               fn (y, [_, Ty.DIM d0, Ty.SHAPE s0, Ty.DIM d1, Ty.SHAPE s1], xs) =>
                                           [assignEin(y, Mk.composition(d0, s0, d1, s1), xs)]),
                 (BV.fn_sqrt_r,          fn (y, _, xs) =>
