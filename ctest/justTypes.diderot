@@ -12,6 +12,7 @@ int[] umm = {1,2,3};
 strand gg(int i, cell{msh} j){
   output position{msh} pos = a.findPos([0.0,0.0]);
   real smesh = AAA.exit(pos, [0.5,0.5]);
+  position{msh} pos' = AAA.exitPos(pos, [0.5,0.5]);
 
   update{
     print(smesh);
