@@ -20,8 +20,8 @@ structure FemOpt : sig
 			      | RefBuild | WorldBuild of Atom.atom option * Stamp.t option | AllBuild
 			      | NewWorld
 			      | InvalidBuild | WorldTest | NearbyCellQuery of Atom.atom
-			      | InvalidBuildBoundary
-		   |CellConnectivity
+			      | InvalidBuildBoundary | CellConnectivity | CellFaceCell
+
 
 	   type femOption = femOpts * FemData.femType
 					    
@@ -52,7 +52,7 @@ datatype femOpts = Cells | RefCell
 		 | RefBuild | WorldBuild of Atom.atom option * Stamp.t option | AllBuild | NewWorld (*function to do inverse, but not needed*)
 		 | InvalidBuild | InvalidBuildBoundary | WorldTest (*internal use only*)
 		 | NearbyCellQuery of Atom.atom
-		 | CellConnectivity
+		 | CellConnectivity | CellFaceCell
 
 		     
 datatype femField =  Transform | RefField | InvTransform 
@@ -96,6 +96,7 @@ fun toStringOpt v =
        | NewWorld => "NewWorld"
        | NearbyCellQuery(a) => "NearbyCell(File="^(Atom.toString a)^")"
        | CellConnectivity => "CellConnectivity"
+       | CellFaceCell => "CellFaceCell"
     (* end case*))
 
 fun toString (v, d) = toStringOpt(v) ^ "(" ^ (FT.toString d) ^ ")"
@@ -124,6 +125,7 @@ fun arity (NumCell) = 1
   | arity (NewWorld) = 2
   | arity (NearbyCellQuery(_)) = 2
   | arity (CellConnectivity) = 2
+  | arity (CellFaceCell) = 3
 
 
 fun hash (NumCell, d) = 0w1 + FT.hash d
@@ -149,6 +151,7 @@ fun hash (NumCell, d) = 0w1 + FT.hash d
   | hash (NearbyCellQuery(a), d) = 0w83 + (Atom.hash a) * 0w89 + FT.hash d
   | hash (CellConnectivity, d) = 0w89 + FT.hash d
   | hash (InvalidBuildBoundary, d) = 0w97 + FT.hash d
+  | hash (CellFaceCell, d) = 0w101 + FT.hash d
 fun sameR ((a1,s1), (a2,s2)) = (case (a1, a2)
 				 of (SOME(a1'), SOME(a2')) => Atom.same(a1', a2')
 				  | (SOME(_), NONE) => false
@@ -184,9 +187,9 @@ fun same ((v1, d1),(v2, d2)) = FT.same(d1,d2) andalso
        | (NearbyCellQuery(a1), NearbyCellQuery(a2)) => Atom.same(a1, a2)
        | (CellConnectivity, CellConnectivity) => true
        | (InvalidBuildBoundary,InvalidBuildBoundary) => true
+       | (CellFaceCell, CellFaceCell) => true
        | _ => false
     (*end case*))
-
 
 fun findIndexLength (opt, data) =
     let

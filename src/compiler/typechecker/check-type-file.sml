@@ -491,7 +491,7 @@ fun analyzeGeometry1(cxt, points, higher1) =
 	     then TypeError.warning(cxt, [S"A line defined in a json file is probably degenerate!"])
 	     else ()
     in
-     LineParam(pairSegs'')
+     (LineParam(pairSegs''), List.length pairSegs')
     end
 fun subtract(a,b) = (ListPair.map (Real.-)(a,b))
 fun crossProduct ([a1,a2,a3] : real list, [b1, b2, b3]) =
@@ -578,7 +578,7 @@ fun analyzeGeometry2(points, higher2) =
      val transforms : real list list list list = ugg(buildTansform, affineDefs, affineDefs) (*[x][y] maps from facet x to facet y*)
 						    (*todo: build *)
     in
-     PlaneParam(dNormPairs, transforms)
+     (PlaneParam(dNormPairs, transforms), List.length planes)
     end
 
 
@@ -681,7 +681,7 @@ fun parseGeometryOfRefCell(env, cxt, dim, json, meshName) =
 	   (*do basis version*)
 			     (*tabulate over it...*)
 
-     val parameterized = if dim = 2
+     val (parameterized, nunF) = if dim = 2
 			 then
 			  (case List.find(fn Higher(1, _) => true | _ => false) higher
 			    of SOME(h) => analyzeGeometry1(cxt, verts, h)
@@ -693,7 +693,7 @@ fun parseGeometryOfRefCell(env, cxt, dim, json, meshName) =
 			 else raise Fail "invalid dim"
      val result = parameterized::verts::(List.@(higher, maps))
     in
-     result
+     (result, nunF)
     end
 
       
@@ -710,6 +710,7 @@ fun paresRefCell(env, cxt, refCellJson, dim, machinePres, meshName) =
      val cell = Option.mapPartial (fn  x => FemData.fromStr(x, dim)) cellClass
 
      val newtonParamsJson = (findField "newtonParams") refCellJson
+     val (geometry, numF) = parseGeometryOfRefCell(env, cxt, dim, SOME(refCellJson), meshName)
      val newtonParamsDict = (case newtonParamsJson
 			      of NONE => {contraction = true, itters = 16, killAfterTol = true, newtonTol = realToRealLit 0.001}
 			       | SOME(json) =>
@@ -724,11 +725,10 @@ fun paresRefCell(env, cxt, refCellJson, dim, machinePres, meshName) =
 				  {contraction=contraction, itters=itters, killAfterTol=killAfterTol, newtonTol=newtonTol}
 				 end
 			    (*end case*))
-     val _ = print("epsilon: " ^ (RealLit.toString eps) ^ "\n");
-     val geometry = parseGeometryOfRefCell(env, cxt, dim, SOME(refCellJson), meshName)
+
     in
      (case cell
-       of SOME(cellVal) => SOME(FemData.RefCellData({ty=cellVal, eps = eps, newtonControl = newtonParamsDict}), geometry)
+       of SOME(cellVal) => SOME(FemData.RefCellData({ty=cellVal, eps = eps, newtonControl = newtonParamsDict,numFaces = numF}), geometry)
 	| NONE => makeParseError(err, cxt, "cell:type", "field doesn't exsist, isn't a string, or string is stupid", NONE)
 				
      (*end case*))

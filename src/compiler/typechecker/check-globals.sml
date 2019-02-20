@@ -1124,7 +1124,7 @@ structure CheckGlobals : sig
 			 val meshPos = FT.MeshPos(m)
 			 val meshPosTy = Ty.T_Fem(meshPos, SOME(meshName))
 			 val refCellData = FemData.refCell m
-			 val FemData.RefCellData({ty=refCellClass, eps, newtonControl}) = refCellData
+			 val FemData.RefCellData({ty=refCellClass, eps, newtonControl,...}) = refCellData
 			 val {contraction, itters, newtonTol, killAfterTol} = newtonControl
 			 val newtonTolExp = AST.E_Lit(Literal.Real(newtonTol))
 			 val newtonAttempts = AST.E_Lit(Literal.intLit itters)
@@ -1477,6 +1477,40 @@ structure CheckGlobals : sig
 		    in
 		     buildFunction
 		    end
+		(*Several versions of cell connectivity:
+		 1. Raw
+		 2. Nearby cells only -> search through them
+		 3. (cell, face) -> cell
+		 4. (cell, face) -> (cell', face')
+		For now, we have the 2nd and 4th one. 
+		This is where you index into cells and the into face -> an int2 pair.
+		
+		 *)
+		fun faceConnectivityToCellFact(meshExp, cellExp, facetExp) =
+		    let
+		     val FT.Mesh(mesh) = meshData
+		     val FemData.RefCellData{numFaces, ...} = FemData.refCell mesh
+		     val cellOffset = AST.E_Lit(Literal.intLit (2 * numFaces))
+
+		     val cellIndexIn = makePrim'(BV.mul_ii, [cellExp, cellOffset], [Ty.T_Int, Ty.T_Int], Ty.T_Int)
+		     val two = AST.E_Lit(Literal.intLit 2)
+		     val facetIndexIn = makePrim'(BV.mul_ii, [facetExp, two], [Ty.T_Int, Ty.T_Int], Ty.T_Int)
+		     val offset = makePrim'(BV.add_ii, [cellIndexIn, facetIndexIn], [Ty.T_Int, Ty.T_Int], Ty.T_Int)
+					   
+		     val neg1 = AST.E_Lit(Literal.intLit (~1))
+		     val validCellTest = makePrim'(BV.equ_ii, [cellExp, neg1], [Ty.T_Int, Ty.T_Int],Ty.T_Bool)
+		     val validFacet = makePrim'(BV.equ_ii, [facetExp, neg1], [Ty.T_Int, Ty.T_Int], Ty.T_Bool)
+		     val combinedTest = makePrim'(BV.and_b, [validCellTest, validFacet], [Ty.T_Bool, Ty.T_Bool], Ty.T_Bool)
+		     val opt = (FemOpt.CellFaceCell, meshData)
+		     val retTy = Ty.T_Sequence(Ty.T_Int, SOME(Ty.DimConst 2))
+		     val femExp = AST.E_ExtractFemItemN([meshExp, offset], [meshTy, Ty.T_Int], retTy, opt, NONE)
+
+		     val ret = AST.S_Return(femExp)
+		     val badReturn = AST.S_Return(AST.E_Seq([neg1, neg1], retTy));
+		     (*Could insert test here*)
+		    in
+		     ret
+		    end
 
 		local
 		 val facetIntParam = Var.new(Atom.atom "faceIdx", span, AST.FunParam, Ty.T_Int)
@@ -1488,7 +1522,7 @@ structure CheckGlobals : sig
 		 val meshExp = AST.E_Var(meshParam, span);
 		 val buildNextCellFunction = buildIndexAnalysis(dim, geometry)
 		 val functionBody = buildNextCellFunction(meshExp, meshData, cellExp, facetIntExp)
-		 val nextCellAtom = Atom.atom "$nextCell"
+		 val nextCellAtom = Atom.atom "$nextCell2"
 		 val nextCellTy = Ty.T_Fun([Ty.T_Int, Ty.T_Int, meshTy], Ty.T_Sequence(Ty.T_Int, SOME(Ty.DimConst 2)))
 		 val nextCellFuncVar = Var.new (nextCellAtom, span, AST.FunVar, nextCellTy)
 		 val nextCellFunc = AST.D_Func(nextCellFuncVar, params, AST.S_Block(functionBody))
@@ -1504,8 +1538,20 @@ structure CheckGlobals : sig
 		      AST.E_Apply((nextCellFuncVar, span), [facetIdExpr, cellExpr, meshExp], Ty.T_Sequence(Ty.T_Int, SOME(Ty.DimConst 2)))
 		     end
 
+		 val nextCellAtom4 = Atom.atom "nextCell4"
+		 val nextCellTy4 = Ty.T_Fun([Ty.T_Int, Ty.T_Int, meshTy], Ty.T_Sequence(Ty.T_Int, SOME(Ty.DimConst 2)))
+		 val nextCellFuncVar4 = Var.new (nextCellAtom4, span, AST.FunVar, nextCellTy4)
+		 val functionBody4 =faceConnectivityToCellFact(meshExp, cellExp, facetIntExp)
+		 val nextCellFunc4 = AST.D_Func(nextCellFuncVar4, params, AST.S_Block([functionBody4]))
+
+
+		       
+
+
+
 		in
 		val cellFunc = ((nextCellAtom,nextCellFuncVar), nextCellFunc)
+		val cellFunc4 = ((nextCellAtom4, nextCellFuncVar4), nextCellFunc4)
 		val internalCellFuncReplace = internalCellFuncReplace
 		end
 
@@ -1615,7 +1661,7 @@ structure CheckGlobals : sig
 		     val time = AST.E_Slice(timeAndFaceExp, [SOME(AST.E_Lit(Literal.intLit 0))], Ty.realTy)
 		     val srcFacet = makePrim'(BV.floor, [AST.E_Slice(timeAndFaceExp, [SOME(AST.E_Lit(Literal.intLit 1))], Ty.realTy)], [Ty.realTy], Ty.T_Int)
 		     val newVec = makePrim'(BV.add_tt, [makePrim'(BV.mul_rt, [time, dPosExp], [Ty.realTy, vecTy], vecTy), refPosExp], [vecTy, vecTy], vecTy)
-		     val ((_, nextCellFuncVar),_) = cellFunc
+		     val ((_, nextCellFuncVar),_) = cellFunc4
 		     val nextCellAndFace = AST.E_Apply((nextCellFuncVar, span), [srcFacet, cellExp, meshExp], Ty.T_Sequence(Ty.T_Int, SOME(Ty.DimConst 2)))
 		     val newCell = makePrim'(BV.subscript, [nextCellAndFace, AST.E_Lit(Literal.intLit 0)], [Ty.T_Sequence(Ty.T_Int, SOME(Ty.DimConst 2)), Ty.T_Int], Ty.T_Int)
 		     val dstFace = makePrim'(BV.subscript, [nextCellAndFace, AST.E_Lit(Literal.intLit 1)], [Ty.T_Sequence(Ty.T_Int, SOME(Ty.DimConst 2)), Ty.T_Int], Ty.T_Int)
@@ -1687,7 +1733,7 @@ structure CheckGlobals : sig
 
 	
 
-		val refActualFuncs = [hiddenExitFuncResult, cellFunc, refPosExitFunc]
+		val refActualFuncs = [hiddenExitFuncResult, cellFunc,cellFunc4, refPosExitFunc]
 		val (refActualFuncsInfo, refActualFuncDcls) = ListPair.unzip refActualFuncs
 		val refReplaceFuncs = [exitFuncResult, refExitPosReplace]
 		val results = {ref = (refActualFuncsInfo, refActualFuncDcls, refReplaceFuncs), pos = ([],[],[])}			  
@@ -1845,7 +1891,7 @@ structure CheckGlobals : sig
 			   val hiddenFuncAtom = (FT.functionNameMake femType (FemName.hiddenNewtonInverse))
 
 
-			   val FemData.RefCellData({ty=refCellClass, eps, newtonControl}) = refCellInfo (*move this outside? Eh.*)
+			   val FemData.RefCellData({ty=refCellClass, eps, newtonControl,...}) = refCellInfo (*move this outside? Eh.*)
 			   val {contraction, itters, newtonTol, killAfterTol} = newtonControl
 			   val _ = print("The contraction is:"^(Bool.toString contraction) ^ "\n")
 			   val meshData = m

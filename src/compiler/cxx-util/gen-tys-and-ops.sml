@@ -67,10 +67,12 @@ structure GenTysAndOps : sig
 		  val mapDimConst = CL.D_Var([], intTy,[], "mapDim", NONE)
 		  val numCells = CL.D_Var([], intTy,[], "numCells", NONE)
 		  val indexPtr = CL.D_Var([], CL.voidPtr,[], "index", NONE)
+		  val conTy = CL.T_Ptr(intTy)
+		  val con = CL.D_Var([], conTy, [], "con", NONE)
 
 		  val extra =
 		      let
-		       val results = []
+		       val results = [con]
 		       val results = if (Option.isSome (FemData.meshAccInsert(m)))
 				     then indexPtr::results
 				     else results
