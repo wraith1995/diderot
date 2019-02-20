@@ -219,6 +219,7 @@ structure CollectInfo : sig
 					       of SOME(ty'') => SOME(Ty.SeqTy(ty'', s))
 						| NONE => NONE
 					     (*end case*))
+		       | Ty.FemData(FemData.Mesh(_)) => SOME(Ty.SeqTy(Ty.IntTy, SOME(2)))
 		       | Ty.FemData(FemData.MeshCell(_)) => SOME(Ty.IntTy)
 		       | Ty.FemData(FemData.FuncCell(_)) => SOME(Ty.IntTy)
 		       | Ty.FemData(FemData.MeshPos(mesh)) =>
