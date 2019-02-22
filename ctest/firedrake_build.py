@@ -76,7 +76,7 @@ def elementToBasis(elem):
     var = [sp.Symbol("x{0}".format(i)) for i in range(dim)]
     basisFunctions = fiatElem.tabulate(0, var)
     basisFunctions = basisFunctions[tuple([0 for i in range(dim)])]
-    print(basisFunctions)
+
     # should be a straightup array
     if len(basisFunctions.shape) != 1:
         raise Exception("Don't know how to handle non-vector basis shape")
@@ -102,12 +102,12 @@ def makeAccelerate():
          ]}
     return(a)
 
-def makeRefCell(geometry, epsilon=0.000000001, itters=16,
+def makeRefCell(geometry, start, epsilon=0.000000001, itters=16,
                 newtonTol=0.00000001):
     a = {"type": "other",
          "epsilon": epsilon,
          "newtonParams": {"contraction": True, "itters": itters,
-                          "killAfterTol": False, "newtonTol": newtonTol},
+                          "killAfterTol": False, "newtonTol": newtonTol, "start": start},
          "geometry": geometry}
     return(a)
 
@@ -115,6 +115,7 @@ def buildGeometry(elem):
     fiatElement = tsfc.fiatinterface.create_element(elem)
     refElem = fiatElement.get_reference_element()
     vertices = list(refElem.get_vertices())
+    start = list(np.average(vertices, axis=0))
     toNode = list(range(len(vertices)))
     topology = refElem.get_topology()
     dims = list(topology.keys())[1:-1]  # higher than points, but not itself.
@@ -123,7 +124,7 @@ def buildGeometry(elem):
         key = "object" + str(x)
         entities = topology[x]
         entity = []
-        print(entities)
+
         for e in entities:
             ep = entities[e]
             obj = {"entity": ep, "plane": ep[0:x + 1]}
@@ -131,7 +132,7 @@ def buildGeometry(elem):
         objects[key] = entity
     objects["vertices"] = vertices
     objects["toNode"] = toNode
-    return(objects)
+    return(objects,start)
 #glue it all togeather now.
 
 def makeConstant(name, ty, value):
@@ -147,14 +148,13 @@ def processSpace(V):
     (meshBasis, meshDim) = elementToBasis(meshElem)
     (spaceBasis, meshDimP) = elementToBasis(spaceElem)
 
-    geometry = buildGeometry(meshElem)
-    refCell = makeRefCell(geometry)
+    (geometry, start) = buildGeometry(meshElem)
+    refCell = makeRefCell(geometry, start)
     accelerate = makeAccelerate()
     meshMapDim = len(meshBasis)
     meshBasisP = [x for (x,y) in meshBasis]
     spaceBasisP = [x for (x,y) in spaceBasis]
     meshMapDegree = max([y for (x,y) in meshBasis])
-    print(meshMapDegree)
     mesh = {
         "basis": {"polys": meshBasisP},
         "constants": [
@@ -194,6 +194,6 @@ def spaceToJson(V, jsonFile):
         f.write(dumped)
 
 
-mesh = UnitSquareMesh(5,5)
+mesh = UnitSquareMesh(5,5,5)
 space = FunctionSpace(mesh, "Lagrange", 4)
 spaceToJson(space, "test.json")

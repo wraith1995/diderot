@@ -226,7 +226,9 @@ fun tryAll x = (Option.valOf o Option.join) (List.find Option.isSome (List.map (
 fun optionInt x = oE (IntInf.toInt o JU.asIntInf) x
 fun optionListInt x = oE (JU.arrayMap (IntInf.toInt o JU.asIntInf)) x
 fun optionRealLit x = oE ( realToRealLit o JU.asNumber) x
+fun optionRealLitList x = oE ( JU.arrayMap (realToRealLit o JU.asNumber)) x
 fun optionBool x = oE (JU.asBool) x
+fun optionString x = oE (JU.asString) x
 					     
 val bogusExp = AST.E_Lit(L.Int 0)
 val bogusExpTy = (Ty.T_Error, bogusExp)
@@ -710,9 +712,10 @@ fun paresRefCell(env, cxt, refCellJson, dim, machinePres, meshName) =
      val cell = Option.mapPartial (fn  x => FemData.fromStr(x, dim)) cellClass
 
      val newtonParamsJson = (findField "newtonParams") refCellJson
+     val insideInsert = Option.mapPartial optionString (findField "insideInsert" refCellJson)
      val (geometry, numF) = parseGeometryOfRefCell(env, cxt, dim, SOME(refCellJson), meshName)
      val newtonParamsDict = (case newtonParamsJson
-			      of NONE => {contraction = true, itters = 16, killAfterTol = true, newtonTol = realToRealLit 0.001}
+			      of NONE => {contraction = true, itters = 16, killAfterTol = true, newtonTol = realToRealLit 0.001, start = NONE}
 			       | SOME(json) =>
 				 let
 				  val contraction = Option.getOpt(Option.mapPartial (optionBool) (findField "contraction" json), true)
@@ -721,14 +724,17 @@ fun paresRefCell(env, cxt, refCellJson, dim, machinePres, meshName) =
 				  val killAfterTol = Option.getOpt(Option.mapPartial (optionBool) (findField "killAfterTol" json), true)
 				  val newtonTol = Option.getOpt(Option.mapPartial (optionRealLit) (findField "newtonTol" json), realToRealLit 0.001)
 
+				  val start = Option.mapPartial optionRealLitList (findField "start" json)
+								
+
 				 in
-				  {contraction=contraction, itters=itters, killAfterTol=killAfterTol, newtonTol=newtonTol}
+				  {contraction=contraction, itters=itters, killAfterTol=killAfterTol, newtonTol=newtonTol, start = start}
 				 end
 			    (*end case*))
 
     in
      (case cell
-       of SOME(cellVal) => SOME(FemData.RefCellData({ty=cellVal, eps = eps, newtonControl = newtonParamsDict,numFaces = numF}), geometry)
+       of SOME(cellVal) => SOME(FemData.RefCellData({ty=cellVal, eps = eps,insideInsert = insideInsert, newtonControl = newtonParamsDict,numFaces = numF}), geometry)
 	| NONE => makeParseError(err, cxt, "cell:type", "field doesn't exsist, isn't a string, or string is stupid", NONE)
 				
      (*end case*))
@@ -853,6 +859,7 @@ fun parseSpace(env, cxt, tyName, basisFunctionShape : int list, rangeShape : int
      val rangeShape : int list option = Option.mapPartial (extractShapeConst cxt) rangeConstCheck
      val rangeShape = (case rangeShape
 			of SOME([1]) => SOME([])
+			 | NONE => SOME([]) (*maybe register a warning?*)
 			 | _ => rangeShape)
      val combined = optionList [spaceMapDim, rangeConstCheck]
      val spaceDofShapeConst = Option.map (fn ([(ty, expr, name), (ty', expr', name')])

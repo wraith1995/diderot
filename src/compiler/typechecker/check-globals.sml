@@ -440,7 +440,7 @@ structure CheckGlobals : sig
 	       fun makeAnd v1 v2 = makePrim'(BV.and_b, [v1,v2], [Ty.T_Bool, Ty.T_Bool], Ty.T_Bool)
 	       fun makeAnds([v1,v2]) = makeAnd v1 v2
 		 | makeAnds (v::vs) = makeAnd v (makeAnds vs)
-	       fun makeRefCellInside(env, cxt, span, dim, refCellInfo, posVar, meshVar) =
+	       fun makeRefCellInside(env, cxt, span, dim, refCellInfo, posVar, meshVar, insert, meshData, meshTy) =
 		   let
 		    val insideVec = Ty.vecTy dim
 		    val FemData.RefCellData({ty=refCellClass, eps,...}) = refCellInfo
@@ -487,11 +487,18 @@ structure CheckGlobals : sig
 			  val endTest = greaterThanTest onePlusEps norm
 			 in
 			  endTest
-			 end)
+			 end
+		       | FemData.Other(_) =>
+			 (case insert
+			   of SOME(file) => AST.E_ExtractFemItemN([meshVar, posVar, epsExpr],
+								  [meshTy, insideVec, Ty.realTy],
+								  Ty.T_Bool,
+								  (FemOpt.InsideInsert(Atom.atom file), meshData), NONE)
+			    | NONE => raise Fail "insert error"))
 		   end
 	       (*make parameterized newton inverse*)
 	       (*make meshPosSearch*)
-	       fun itterStartPos(cxt, span, refCellClass, vecTy, dim) =
+	       fun itterStartPos(cxt, span, refCellClass, vecTy, dim, start) =
 		   (case refCellClass
 		     of FemData.KCube(dim) => AST.E_Tensor(List.tabulate(dim, fn x => AST.E_Lit(Literal.Real(RealLit.zero false))), vecTy)
 		      | FemData.KSimplex(dim) =>
@@ -502,6 +509,11 @@ structure CheckGlobals : sig
 			in
 			 AST.E_Tensor(List.tabulate(dim, fn x => AST.E_Lit(Literal.Real(third))), vecTy)
 			end
+		      | FemData.Other(dim) => (case start
+						      (*todo: check length*)
+						of SOME(s) => AST.E_Tensor((List.map (fn x => AST.E_Lit(Literal.Real(x))) s),
+									   Ty.T_Tensor(Ty.Shape([Ty.DimConst dim])))
+						 | NONE => raise Fail "insert an error here")
 		   (* end case*))
 
 	       (*build n derivative functions of the transform*)
@@ -630,7 +642,7 @@ structure CheckGlobals : sig
 		   else raise Fail "invalid dim;" (*TODO: this resgtriction should be left as I should be able to do arbitrary inverses of a matrix*)
 
 
-	       fun makeMeshPosSearch(env, cxt, span, refCellClass, meshData, newtonTol, newtonAttempts, contraction, killAfterTol, posExpr, meshExpr, insideFunction) =
+	       fun makeMeshPosSearch(env, cxt, span, refCellClass, meshData, newtonTol, newtonAttempts, contraction, killAfterTol, posExpr, meshExpr, insideFunction, start) =
 		   let
 
 		    (*set up types*)
@@ -651,7 +663,7 @@ structure CheckGlobals : sig
 		    val initStms = []
 
 		    (*setup vars, constant expressions, inserts*)
-		    val startPosition = itterStartPos(cxt, span, refCellClass, insideVec, dim)
+		    val startPosition = itterStartPos(cxt, span, refCellClass, insideVec, dim, start)
 		    val invVar = makeInvVar(dim)
 		    val tolExpr = newtonTol
 		    val maxNewtonExpr = newtonAttempts
@@ -835,7 +847,7 @@ structure CheckGlobals : sig
 		    body
 		   end
 
-	       fun makeNewtonInversesBody(env, cxt, span, refCellClass, meshData, newtonTol, newtonAttempts, contraction, killAfterTol, posExpr, cellIntExpr, meshExpr, insideFunction) =
+	       fun makeNewtonInversesBody(env, cxt, span, refCellClass, meshData, newtonTol, newtonAttempts, contraction, killAfterTol, posExpr, cellIntExpr, meshExpr, insideFunction, start) =
 		   let
 		    (*Setup useful types*)
 		    val dim = FemData.meshDim meshData
@@ -848,7 +860,7 @@ structure CheckGlobals : sig
 
 		    (*setup useful vars and expressions*)
 		    val tolExpr = newtonTol
-		    val startPosition = itterStartPos(cxt, span, refCellClass, insideVec, dim)
+		    val startPosition = itterStartPos(cxt, span, refCellClass, insideVec, dim, start)
 		    val invVar = makeInvVar(dim)
 		    val newPosVar = Var.new(Atom.atom "xn", span, AST.LocalVar, insideVec)
 		    val newPosVarExpr = AST.E_Var((newPosVar, span))
@@ -1124,8 +1136,8 @@ structure CheckGlobals : sig
 			 val meshPos = FT.MeshPos(m)
 			 val meshPosTy = Ty.T_Fem(meshPos, SOME(meshName))
 			 val refCellData = FemData.refCell m
-			 val FemData.RefCellData({ty=refCellClass, eps, newtonControl,...}) = refCellData
-			 val {contraction, itters, newtonTol, killAfterTol} = newtonControl
+			 val FemData.RefCellData({ty=refCellClass, eps, newtonControl,insideInsert,...}) = refCellData
+			 val {contraction, itters, newtonTol, killAfterTol, start} = newtonControl
 			 val newtonTolExp = AST.E_Lit(Literal.Real(newtonTol))
 			 val newtonAttempts = AST.E_Lit(Literal.intLit itters)
 
@@ -1140,7 +1152,7 @@ structure CheckGlobals : sig
 			 val meshPosFuncVar = Var.new (meshPosFuncAtom, span, AST.FunVar, meshPosfuncTy)
 
 			 fun makeRefCellInsideFunc vars = (case vars
-							    of [v1,v2] => makeRefCellInside(env, cxt, span, mapDim, refCellData, v2, v1)
+							    of [v1,v2] => makeRefCellInside(env, cxt, span, mapDim, refCellData, v2, v1, insideInsert, meshData, Ty.T_Fem(meshData, NONE))
 							     | _ => raise Fail "impossble got through type checker"
 							  (* end case*))
 			 val meshPosBody = makeMeshPosSearch(env, cxt, span,
@@ -1149,7 +1161,8 @@ structure CheckGlobals : sig
 							     newtonTolExp,newtonAttempts,
 							     contraction, killAfterTol,
 							     posExpr, meshExpr,
-							     makeRefCellInsideFunc)
+							     makeRefCellInsideFunc,
+							     start)
 
 			 val meshPosFunc = AST.D_Func(meshPosFuncVar, [meshParam, posParam], meshPosBody)
 
@@ -1881,8 +1894,9 @@ structure CheckGlobals : sig
 
 			  val refCellInside = Atom.atom (FemName.refCellIsInside)
 			  val refCellInsideTy = Ty.T_Fun([refCellTy, dimSizeVec], Ty.T_Bool)
+			  val FemData.RefCellData({ty=refCellClass, eps, newtonControl,insideInsert,...}) = refCellInfo (*move this outside? Eh.*)
 			  fun makeRefCellInsideFunc vars = (case vars
-							     of [v1,v2] => makeRefCellInside(env, cxt, span, mapDim, refCellInfo, v2, v1)
+							     of [v1,v2] => makeRefCellInside(env, cxt, span, mapDim, refCellInfo, v2, v1, insideInsert, meshData, meshTy)
 							      | _ => raise Fail "impossble got through type checker"
 							   (* end case*))
 
@@ -1891,9 +1905,9 @@ structure CheckGlobals : sig
 			   val hiddenFuncAtom = (FT.functionNameMake femType (FemName.hiddenNewtonInverse))
 
 
-			   val FemData.RefCellData({ty=refCellClass, eps, newtonControl,...}) = refCellInfo (*move this outside? Eh.*)
-			   val {contraction, itters, newtonTol, killAfterTol} = newtonControl
-			   val _ = print("The contraction is:"^(Bool.toString contraction) ^ "\n")
+
+			   val {contraction, itters, newtonTol, killAfterTol, start} = newtonControl
+
 			   val meshData = m
 			   val posTy = Ty.vecTy mapDim
 			   val newtonTol = AST.E_Lit(Literal.Real(newtonTol)) (*TODO fix me with ref cell info*)
@@ -1913,7 +1927,7 @@ structure CheckGlobals : sig
 						
 			   val insideFunc = makeRefCellInsideFunc
 
-			   val body = makeNewtonInversesBody(env, cxt, span, refCellClass, meshData, newtonTol, newtonAttempts, contraction, killAfterTol, posExpr, cellIntExpr, meshExpr, insideFunc)
+			   val body = makeNewtonInversesBody(env, cxt, span, refCellClass, meshData, newtonTol, newtonAttempts, contraction, killAfterTol, posExpr, cellIntExpr, meshExpr, insideFunc, start)
 			   val newtonFunc = AST.D_Func(hiddenFuncVar, [posParam, cellIntParam, meshParam], body)
 
 

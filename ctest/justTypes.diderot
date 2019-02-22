@@ -1,7 +1,7 @@
 #version 3.0
 
 type mesh msh = file("test.json");
-type functionSpace{msh}[1] fns = file("test.json");
+type functionSpace{msh}[] fns = file("test.json");
 type femFunction{fns} FUNC = file("test.json");
 
 input msh a;
