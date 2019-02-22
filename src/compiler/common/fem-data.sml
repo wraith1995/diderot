@@ -82,11 +82,13 @@ structure FemData : sig
 structure BD = BasisData
 datatype refCellType = KSimplex of int | KCube of int | Other of int
 fun fromStr(str,dim) = if str = "simplex"
-		   then SOME(KSimplex(dim))
-		   else if str = "cube"
-		   then SOME(KCube(dim))
-		   else NONE
-			  
+		       then SOME(KSimplex(dim))
+		       else if str = "cube"
+		       then SOME(KCube(dim))
+		       else if str = "other"
+		       then SOME(Other(dim))
+		       else NONE
+			      
 datatype refCell = RefCellData of {ty : refCellType,
 				   eps : RealLit.t,
 				   newtonControl :

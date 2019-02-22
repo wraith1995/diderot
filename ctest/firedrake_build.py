@@ -26,10 +26,11 @@ def computeInverseIndex(shape):
     return(idxs)
 
 def cleanEpsilon(x):
-    if abs(x) < EPSILON:
+    xp = float(x)
+    if abs(xp) < EPSILON:
         return(0.0)
     else:
-        return(x)
+        return(xp)
 
 def monos(degree, var):
     # We order our nonomials based on the following indexing algorithim
@@ -52,7 +53,8 @@ def processSympyPoly(poly, var):
             return(0.0)
                 
     expansion = [cleanEpsilon(getCoeff(poly,mono)) for mono in monoPolys]
-    return((expansion, maxDegree))
+    result = {"coeffs": expansion, "degree": maxDegree}
+    return((result, maxDegree))
 
 def elementToBasis(elem):
     fiatElem = tsfc.fiatinterface.create_element(elem)
@@ -74,6 +76,7 @@ def elementToBasis(elem):
     var = [sp.Symbol("x{0}".format(i)) for i in range(dim)]
     basisFunctions = fiatElem.tabulate(0, var)
     basisFunctions = basisFunctions[tuple([0 for i in range(dim)])]
+    print(basisFunctions)
     # should be a straightup array
     if len(basisFunctions.shape) != 1:
         raise Exception("Don't know how to handle non-vector basis shape")
@@ -126,6 +129,8 @@ def buildGeometry(elem):
             obj = {"entity": ep, "plane": ep[0:x + 1]}
             entity.append(obj)
         objects[key] = entity
+    objects["vertices"] = vertices
+    objects["toNode"] = toNode
     return(objects)
 #glue it all togeather now.
 
@@ -146,9 +151,12 @@ def processSpace(V):
     refCell = makeRefCell(geometry)
     accelerate = makeAccelerate()
     meshMapDim = len(meshBasis)
+    meshBasisP = [x for (x,y) in meshBasis]
+    spaceBasisP = [x for (x,y) in spaceBasis]
     meshMapDegree = max([y for (x,y) in meshBasis])
+    print(meshMapDegree)
     mesh = {
-        "basis": {"polys": meshBasis},
+        "basis": {"polys": meshBasisP},
         "constants": [
             makeConstant("dim", "int", meshDim),
             makeConstant("meshMapDim", "int", meshMapDim),
@@ -162,7 +170,7 @@ def processSpace(V):
     shape = list(V.shape)
     shapeLen = len(shape)
     space = {
-        "basis" : {"polys" : spaceBasis},
+        "basis" : {"polys" : spaceBasisP},
         "constants" : [
             makeConstant("dim", "int", meshDimP),
             makeConstant("spaceMapDim", "int", spaceMapDim),
@@ -182,7 +190,7 @@ def processSpace(V):
 def spaceToJson(V, jsonFile):
     dictJson = processSpace(V)
     with open(jsonFile, "w+") as f:
-        dumped = json.dumps(dictJson)
+        dumped = json.dumps(dictJson, indent=4)
         f.write(dumped)
 
 
