@@ -330,20 +330,20 @@ structure TreeToCxx : sig
 	       val _ = ()
 	      in
 	       (case (opt, args)
-		 of ((AllBuild, FT.MeshPos(m)), [mesh, cellInt,worldPos, refPos]) =>
+		 of ((FemOpt.AllBuild, FT.MeshPos(m)), [mesh, cellInt,worldPos, refPos]) =>
 		    let
 		     val args' = [mesh, cellInt, worldPos, refPos, CL.E_Bool(true), CL.E_Bool(true)]
 		    in
 		     CL.mkApply("allBuild", args')
 		    end
-		  | ((InvalidBuild, FT.MeshPos(m)), [mesh]) =>
+		  | ((FemOpt.InvalidBuild, FT.MeshPos(m)), [mesh]) =>
 		    let
 		    in
 		     CL.mkApply("invalidBuild", [mesh])
 		    end
-		  | ((CellFaceCell, FT.Mesh(m)),[mesh, idx]) =>
+		  | ((FemOpt.CellFaceCell, FT.Mesh(m)), [mesh, idx]) =>
 		    let
-		     (*cell*numFaces*2 + faceId*2*)
+		     (*just do pointer arithemtic.... and make this cleaner*)
 		     val faces = CL.E_Grp(CL.mkAddrOf(CL.E_Subscript(CL.E_Select(mesh, "con"), idx)))
 		     val zero = CL.E_Int(IntLit.fromInt 0, CL.intTy)
 		     val one =  CL.E_Int(IntLit.fromInt 1, CL.intTy)
@@ -351,6 +351,11 @@ structure TreeToCxx : sig
 		    in
 		     result
 		    end
+		  | ((FemOpt.InvalidBuildBoundary, FT.MeshPos(m)), [mesh, tensor]) => CL.mkApply("invalidBuild", [mesh, tensor])
+		  | ((FemOpt.RefBuild, FT.Mesh(m)), [mesh, cell, refTensor]) => CL.mkApply("refBuild", [mesh, cell, refTensor])
+		  | _ => raise Fail(concat[
+				      "unknown or incorrect operator ", Op.toString rator
+				   ])
 
 	       (*end case*))
 	      end

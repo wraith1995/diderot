@@ -266,6 +266,10 @@ structure GenTysAndOps : sig
 
 		  fun assgn' name expr = CL.S_Exp(CL.E_AssignOp(CL.E_Select(CL.E_Var("pos"), name), CL.$=, expr))
 
+		  fun assgnTrue name = CL.S_Exp(CL.E_AssignOp(CL.E_Select(CL.E_Var("pos"), name), CL.$=, CL.E_Bool(true)))
+		  fun assgnFalse name = CL.S_Exp(CL.E_AssignOp(CL.E_Select(CL.E_Var("pos"), name), CL.$=, CL.E_Bool(false)))
+					       
+
 		  fun nullPtrStart name = CL.E_Apply(CL.E_Var(name),[CL.E_Var("nullptr")])
 		  fun varStart name = CL.E_Apply(CL.E_Var(name), [CL.E_Var(name)])
 		  fun expStart name exp = CL.E_Apply(CL.E_Var(name), [exp])
@@ -298,6 +302,7 @@ structure GenTysAndOps : sig
 					      CL.S_Block([
 							 CL.S_Decl([], meshPosTy, "pos",NONE),
 							 assgn "mesh",
+							 assgn "cell",
 							 assgn "refPos",
 							 assgn "worldPos",
 							 assgn "wpc",
@@ -305,6 +310,18 @@ structure GenTysAndOps : sig
 							 CL.S_Return(SOME(CL.E_Var("pos")))
 							])
 					     )
+		  val refBuild = CL.mkFuncDcl(meshPosTy, "refBuild", [CL.PARAM([], meshTy, "mesh"),
+								      CL.PARAM([], intTy, "cell"),
+								      CL.PARAM([], tensorTy, "refPos")],
+					      CL.S_Block([
+							 CL.S_Decl([], meshPosTy, "pos",NONE),
+							 assgn "mesh",
+							 assgn "cell",
+							 assgn "refPos",
+							 assgnFalse "wpc",
+							 assgnTrue "valid",
+							 CL.S_Return(SOME(CL.E_Var("pos")))
+							]))
 
 		  val invalidBuild = CL.mkFuncDcl(meshPosTy, "invalidBuild", [CL.PARAM([], meshTy, "mesh")],
 					      CL.S_Block([
@@ -314,6 +331,15 @@ structure GenTysAndOps : sig
 							])
 					     )
 
+		  val invalidBuild' = CL.mkFuncDcl(meshPosTy, "invalidBuild", [CL.PARAM([], meshTy, "mesh"),
+									       CL.PARAM([], tensorTy, "refPos")],
+					      CL.S_Block([
+							 CL.S_Decl([], meshPosTy, "pos",NONE),
+							 assgn "mesh",
+							 assgn "refPos",
+							 CL.S_Return(SOME(CL.E_Var("pos")))
+							])
+					     )
 		      
 
 					    
@@ -420,7 +446,7 @@ structure GenTysAndOps : sig
 		  val class = CL.D_ClassDef{name=name, args=NONE, from=NONE,public = fields , protected = [], private = []}
 		  
 		 in
-		  (class, [printer,allBuild, invalidBuild, copy_to, makeFem])
+		  (class, [printer,allBuild, invalidBuild,invalidBuild', refBuild, copy_to, makeFem])
 		 end
 		)
 		
