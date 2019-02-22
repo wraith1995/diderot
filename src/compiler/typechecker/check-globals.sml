@@ -1669,7 +1669,7 @@ structure CheckGlobals : sig
 		     val return = AST.S_Return(solveBody);
 		     val boundaryMeshPos = AST.E_ExtractFemItemN([meshExp, newVec], [meshTy, vecTy], posTy, (FemOpt.InvalidBuildBoundary, posData), NONE)
 		     val failReturnMesh = AST.S_Return(boundaryMeshPos)
-		     val condition = makePrim'(BV.equ_ii, [AST.E_Lit(Literal.intLit (~1)), newCell], [Ty.T_Int, Ty.T_Int], Ty.T_Bool)
+		     val condition = makePrim'(BV.neq_ii, [AST.E_Lit(Literal.intLit (~1)), newCell], [Ty.T_Int, Ty.T_Int], Ty.T_Bool)
 		     val stm = AST.S_IfThenElse(condition, return, failReturnMesh);
 		     (*TODO:This code does not check if the time is invalid; assumption is won't be called without time for now.*)
 		    in

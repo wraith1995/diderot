@@ -1,26 +1,47 @@
-MORNING: WHAT IS NEXT????
-NEED AN ACCONTING OF WHAT IS UP AFTER WE DO THIS.
+Plan:
+1.
+-Build firedrake convert:
+-should make basis functions
+-assume verticies and plan them in via a template for the ref cell
+-determine degree
+-add isAffine trait.
+2.
+Use this to test:
+inverse
+findpos
+global field
+-Add isInside to meshPos - should be making a cell - 
 
-Next step:
-Parse refCell data with possible .in
---connectivity information required --- see other file
---build the two methods
---how do we combination -- see the file
---fix reallit bug
---realize potential for failures in checktype file shit and catch more exceptions.
 
-Gordon:
-names,kirby, testing on data
+3.
+-Correct our names. Correct possible errors in the above code.
+-Optimize: affine, basis function evaluation, pos issue
+-What else needs to be done? Review
+-error checking in the damn ray moving thing: normals, planes, on the plane.
+-Build per cell data attachment?
+-What about verticies?
+-add refCell to verticies?
+4.
+Testing the ray moving thing:
+-- Build global, build meshCell method for building 
+-- Try this on a simple mesh - see what it looks like.
+5. Figures and Language design section
+
+Missing: mesh.isInside, meshCell.vertices, meshCell.isValid, meshCell.meshPos, meshCell.enterPos?
+Missing:meshPos.cellExit, celExitPos
+missing: refCell verticies
+Missing: meshCell cellTypes
+Note: add mapping options for the two cell options.
+Note: cellExit, cellExitPos for mesh: isAffine, we map-otherwise, we need a map
+
+Sschedule:
+1 and 2 on Thursday/Friday.-- also fix other
+3 and 4 on Friday and Saturday
+5 on Sunday...
 
 
-AIM TO BE UP AND RUNNING TOWARDS BY FRIDAY: THURSDAY HELL/BE UP LATE/PUSHPUSH
--Geometric data structures and mesh operatoins
--First do geometrices via c code insert and changes to json file
--Changes to type generation
--Do a fem function via firedrake and pass the damn thing
--Also do the affine optimization and get that test right.
 
-NOTE: need tensor 7s
+
 Minor code task:
 make newtoneps return a meshpos - better for error checking?
 Means error code can be inserted when done

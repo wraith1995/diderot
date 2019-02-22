@@ -15,7 +15,7 @@ strand gg(int i, cell{msh} j){
   position{msh} pos' = AAA.exitPos(pos, [0.5,0.5]);
 
   update{
-    print(smesh);
+    print(pos');
     stabilize;
   }
 } create_collection {gg(j,k) | j in umm, k in a.cells()};

@@ -9,7 +9,7 @@
  *)
 
 structure FemData : sig
-	   datatype refCellType = KSimplex of int | KCube of int
+	   datatype refCellType = KSimplex of int | KCube of int | Other of int
 	   val fromStr : string * int -> refCellType option
 	   datatype refCell = RefCellData of {ty : refCellType,
 					      eps : RealLit.t,
@@ -80,7 +80,7 @@ structure FemData : sig
 	  end = struct
 
 structure BD = BasisData
-datatype refCellType = KSimplex of int | KCube of int
+datatype refCellType = KSimplex of int | KCube of int | Other of int
 fun fromStr(str,dim) = if str = "simplex"
 		   then SOME(KSimplex(dim))
 		   else if str = "cube"
@@ -105,6 +105,7 @@ fun hashRefCell(a) = 0w3 * RealLit.hash(getCellEps(a)) +
 		     0w5 * (case (getCellType a)
 			     of KSimplex(d1) => 0w3*(Word.fromInt d1)
 			      | KCube(d2) => 0w5*(Word.fromInt d2)
+			      | Other(d2) => 0w7*(Word.fromInt d2)
 			   (*end case*))
 (*refcells are `simplex, gen triangle, quad, *)
 
