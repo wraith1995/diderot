@@ -18,6 +18,7 @@ structure BasisData : sig
 	   val toString : t -> string
 
 	   val isMono : t -> bool
+	   val isAffine : t -> bool
 	   val extractMonoTerm : t * int list -> real
 	   val nonZeroTerms : t -> (real * int list) list
 	   val dim : t -> int
@@ -28,7 +29,7 @@ structure BasisData : sig
 	   val zero : int -> t
 
 	   val dx : t * int -> t
-		  
+	   (*not implemented:*)
 	   val scale : t * real -> t
 	   val sum : t * t -> t
 	   val cast : t * int -> t
@@ -87,6 +88,20 @@ fun isMono(BasisFunc{coeffs=Array(coeffs'),...}) = let
 in
  (ArrayNd.foldr (fn (x,y) => y + (nonZero x)) 0 coeffs') <= 1
 end
+
+fun isAffine(BasisFunc{coeffs=Array(coeffs'), ...}) =
+    let
+     fun zeroIfNonAffine (idx, x, y) =
+	 if y
+	 then if Real.==(x, 0.0)
+	      then true
+	      else List.all (fn x => x <= 1) idx
+	 else false
+						  
+				      
+    in
+     ArrayNd.foldri' zeroIfNonAffine true coeffs'
+    end
 
 
 fun extractMonoTerm(BasisFunc{coeffs=Array(coeffs'),...}, idx) = if A.indexInside(coeffs', idx)
@@ -176,7 +191,7 @@ fun makeBasisFunc(reals, dim, degree) =
      val shape = dimDegreeShape(dim, degree)
      val reals' = A.fromArray'(reals, shape)
      val monoRep = Atom.atom (makeMonoTerms(reals', dim, degree))
-     val _ = print("Imported basis func with mono: " ^ (Atom.toString monoRep) ^ "\n")
+     (* val _ = print("Imported basis func with mono: " ^ (Atom.toString monoRep) ^ "\n") *)
     in
      SOME(BasisFunc({dim = dim, degree = degree, mapDim = numNonZero(Array(reals')), coeffs = Array(reals'), strForm = monoRep}))
      handle exn => (print(exnMessage(exn)); NONE)

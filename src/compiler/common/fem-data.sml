@@ -13,8 +13,9 @@ structure FemData : sig
 	   val fromStr : string * int -> refCellType option
 	   datatype refCell = RefCellData of {ty : refCellType,
 					      eps : RealLit.t,
+					      insideInsert : string option,
 					      newtonControl :
-					      {contraction : bool, itters: int, newtonTol : RealLit.t, killAfterTol : bool}, numFaces : int}
+					      {contraction : bool, itters: int, newtonTol : RealLit.t, killAfterTol : bool, start : RealLit.t list option}, numFaces : int}
 					     
 	   type mesh
 	   val meshDim : mesh -> int
@@ -91,8 +92,9 @@ fun fromStr(str,dim) = if str = "simplex"
 			      
 datatype refCell = RefCellData of {ty : refCellType,
 				   eps : RealLit.t,
+				   insideInsert : string option,
 				   newtonControl :
-				   {contraction : bool, itters: int, newtonTol : RealLit.t, killAfterTol : bool}, numFaces : int}
+				   {contraction : bool, itters: int, newtonTol : RealLit.t, killAfterTol : bool, start : RealLit.t list option}, numFaces : int}
 
 fun getCellType(RefCellData{ty,...}) = ty
 fun getCellEps(RefCellData{eps,...}) = eps
