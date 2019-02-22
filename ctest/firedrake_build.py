@@ -4,7 +4,8 @@ import ufl
 import sympy as sp
 import json
 import numpy as np
-
+import ctypes as ct
+import stucts as st
 EPSILON = 0.000000001
 
 def computeInverseIndex(shape):
@@ -102,9 +103,9 @@ def makeAccelerate():
          ]}
     return(a)
 
-def makeRefCell(geometry, start, epsilon=0.000000001, itters=16,
+def makeRefCell(geometry, start, refCellDefault="other", epsilon=0.000000001, itters=16,
                 newtonTol=0.00000001):
-    a = {"type": "other",
+    a = {"type": refCellDefault,
          "epsilon": epsilon,
          "newtonParams": {"contraction": True, "itters": itters,
                           "killAfterTol": False, "newtonTol": newtonTol, "start": start},
@@ -141,7 +142,7 @@ def makeConstant(name, ty, value):
          "value": value}
     return(a)
 
-def processSpace(V):
+def processSpace(V, refCellDefault="other"):
     mesh = V.mesh()
     meshElem = mesh.ufl_coordinate_element()
     spaceElem = V.ufl_element()
@@ -149,7 +150,7 @@ def processSpace(V):
     (spaceBasis, meshDimP) = elementToBasis(spaceElem)
 
     (geometry, start) = buildGeometry(meshElem)
-    refCell = makeRefCell(geometry, start)
+    refCell = makeRefCell(geometry, start, refCellDefault=refCellDefault)
     accelerate = makeAccelerate()
     meshMapDim = len(meshBasis)
     meshBasisP = [x for (x,y) in meshBasis]
@@ -187,13 +188,54 @@ def processSpace(V):
     }
     return(result)
 
-def spaceToJson(V, jsonFile):
-    dictJson = processSpace(V)
+def spaceToJson(V, jsonFile, refCellDefault="other"):
+    dictJson = processSpace(V,refCellDefault=refCellDefault)
     with open(jsonFile, "w+") as f:
         dumped = json.dumps(dictJson, indent=4)
         f.write(dumped)
 
 
-mesh = UnitSquareMesh(5,5,5)
-space = FunctionSpace(mesh, "Lagrange", 4)
-spaceToJson(space, "test.json")
+
+# mesh = UnitSquareMesh(5,5,5)
+# space = FunctionSpace(mesh, "Lagrange", 4)
+# spaceToJson(space, "test.json", refCellDefault="simplex")
+
+        
+def passMeshHelper(mesh, intTy, floatTy):
+    intPtr = ct.POINTER(intTy)
+    floatPtr = ct.POINTER(floatTy)
+    meshCoords = mesh.coordinates
+    meshIndexMap = meshCoords.cell_node_map().values
+    meshCoordsMap = meshCoords.dat.data
+    dim = mesh.topological_dimension()
+    meshMapDim = meshCoords.cell_node_map().values.shape[1]
+    numCell = meshCoords.cell_node_map().values.shape[0]
+    sIndex = mesh.spatial_index and mesh.spatial_index.ctypes #copied from firedrake code;why?
+    con = np.array([0])  # fill me in later with a useful function
+    return((meshIndexMap, meshCoordsMap, dim, meshMapDim, numCell, sIndex, con))
+
+def passSpaceHelper(space, intTy):
+    intPtr = ct.POINTER(intTy)
+    spaceIndexMap = space.cell_node_map().values
+    spaceDim = space.cell_node_map().values.shape[1]
+    return(spaceIndexMap, spaceDim)
+
+def passFuncHelper(func, floatTy):
+    floatPtr = ct.POINTER(floatTy)
+    funcCoordMap = func.dat.data
+    return((funcCoordMap,))
+
+def passAll(func, intTy, floatTy):
+    space = func.function_space()
+    mesh = space.mesh()
+    meshTuple = passMeshHelper(mesh, intTy, floatTy)
+    spaceTuple = passSpaceHelper(space, intTy)
+    funcTuple = passFuncHelper(func, floatTy)
+    combined = meshTuple + spaceTuple + funcTuple
+    (_, _, _, buildAll) = st.makeAllTypes(intTy, floatTy)
+    return(buildAll(*combined))
+
+
+# mesh = UnitSquareMesh(5,5,5)
+# space = FunctionSpace(mesh, "Lagrange", 4)
+# spaceToJson(space, "test.json", refCellDefault="simplex")

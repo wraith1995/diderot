@@ -35,7 +35,7 @@ Note: add mapping options for the two cell options.
 Note: cellExit, cellExitPos for mesh: isAffine, we map-otherwise, we need a map
 
 Sschedule:
-1 and 2 on Thursday/Friday.-- also fix other - needs inside inserts and __inline__ directive -- the hsape issue - the shape of the function space to begin with - UGGGGG wrong...
+1 and 2 on Thursday/Friday.-- also fix other - needs inside inserts and __inline__ directive -- the hsape issue - the shape of the function space to begin with - UGGGGG wrong...-general dislike - tensor product information - reconsider extra paramters in struct - not needed as much
 
 3 and 4 on Friday and Saturday
 5 on Sunday...

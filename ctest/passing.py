@@ -8,13 +8,6 @@ import ctypes as ct
 # automation of mesh and other types of inputs will require more trickery - maybe modifying generated header file to have those types.
 
 
-floatString = "float32"
-ctylesFloat = c_float
-
-intString = "int32"
-ctylesInt = c_int32
-
-
 
 class Library:
     def __init__(self, lib, nameSpace="diderot"):
