@@ -8,6 +8,9 @@ def makeArrayType(array, ty):
     dataType = array.ctypes.data_as(POINTER(ty))
     return(dataType)
 
+def makeVoidPointerTuple(val):
+    return(val,ct.cast(ct.pointer(val), ct.c_void_p))
+
 def makeMeshType(ctylesInt, ctylesFloat):
     class _CFunction(ct.Structure):
         """C struct that represents a base mesh"""
@@ -29,7 +32,7 @@ def makeMeshType(ctylesInt, ctylesFloat):
         ty.numCells = numCells
         ty.index = ct.cast(index, ct.c_void_p)
         ty.con = makeArrayType(con, ctylesInt)
-        return(ty)
+        return(makeVoidPointerTuple(ty))
 
     return(_CFunction, build)
 
@@ -44,7 +47,7 @@ def makeSpaceType(meshTy, ctylesInt):
         ty = _CFunction()
         ty.indexMap = makeArrayType(indexMap, ctylesInt)
         ty.mesh = mesh
-        return(ty)
+        return(makeVoidPointerTuple(ty))
         
     return(_CFunction, build)
 
@@ -60,7 +63,7 @@ def makeFuncType(spaceTy, ctylesFloat):
         ty = _CFunction()
         ty.coordMap = makeArrayType(coordMap, ctylesFloat)
         ty.space = space
-        return(ty)
+        return(makeVoidPointerTuple(ty))
     return(_CFunction, build)
 
 
@@ -75,11 +78,11 @@ def makeAllTypes(ctylesInt, ctylesFloat):
                  spaceIndexMap,
                  spaceDim,
                  funcCoordMap):
-        meshVal = buildMesh(meshIndexMap, meshCoordMap, dim, meshMapDim,
+        (meshVal, meshValPtr) = buildMesh(meshIndexMap, meshCoordMap, dim, meshMapDim,
                             numCell, sIndex, con)
-        spaceVal = buildSpace(spaceIndexMap, spaceDim, meshVal)
-        funcVal = buildFunc(funcCoordMap, spaceVal)
-        return((meshVal, spaceVal, funcVal))
+        (spaceVal, spaceValPtr) = buildSpace(spaceIndexMap, spaceDim, meshVal)
+        (funcVal, funcValPtr) = buildFunc(funcCoordMap, spaceVal)
+        return((meshValPtr, spaceValPtr, funcValPtr))
     return(buildMesh, buildSpace, buildFunc, buildAll)
 
 

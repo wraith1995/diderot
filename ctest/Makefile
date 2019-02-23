@@ -1,6 +1,6 @@
 #config vars:
 SHELL = /bin/sh
-PYTHON = python3.6
+PYTHON = python3
 PYTHONINCLUDE = -I/usr/include/python3.6m -I/usr/include/python3.6m
 DIDEROTFEMPATH = /home/teocollin/gitcode/diderot
 TEEMPATH = /home/teocollin/installs/teem/teem-build
@@ -8,14 +8,14 @@ TARGET = justTypes
 NAMESPACE = $(TARGET)
 CC = clang
 CXX = clang++ -std=gnu++11
-PYTHONFILE = passing.py
+PYTHONFILE = run.py
 
 DIDEROTFEM = $(DIDEROTFEMPATH)/bin/diderotc
 DIDEROTINCLUDE = $(DIDEROTFEMPATH)/include
 DIDEROTLIB = $(DIDEROTFEMPATH)/lib
 TEEMLIB = $(TEEMPATH)/include
 
-DIDEROTFLAGS = --debug --log --json --dump-pt --dump-ast --dump-simple --dump-high --dump-mid --dump-low --dump-tree --namespace=$(NAMESPACE) --target=parallel
+DIDEROTFLAGS = --debug --log --json --dump-pt --dump-ast --dump-simple --dump-high --dump-mid --dump-low --dump-tree --namespace=$(NAMESPACE) 
 INCLUDES = -I$(DIDEROTINCLUDE) -I/usr/local/include -I$(TEEMLIB) -I$(PYTHONINCLUDE)
 LDFLAGS = -L$(DIDEROTLIB) -L/usr/local/lib -L/opt/local/lib -L/usr/lib
 LIBS = -lteem -lpng -lz -lbz2
