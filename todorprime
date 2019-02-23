@@ -1,17 +1,10 @@
 Plan:
-1.
--Build firedrake convert:
--should make basis functions
--assume verticies and plan them in via a template for the ref cell
--determine degree
--add isAffine trait.
 2.
 Use this to test:
-inverse
 findpos
 global field
 -Add isInside to meshPos - should be making a cell - 
-
+-add meshCell equality, inequality
 
 3.
 -Correct our names. Correct possible errors in the above code.

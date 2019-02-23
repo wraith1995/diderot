@@ -185,15 +185,21 @@ fun makeMonoTerms(reals, dim, degree) =
     in
      string
     end
+
+fun actualDegree(array) =
+    ArrayNd.foldri' (fn (idx,x,y) => if Real.==(x,0.0)
+				    then y
+				    else Int.max(List.foldr (op+) 0 idx, y)) 0 array
       
 fun makeBasisFunc(reals, dim, degree) =
     let
      val shape = dimDegreeShape(dim, degree)
      val reals' = A.fromArray'(reals, shape)
      val monoRep = Atom.atom (makeMonoTerms(reals', dim, degree))
-     val _ = print("Imported basis func with mono: " ^ (Atom.toString monoRep) ^ "\n")
+     val degree' = actualDegree(reals')
+     val _ = print("Imported basis func of degree "^(Int.toString degree')^" with mono: " ^ (Atom.toString monoRep) ^ "\n")
     in
-     SOME(BasisFunc({dim = dim, degree = degree, mapDim = numNonZero(Array(reals')), coeffs = Array(reals'), strForm = monoRep}))
+     SOME(BasisFunc({dim = dim, degree = degree', mapDim = numNonZero(Array(reals')), coeffs = Array(reals'), strForm = monoRep}))
      handle exn => (print(exnMessage(exn)); NONE)
     end
 
