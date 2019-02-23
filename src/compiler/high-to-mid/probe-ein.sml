@@ -274,6 +274,9 @@ structure ProbeEin : sig
 	 val basisTensorTy = Ty.TensorTy(basisShape)
 	 val basisVar = IR.Var.new("basisResult", basisTensorTy)
 	 val _ =  AvailRHS.addAssignToList (avail, (basisVar, basisOpt))
+	 (* val printBasisOpt = Op.Print(basisTensorTy) *)
+	 (* val *)
+	 (* val _ = AvailRHS.addAssignToList (avail, (basisVar, basisOpt)) *)
 	 val basisParam = E.TEN(true, basisShape)
 	 val basisAlpha = List.@(dx, [sumIndexVar])
 	 (* List.@(dx, [sumIndexVar]) if we went the other way *)
@@ -447,7 +450,7 @@ structure ProbeEin : sig
 		  let val (newInt, newPos) = callMeshPosFunc(avail, env, BasisDataArray.domainDim a, f, prePosVar, preIndexVar, meshDef) in  (a, b, newPos, false, newInt) end
 	     (*end case*))
 	 val dim = BasisDataArray.domainDim basisArray
-
+	 val _ = print("Id:"^(Bool.toString id)^"\n")
 	 val finRhs =
 	     if id
 	     then 
@@ -481,7 +484,7 @@ structure ProbeEin : sig
 		    dx, indexVar, indexSrcVar, dofSrcVar, basisArray, dofCount, dofData)
 
 	       val args'' = args @ args'
-	       val params'' = params @ params'
+	       val params'' = params @ params' @[E.TEN(true, [dim])] (*because a new pos is being attached to the end.*)
 	       val (_, body') = substituteProbe(body, probe')
 					       
 	       val einapp = (y, IR.EINAPP(mkEin(params'', index, body'), args''))

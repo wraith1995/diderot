@@ -41,7 +41,7 @@ fun power(avail, var, 0) =
     in
      AvailRHS.addAssign(avail, "one", Ty.realTy, one)
     end
-  | power (avail, var, 1) = AvailRHS.addAssign(avail, "one", Ty.realTy, IR.VAR(var))
+  | power (avail, var, 1) = AvailRHS.addAssign(avail, "iden", Ty.realTy, IR.VAR(var))
   | power(avail, var, n) =
     let
      val prev = power(avail, var, n - 1)
@@ -79,8 +79,38 @@ fun powerIndex(avail, vars, idx) =
     end
 
 (*We need this function because lack of choice about RealLit and real at various points*)
+(* fun realToRealLit x = *)
+(*     let *)
+(*      fun mkReal ss = let *)
+(*       val (isNeg, rest) = (case Substring.getc ss *)
+(* 			    of SOME(#"-", r) => (true, r) *)
+(* 			     | SOME(#"+", r) => (false, r) *)
+(* 			     | _ => (false, ss) *)
+(* 			  (* end case *)) *)
+(*       val (whole, rest) = Substring.splitl Char.isDigit rest *)
+(*       val rest = Substring.triml 1 rest (* remove "." *) *)
+(*       val (frac, rest) = Substring.splitl Char.isDigit rest *)
+(*       val exp = if Substring.isEmpty rest *)
+(* 		then 0 *)
+(* 		else let *)
+(*                  val rest = Substring.triml 1 rest (* remove "e" or "E" *) *)
+(* 		in *)
+(*                  #1(valOf(IntInf.scan StringCvt.DEC Substring.getc rest)) *)
+(* 		end *)
+(*      in *)
+(*       (RealLit.real{ *)
+(*          isNeg = isNeg, *)
+(*          whole = Substring.string whole, *)
+(*          frac = Substring.string frac, *)
+(*          exp = exp *)
+(*       }) *)
+(*      end *)
+(*     in *)
+(*      mkReal (Substring.extract (Real.toString x, 0, NONE)) *)
+(*     end *)
 fun realToRealLit x =
     let
+     val preProc  = String.implode o (List.map (fn #"~" => #"-" | a => a)) o String.explode
      fun mkReal ss = let
       val (isNeg, rest) = (case Substring.getc ss
 			    of SOME(#"-", r) => (true, r)
@@ -88,7 +118,10 @@ fun realToRealLit x =
 			     | _ => (false, ss)
 			  (* end case *))
       val (whole, rest) = Substring.splitl Char.isDigit rest
-      val rest = Substring.triml 1 rest (* remove "." *)
+      val rest = (case Substring.getc rest
+		   of SOME(#".", _) => Substring.triml 1 rest (* remove "." if it exists*)
+		    | _ => rest
+		  (* end case*))
       val (frac, rest) = Substring.splitl Char.isDigit rest
       val exp = if Substring.isEmpty rest
 		then 0
@@ -106,9 +139,8 @@ fun realToRealLit x =
       })
      end
     in
-     mkReal (Substring.extract (Real.toString x, 0, NONE))
-    end
-
+     mkReal (Substring.extract (preProc(Real.toString x), 0, NONE))
+    end		       
       
 
 fun evalFunctionDumb(avail, basisFunc, vars) =

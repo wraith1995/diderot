@@ -191,7 +191,7 @@ fun makeBasisFunc(reals, dim, degree) =
      val shape = dimDegreeShape(dim, degree)
      val reals' = A.fromArray'(reals, shape)
      val monoRep = Atom.atom (makeMonoTerms(reals', dim, degree))
-     (* val _ = print("Imported basis func with mono: " ^ (Atom.toString monoRep) ^ "\n") *)
+     val _ = print("Imported basis func with mono: " ^ (Atom.toString monoRep) ^ "\n")
     in
      SOME(BasisFunc({dim = dim, degree = degree, mapDim = numNonZero(Array(reals')), coeffs = Array(reals'), strForm = monoRep}))
      handle exn => (print(exnMessage(exn)); NONE)
