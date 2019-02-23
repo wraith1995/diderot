@@ -199,7 +199,7 @@ def spaceToJson(V, jsonFile, refCellDefault="other"):
 # mesh = UnitSquareMesh(5,5,5)
 # space = FunctionSpace(mesh, "Lagrange", 4)
 # spaceToJson(space, "test.json", refCellDefault="simplex")
-
+#np.asfarray(
         
 def passMeshHelper(mesh, intTy, floatTy):
     intPtr = ct.POINTER(intTy)
@@ -207,6 +207,7 @@ def passMeshHelper(mesh, intTy, floatTy):
     meshCoords = mesh.coordinates
     meshIndexMap = meshCoords.cell_node_map().values
     meshCoordsMap = meshCoords.dat.data
+    print(meshCoords.dat.data)
     dim = mesh.topological_dimension()
     meshMapDim = meshCoords.cell_node_map().values.shape[1]
     numCell = meshCoords.cell_node_map().values.shape[0]
@@ -236,6 +237,6 @@ def passAll(func, intTy, floatTy):
     return(buildAll(*combined))
 
 
-# mesh = UnitSquareMesh(5,5,5)
+# mesh = UnitSquareMesh(5,5,5)x
 # space = FunctionSpace(mesh, "Lagrange", 4)
 # spaceToJson(space, "test.json", refCellDefault="simplex")
