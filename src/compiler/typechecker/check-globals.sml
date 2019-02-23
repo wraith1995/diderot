@@ -429,7 +429,7 @@ structure CheckGlobals : sig
 		    AST.E_Prim(var, tyArgs, exprs', result)
 		   end
 
-	       fun makePrimStatement(msg, vars) = AST.S_Print((AST.E_Lit(Literal.String(msg)))::vars)
+	       fun makePrinStatement(msg, vars) = AST.S_Print((AST.E_Lit(Literal.String(msg)))::vars)
 							     
 
 
@@ -922,7 +922,6 @@ structure CheckGlobals : sig
 				      initPos,
 				      probeDAssign,
 				      forLoop,
-				      makePrimStatement("Fail return all loops\n",[]),
 				      failReturn])
 			 end
 			else
@@ -1067,7 +1066,8 @@ structure CheckGlobals : sig
 			in
 			 ([(funcCell, funcCellFuncVar), (spaceFunc, spaceFuncVar)],
 			  [funcCellFunc, spaceFun],
-			  [result])
+			  [result],
+			 [])
 			end
 		      | ((FT.Space(s), n), PT.T_Space(meshName)) =>
 			let
@@ -1081,12 +1081,13 @@ structure CheckGlobals : sig
 			 val meshFuncBody =  AST.S_Block([AST.S_Return(AST.E_ExtractFem(AST.E_Var(param,span),mesh))])
 			 val meshFun = AST.D_Func(meshFuncVar, [param], meshFuncBody)
 			in
-			 ([(meshFunc, meshFuncVar)], [meshFun],[])
+			 ([(meshFunc, meshFuncVar)], [meshFun],[],[])
 			end
 		      | ((meshData as FT.Mesh(m), n), PT.T_Mesh) =>
 			let
 			 val meshName = FT.nameOf meshData
 			 val meshArgTy = Ty.T_Named(tyName, Ty.T_Fem(femInfo))
+			 val meshCellTy = Ty.T_Fem(FT.MeshCell(m), SOME(tyName))
 			 val numCell = Atom.atom "numCell"
 			 val meshType = Ty.T_Fem(FT.Mesh(m), SOME(tyName))
 			 val numCellFuncTy = Ty.T_Fun([meshArgTy],Ty.T_Int)
@@ -1171,13 +1172,47 @@ structure CheckGlobals : sig
 
 			 val meshPosFunc = AST.D_Func(meshPosFuncVar, [meshParam, posParam], meshPosBody)
 
+
+			 (*Equality Function:N.op_equ, N.op_neq*)
+
+			 local
+			  val cell1 = Var.new(Atom.atom "cell1", span, Var.FunParam, meshCellTy)
+			  val cell2 = Var.new(Atom.atom "cell1", span, Var.FunParam, meshCellTy)
+			  fun cellInt x = AST.E_ExtractFemItem(AST.E_Var(x,span), Ty.T_Int, (FemOpt.CellIndex, FT.Mesh(m)))
+			  val result1 = makePrim'(BV.equ_ii, [cellInt cell1, cellInt cell2], [Ty.T_Int, Ty.T_Int], Ty.T_Int)
+			  val result2 = makePrim'(BV.neq_ii, [cellInt cell1, cellInt cell2], [Ty.T_Int, Ty.T_Int], Ty.T_Int)
+			  val ret1 = AST.S_Return(result1)
+			  val ret2 = AST.S_Return(result2)
+
+			  val atom1 = BasisNames.op_equ
+			  val atom2 = BasisNames.op_neq
+
+			  val funTy = Ty.T_Fun([meshCellTy, meshCellTy], Ty.T_Bool)
+			  val funVar1 = Var.new(atom1, span, Var.FunVar, funTy)
+			  val funVar2 = Var.new(atom2, span, Var.FunVar, funTy)
+
+			  val func1 = AST.D_Func(funVar1, [cell1, cell2], ret1)
+			  val func2 = AST.D_Func(funVar2, [cell1, cell2], ret2)
+
+						 
+
+						 
+			 in
+			 val (eqFunc, nEqFunc) = (func1, func2)
+			 val eqFuncPair = (atom1, funVar1)
+			 val nEqFuncPair = (atom2, funVar2)
+			 end
+
+						     
+
 		
 
 
 			in
-			 ([(numCell, numCellFuncVar), (cells', cellFuncVar'), (refCellName, refCellFuncVar), (meshPosFuncAtom, meshPosFuncVar)],
-			  [numCellFun, cellsFun', cellsFun, refCellFunc, meshPosFunc],
-			  [(cells, makeCells, cellTypeFuncTy)])
+			 ([(numCell, numCellFuncVar), (cells', cellFuncVar'), (refCellName, refCellFuncVar), (meshPosFuncAtom, meshPosFuncVar), eqFuncPair, nEqFuncPair],
+			  [numCellFun, cellsFun', cellsFun, refCellFunc, meshPosFunc, eqFunc, nEqFunc],
+			  [(cells, makeCells, cellTypeFuncTy)],
+			  [eqFuncPair, nEqFuncPair])
 			end
 
 		   (*end case*))
@@ -2083,11 +2118,23 @@ structure CheckGlobals : sig
 		    (* end case *))
 		   end
 
+	       fun addOverloads(cxt, (env, moreDcls), loads) =
+		   let
+		   
+		    fun addOverload((name, func), env) =
+			let
+			  val E.PrimFun(funcs) = E.findFunc(env, name)
+			in
+			 E.insertOverloadPrim(env, cxt, name, func::funcs)
+			end
+		   in
+		    (List.foldr addOverload env loads, moreDcls)
+		   end
 
 	       fun makeFemType femTyDef file =
 		   let
 		    val (femType, constants, geometry) = validateFemType femTyDef file
-		    val (methodRefs, methods, newVars) = Option.getOpt (Option.map (makeFemMethods femTyDef file) femType, ([],[],[]))
+		    val (methodRefs, methods, newVars, overloads) = Option.getOpt (Option.map (makeFemMethods femTyDef file) femType, ([],[],[],[]))
 		    val constants' = reformatConstants constants
 		    val envI =  Option.map (fn x => Env.insertNamedType(env, cxt, tyName, Ty.T_Fem(x), constants', methodRefs, newVars)) femType
 
@@ -2095,6 +2142,8 @@ structure CheckGlobals : sig
 				       of (SOME(envI'), SOME((femTy', _))) => SOME((envI', femTy'))
 					| _ => NONE)
 		    val env' = Option.map (makeDescendentFemTypes geometry) argsOption
+		    val env'' = Option.map (fn x => addOverloads(cxt, x, overloads)) env'
+
 		   in
 		    (case env'
 		      of SOME(env'', methods') => (OTHERS(List.@(methods', methods)), env'')
