@@ -1,10 +1,12 @@
 import ctypes as ct
 from ctypes import POINTER, c_int, c_double, c_void_p, c_float, c_int32, c_uint
-
+import numpy as np
 
 
 def makeArrayType(array, ty):
     array.flatten()
+    if ty == c_float or ty == c_double:
+        array = np.asfarray(array, dtype=ty)
     dataType = array.ctypes.data_as(POINTER(ty))
     return(dataType)
 

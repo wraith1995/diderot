@@ -14,6 +14,7 @@ strand gg(cell{msh} j){
 
   update{
     print(a.numCell,"\n");
+    print(j.transformDofs(), "\n");
     print("start:", pos, "\n");
     pos = j.transform(pos);
     print("world:", pos, "\n");
