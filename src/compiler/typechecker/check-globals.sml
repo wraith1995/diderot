@@ -429,6 +429,10 @@ structure CheckGlobals : sig
 		    AST.E_Prim(var, tyArgs, exprs', result)
 		   end
 
+	       fun makePrimStatement(msg, vars) = AST.S_Print((AST.E_Lit(Literal.String(msg)))::vars)
+							     
+
+
 	       fun makePrim'(var, args, argTys, resultTy) =
 		   let
 		    val (tyArgs, Ty.T_Fun(domTy, rngTy)) = TU.instantiate(Var.typeOf var)
@@ -504,7 +508,7 @@ structure CheckGlobals : sig
 		      | FemData.KSimplex(dim) =>
 			let
 			 val digits = List.tabulate(100, fn x => 3)
-			 val exp = IntInf.fromInt (1)
+			 val exp = IntInf.fromInt (0)
 			 val third = RealLit.fromDigits({isNeg = false, digits = digits, exp = exp})
 			in
 			 AST.E_Tensor(List.tabulate(dim, fn x => AST.E_Lit(Literal.Real(third))), vecTy)
@@ -918,6 +922,7 @@ structure CheckGlobals : sig
 				      initPos,
 				      probeDAssign,
 				      forLoop,
+				      makePrimStatement("Fail return all loops\n",[]),
 				      failReturn])
 			 end
 			else
