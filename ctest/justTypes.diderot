@@ -10,12 +10,13 @@ input FUNC c = FUNC(b);
 refCell{msh} AAA = a.refcell();
 int[] umm = {1,2,3};
 strand gg(cell{msh} j){
-  output vec2 pos = [0.333333333333, 0.33333333333333];
+  output vec2 pos = [0.333333333333333333, 0.333333333333333];
 
   update{
     print(a.numCell,"\n");
     print(j.transformDofs(), "\n");
-    print([1 - 2 * 0.333333333, 0.33333333, 0.333333333] • j.transformDofs(), "\n");
+    vec2 r = [1 - pos[0] - pos[1], pos[0], pos[1]] • j.transformDofs();
+    print("real:", r , "\n");
     print("start:", pos, "\n");
     pos = j.transform(pos);
     print("world:", pos, "\n");

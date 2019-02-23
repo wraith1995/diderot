@@ -123,7 +123,12 @@ structure MidToLow : sig
               | SrcOp.BuildPos s => expandBuildPos (y, s, args')
               | SrcOp.EvalKernel(d, h, k) => EvalKern.expand(y, d, h, k, args')
 	      | SrcOp.EvaluateBasis(data) => (case args'
-					       of [x] => EvalBasis.expand(y, data, x)
+					       of [x] =>
+						  let
+						   val res = EvalBasis.expand(y, data, x)
+						  in
+						   res
+						  end
 						| _ => raise Fail("bogus operator " ^ SrcOp.toString rator)
 					     (* end case*))
               | SrcOp.Kernel _ => dummy()
