@@ -921,7 +921,9 @@ structure Simplify : sig
 	       val one = newTemp STy.T_Int
 	       val numCells = newTemp STy.T_Int
 	       val itterStart = newTemp STy.T_Int
+
 	       val itterEnd = newTemp STy.T_Int
+	       val itterEnd' = newTemp STy.T_Int
 
 	       val itterIn = iterVar (newTemp STy.T_Int)
 	       val intSeqTy =  (STy.T_Sequence(STy.T_Int, NONE))
@@ -934,7 +936,8 @@ structure Simplify : sig
 	       val block = List.rev [
 		    S.S_Var(itterStart, SOME(S.E_Lit(Literal.Int(IntLit.fromInt 0)))),
 		    S.S_Var(one, SOME(S.E_Lit(Literal.Int(IntLit.fromInt 1)))),
-		    S.S_Var(itterEnd, SOME(S.E_ExtractFemItem(x', STy.T_Int, (FemOpt.NumCell, data)))),
+		    S.S_Var(itterEnd', SOME(S.E_ExtractFemItem(x', STy.T_Int, (FemOpt.NumCell, data)))),
+		    S.S_Var(itterEnd, SOME(S.E_Prim(BasisVars.sub_ii,[], [itterEnd', one], STy.T_Int))),
 
 		    S.S_Var(acc, SOME(S.E_Prim(BasisVars.range, [], [itterStart, itterEnd], intSeqTy))),
 		    S.S_Var(accp, SOME(S.E_Seq([], femCellTySeq))),

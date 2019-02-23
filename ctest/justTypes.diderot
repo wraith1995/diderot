@@ -9,13 +9,16 @@ input fns b = fns(a);
 input FUNC c = FUNC(b);
 refCell{msh} AAA = a.refcell();
 int[] umm = {1,2,3};
-strand gg(int i, cell{msh} j){
-  output position{msh} pos = a.findPos([0.0,0.0]);
-  real smesh = AAA.exit(pos, [0.5,0.5]);
-  position{msh} pos' = AAA.exitPos(pos, [0.5,0.5]);
+strand gg(cell{msh} j){
+  output vec2 pos = [0.3, 0.3];
 
   update{
-    print(pos');
+    print(a.numCell,"\n");
+    print("start:", pos, "\n");
+    pos = j.transform(pos);
+    print("world:", pos, "\n");
+    pos = j.invTransform(pos);
+    print("return:", pos, "\n");
     stabilize;
   }
-} create_collection {gg(j,k) | j in umm, k in a.cells()};
+} create_collection {gg(k) |k in a.cells()};
