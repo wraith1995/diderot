@@ -256,8 +256,8 @@ structure GenTysAndOps : sig
 		  val printer = CL.mkFuncDcl(osty, "operator<<", [CL.PARAM([], osty, "os"), CL.PARAM(["const"], meshPosRefTy, "pos")], 
 					     CL.S_Block([
 							CL.S_Return(SOME(CL.E_BinOp(CL.E_Var("os"),
-										    CL.#<<, CL.E_Str("...\n")
-										       )))])) (*CL.E_Select(CL.E_Var("pos"),"cell")*)
+										    CL.#<<, CL.E_Select(CL.E_Var("pos"),"cell")
+										       )))]))
 
 		  fun assgn src name = CL.S_Exp(CL.E_AssignOp(CL.E_Select(CL.E_Var(src),name), CL.$=, CL.E_Var(name)))
 		  fun assgnTensor src name = CL.S_Exp(CL.E_AssignOp(CL.E_Select(CL.E_Var(src),name), CL.$=, CL.E_Select(CL.E_Var(name), "_data")))

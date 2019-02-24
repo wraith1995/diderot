@@ -22,6 +22,9 @@ strand gg(cell{msh} j){
     print("world:", pos, "\n");
     pos = j.invTransform(pos);
     print("return:", pos, "\n");
+    pos = j.transform(pos);
+    position{msh} umm = a.findPos(pos);
+    print(umm,"...", umm.refPos(),"...", umm.worldPos(),"...");
     stabilize;
   }
 } create_collection {gg(k) |k in a.cells()};
