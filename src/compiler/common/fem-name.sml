@@ -22,6 +22,7 @@ val hiddenNewtonInverse = "newtonInverse"
 (*ref cell:*)
 val refCellIsInside = "isInside"
 val isInsideMesh = "isInside"
+val isInsideMeshCell = "isInside"
 		  
 (*space: *)
 val spaceMapDim = "spaceMapDim"
