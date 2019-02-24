@@ -234,7 +234,7 @@ def passAll(func, intTy, floatTy):
     funcTuple = passFuncHelper(func, floatTy)
     combined = meshTuple + spaceTuple + funcTuple
     (_, _, _, buildAll) = st.makeAllTypes(intTy, floatTy)
-    return(buildAll(*combined))
+    return((combined,buildAll(*combined)))
 
 
 # mesh = UnitSquareMesh(5,5,5)x

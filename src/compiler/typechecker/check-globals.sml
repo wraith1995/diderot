@@ -851,7 +851,7 @@ structure CheckGlobals : sig
 		    body
 		   end
 
-	       fun makeNewtonInversesBody(env, cxt, span, refCellClass, meshData, newtonTol, newtonAttempts, contraction, killAfterTol, posExpr, cellIntExpr, meshExpr, insideFunction, start) =
+	       fun makeNewtonInversesBody(env, cxt, span, refCellClass, meshData, newtonTol, newtonAttempts, contraction, killAfterTol, posExpr, cellIntExpr, meshExpr, insideFunction, start, meshTy) =
 		   let
 		    (*Setup useful types*)
 		    val dim = FemData.meshDim meshData
@@ -874,6 +874,7 @@ structure CheckGlobals : sig
 		    val itterRange = makePrim'(BV.range,
 					       [AST.E_Lit(Literal.intLit 0), newtonAttempts],
 					       [Ty.T_Int, Ty.T_Int], Ty.T_Sequence(Ty.T_Int, NONE)) (*TODO: shouldn't we put a SOME here.*)
+					      
 		    val itter = (itterVar, itterRange)
 					   
 
@@ -887,9 +888,22 @@ structure CheckGlobals : sig
 		    val deltaNormTest = makePrim'(BV.gte_rr, [tolExpr, deltaNorm], [Ty.realTy, Ty.realTy], Ty.T_Bool)
 		    val insideTest = insideFunction([meshExpr, newPosVarExpr])
 		    (* val combinedTest = AST.Andalso(deltaNormTest, insideTest) (*note: we might want to combined them...... it might be better to do delta test then inside test????*) *)
-		    val succesReturn = AST.S_Return(newPosVarExpr) (*TODO: return the itterated thing*)
-		    val nans = makePrim'(BV.nan, [], [], insideVec) (*return nans to signal failure*)
-		    val failReturn = AST.S_Return(nans)
+
+		    (* val nans = makePrim'(BV.nan, [], [], insideVec) (*return nans to signal failure*) *)
+		    (*TODO: check order*)
+		    (* val FemData.Mesh(mesh) = meshData *)
+		    val meshPosData = FT.MeshPos(meshData)
+		    val meshPosTy = Ty.T_Fem(meshPosData, SOME(FemData.nameOf (FT.Mesh(meshData))))
+		    val makeMeshPos = AST.E_ExtractFemItemN([meshExpr, cellIntExpr, newPosVarExpr, posExpr], [meshTy, Ty.T_Int, insideVec, insideVec], meshPosTy, (FemOpt.AllBuild, meshPosData), NONE)
+		    val invalidMeshPos = AST.E_ExtractFemItemN([meshExpr], [ meshTy], meshPosTy, (FemOpt.InvalidBuild, meshPosData), NONE)
+		    val succesIntermediate = Var.new (Atom.atom "dump", span, Var.LocalVar, meshPosTy)
+		    val sia = AST.S_Assign((succesIntermediate,span), (makeMeshPos))
+		    val printIt = makePrinStatement("This is dumb", [AST.E_Var(succesIntermediate,span)])
+		    val okay = makePrinStatement("This is reall dumb so\n",[])
+							      
+		    val failReturn = AST.S_Return(invalidMeshPos)
+		    val succesReturn = AST.S_Return(makeMeshPos)
+		    val rightBefore = makePrinStatement("Hello\n",[newPosVarExpr]);
 		    val ifStm = if true
 				then AST.S_IfThenElse(deltaNormTest, (*we might want to change this test to be this and that, rather than a nested if.*)
 						 AST.S_Block([AST.S_IfThenElse(insideTest,
@@ -1157,6 +1171,12 @@ structure CheckGlobals : sig
 			 val meshPosfuncTy = Ty.T_Fun([meshArgTy, vecTy], meshPosTy)
 			 val meshPosFuncVar = Var.new (meshPosFuncAtom, span, AST.FunVar, meshPosfuncTy)
 
+			 val meshInsideAtom = Atom.atom FemName.isInsideMesh
+			 val meshInsideType = Ty.T_Fun([cellType], Ty.T_Bool)
+			 fun meshInsideFunc([v1, v2]) = AST.E_ExtractFemItem(AST.E_Apply((meshPosFuncVar, span), [v1, v2], Ty.T_Bool), Ty.T_Bool, (FemOpt.Valid,meshPos))
+			   | meshInsideFunc (_) = raise Fail "impossible type checker error"
+
+
 			 fun makeRefCellInsideFunc vars = (case vars
 							    of [v1,v2] => makeRefCellInside(env, cxt, span, mapDim, refCellData, v2, v1, insideInsert, meshData, Ty.T_Fem(meshData, NONE))
 							     | _ => raise Fail "impossble got through type checker"
@@ -1211,7 +1231,7 @@ structure CheckGlobals : sig
 			in
 			 ([(numCell, numCellFuncVar), (cells', cellFuncVar'), (refCellName, refCellFuncVar), (meshPosFuncAtom, meshPosFuncVar), eqFuncPair, nEqFuncPair],
 			  [numCellFun, cellsFun', cellsFun, refCellFunc, meshPosFunc, eqFunc, nEqFunc],
-			  [(cells, makeCells, cellTypeFuncTy)],
+			  [(cells, makeCells, cellTypeFuncTy), (meshInsideAtom, meshInsideFunc, meshInsideType)],
 			  [eqFuncPair, nEqFuncPair])
 			end
 
@@ -1942,7 +1962,7 @@ structure CheckGlobals : sig
 
 			  fun mkVar (var) = AST.E_Var(var,span)
 			  val (newtonResult) = let (*TODO: USE let a lot here too refactor this code... god this code is ugly*)
-			   val hiddenFuncAtom = (FT.functionNameMake femType (FemName.hiddenNewtonInverse))
+			   val hiddenFuncAtom = (FT.functionNameMake femType (FemName.hiddenNewtonInverse)) (*TODO: inconsistent scheme for hiding this...*)
 
 
 
@@ -1957,8 +1977,8 @@ structure CheckGlobals : sig
 			   val posParam = Var.new (Atom.atom "pos", span, AST.FunParam, posTy)
 			   val cellIntParam = Var.new (Atom.atom "cellInt", span, AST.FunParam, Ty.T_Int)
 			   val meshParam = Var.new (Atom.atom "mesh", span, AST.FunParam, meshTy)
-
-			   val funTy = Ty.T_Fun([Ty.vecTy mapDim, Ty.T_Int, meshTy], posTy)
+			   val meshPosTy = Ty.T_Fem(FT.MeshPos(m), SOME(FT.nameOf (FT.Mesh(m))))
+			   val funTy = Ty.T_Fun([Ty.vecTy mapDim, Ty.T_Int, meshTy], meshPosTy)
 			   val hiddenFuncVar = Var.new (hiddenFuncAtom, span, AST.FunVar, funTy)
 						       
 			   val posExpr = mkVar posParam
@@ -1967,7 +1987,7 @@ structure CheckGlobals : sig
 						
 			   val insideFunc = makeRefCellInsideFunc
 
-			   val body = makeNewtonInversesBody(env, cxt, span, refCellClass, meshData, newtonTol, newtonAttempts, contraction, killAfterTol, posExpr, cellIntExpr, meshExpr, insideFunc, start)
+			   val body = makeNewtonInversesBody(env, cxt, span, refCellClass, meshData, newtonTol, newtonAttempts, contraction, killAfterTol, posExpr, cellIntExpr, meshExpr, insideFunc, start, meshTy)
 			   val newtonFunc = AST.D_Func(hiddenFuncVar, [posParam, cellIntParam, meshParam], body)
 
 

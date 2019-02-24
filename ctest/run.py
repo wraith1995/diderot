@@ -3,7 +3,7 @@ import ctypes as ct
 import firedrake_build as fb
 import os
 import passing
-
+import dill
 
 #Firedrake stuff:
 mesh = UnitSquareMesh(1,1)
@@ -16,14 +16,14 @@ intTy = ct.c_int32
 floatTy = ct.c_float
 # build json
 jsonFile = "test.json"
+dataFile = "ugg.dill"
 if os.path.exists(jsonFile):
     pass
 else:
     fb.spaceToJson(space, "test.json", refCellDefault="simplex")
 # build data
-femArgs = fb.passAll(f, intTy, floatTy)
-print(femArgs)
-#program:
+(preFemArgs, femArgs) = fb.passAll(f, intTy, floatTy)
+
 programNameArg = "justTypes"
 nameSpaceArg = "justTypes"
 library = ct.CDLL("./" + programNameArg + ".so")
