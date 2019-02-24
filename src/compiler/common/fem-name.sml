@@ -23,7 +23,10 @@ val hiddenNewtonInverse = "newtonInverse"
 val refCellIsInside = "isInside"
 val isInsideMesh = "isInside"
 val isInsideMeshCell = "isInside"
-		  
+val isValidCell = "isValid"
+val refVerts = "vertices"
+
+val refMeshPos = "meshPos"
 (*space: *)
 val spaceMapDim = "spaceMapDim"
 val dim = "dim"

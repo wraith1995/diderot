@@ -2029,12 +2029,44 @@ structure CheckGlobals : sig
 			       in
 				getValid
 			       end
-			     | makeInsideCell _ = raise Fail "typechecker error."
+			     | makeInsideCell _ = raise Fail "typechecker error"
 			  in
 			  val insideCellTriple = (insideCellAtom, makeInsideCell, insideCellFunTy)
 			  end
 
-			  val transformFuncs = [(transformDofs, makeTransformDofs, transformsDofsFunTy), (transform, makeTransformFieldFunc, transformFieldFunc), invTransformSpec, insideCellTriple]
+			  local
+			   val isValidAtom = Atom.atom (FemName.isValidCell)
+			   val isValidFunTy = Ty.T_Fun([cellTy], Ty.T_Bool)
+			   fun makeValidCheck([v1]) =
+			       let
+				val int =  AST.E_ExtractFemItem(v1, Ty.T_Int, (FemOpt.CellIndex, cellData))
+				val test = makePrim'(BV.gte_ii, [int, AST.E_Lit(Literal.intLit 0)], [Ty.T_Int, Ty.T_Int], Ty.T_Bool)
+			       in
+				test
+			       end
+			     | makeValidCheck _ = raise Fail "typechecker error"
+			  in
+			  val validCellTriple = (isValidAtom, makeValidCheck, isValidFunTy)
+			  end
+
+			  local
+			   val refMeshPosAtom = Atom.atom (FemName.refMeshPos)
+			   val refMeshFunTy = Ty.T_Fun([cellTy, dimSizeVec], posTy)
+			   fun refMeshPosBuild([v1, v2]) =
+			       let
+				val mesh = AST.E_ExtractFem(v1, meshData)
+				val int = AST.E_ExtractFemItem(v1, Ty.T_Int, (FemOpt.CellIndex, cellData))
+				val result = AST.E_ExtractFemItemN([mesh, int, v2], [meshTy, Ty.T_Int, dimSizeVec], posTy, (FemOpt.RefBuild, posData), NONE)
+			       in
+				result
+			       end
+			     | refMeshPosBuild _ = raise Fail "typechecker error"
+			  in
+			  val refMeshPosTriple = (refMeshPosAtom, refMeshPosBuild, refMeshFunTy)
+			  end
+
+			  val transformFuncs = [(transformDofs, makeTransformDofs, transformsDofsFunTy), (transform, makeTransformFieldFunc, transformFieldFunc),
+						invTransformSpec, insideCellTriple,validCellTriple, refMeshPosTriple]
 			  val cellMethods = [(hiddenFuncAtom, hiddenFuncVar)]
 			  (* TODO: The naming in this area of the compiler is really inconsistent*)
 
@@ -2052,7 +2084,20 @@ structure CheckGlobals : sig
 			  val refCellTransformFuncs = [(refCellInside, makeRefCellInsideFunc, refCellInsideTy)]
 			  val (refActualFuncI, refActualFuncDcls, refReplaceFunc) = #ref geometryInfo
 			  val refCellTransformFuncs' = refReplaceFunc@refCellTransformFuncs
-			 
+
+			  (* local *)
+			  (*  val vertsAtom = Atom.atom (FemName.refVerts) *)
+			  (*  val vertsSeqTy = Ty.T_Sequence(dimSizeVec, NONE) *)
+			  (*  val vertsSeqFunTy = Ty.T_Fun([refCellTy], vertsSeqTy) *)
+			  (*  fun vertsReplaceFun([v1]) = *)
+			  (*      let *)
+				
+			  (*      in *)
+			  (*      end *)
+			  (*    | vertsReplaceFun _ = raise Fail "type checker error" *)
+			  (* in *)
+			  
+			  (* end *)
 
 
 			  val env'' = Env.insertNamedType(env', cxt, refCellName, refCellTy, constants, refActualFuncI, refCellTransformFuncs')

@@ -26,7 +26,8 @@ strand gg(cell{msh} j){
     pos = j.transform(pos);
     position{msh} umm = a.findPos(pos);
     print(umm,"...", umm.refPos(),"...", umm.worldPos(),"...\n");
-    print("\nfin: ",F(pos), "\n");
+    
+    print("\nfin: ",∇⊗(j.transform)(pos), "\n");
     
     stabilize;
   }
