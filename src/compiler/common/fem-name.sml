@@ -21,6 +21,7 @@ val meshPos = "findPos"
 val hiddenNewtonInverse = "newtonInverse"
 (*ref cell:*)
 val refCellIsInside = "isInside"
+val isInsideMesh = "isInside"
 		  
 (*space: *)
 val spaceMapDim = "spaceMapDim"

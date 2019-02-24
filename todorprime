@@ -1,10 +1,33 @@
+--
+Plan now:
+An hour for this:
+meshCell:
+
+insideCell--need that damn inverse function to return a meshPos-- think this through a bit more --- --- just do inverse
+validCell
+meshPos -- make two versions -- later -- -- (make Cell given reference + cell) -- dump...
+
+meshPos:
+
+isValid
+
+refCell:
+verticies
+
+NEXT: GLOAL TEST
+Next: Test these refCell things on actual geometry... need to build connectivity
+Next: error checking in there (normal, 3d case,) - FIGURE I WANT IS FOR LANGUAGE DESIGN SECTION
+Next: Other optimizatoins/ a thing that gordon wants/Figures.
+Next: inserting code.
+---
+Left:
+meshPos/refCell Geometry (4)
+
 Plan:
 2.
 Use this to test:
-findpos
+findpos/
 global field
--Add isInside to meshPos - should be making a cell - 
--add meshCell equality, inequality
 
 3.
 -Correct our names. Correct possible errors in the above code.

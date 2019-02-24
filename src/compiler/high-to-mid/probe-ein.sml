@@ -382,16 +382,27 @@ structure ProbeEin : sig
 	let
 	 (*we need to find the function*)
 	 val Ty.FemData(data) = IR.Var.ty meshVar
+	 val FemData.Mesh(meshData) = data
+	 val meshPosData = FemData.MeshPos(meshData)
+	 val meshPosTy = Ty.FemData(meshPosData)    
+
 	 val tempName = Atom.toString (FemData.functionNameMake' data (FemName.hiddenNewtonInverse) func)
 	 val paramTys = [HTy.TensorTy([n]), HTy.IntTy, HTy.FemData data]
-	 val newFuncFV = HIR.FV{id=func, name = tempName, ty = HTy.TensorTy([n]),
+			  
+	 val newFuncFV = HIR.FV{id=func, name = tempName, ty = HTy.FemData(meshPosData),
 				useCnt = ref 1,
 				paramTys = paramTys,
 				props = PropList.newHolder ()}
 	 val targetFV = Env.renameFV(env, newFuncFV)
-	 
+	 val meshPosResult = AvailRHS.addAssign(avail, "callNewtonPos", meshPosTy, IR.APPLY(targetFV, [posVar, cellIntVar, meshVar]))
+	 val newPosVar = AvailRHS.addAssign(avail, "refPos",
+					    Ty.TensorTy([n]),
+					    IR.OP(
+					     Op.ExtractFemItem( Ty.TensorTy([n]),
+								(FemOpt.RefPos, data)),
+					     [meshPosResult]))
 	in
-	 AvailRHS.addAssign(avail, "callNewton", Ty.TensorTy([n]), IR.APPLY(targetFV, [posVar, cellIntVar, meshVar]))
+	 newPosVar
 	end
 
     fun callMeshPosFunc(avail, env, n, func, posVar, meshVar, meshData) =
