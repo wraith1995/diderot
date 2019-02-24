@@ -710,7 +710,7 @@ structure CheckGlobals : sig
 		    val deltaNormTest = makePrim'(BV.gte_rr, [tolExpr, deltaNorm], [Ty.realTy, Ty.realTy], Ty.T_Bool)
 						 
 		    val insideTest = insideFunction([meshExpr, newPosVarExpr])
-		    val makeMeshPos = AST.E_ExtractFemItemN([meshExpr, cellItterVarExp, posExpr, newPosVarExpr], [meshTy, Ty.T_Int, insideVec, insideVec], meshPosType, (FemOpt.AllBuild, meshPosData), NONE)
+		    val makeMeshPos = AST.E_ExtractFemItemN([meshExpr, cellItterVarExp,newPosVarExpr, posExpr], [meshTy, Ty.T_Int, insideVec, insideVec], meshPosType, (FemOpt.AllBuild, meshPosData), NONE)
 		    val invalidMeshPos = AST.E_ExtractFemItemN([meshExpr], [ meshTy], meshPosType, (FemOpt.InvalidBuild, meshPosData), NONE)
 
 		    val succesReturn = AST.S_Return(makeMeshPos)
