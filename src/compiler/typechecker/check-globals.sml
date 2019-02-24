@@ -1918,6 +1918,9 @@ structure CheckGlobals : sig
 			  val refCellTy = Ty.T_Fem(refCellData, SOME(meshName))
 			  val refCellInfo = FT.refCell m
 
+			  val posData = FT.MeshPos(m)
+			  val posTy = Ty.T_Fem(posData, SOME(meshName))
+
 			  val transformDofs = Atom.atom "transformDofs"
 			  val transformDofsTy = Ty.T_Tensor(Ty.Shape((List.map Ty.DimConst shape))) (*careful*)
 			  val transformsDofsFunTy = Ty.T_Fun([cellTy], transformDofsTy)
@@ -2016,7 +2019,22 @@ structure CheckGlobals : sig
 			       (invTransformField, makeInvTransformFieldFunc, invTransformFieldFuncTy)
 			      end
 
-			  val transformFuncs = [(transformDofs, makeTransformDofs, transformsDofsFunTy), (transform, makeTransformFieldFunc, transformFieldFunc), invTransformSpec]
+			  local
+			   val insideCellAtom = Atom.atom (FemName.isInsideMeshCell)
+			   val insideCellFunTy = Ty.T_Fun([cellTy, dimSizeVec], Ty.T_Bool)
+			   fun makeInsideCell([v1,v2]) =
+			       let
+				val getPos = AST.E_Apply((hiddenFuncVar,span), [v2, AST.E_ExtractFemItem(v1, Ty.T_Int, (FemOpt.CellIndex, cellData)), AST.E_ExtractFem(v1, meshData)], posTy)
+				val getValid = AST.E_ExtractFemItem(getPos, Ty.T_Bool, (FemOpt.Valid, posData))
+			       in
+				getValid
+			       end
+			     | makeInsideCell _ = raise Fail "typechecker error."
+			  in
+			  val insideCellTriple = (insideCellAtom, makeInsideCell, insideCellFunTy)
+			  end
+
+			  val transformFuncs = [(transformDofs, makeTransformDofs, transformsDofsFunTy), (transform, makeTransformFieldFunc, transformFieldFunc), invTransformSpec, insideCellTriple]
 			  val cellMethods = [(hiddenFuncAtom, hiddenFuncVar)]
 			  (* TODO: The naming in this area of the compiler is really inconsistent*)
 

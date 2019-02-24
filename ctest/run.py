@@ -9,6 +9,7 @@ import dill
 mesh = UnitSquareMesh(1,1)
 space = FunctionSpace(mesh, "Lagrange", 4)
 f = Function(space)
+f = interpolate(Expression("x[0]*x[0] + x[1]*x[1]"), space)
 
 #Diderot stuff:
 #choose types...
