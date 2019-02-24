@@ -8,6 +8,7 @@ input msh a;
 input fns b = fns(a);
 input FUNC c = FUNC(b);
 refCell{msh} AAA = a.refcell();
+field(2)[] F = c.F;
 int[] umm = {1,2,3};
 strand gg(cell{msh} j){
   output vec2 pos = [0.333333333333333333, 0.333333333333333];
@@ -24,7 +25,9 @@ strand gg(cell{msh} j){
     print("return:", pos, "\n");
     pos = j.transform(pos);
     position{msh} umm = a.findPos(pos);
-    print(umm,"...", umm.refPos(),"...", umm.worldPos(),"...");
+    print(umm,"...", umm.refPos(),"...", umm.worldPos(),"...\n");
+    print("\nfin: ",F(pos), "\n");
+    
     stabilize;
   }
 } create_collection {gg(k) |k in a.cells()};

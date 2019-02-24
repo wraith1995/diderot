@@ -17,20 +17,22 @@ structure Op = LowOps
 structure AN = ArrayNd
 structure Ty = LowTypes
 structure BDA = BasisDataArray
-
 datatype EvalMethod = Mono
 
 fun consFunc(vars, ty) = (case ty
 			   of Ty.TensorTy[] => (case vars
 					      of [v] => IR.VAR(v)
 					       | _ => raise Fail "impossible")
+			    | Ty.TensorTy[1] => raise Fail "impossible"
 			    | Ty.TensorTy(_) => IR.CONS(vars, ty)
 			    | _ => raise Fail "impossible")
 fun multFunc(v1, v2) = (case (IR.Var.ty(v1), IR.Var.ty(v1))
 			 of (Ty.TensorTy[], Ty.TensorTy[]) =>  IR.OP(Op.RMul, [v1,v2])
-			  | (Ty.TensorTy[d1], Ty.TensorTy[d2]) => if d1=d2
-								  then IR.OP(Op.VDot(d1), [v1,v2])
-								  else raise Fail "impossible"
+			  | (Ty.TensorTy[d1], Ty.TensorTy[d2]) =>
+			    if d1=d2 andalso (d1<>1) andalso (d2 <> 1)
+			    then IR.OP(Op.VDot(d1), [v1,v2])
+			    else raise Fail "impossible"
+
 			  | _ => raise Fail "impossible"
 		       )
 
@@ -79,35 +81,6 @@ fun powerIndex(avail, vars, idx) =
     end
 
 (*We need this function because lack of choice about RealLit and real at various points*)
-(* fun realToRealLit x = *)
-(*     let *)
-(*      fun mkReal ss = let *)
-(*       val (isNeg, rest) = (case Substring.getc ss *)
-(* 			    of SOME(#"-", r) => (true, r) *)
-(* 			     | SOME(#"+", r) => (false, r) *)
-(* 			     | _ => (false, ss) *)
-(* 			  (* end case *)) *)
-(*       val (whole, rest) = Substring.splitl Char.isDigit rest *)
-(*       val rest = Substring.triml 1 rest (* remove "." *) *)
-(*       val (frac, rest) = Substring.splitl Char.isDigit rest *)
-(*       val exp = if Substring.isEmpty rest *)
-(* 		then 0 *)
-(* 		else let *)
-(*                  val rest = Substring.triml 1 rest (* remove "e" or "E" *) *)
-(* 		in *)
-(*                  #1(valOf(IntInf.scan StringCvt.DEC Substring.getc rest)) *)
-(* 		end *)
-(*      in *)
-(*       (RealLit.real{ *)
-(*          isNeg = isNeg, *)
-(*          whole = Substring.string whole, *)
-(*          frac = Substring.string frac, *)
-(*          exp = exp *)
-(*       }) *)
-(*      end *)
-(*     in *)
-(*      mkReal (Substring.extract (Real.toString x, 0, NONE)) *)
-(*     end *)
 fun realToRealLit x =
     let
      val preProc  = String.implode o (List.map (fn #"~" => #"-" | a => a)) o String.explode
@@ -158,6 +131,15 @@ fun evalFunctionDumb(avail, basisFunc, vars) =
      val result =
 	 if count = 0
 	 then AvailRHS.addAssign(avail, "basisEval", Ty.realTy, IR.LIT(Literal.Real(RealLit.zero(false))))
+	 else if count = 1
+	 then
+	  let
+	   val ([c], [p]) = List.foldr foldrFunc ([],[]) nonZeroTerms
+	   val resultOP = multFunc(c, p)
+	   val next = AvailRHS.addAssign(avail, "basisEval", Ty.realTy, resultOP)
+	  in
+	   next
+	  end
 	 else
 	  let
 	   val (coeffs, pows) = List.foldr foldrFunc ([],[]) nonZeroTerms

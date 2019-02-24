@@ -234,7 +234,7 @@ structure CollectInfo : sig
                        of Ty.BoolTy => ()
                         | Ty.IntTy => ()
                         | Ty.StringTy => ()
-                        | Ty.VecTy(1, 1) => ()
+                        (*TODO: TRee can generate these  | Ty.VecTy(1, 1) => () *)
                         | Ty.TensorTy shp => insertTensorTy shp
                         | Ty.TensorRefTy shp => insertTensorTy shp
                         | Ty.StrandIdTy _ => ()
