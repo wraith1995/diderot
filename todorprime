@@ -1,12 +1,11 @@
---
-
+GOAL: By monday night, have language design code compile.
 Next schedule:
-Sunday 0: Check grad of F, T, invT, trf -- not working
+NOTE: REWRITE FINDPOS to deal with that when approrpate
 Sunday: 1. Test refCell geometry in 2d and 3d after building connectivity data structure - print geometry structures
 Sunday: 2. Build affine versions of of the above 4 and otherwise some insert - instead of pointers - more sophisciated inserts - look at infustructure
 Monday: 3. Get language design based on this
 Tuesday: 4. Nektar Data and other issues as above?
-
+NOTE: meshPos ordering...
 Next: Test these refCell things on actual geometry... need to build connectivity
 Next: error checking in there (normal, 3d case,) - FIGURE I WANT IS FOR LANGUAGE DESIGN SECTION
 Next: Other optimizatoins/ a thing that gordon wants/Figures.
@@ -22,7 +21,8 @@ i.e verticies for ref and cell.
 i.e attaching metadata
 Selct precedence issue
 Optimization
----
+ - also syntax things needed to be deal with
+---enterPos -- should it be a mesh method?
 3.
 -Correct our names. Correct possible errors in the above code.
 -Optimize: affine, basis function evaluation, pos issue
