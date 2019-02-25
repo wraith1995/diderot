@@ -218,18 +218,23 @@ fun dx(t as BasisFunc({dim, degree, coeffs=Array(coeffs'), strForm, mapDim,...})
 	 let
 	  
 	  val power = List.nth(idx, varIndex) + 1
+	  val realPower = Real.fromInt power
 	  fun foldrFunc(index, a', b') = if List.nth(index, varIndex) = power
 					    andalso allSameBut(index,idx, varIndex)
 				       then a'+b'
 				       else b'
 	  (* grab everyone with idx_{varIndex} = power*)
 	 in
-	  ArrayNd.foldri' foldrFunc 0.0 coeffs'
+	   realPower * (ArrayNd.foldri' foldrFunc 0.0 coeffs')
 	 end
      val _ = ArrayNd.modifyi' modNew newArray
      val strForm' = Atom.atom (makeMonoTerms(newArray, dim, degree'))
      val mapDim' = numNonZero(Array(newArray))
- 
+     val _ = print("Check (d/dx"^(Int.toString varIndex)^" ("^(Atom.toString strForm)^")) - ("^(Atom.toString strForm')^")\n")
+     (* val _ = print("We started with poly:"^(Atom.toString strForm)^"\n") *)
+     (* val _ = print("We took the derivative:"^(Int.toString varIndex)^"\n") *)
+     (* val _ = print("We got the poly:"^(Atom.toString strForm')^"\n") *)
+     (* val _ = print("It has degree:"^(Int.toString degree')^"\n") *)
 
     in
      if degree = 0

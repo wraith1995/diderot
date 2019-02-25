@@ -14,21 +14,32 @@ strand gg(cell{msh} j){
   output vec2 pos = [0.333333333333333333, 0.333333333333333];
 
   update{
-    print(a.numCell,"\n");
-    print(j.transformDofs(), "\n");
-    vec2 r = [1 - pos[0] - pos[1], pos[0], pos[1]] • j.transformDofs();
-    print("real:", r , "\n");
-    print("start:", pos, "\n");
-    pos = j.transform(pos);
-    print("world:", pos, "\n");
-    pos = j.invTransform(pos);
-    print("return:", pos, "\n");
-    pos = j.transform(pos);
-    position{msh} umm = a.findPos(pos);
-    print(umm,"...", umm.refPos(),"...", umm.worldPos(),"...\n");
-    
-    print("\nfin: ",∇⊗(j.transform)(pos), "\n");
-    
+    /* print(a.numCell,"\n"); */
+    /* print(j.transformDofs(), "\n"); */
+    /* vec2 r = [1 - pos[0] - pos[1], pos[0], pos[1]] • j.transformDofs(); */
+    /* mat2 rr = transpose(j.transformDofs()) •( [[-1,-1], [1, 0], [0,1]] ); */
+    /* /\* print("real:", r , "\n"); *\/ */
+    /* /\* print("start:", pos, "\n"); *\/ */
+    /* pos = j.transform(pos); */
+    /* print(r, pos, r-pos, "\n"); */
+
+    /* mat2 m  = ∇⊗(j.transform)(pos); */
+    /* print(rr, inv(rr),"\n"); */
+    /* print("world:", pos, "\n"); */
+    /* pos = j.invTransform(pos); */
+    /* print("return:", pos, "\n"); */
+    /* position{msh} umm = a.findPos(pos); */
+    /* print(umm,"...", umm.refPos(),"...", umm.worldPos(),"...\n"); */
+
+    /* print("\nfin: ",∇⊗(j.invTransform)(pos) - inv(transpose(j.transformDofs()) • [[-1, -1], [1,0], [0,1]]), "\n"); */
+    /* position{msh} testPos = a.findPos(pos); */
+    /* print("ref:", testPos.refPos, "\n"); */
+    /* print("func dofs:", c.funcCell(j).dofs, "\n"); */
+    /* print("refValue:", (c.funcCell(j).refField)(pos) , "\n"); */
+    /* print("\nugg:", ∇⊗(j.invTransform)(pos), "\n"); */
+    /* print("\nfin: ", ∇⊗(j.invTransform)(pos) • ∇(c.funcCell(j).refField)(pos), "\n"); */
+    print("\ndumb:", ∇( c.funcCell(j).transformedRefField )(pos),"\n");
+
     stabilize;
   }
 } create_collection {gg(k) |k in a.cells()};

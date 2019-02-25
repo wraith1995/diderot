@@ -262,7 +262,7 @@ structure Derivative : sig
 				  
 	       val mu2 = List.hd dx
 	       val dx' = List.tl dx
-	       fun probeAtIndex(mu1, mu2) = E.Fem(E.Plain( BasisDataArray.D(bda), n, f), id1, id2, id3, [mu1], [mu2])
+	       fun probeAtIndex(mu1, mu2) = E.Fem(E.Plain( BasisDataArray.D(bda), n, f), id1, id2, id3, [mu2], [mu1])
 	       val dim = BasisDataArray.domainDim bda
 	       val _ = if dim <> 2 andalso dim <> 3
 		       then raise Fail "One d and higher than 3d fields not yet supported"
