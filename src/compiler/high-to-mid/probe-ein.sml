@@ -461,7 +461,6 @@ structure ProbeEin : sig
 		  let val (newInt, newPos) = callMeshPosFunc(avail, env, BasisDataArray.domainDim a, f, prePosVar, preIndexVar, meshDef) in  (a, b, newPos, false, newInt) end
 	     (*end case*))
 	 val dim = BasisDataArray.domainDim basisArray
-	 val _ = print("Id:"^(Bool.toString id)^"\n")
 	 val finRhs =
 	     if id
 	     then 
