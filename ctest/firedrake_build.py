@@ -219,7 +219,7 @@ def passMeshHelper(mesh, intTy, floatTy, geometric = True):
     meshCoords = mesh.coordinates
     meshIndexMap = meshCoords.cell_node_map().values
     meshCoordsMap = meshCoords.dat.data
-    print(meshCoordsMap, "\n", meshIndexMap, "\n")
+
     dim = mesh.topological_dimension()
     meshMapDim = meshCoords.cell_node_map().values.shape[1]
     numCell = meshCoords.cell_node_map().values.shape[0]
@@ -229,21 +229,21 @@ def passMeshHelper(mesh, intTy, floatTy, geometric = True):
     else:
         sIndex = 0
     conBuild = buildCellConnections(mesh, intTy)
-    print("\n", conBuild, "\n")
+
     con = conBuild
     return((meshIndexMap, meshCoordsMap, dim, meshMapDim, numCell, sIndex, con))
 
 def passSpaceHelper(space, intTy):
     intPtr = ct.POINTER(intTy)
     spaceIndexMap = space.cell_node_map().values
-    print(spaceIndexMap)
+
     spaceDim = space.cell_node_map().values.shape[1]
     return(spaceIndexMap, spaceDim)
 
 def passFuncHelper(func, floatTy):
     floatPtr = ct.POINTER(floatTy)
     funcCoordMap = func.dat.data
-    print(func.dat.data)
+
     return((funcCoordMap,))
 
 def passAll(func, intTy, floatTy, geometric=True):

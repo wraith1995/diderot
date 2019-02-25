@@ -6,7 +6,7 @@ import stucts as st
 
 
 intTy = ct.c_int32
-floatTy = ct.c_float
+floatTy = ct.c_double
 # build json
 jsonFile = "test.json"
 dataFile = "ugg.dill"
@@ -14,13 +14,10 @@ dataFile = "ugg.dill"
 with open(dataFile, "rb") as f:
     data = dill.loads(f.read())
     
-
-print(data)
 datap = list(data)
-print(datap[5])
-datap[5] = ct.c_void_p(0) #ct.cast(ct.POINTER(datap[5]), ct.c_void_p)
+datap[5] = ct.c_void_p(0)
 datapp = tuple(datap)
-print(datapp)
+
 builders = st.makeAllTypes(intTy, floatTy)
 buildAll = builders[-1]
 femArgs = buildAll(*datapp)

@@ -1,3 +1,5 @@
+--worldPos build issue... () issue... ugg
+--transform potential numerical issues - can they be caught soley in the inersection facet...
 GOAL: By monday night, have language design code compile.
 Next schedule:
 NOTE: REWRITE FINDPOS to deal with that when approrpate

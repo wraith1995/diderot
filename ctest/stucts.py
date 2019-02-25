@@ -4,10 +4,10 @@ import numpy as np
 
 
 def makeArrayType(array, ty):
-    array.flatten()
+    arrayp = array.flatten()
     if ty == c_float or ty == c_double:
-        array = np.asfarray(array, dtype=ty)
-    dataType = array.ctypes.data_as(POINTER(ty))
+        array = np.asfarray(arrayp, dtype=ty)
+    dataType = arrayp.ctypes.data_as(POINTER(ty))
     return(dataType)
 
 def makeVoidPointerTuple(val):
