@@ -24,6 +24,17 @@ strand gg(cell{msh} j){
       position{msh} mpos2 = AAA.exitPos(mpos, [0, -1]);
       position{msh} mpos3 = AAA.exitPos(mpos, [1, 1]);
       print("Validity:", mpos1.isValid(), mpos2.isValid(), mpos3.isValid(),"\n");
+      if (mpos1.isValid()){
+	print("1: intersect cell, ref, and worldpos:",mpos1.mc(), mpos1.refPos, mpos1.worldPos(), "\n");
+      }
+      if (mpos2.isValid()){
+	print("2: intersect ref and worldpos:",mpos2.mc(), mpos2.refPos, mpos2.worldPos(), "\n");
+	print("umm:", mpos2.mc().transform(mpos2.refPos),"\n");
+      }
+      if (mpos3.isValid()){
+	print("3: intersect ref and worldpos:",mpos3.mc(), mpos3.refPos, mpos3.worldPos(), "\n");
+	print("umm:", mpos3.mc().transform(mpos3.refPos),"\n");
+      }
     }
     else {
       print("Cell ", j, " fails to build meshPos.\n");

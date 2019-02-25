@@ -28,7 +28,6 @@ else:
 # build data
 (preFemArgs, femArgs) = fb.passAll(f, intTy, floatTy, geometric=not(saveToDill))
 if saveToDill:
-    print(preFemArgs[6].shape)
     with open(dataFile, "wb+") as f:
         dill.dump(preFemArgs, f)
     exit(0)
