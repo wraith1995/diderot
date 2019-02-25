@@ -83,7 +83,24 @@ def elementToBasis(elem):
         raise Exception("Don't know how to handle non-vector basis shape")
     basis = [processSympyPoly(sp.Poly(x), var) for x in basisFunctions]
     return((basis, dim))
-    
+
+# would be nice if this were just pure c
+def buildCellConnections(mesh):
+    mesh.init() # we need mesh topology now.
+    numCell = mesh.num_cells()
+    facetsPercell = mesh.ufl_cell().num_facets()
+    result = (-1) * np.ones((numCell, facetsPercell, 2))
+    interiorFacets = mesh.interior_facets
+    facetCellMap = interiorFacets.facet_cell_map.values
+    localFacetData = interiorFacets.local_facet_dat.data
+    num_facets = localFacetData.shape[0]
+    for x in range(num_facets):
+        [c1, c2] = facetCellMap[x]
+        [l1, l2] = localFacetData[x]
+        result[c1][l1][0] = c2
+        result[c1][l1][1] = l2
+    return(result) # all exterior facets are (-1, -1)
+
 #accelerate function:
 #newton function
 #refCell
@@ -207,12 +224,14 @@ def passMeshHelper(mesh, intTy, floatTy):
     meshCoords = mesh.coordinates
     meshIndexMap = meshCoords.cell_node_map().values
     meshCoordsMap = meshCoords.dat.data
-    print(meshCoordsMap,"\n", meshIndexMap)
+    print(meshCoordsMap, "\n", meshIndexMap, "\n")
     dim = mesh.topological_dimension()
     meshMapDim = meshCoords.cell_node_map().values.shape[1]
     numCell = meshCoords.cell_node_map().values.shape[0]
-    sIndex = mesh.spatial_index and mesh.spatial_index.ctypes #copied from firedrake code;why?
-    con = np.array([0])  # fill me in later with a useful function
+    sIndex = mesh.spatial_index and mesh.spatial_index.ctypes  # copied from firedrake code;why?
+    conBuild = buildCellConnections(mesh)
+    print("\n", conBuild, "\n")
+    con = conBuild
     return((meshIndexMap, meshCoordsMap, dim, meshMapDim, numCell, sIndex, con))
 
 def passSpaceHelper(space, intTy):
