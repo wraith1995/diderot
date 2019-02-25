@@ -1578,12 +1578,12 @@ structure CheckGlobals : sig
 		     val opt = (FemOpt.CellFaceCell, meshData)
 		     val retTy = Ty.T_Sequence(Ty.T_Int, SOME(Ty.DimConst 2))
 		     val femExp = AST.E_ExtractFemItemN([meshExp, offset], [meshTy, Ty.T_Int], retTy, opt, NONE)
-
+		     val printRet = makePrinStatement("temp:", [femExp, cellExp, facetExp], "\n");
 		     val ret = AST.S_Return(femExp)
 		     val badReturn = AST.S_Return(AST.E_Seq([neg1, neg1], retTy));
 		     (*Could insert test here*)
 		    in
-		     ret
+		     AST.S_Block(printRet::ret::[])
 		    end
 
 		local
@@ -2057,7 +2057,7 @@ structure CheckGlobals : sig
 			       let
 				val mesh = AST.E_ExtractFem(v1, meshData)
 				val int = AST.E_ExtractFemItem(v1, Ty.T_Int, (FemOpt.CellIndex, cellData))
-				val result = AST.E_ExtractFemItemN([mesh, int, v2], [meshTy, Ty.T_Int, dimSizeVec], posTy, (FemOpt.RefBuild, posData), NONE)
+				val result = AST.E_ExtractFemItemN([mesh, int, v2], [meshTy, Ty.T_Int, dimSizeVec], posTy, (FemOpt.RefBuild, meshData), NONE)
 			       in
 				result
 			       end
