@@ -343,11 +343,12 @@ structure TreeToCxx : sig
 		    end
 		  | ((FemOpt.CellFaceCell, FT.Mesh(m)), [mesh, idx]) =>
 		    let
-		     (*just do pointer arithemtic.... and make this cleaner*)
-		     val faces = CL.E_Grp(CL.mkAddrOf(CL.E_Subscript(CL.E_Select(mesh, "con"), idx)))
-		     val zero = CL.E_Int(IntLit.fromInt 0, CL.intTy)
 		     val one =  CL.E_Int(IntLit.fromInt 1, CL.intTy)
-		     val result = CL.E_Array([CL.E_Subscript(faces, zero), CL.E_Subscript(faces, one)])
+		     val faces1 = (CL.E_Subscript(CL.E_Select(mesh, "con"), idx))
+		     val faces2 = (CL.E_Subscript(CL.E_Select(mesh, "con"), CL.mkBinOp(idx, CL.#+, one)))
+		     val zero = CL.E_Int(IntLit.fromInt 0, CL.intTy)
+
+		     val result = CL.E_Array([faces1, faces2])
 		    in
 		     result
 		    end

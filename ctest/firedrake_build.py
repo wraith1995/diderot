@@ -85,11 +85,11 @@ def elementToBasis(elem):
     return((basis, dim))
 
 # would be nice if this were just pure c
-def buildCellConnections(mesh):
+def buildCellConnections(mesh, ty):
     mesh.init() # we need mesh topology now.
     numCell = mesh.num_cells()
     facetsPercell = mesh.ufl_cell().num_facets()
-    result = (-1) * np.ones((numCell, facetsPercell, 2))
+    result = (-1) * np.ones((numCell, facetsPercell, 2), dtype=ty)
     interiorFacets = mesh.interior_facets
     facetCellMap = interiorFacets.facet_cell_map.values
     localFacetData = interiorFacets.local_facet_dat.data
@@ -99,6 +99,8 @@ def buildCellConnections(mesh):
         [l1, l2] = localFacetData[x]
         result[c1][l1][0] = c2
         result[c1][l1][1] = l2
+        result[c2][l2][0] = c1
+        result[c2][l2][1] = l1
     return(result) # all exterior facets are (-1, -1)
 
 #accelerate function:
@@ -211,14 +213,7 @@ def spaceToJson(V, jsonFile, refCellDefault="other"):
         dumped = json.dumps(dictJson, indent=4)
         f.write(dumped)
 
-
-
-# mesh = UnitSquareMesh(5,5,5)
-# space = FunctionSpace(mesh, "Lagrange", 4)
-# spaceToJson(space, "test.json", refCellDefault="simplex")
-#np.asfarray(
-        
-def passMeshHelper(mesh, intTy, floatTy):
+def passMeshHelper(mesh, intTy, floatTy, geometric = True):
     intPtr = ct.POINTER(intTy)
     floatPtr = ct.POINTER(floatTy)
     meshCoords = mesh.coordinates
@@ -228,8 +223,12 @@ def passMeshHelper(mesh, intTy, floatTy):
     dim = mesh.topological_dimension()
     meshMapDim = meshCoords.cell_node_map().values.shape[1]
     numCell = meshCoords.cell_node_map().values.shape[0]
-    sIndex = mesh.spatial_index and mesh.spatial_index.ctypes  # copied from firedrake code;why?
-    conBuild = buildCellConnections(mesh)
+    if geometric:
+        sIndex = mesh.spatial_index and mesh.spatial_index.ctypes
+        # copied from firedrake code;why though?
+    else:
+        sIndex = 0
+    conBuild = buildCellConnections(mesh, intTy)
     print("\n", conBuild, "\n")
     con = conBuild
     return((meshIndexMap, meshCoordsMap, dim, meshMapDim, numCell, sIndex, con))
@@ -247,17 +246,12 @@ def passFuncHelper(func, floatTy):
     print(func.dat.data)
     return((funcCoordMap,))
 
-def passAll(func, intTy, floatTy):
+def passAll(func, intTy, floatTy, geometric=True):
     space = func.function_space()
     mesh = space.mesh()
-    meshTuple = passMeshHelper(mesh, intTy, floatTy)
+    meshTuple = passMeshHelper(mesh, intTy, floatTy, geometric=geometric)
     spaceTuple = passSpaceHelper(space, intTy)
     funcTuple = passFuncHelper(func, floatTy)
     combined = meshTuple + spaceTuple + funcTuple
     (_, _, _, buildAll) = st.makeAllTypes(intTy, floatTy)
-    return((combined,buildAll(*combined)))
-
-
-# mesh = UnitSquareMesh(5,5,5)x
-# space = FunctionSpace(mesh, "Lagrange", 4)
-# spaceToJson(space, "test.json", refCellDefault="simplex")
+    return((combined, buildAll(*combined)))
