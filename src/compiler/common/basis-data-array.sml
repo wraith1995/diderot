@@ -54,7 +54,8 @@ datatype t = Array of BasisData.t ArrayNd.ArrayNd * meta
 fun same(Array(a1, m1),Array(a2,m2)) = sameMeta(m1,m2) andalso ArrayNd.all (BasisData.same) (ArrayNd.zip(a1,a2))
 fun hash(Array(a1, m1)) = (ArrayNd.foldr (fn (d, s) => 0w5 * BasisData.hash d + s) 0w3 a1)
 			  + 0w7 * hashMeta(m1)
-fun toString(Array(a1,_)) = "BasisArray"
+fun intStrings(xs) = String.concatWith "," (List.map (Int.toString) xs)
+fun toString(Array(a1,_)) = "BasisArray(" ^ intStrings(ArrayNd.shape a1) ^")"
 
 fun isAffine(Array(a1, m1)) = (maxDegree m1 <= 1) orelse (ArrayNd.all BasisData.isAffine a1)
 						   

@@ -874,7 +874,7 @@ structure MkOperators : sig
 		       else if dim = 3
 		       then (fn [x,y,z] => E.Epsilon(x,y,z))
 		       else raise Fail "dims other than 2 and 3 not supported."
-	 fun makeProbe(mu1, mu2) = f(0, [mu1, mu2])
+	 fun makeProbe(mu1, mu2) = f(0, [mu2, mu1])
 	 val mu1 = E.V 0
 	 val mu2 = E.V 1
 	 val sumX = 2

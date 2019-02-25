@@ -10,7 +10,7 @@ structure EvalBasis : sig
 
 	   val expand : LowIR.var * BasisDataArray.t * LowIR.var -> (LowIR.var * LowIR.rhs) list
 	  end  = struct
-
+val dumb = true
 structure IR = LowIR
 structure BD = BasisData
 structure Op = LowOps
@@ -35,6 +35,15 @@ fun multFunc(v1, v2) = (case (IR.Var.ty(v1), IR.Var.ty(v1))
 
 			  | _ => raise Fail "impossible"
 		       )
+(*USE THIS UNTIL THE VECTORIZATION IS FIXED:*)
+fun sumVars(avail, [v]) = AvailRHS.addAssign(avail, "sum", Ty.realTy, IR.VAR(v))
+  | sumVars(avail, [v1, v2]) = AvailRHS.addAssign(avail, "sum", Ty.realTy, IR.OP(Op.RAdd, [v1,v2]))
+  | sumVars(avail, v::vs) =
+    let
+     val sum = sumVars(avail, vs)
+    in
+     AvailRHS.addAssign(avail, "sum", Ty.realTy, IR.OP(Op.RAdd, [v, sum]))
+    end
 
 
 fun power(avail, var, 0) =
@@ -141,6 +150,19 @@ fun evalFunctionDumb(avail, basisFunc, vars) =
 	   next
 	  end
 	 else
+	  if dumb
+	  then
+	   let
+	    val (coeffs, pows) = List.foldr foldrFunc ([],[]) nonZeroTerms
+	    val combined = ListPair.zip (coeffs, pows)
+	    val ops = List.map multFunc combined
+	    val mults = List.map (fn x => AvailRHS.addAssign(avail, "mult", Ty.realTy, x)) ops
+	    val sum = sumVars(avail, mults)
+	    val next = IR.Var.new("intermediate", Ty.realTy)
+	   in
+	    (AvailRHS.addAssignToList(avail, (next, IR.VAR(sum))); next)
+	   end
+	  else
 	  let
 	   val (coeffs, pows) = List.foldr foldrFunc ([],[]) nonZeroTerms
 					   
