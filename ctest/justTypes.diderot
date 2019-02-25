@@ -20,14 +20,17 @@ strand gg(cell{msh} j){
     /* mat2 rr = transpose(j.transformDofs()) •( [[-1,-1], [1, 0], [0,1]] ); */
     /* /\* print("real:", r , "\n"); *\/ */
     /* /\* print("start:", pos, "\n"); *\/ */
-    /* pos = j.transform(pos); */
+    print("cell:",j,"\n");
+    pos = j.transform(pos);
+    print("new:",pos,"\n");
+    position{msh} f = a.findPos(pos);
     /* print(r, pos, r-pos, "\n"); */
 
     /* mat2 m  = ∇⊗(j.transform)(pos); */
     /* print(rr, inv(rr),"\n"); */
     /* print("world:", pos, "\n"); */
-    /* pos = j.invTransform(pos); */
-    /* print("return:", pos, "\n"); */
+    vec2 pos' = j.invTransform(pos);
+    print("return:", pos', "\n");
     /* position{msh} umm = a.findPos(pos); */
     /* print(umm,"...", umm.refPos(),"...", umm.worldPos(),"...\n"); */
 
@@ -38,7 +41,12 @@ strand gg(cell{msh} j){
     /* print("refValue:", (c.funcCell(j).refField)(pos) , "\n"); */
     /* print("\nugg:", ∇⊗(j.invTransform)(pos), "\n"); */
     /* print("\nfin: ", ∇⊗(j.invTransform)(pos) • ∇(c.funcCell(j).refField)(pos), "\n"); */
-    print("\ndumb:", ∇( c.funcCell(j).transformedRefField )(pos),"\n");
+    if( f.isValid()){
+      print("dumb:", ∇⊗∇F(pos),"\n");
+    }
+    else{
+      print("ops!\n");
+    }
 
     stabilize;
   }

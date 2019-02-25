@@ -429,7 +429,7 @@ structure CheckGlobals : sig
 		    AST.E_Prim(var, tyArgs, exprs', result)
 		   end
 
-	       fun makePrinStatement(msg, vars) = AST.S_Print((AST.E_Lit(Literal.String(msg)))::vars)
+	       fun makePrinStatement(msg, vars, endMsg) = AST.S_Print((AST.E_Lit(Literal.String(msg)))::(vars@[AST.E_Lit(Literal.String(endMsg))]))
 							     
 
 
@@ -791,7 +791,7 @@ structure CheckGlobals : sig
 			  ([], updateDeltaStm, updateCurrentPosStm)
 			 end
 
-		    val secondForLoop = AST.S_Foreach(itter, AST.S_Block([
+		    val secondForLoop = AST.S_Foreach(itter, AST.S_Block(setupVars@[
 									 updateDeltaStm,
 									 updateCurrentPosStm,
 									 ifStm,
@@ -804,6 +804,7 @@ structure CheckGlobals : sig
 			      val opt = (FemOpt.NearbyCellQuery(insert), FemData.Mesh(mesh))
 			      val intSeq = Ty.T_Sequence(Ty.T_Int, NONE)
 			      val cellExpr = AST.E_ExtractFemItem2(meshExpr,posExpr,insideVec,intSeq, opt);
+			      val printSeq = makePrinStatement("Cells:", [cellExpr],"\n")
 			      val newCellsVar = Var.new(Atom.atom "yayCells", span, AST.LocalVar, Ty.T_Sequence(Ty.T_Int, NONE))
 			      val newAssign = AST.S_Assign((newCellsVar, span), cellExpr)
 			      (*init cell, cellCount, n, n=0*)
@@ -821,7 +822,7 @@ structure CheckGlobals : sig
 			      (*TODO: rewrite as above maybe - interesting to compare these two*)
 			      val loop = AST.S_Foreach(
 				   itter1,
-				   AST.S_Block([tempAssignment,
+				   AST.S_Block((tempAssignment::setupVars)@[
 						AST.S_Foreach(itter2,
 							      AST.S_Block([
 									  updateDeltaStm,
@@ -840,7 +841,7 @@ structure CheckGlobals : sig
 		   
 
 
-		    val bodyStms = setupVars@loopStms@[failReturn]
+		    val bodyStms = loopStms@[makePrinStatement("leaving\n",[],"\n"), failReturn]
 			 
 		    val bodyStms' = initStms@bodyStms
 		    val body = AST.S_Block(bodyStms')
@@ -898,12 +899,12 @@ structure CheckGlobals : sig
 		    val invalidMeshPos = AST.E_ExtractFemItemN([meshExpr], [ meshTy], meshPosTy, (FemOpt.InvalidBuild, meshPosData), NONE)
 		    val succesIntermediate = Var.new (Atom.atom "dump", span, Var.LocalVar, meshPosTy)
 		    val sia = AST.S_Assign((succesIntermediate,span), (makeMeshPos))
-		    val printIt = makePrinStatement("This is dumb", [AST.E_Var(succesIntermediate,span)])
-		    val okay = makePrinStatement("This is reall dumb so\n",[])
+		    val printIt = makePrinStatement("This is dumb", [AST.E_Var(succesIntermediate,span)],"\n")
+		    val okay = makePrinStatement("This is reall dumb so\n",[],"\n")
 							      
 		    val failReturn = AST.S_Return(invalidMeshPos)
 		    val succesReturn = AST.S_Return(makeMeshPos)
-		    val rightBefore = makePrinStatement("Hello\n",[newPosVarExpr]);
+		    val rightBefore = makePrinStatement("Hello\n",[newPosVarExpr],"\n");
 		    val ifStm = if true
 				then AST.S_IfThenElse(deltaNormTest, (*we might want to change this test to be this and that, rather than a nested if.*)
 						 AST.S_Block([AST.S_IfThenElse(insideTest,
