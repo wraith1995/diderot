@@ -4,7 +4,9 @@ import firedrake_build as fb
 import os
 import passing
 import dill
-
+import sys
+sys.path
+sys.path.append('/path/to/the/example_file.py')
 #Firedrake stuff:
 mesh = UnitCubeMesh(1,1,1)
 space = FunctionSpace(mesh, "Lagrange", 2)
