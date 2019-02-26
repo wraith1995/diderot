@@ -8,8 +8,8 @@ import stucts as st
 intTy = ct.c_int32
 floatTy = ct.c_double
 # build json
-jsonFile = "test.json"
-dataFile = "ugg.dill"
+jsonFile = "test1.json"
+dataFile = "ugg1.dill"
 
 with open(dataFile, "rb") as f:
     data = dill.loads(f.read())
@@ -21,6 +21,7 @@ datapp = tuple(datap)
 builders = st.makeAllTypes(intTy, floatTy)
 buildAll = builders[-1]
 femArgs = buildAll(*datapp)
+
 
 programNameArg = "justTypes"
 nameSpaceArg = "justTypes"
