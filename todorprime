@@ -3,8 +3,14 @@
 GOAL: By monday night, have language design code compile.
 Next schedule:
 NOTE: REWRITE FINDPOS to deal with that when approrpate
-Sunday: 1. Test refCell geometry in 2d and 3d after building connectivity data structure - print geometry structures
-Sunday: 2. Build affine versions of of the above 4 and otherwise some insert - instead of pointers - more sophisciated inserts - look at infustructure
+Sunday: 2. Build affine versions of of the above 4 and otherwise some insert - instead of pointers - more sophisciated inserts - look at infustructure--Killed
+
+
+
+HEHRE:TUESDAY: 2. Build world version and build language design with script.
+
+
+
 Monday: 3. Get language design based on this
 Tuesday: 4. Nektar Data and other issues as above?
 NOTE: meshPos ordering...

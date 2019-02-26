@@ -22,6 +22,7 @@ structure FemData : sig
 	   val meshBasis : mesh -> BasisDataArray.t
 	   val refCell : mesh -> refCell
 	   val meshAccInsert : mesh -> (Atom.atom * bool) option
+	   val isAffine : mesh -> bool
 		  
 	   type space
 	   val spaceShape : space -> int list
@@ -126,6 +127,7 @@ datatype mesh = Mesh' of {
 fun meshDim (Mesh'({dim, mappingDim, basis, name, ...})) = dim
 fun meshMapDim (Mesh'{dim, mappingDim, basis, name,...}) = mappingDim
 fun meshBasis (Mesh'{dim, mappingDim, basis, name, ...}) = basis
+fun isAffine m = let val b = meshBasis m in BasisDataArray.isAffine b end
 fun meshAccInsert(Mesh'({insert,...})) = insert
 fun refCell(Mesh'{refCell,...}) = refCell
 				    
