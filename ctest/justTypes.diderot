@@ -57,6 +57,11 @@ strand gg(cell{msh} j){
 	    tester(j, [0,0,-1], t3, mpos3),
 	    tester(j, [1,1,1],  t4, mpos4), "\n");
       print("\n\n");
+
+
+      real t5 = AAA.enter([0.25, -0.25, 0.25], [0, 1, 0]);
+      vec3 result = [0.25, -0.25,0.25] + t2*[0,1,0];
+      print("We have time ",t5, " and result", result, "\n");
       
     /*   if (mpos1.isValid()){ */
     /* 	print("1: intersect cell, ref, and worldpos:",mpos1.mc(), mpos1.refPos, mpos1.worldPos(), "\n"); */

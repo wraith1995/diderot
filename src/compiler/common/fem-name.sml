@@ -19,13 +19,16 @@ val transform = "transform" (*field*)
 val invTransform = "invTransform"
 val meshPos = "findPos"
 val hiddenNewtonInverse = "newtonInverse"
+val cellEnter = "enter"
 (*ref cell:*)
 val refCellIsInside = "isInside"
 val isInsideMesh = "isInside"
 val isInsideMeshCell = "isInside"
 val isValidCell = "isValid"
 val refVerts = "vertices"
-
+val refExit = "exit"
+val refEnter = "enter"
+val refExitPos = "exitPos"
 val refMeshPos = "meshPos"
 (*space: *)
 val spaceMapDim = "spaceMapDim"
@@ -47,6 +50,9 @@ val cell = "mc"
 val refPos = "refPos"
 val worldPos = "worldPos"
 val valid = "isValid"
+
+val posExit = "exit"
+val posExitPos = "exitPos"
 
 val pos = "pos"
 end

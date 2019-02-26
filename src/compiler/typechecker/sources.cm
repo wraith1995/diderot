@@ -29,6 +29,7 @@ is
   check-expr.sml
   check-overload.sml
   check-fieldfunc.sml
+  generate-geometry.sml
   check-globals.sml
   check-params.sml
   check-stmt.sml
