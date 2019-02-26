@@ -622,7 +622,7 @@ fun makeGeometryFuncs(env, cxt, span, meshData, geometry, inverse, forwardInfo) 
   
   val catchFacetIssue = true
   val hiddenExitPosAtom = Atom.atom "$exitPos"
-  val hiddenExitPosTy = Ty.T_Fun([meshTy, Ty.T_Int, vecTy, vecTy, vec2SeqTy], posTy)
+  val hiddenExitPosTy = Ty.T_Fun([meshTy, Ty.T_Int, vecTy, vecTy, vec2SeqTy], posTy) (*call this in build world*)
   val hiddenExitPosVar = Var.new (hiddenExitPosAtom, span, Var.FunVar, hiddenExitPosTy)
   val bodyStm = makeRefExitPosBody(meshExp, cellExp, refExp, dExp, tfExp, dim, geometry, catchFacetIssue)
   val hiddeExitPosFunc = AST.D_Func(hiddenExitPosVar, [meshParam, cellParam, refPosParam, dPosParam, timeAndFace], bodyStm)
@@ -675,7 +675,7 @@ fun makeGeometryFuncs(env, cxt, span, meshData, geometry, inverse, forwardInfo) 
       val dInvTransformField = if Option.isSome(refVec1Exp)
  			       then
  				let
- 				 val temp = makePrim'(BV.op_Dotimes, [makePrim'(BV.op_Dotimes, [invTransformField], [invTransformFieldTy], dTransformFieldTy)], [invTransformFieldTy], dTransformFieldTy)
+ 				 val temp = makePrim'(BV.op_Dotimes, [transformField], [invTransformFieldTy], dTransformFieldTy)
  				 val inverse = if dim = 2
  					       then BV.fn_inv2_f
  					       else if dim = 3
@@ -757,17 +757,57 @@ fun makeGeometryFuncs(env, cxt, span, meshData, geometry, inverse, forwardInfo) 
  val posExitResult = (posExit, posExitFun, posExitTy)
  val cellEnterResult = (cellEnter, cellEnterFun, cellEnterTy)
  end
- (* fun buildWorld(true, meshExp, cellExp, vec1Exp, vec2Exp) -> for affine, transform again and do it*)
+
+ fun buildWorld(true, posExp, vecExp) =
+     let
+      (*get the int, ref*)
+      val (_, refExitPosFunc, _) = refExitPosReplace
+      val mesh = AST.E_ExtractFem(posExp, meshData)
+      val cellInt = AST.E_ExtractFemItem(posExp, Ty.T_Int, (FO.CellIndex, posData))
+      val cellExp =  AST.E_LoadFem(cellData, SOME(mesh), SOME(cellInt))
+				  
+      val invTransformField = makeInvTransformFunc([cellExp])
+      val transformField = makeTransformFunc([cellExp])
+      val invertVar = if dim = 2
+ 		      then BV.fn_inv2_f
+ 		      else if dim = 3
+ 		      then BV.fn_inv3_f
+ 		      else raise Fail "dim <> 2 and dim <> 3"
+      val dTransformVal = makePrim'(BV.op_Dotimes, [transformField], [invTransformFieldTy], dTransformFieldTy)
+      val invertedField = makePrim'(invertVar, [dTransformVal], [dTransformFieldTy], dTransformFieldTy)
+      val refPos = AST.E_ExtractFemItem(posExp, vecTy, (FemOpt.RefPos, meshData))
+      val probe = makePrim'(BV.op_probe, [invertedField, refPos], [dTransformFieldTy, vecTy], matTy)
+      val newDpos = makePrim'(BV.op_inner_tt, [probe, vecExp], [matTy, vecTy], vecTy)
+
+				   
+      val mesh = AST.E_ExtractFem(cellExp, meshData)
+      val result = refExitPosFunc([mesh, posExp, newDpos])
+     in
+      result
+     end
+   | buildWorld (false, posExp, vecExp) =  raise Fail "not implemented"
+
+ local
+  val FT.Mesh(mesh) = meshData
+  val posExitName = Atom.atom (FemName.posExitPos)
+  val posExitTy = Ty.T_Fun([posTy, vecTy], posTy)
+  fun posExitFun([v1,v2]) = buildWorld(FemData.isAffine mesh, v1,v2)
+    | posExitFun (_) = raise Fail "typechecker error"
+			  
+ in
+ val posExitPosResult = (posExitName, posExitFun, posExitTy)
+ end
  (* call the above, send to per cell newton with a wider epsilon control? -- go back to meshCell and that refCell epsilon...*)
  (*other option is to: transform to reference small steps....*)
  (* 0.00001 -> get a new pos out via previous method...*)
- (*My schedule: build the time ones, and then build the affine one of these... fill in mapping later...*)
+ (*My schedule: deal with maps later if we need them - we probably don't for the moment.*)
 
+							  
  val refActualFuncs = [hiddenExitFuncResult, cellFunc,cellFunc4, refPosExitFunc]
  val (refActualFuncsInfo, refActualFuncDcls) = ListPair.unzip refActualFuncs
  val refReplaceFuncs = [exitFuncResult, refExitPosReplace, enterFuncResult]
 
- val posReplaceFuncs = [posExitResult] 
+ val posReplaceFuncs = [posExitResult, posExitPosResult]
  val posActualFuncs = []
  val (posActualFuncInfo, posActualFuncDcls) = ListPair.unzip posActualFuncs
  val results = {ref = (refActualFuncsInfo, refActualFuncDcls, refReplaceFuncs),
