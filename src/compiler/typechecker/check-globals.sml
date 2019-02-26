@@ -436,11 +436,14 @@ structure CheckGlobals : sig
 	       fun makePrim'(var, args, argTys, resultTy) =
 		   let
 		    val (tyArgs, Ty.T_Fun(domTy, rngTy)) = TU.instantiate(Var.typeOf var)
-		    val args' = Option.valOf(Unify.matchArgs(domTy, args, argTys))
+		    val temp = Unify.matchArgs(domTy, args, argTys)
+		    val args' = Option.valOf(temp) 
 		    val _ = Unify.matchType(resultTy, rngTy)
 		   in
 		    AST.E_Prim(var, tyArgs, args', rngTy)
+		    handle exn => raise exn
 		   end
+		   handle exn => raise exn
 	       fun makeAnd v1 v2 = makePrim'(BV.and_b, [v1,v2], [Ty.T_Bool, Ty.T_Bool], Ty.T_Bool)
 	       fun makeAnds([v1,v2]) = makeAnd v1 v2
 		 | makeAnds (v::vs) = makeAnd v (makeAnds vs)
@@ -1287,7 +1290,7 @@ structure CheckGlobals : sig
 		fun twoDimTests(refPosExp, dPosExp, geometry) =
 		    let
 		     fun lineIntersect(bma, a) = lineLineIntersect(refPosExp, dPosExp, a, bma)
-		     val lineParams = Option.valOf (List.find (fn CF.LineParam(xs) => true | _ => false) geometry)
+		     val lineParams = Option.valOf (List.find (fn CF.LineParam(xs) => true | _ => false) geometry) handle exn => raise exn
 		     val CF.LineParam(lineData) = lineParams
 		     (*convert to realLits - thankfully only vectors*)
 
@@ -1302,13 +1305,14 @@ structure CheckGlobals : sig
 		    let
 		     fun planeIntersect(d, normal) = linePlaneIntersect(refPosExp, dPosExp, normal, d)
 
-		     val planeParams = Option.valOf (List.find (fn CF.PlaneParam(_) => true | _ => false) geometry)
+		     val planeParams = Option.valOf (List.find (fn CF.PlaneParam(_) => true | _ => false) geometry) handle exn => raise exn
 		     val CF.PlaneParam(xs, _) = planeParams
 		     val planeParamExprs = List.map (fn (x, ys) => (makeRealExpr x, AST.E_Tensor(List.map makeRealExpr ys, vecTy))) xs
 		     val intersectionExprs = List.map planeIntersect planeParamExprs
 		    in
-		     intersectionExprs
+		     intersectionExprs handle exn => raise exn
 		    end
+		    handle exn => raise exn
 
 		(*create local vars with +Inf, -1; Store compute in local var, if >=0 and <= current, update  *)
 		fun intersectionTesting intersectionExprs =
@@ -1356,8 +1360,10 @@ structure CheckGlobals : sig
 		     val stms = [tempStart, tempStart']@ifs@[ifReturn]
 
 		    in
-		     stms
+		     stms  handle exn => raise exn
 		    end
+		    handle exn => raise exn
+		      
 					 
 		local
 		 (*_exit and exit*)
@@ -1371,7 +1377,7 @@ structure CheckGlobals : sig
 		 val tests = if dim = 2
 			     then twoDimTests(refPosExp, dPosExp, geometry)
 			     else if dim = 3
-			     then threeDimTests(refPosExp, dPosExp, geometry)
+			     then threeDimTests(refPosExp, dPosExp, geometry) handle exn => raise exn
 			     else
 			      raise Fail "Dim ought to be 2 or 3 in check-global.sml; this should not have been called at this point."
 		 val body = AST.S_Block(intersectionTesting tests)
@@ -1402,8 +1408,8 @@ structure CheckGlobals : sig
 
 		fun buildIndexAnalysis(dim, geometry) =
 		    let
-		     val SOME(CF.Points(_,SOME(buildIndex))) = (List.find (fn CF.Points(_) => true | _ => false) geometry)
-		     val SOME(CF.Higher(_, xs)) = (List.find (fn CF.Higher(dim', _) => dim'=dim -1 | _ => false) geometry)
+		     val SOME(CF.Points(_,SOME(buildIndex))) = (List.find (fn CF.Points(_) => true | _ => false) geometry) handle exn => raise exn
+		     val SOME(CF.Higher(_, xs)) = (List.find (fn CF.Higher(dim', _) => dim'=dim -1 | _ => false) geometry) handle exn => raise exn
 		     fun buildNodeIndex(idx) = List.nth(buildIndex, idx)
 		     val planeIndecies : int list list = List.map (fn (x,y,z) => List.map (buildNodeIndex o IntInf.toInt) z) xs;
 
@@ -1698,35 +1704,41 @@ structure CheckGlobals : sig
 			 let
 			  val mat4 = Ty.matTy 4
 			  val vec4 = Ty.vecTy 4
-			  fun buildTensor(a) = AST.E_Tensor(List.map (fn x => AST.E_Tensor(List.map makeRealExpr x , vec4)) a, mat4)
+
+			  fun buildTensor(a) = AST.E_Tensor(List.map (fn x => AST.E_Tensor(List.map makeRealExpr x , vec4)) a, mat4) handle exn => raise exn
 			  val count = List.length xs
 			  val seqTy1 = Ty.T_Sequence(mat4, (SOME(Ty.DimConst count)))
 			  val seqTy2 = Ty.T_Sequence(seqTy1, SOME(Ty.DimConst count))
-			  fun buildSeq(xs') = AST.E_Seq(List.map (fn x => AST.E_Seq(List.map buildTensor x, seqTy1)) xs', seqTy2)
+
+			  fun buildSeq(xs') = AST.E_Seq(List.map (fn x => AST.E_Seq(List.map buildTensor x, seqTy1)) xs', seqTy2)	
 			  val seqExp = buildSeq xs
 
-			  val selectedSeq = makePrim'(BV.subscript, [seqExp, srcFacetExp], [seqTy2, Ty.T_Int], seqTy1)
-			  val selectedTensor = makePrim'(BV.subscript, [selectedSeq, dstFacetExpr], [seqTy1, Ty.T_Int], mat4)
+			  val selectedSeq = makePrim'(BV.subscript, [seqExp, srcFacetExp], [seqTy2, Ty.T_Int], seqTy1) handle exn => raise exn
+
+			  val selectedTensor = makePrim'(BV.subscript, [selectedSeq, dstFacetExpr], [seqTy1, Ty.T_Int], mat4) handle exn => raise exn
+
 			  val vec4refPos = AST.E_Tensor(List.tabulate(3, fn x => AST.E_Slice(refPosExp, [SOME(AST.E_Lit(Literal.intLit x))], Ty.realTy))@[AST.E_Lit(Literal.Real(RealLit.one))],
 							vec4)
 						       
-			  val resultVec4 = makePrim'(BV.op_inner_tt, [selectedTensor, vec4refPos], [mat4, vec4], vec4)
+			  val resultVec4 = makePrim'(BV.op_inner_tt, [selectedTensor, vec4refPos], [mat4, vec4], vec4) handle exn => raise exn
 			  val newRefPos = AST.E_Tensor(List.tabulate(3, fn x => AST.E_Slice(resultVec4, [SOME(AST.E_Lit(Literal.intLit x))], Ty.realTy)), vecTy)
 			  val result =  AST.E_ExtractFemItemN([meshExp, newCellExp, newRefPos], [meshTy, Ty.T_Int, vecTy], posTy, (FemOpt.RefBuild, meshData), NONE)
+
 			 in
-			  result
+			  result handle exn => raise exn
 			 end
 
 
 		     val geometryPass = if dim=2
 					then Option.valOf (List.find (fn CF.LineParam(_) => true | _ => false) geometry)
 					else if dim = 3
-					then Option.valOf (List.find (fn CF.PlaneParam(_) => true | _ => false) geometry)
+					then Option.valOf (List.find (fn CF.PlaneParam(_) => true | _ => false) geometry) handle exn => raise exn
 					else raise Fail "ops"
-		     val solveCall = buildSolveOperation(geometryPass)
+		     val solveCall = buildSolveOperation(geometryPass) handle exn => raise exn
 
 		    in
 		     solveCall
+		     handle exn => raise exn
 		    end
 
 		fun makeRefExitPosBody(meshExp, cellExp, refPosExp, dPosExp, timeAndFaceExp, dim, geometry, debug) =
@@ -1734,13 +1746,15 @@ structure CheckGlobals : sig
 		     (*first, build new expression*)
 		     val time = AST.E_Slice(timeAndFaceExp, [SOME(AST.E_Lit(Literal.intLit 0))], Ty.realTy)
 		     val srcFacet = makePrim'(BV.floor, [AST.E_Slice(timeAndFaceExp, [SOME(AST.E_Lit(Literal.intLit 1))], Ty.realTy)], [Ty.realTy], Ty.T_Int)
+		     val srcFacetPrint = makePrinStatement("SrcFacet: ", [srcFacet], "\n");
 		     val newVec = makePrim'(BV.add_tt, [makePrim'(BV.mul_rt, [time, dPosExp], [Ty.realTy, vecTy], vecTy), refPosExp], [vecTy, vecTy], vecTy)
 		     val ((_, nextCellFuncVar),_) = cellFunc4
 		     val nextCellAndFace = AST.E_Apply((nextCellFuncVar, span), [srcFacet, cellExp, meshExp], Ty.T_Sequence(Ty.T_Int, SOME(Ty.DimConst 2)))
 		     val newCell = makePrim'(BV.subscript, [nextCellAndFace, AST.E_Lit(Literal.intLit 0)], [Ty.T_Sequence(Ty.T_Int, SOME(Ty.DimConst 2)), Ty.T_Int], Ty.T_Int)
 		     val dstFace = makePrim'(BV.subscript, [nextCellAndFace, AST.E_Lit(Literal.intLit 1)], [Ty.T_Sequence(Ty.T_Int, SOME(Ty.DimConst 2)), Ty.T_Int], Ty.T_Int)
+		     val dstFacetPrint = makePrinStatement("dstFacet: ", [dstFace], "\n");
 		     val solveBody = buildSolveBlock(dim, srcFacet, dstFace, meshExp, newCell, newVec, geometry)
-		     val return = AST.S_Return(solveBody);
+		     val return = AST.S_Block([srcFacetPrint,dstFacetPrint, AST.S_Return(solveBody)])
 		     val boundaryMeshPos = AST.E_ExtractFemItemN([meshExp, newVec], [meshTy, vecTy], posTy, (FemOpt.InvalidBuildBoundary, posData), NONE)
 		     val failReturnMesh = AST.S_Return(boundaryMeshPos)
 		     val condition = makePrim'(BV.neq_ii, [AST.E_Lit(Literal.intLit (~1)), newCell], [Ty.T_Int, Ty.T_Int], Ty.T_Bool)
@@ -1830,11 +1844,11 @@ structure CheckGlobals : sig
 				else
 				 if dim = 3
 				 then List.exists (fn CF.PlaneParam(_) => true | _ => false) geometry
-				 else false
+				 else (false)
 		    val test = test3 andalso test2 andalso test1
 		   in
 		    if test
-		    then makeGeometryFuncs(env, cxt, span, meshData, geometry)
+		    then makeGeometryFuncs(env, cxt, span, meshData, geometry) handle exn => raise exn
 		    else {ref = ([],[],[]), pos = ([],[],[])}
 		   end
 

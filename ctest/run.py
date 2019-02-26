@@ -6,10 +6,10 @@ import passing
 import dill
 
 #Firedrake stuff:
-mesh = UnitSquareMesh(1,1)
-space = FunctionSpace(mesh, "Lagrange", 4)
+mesh = UnitCubeMesh(1,1,1)
+space = FunctionSpace(mesh, "Lagrange", 2)
 f = Function(space)
-f = interpolate(Expression("x[0]*x[0] + x[1]*x[1]"), space)
+f = interpolate(Expression("x[0]*x[0] + x[1]*x[1] + x[2]*x[2]"), space)
 
 
 #Diderot stuff:
@@ -18,13 +18,13 @@ intTy = ct.c_int32
 floatTy = ct.c_double
 
 # build json
-saveToDill = True
-jsonFile = "test.json"
-dataFile = "ugg.dill"
+saveToDill = False
+jsonFile = "test1.json"
+dataFile = "ugg1.dill"
 if os.path.exists(jsonFile):
     pass
 else:
-    fb.spaceToJson(space, "test.json", refCellDefault="simplex")
+    fb.spaceToJson(space, jsonFile, refCellDefault="simplex")
 # build data
 (preFemArgs, femArgs) = fb.passAll(f, intTy, floatTy, geometric=not(saveToDill))
 if saveToDill:
