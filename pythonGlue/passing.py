@@ -21,12 +21,11 @@ class Library:
         if (self.world == 0):
             raise Exception("World Pointer is void")
         if returnCheck != 0:
-        # raise Exception("Return check indicates error in function {0} with result {1}".format(name, returnCheck))
+            print("Warning, it is possible an error occured:{0}".format(name))
             if (any_errors_func(self.world)):
                 errors = get_errors_func(self.world)
                 errorBtypes = ct.c_char_p(errors).value
                 raise Exception("Error occured: {0} {1}".format(name, errorBtypes))
-
 
     def get_func(self, name):
         funcName = self.nameSpace + "_" + name
@@ -68,20 +67,26 @@ class Library:
         runFunc(self.world)
         self.world = 0
 
-    def saveOutput(self, fileName, outName):
+    def saveOutput(self, fileName, outName, num=1):
         nrrdNew = self.lib.__getattr__("nrrdNew")
         nrrdSave = self.lib.__getattr__("nrrdSave")
-        nrrdNuke = self.lib.__getattr__("nrrdNuke")
-        nrrd = nrrdNew()
-        if (nrrd == 0):
-            raise Exception("Unable to allocate Nrrd for ouput {0}".format(outName))
+        nrrdNuke = self.lib.__getattr__("nrrdNuke") # use this.
+        nrrdNewLambda = lambda x: nrrdNew()
+        nrrds = [nrrdNewLambda(x) for x in range(num)]
+        nrrdTests = [x==0 for x in nrrds]
+        if (any(nrrdTests)):
+            raise Exception("Unable to allocate Nrrd(s) for ouput {0}".format(outName))
         outFunc = self.get_func("output_get_" + outName)
-        outArgs = [self.world, nrrd]
+        outArgs = [self.world] + nrrds
         outRet = outFunc(*outArgs)
         self.errorCheck(name="outputing " + outName, returnCheck=outRet)
-        saveArgs = [fileName, nrrd, 0]
-        saveRet = nrrdSave(*saveArgs)
-        self.errorCheck(name="Saving to nrrd: {0}".format(fileName), returnCheck=saveRet)
+        for (idx, nrrd) in enumerate(nrrds):
+            fileNameIdx = fileName + "_" + str(idx) + ".nrrd"
+            saveArgs = [ct.c_char_p(str.encode(fileNameIdx)), nrrd, 0]
+            saveRet = nrrdSave(*saveArgs)
+            print("Saving:"+fileNameIdx) #c_char_p
+            self.errorCheck(name="Saving to nrrd: {0}".format(fileName),
+                            returnCheck=saveRet)
 
     def go(self, inputs, outputs):
         self.create_world()
@@ -95,8 +100,8 @@ class Library:
         steps = self.runStrands()
         print("Ran steps: {0}".format(steps))
         for output in outputs:
-            fileName = output + ".nrrd"
-            self.saveOutput(fileName, output)
+            fileName = output[2]
+            self.saveOutput(fileName, output[0], num=output[1])
         self.shutDown()
 
 
