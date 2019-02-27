@@ -4,7 +4,7 @@ ACTUAL features: parsing issues
 ACTUAL features: tagging cells...
 MUST DO: clean up names, clean up geometry, typechecking in there, c data could be nicer outlined - more pointers and management thereof.. 
 Optimizations: worldPos, data analysis, basis stuff, pointers and grab indexical data...
-
+USEFUL: read in from files...
 
 Right now:
 1. Reorder python code.
@@ -13,6 +13,7 @@ Right now:
 3. Lang design
 4. Gordon's data
 
+--Have a sort function for sequences... - tuple extra - 
 
 GOAL: By monday night, have language design code compile.
 Next schedule:

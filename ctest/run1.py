@@ -1,3 +1,7 @@
+import sys
+sys.path
+sys.path.append('/home/teocollin/gitcode/diderot/pythonGlue')
+
 import ctypes as ct
 import os
 import passing
@@ -29,6 +33,6 @@ library = ct.CDLL("./" + programNameArg + ".so")
 program = passing.Library(library, nameSpace=nameSpaceArg)
 
 femArgsNamed = {"a": [femArgs[0]], "b": [femArgs[1]], "c": [femArgs[2]]}
-outputs = ["pos"]
+outputs = []  # ["pos"]
 program.go(femArgsNamed, outputs)
 

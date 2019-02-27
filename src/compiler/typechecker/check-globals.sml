@@ -1244,7 +1244,7 @@ structure CheckGlobals : sig
 
 
 
-	       fun makeGeometryFuncsWrap(env, cxt, span, meshData, geometry, inverseInfo, forwardInfo) =
+	       fun makeGeometryFuncsWrap(env, cxt, span, meshData, geometry, inverseInfo, forwardInfo, makeRefCellInsideFunc) =
 		   let
 		    val FT.Mesh(mesh) = meshData
 		    val dim = FT.meshDim mesh
@@ -1261,7 +1261,7 @@ structure CheckGlobals : sig
 		    val test = test3 andalso test2 andalso test1
 		   in
 		    if test
-		    then FemGeometry.makeGeometryFuncs(env, cxt, span, meshData, geometry, inverseInfo, forwardInfo) handle exn => raise exn
+		    then FemGeometry.makeGeometryFuncs(env, cxt, span, meshData, geometry, inverseInfo, forwardInfo, makeRefCellInsideFunc) handle exn => raise exn
 		    else {ref = ([],[],[]), pos = ([],[],[]), cell = ([],[],[])}
 		   end
 
@@ -1503,15 +1503,15 @@ structure CheckGlobals : sig
 			  val dTFuncDcls = List.map (fn (x,y,z) => z) dnTFuncs
 			  val worldMeshPosDef = (fn (x,y,z) => z) worldMeshPos
 			  val dumbDef = (fn (x,y,z) => z) dumb
+			  val refCellTransformFuncs = [(refCellInside, makeRefCellInsideFunc, refCellInsideTy)] (*pass to geometry.....yay!*)
+			  val geometryInfo = makeGeometryFuncsWrap(env, cxt, span, meshData, geometry, invTransformSpec, transformSpec, makeRefCellInsideFunc)
 
-			  val geometryInfo = makeGeometryFuncsWrap(env, cxt, span, meshData, geometry, invTransformSpec, transformSpec)
-
-			  val (extraCellFuncInfo, extraCellFuncDcls, extraCellReplaceFuncs) = #pos geometryInfo
+			  val (extraCellFuncInfo, extraCellFuncDcls, extraCellReplaceFuncs) = #cell geometryInfo
 
 
 			  val env' = Env.insertNamedType(env, cxt, cellName, cellTy, constants, extraCellFuncInfo@cellMethods, extraCellReplaceFuncs@transformFuncs)
 
-			  val refCellTransformFuncs = [(refCellInside, makeRefCellInsideFunc, refCellInsideTy)]
+
 			  val (refActualFuncI, refActualFuncDcls, refReplaceFunc) = #ref geometryInfo
 			  val refCellTransformFuncs' = refReplaceFunc@refCellTransformFuncs
 
@@ -1519,7 +1519,7 @@ structure CheckGlobals : sig
 			  val env'' = Env.insertNamedType(env', cxt, refCellName, refCellTy, constants, refActualFuncI, refCellTransformFuncs')
 
 			  (*get the appropraite transform vars*)
-			  val (posActualFuncI , posActualFuncDcls, posReplaceFunc) = ([],[],[]) (* #pos geometryInfo *)
+			  val (posActualFuncI , posActualFuncDcls, posReplaceFunc) = #pos geometryInfo
 
 			  val env''' = makeMeshPos(env, cxt, span, FT.Mesh(m), vars, worldMeshPos, dumb, posActualFuncI, posReplaceFunc)
 							 

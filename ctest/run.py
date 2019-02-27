@@ -1,3 +1,6 @@
+import sys
+sys.path
+sys.path.append('/home/teocollin/gitcode/diderot/pythonGlue')
 from firedrake import *
 import ctypes as ct
 import firedrake_build as fb
@@ -6,7 +9,8 @@ import passing
 import dill
 import sys
 sys.path
-sys.path.append('/path/to/the/example_file.py')
+sys.path.append('/home/teocollin/gitcode/diderot/pythonGlue')
+
 #Firedrake stuff:
 mesh = UnitCubeMesh(1,1,1)
 space = FunctionSpace(mesh, "Lagrange", 2)
@@ -20,7 +24,7 @@ intTy = ct.c_int32
 floatTy = ct.c_double
 
 # build json
-saveToDill = False
+saveToDill = True
 jsonFile = "test1.json"
 dataFile = "ugg1.dill"
 if os.path.exists(jsonFile):

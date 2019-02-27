@@ -30,6 +30,9 @@ fun makePrim'(var, args, argTys, resultTy) =
     let
      val (tyArgs, Ty.T_Fun(domTy, rngTy)) = TU.instantiate(Var.typeOf var)
      val temp = Unify.matchArgs(domTy, args, argTys)
+     val _ = if Option.isSome(temp)
+	     then ()
+	     else print((String.concatWith "," (List.map TU.toString argTys))^"\n");
      val args' = Option.valOf(temp) 
      val _ = Unify.matchType(resultTy, rngTy)
     in
@@ -46,7 +49,8 @@ structure FemGeometry : sig
 	   val makeGeometryFuncs : Env.t * (Error.err_stream * Error.span) * Error.span * FemData.femType * 
 				   CheckTypeFile.dimensionalObjects list * 
 				   (Atom.atom * (AST.expr list -> AST.expr) * Types.ty) *
-				   (Atom.atom * (AST.expr list -> AST.expr) * Types.ty)  
+				   (Atom.atom * (AST.expr list -> AST.expr) * Types.ty) *
+				   (AST.expr list -> AST.expr)
 				   -> {cell:(Atom.atom * Var.t) list * AST.global_dcl list * 
 					    (Atom.atom * (AST.expr list -> AST.expr) * Types.ty) list,
 				       pos:(Atom.atom * Var.t) list * AST.global_dcl list * 
@@ -54,7 +58,7 @@ structure FemGeometry : sig
 				       ref:(Atom.atom * Var.t) list * AST.global_dcl list * 
 					   (Atom.atom * (AST.expr list -> AST.expr) * Types.ty) list}
 	  end = struct
-fun makeGeometryFuncs(env, cxt, span, meshData, geometry, inverse, forwardInfo) = let
+fun makeGeometryFuncs(env, cxt, span, meshData, geometry, inverse, forwardInfo, makeRefCellInsideFunc) = let
  (*Make types and associated data*)
  val FT.Mesh(mesh) = meshData
  val cellData = FT.MeshCell(mesh)
@@ -68,9 +72,16 @@ fun makeGeometryFuncs(env, cxt, span, meshData, geometry, inverse, forwardInfo) 
  val refTy = Ty.T_Fem(refData, SOME(meshName))
  val meshTy = Ty.T_Fem(meshData, NONE)   
  val dim = FT.meshDim mesh
- val (_, makeInvTransformFunc, invTransformFieldTy) = inverse
- val (_, makeTransformFunc, transformFieldTy) = forwardInfo
-						  
+ val (_, makeInvTransformFunc', _) = inverse
+ val (_, makeTransformFunc, _) = forwardInfo
+
+
+ val invTransformFieldTy = Ty.T_Field{
+      diff = Ty.DiffConst(NONE),
+      dim = Ty.DimConst(dim),
+      shape = Ty.Shape([Ty.DimConst(dim)])
+     }
+ val transformFieldTy = invTransformFieldTy
 
  val dTransformFieldTy = Ty.T_Field{
       diff = Ty.DiffConst(NONE),
@@ -86,6 +97,29 @@ fun makeGeometryFuncs(env, cxt, span, meshData, geometry, inverse, forwardInfo) 
 
  val vec2SeqTy = Ty.T_Sequence(Ty.realTy, SOME(Ty.DimConst 2))
 
+ val invertBasisVar = if dim = 2
+		      then BV.fn_inv2_t
+		      else if dim = 3
+		      then BV.fn_inv3_t
+		      else raise Fail "impossible"
+
+ fun makeInvTransformFunc([cellExp], eval) =
+     let
+      val transform = makeTransformFunc([cellExp])
+      val dTransform = makePrim'(BV.op_Dotimes, [transform], [transformFieldTy], dTransformFieldTy)
+				
+      val zero = AST.E_Tensor(List.tabulate(dim, fn x => AST.E_Lit(Literal.Real(RealLit.zero true))), vecTy)
+
+      val A = makePrim'(BV.op_probe, [dTransform, zero], [dTransformFieldTy, vecTy], matTy)
+      val invA = makePrim'(invertBasisVar, [A], [matTy], matTy) (*FUCK*)
+      val offset = makePrim'(BV.op_probe, [transform, zero], [transformFieldTy, vecTy], vecTy)
+			    
+      val offseted = makePrim'(BV.sub_tt, [eval, offset], [vecTy, vecTy], vecTy)
+      val result = makePrim'(BV.op_inner_tt, [invA, offseted], [matTy, vecTy], vecTy)
+     in
+      (invA, result)
+     end
+   | makeInvTransformFunc (_) = raise Fail "impossible"			      
  (*if dim=2, line-line intersection; if dim=3 - line-plane intersection*)
  fun lineLineIntersect( targetBasis, targetD, refBasis, refD) =
      let
@@ -137,8 +171,9 @@ fun makeGeometryFuncs(env, cxt, span, meshData, geometry, inverse, forwardInfo) 
      end
      handle exn => raise exn
 
- (*create local vars with +Inf, -1; Store compute in local var, if >=0 and <= current, update  *)
- fun intersectionTesting intersectionExprs =
+ (*create local vars with +Inf, -1; Store compute in local var, if >=eps=0.000000000001 and <= current, update  *)
+ (*create an additional tester option -> given refPos, dPos, test1 -> do inside*)
+ fun intersectionTesting intersectionExprs insideOption=
      let
       val tempVar = Var.new (Atom.atom "time", span, AST.LocalVar, Ty.realTy)
       val tempVar' = Var.new (Atom.atom "face", span, AST.LocalVar, Ty.T_Int)
@@ -148,16 +183,24 @@ fun makeGeometryFuncs(env, cxt, span, meshData, geometry, inverse, forwardInfo) 
       val neg1 = AST.E_Lit(Literal.Int(IntLit.fromInt (~1)))
       val tempStart' = AST.S_Decl(tempVar', SOME(neg1))
       val zero = AST.E_Lit(Literal.Real(RealLit.zero true))
+      val eps = AST.E_Lit(Literal.Real(RealLit.fromDigits{isNeg = false, digits = [1], exp = IntInf.fromInt (~16)}))
       fun buildIf(test1, test2, intExpr) =
 	  let
 	   (*compute special test, int*)
 	   val positiveTest = makePrim'(BV.gt_rr, [test1, zero], [Ty.realTy, Ty.realTy], Ty.T_Bool)
 	   val newUpdateTest = makePrim'(BV.gt_rr, [tempExp, test1], [Ty.realTy, Ty.realTy], Ty.T_Bool)
-	   val combined = makePrim'(BV.and_b, [positiveTest, newUpdateTest], [Ty.T_Bool, Ty.T_Bool], Ty.T_Bool)
-	   val fin = AST.S_IfThenElse(combined, AST.S_Block([
+	   val antiNanInfTest = makePrim'(BV.gte_rr, [test2, eps], [Ty.realTy, Ty.realTy], Ty.T_Bool)
+	   val preTests = [positiveTest, newUpdateTest]
+	   val combined = makeAnds(preTests)(* makePrim'(BV.and_b, [positiveTest, newUpdateTest], [Ty.T_Bool, Ty.T_Bool], Ty.T_Bool) *)
+	   val proc = if Option.isSome(insideOption)
+		      then let val SOME(f) = insideOption in (fn b => f(test1, b)) end
+		      else (fn b => b)
+			     (* makePrinStatement("Suc with:", [test1,AST.E_Lit(Literal.String(", ")), test2], "\n"), *)
+	   val fin = AST.S_IfThenElse(combined, proc (AST.S_Block([
+								  
 							    AST.S_Assign((tempVar, span), test1),
 							    AST.S_Assign((tempVar', span), intExpr)
-							   ]),
+							   ])),
 				      AST.S_Block([]))
 	  in
 	   fin
@@ -189,7 +232,7 @@ fun makeGeometryFuncs(env, cxt, span, meshData, geometry, inverse, forwardInfo) 
 			 
 			 
  local
-  (*_exit and exit*)
+  (*_exit and exit; _enter and enter*)
   val refPosParam = Var.new(Atom.atom "refPos", span, AST.FunParam, vecTy)
   val dposParam = Var.new(Atom.atom "dPos", span, AST.FunParam, vecTy)
   val refPosExp = AST.E_Var(refPosParam, span)
@@ -203,12 +246,30 @@ fun makeGeometryFuncs(env, cxt, span, meshData, geometry, inverse, forwardInfo) 
 	      then threeDimTests(refPosExp, dPosExp, geometry) handle exn => raise exn
 	      else
 	       raise Fail "Dim ought to be 2 or 3 in check-global.sml; this should not have been called at this point."
-  val body = AST.S_Block(intersectionTesting tests)
+
+
+  val body = AST.S_Block(intersectionTesting tests NONE)
   val result = ((funAtom, funVar), AST.D_Func(funVar, [refPosParam, dposParam], body))
-  (*make type, var*)
-  (*build intersections based on dim*)
-  (*build stms*)
-  (*build function*)
+
+		 
+  val funAtom' = Atom.atom "_enter"
+  val funVar' = Var.new (funAtom', span, Var.FunVar, funType)
+  fun buildInsideOption(test1, b) =
+      let
+       (*comptue new pos *)
+       val adjustedTest = test1
+       val scale = makePrim'(BV.mul_tr, [dPosExp, test1], [vecTy, Ty.realTy], vecTy)
+       val newPos = makePrim'(BV.add_tt, [scale, refPosExp], [vecTy, vecTy], vecTy)
+       val insideTest = makeRefCellInsideFunc([newPos, newPos]) (*avoid the need to pass refPos because under our scheme we current forget it...*)
+       val printInsidePos = makePrinStatement("pos in ref", [dPosExp, refPosExp, newPos], "\n");
+					     
+       (*see if inside*)
+      in
+       AST.S_IfThenElse(insideTest, b, AST.S_Block([]))
+      end
+  val body' = AST.S_Block(intersectionTesting tests (SOME(buildInsideOption)))
+  val result' = ((funAtom', funVar'), AST.D_Func(funVar', [refPosParam, dposParam], body'))
+
 
   val exitFuncTy = Ty.T_Fun([refTy, posTy, vecTy], Ty.realTy)
   val exitFuncName = Atom.atom (FemName.refExit)
@@ -229,7 +290,7 @@ fun makeGeometryFuncs(env, cxt, span, meshData, geometry, inverse, forwardInfo) 
   val enterFuncTy = Ty.T_Fun([refTy, vecTy, vecTy], Ty.realTy)
   fun replaceEnter ([re, vec1, vec2]) =
       let
-       val res = AST.E_Apply((funVar, span), [vec1, vec2], vec2Ty)
+       val res = AST.E_Apply((funVar', span), [vec1, vec2], vec2Ty)
        val ret = AST.E_Slice(res, [SOME(AST.E_Lit(Literal.intLit 0))], Ty.realTy )
       in
        ret
@@ -240,6 +301,7 @@ fun makeGeometryFuncs(env, cxt, span, meshData, geometry, inverse, forwardInfo) 
 			  
  in
  val hiddenExitFuncResult = result
+ val hiddenEnterFuncResult = result'
  val enterFuncResult = enterFuncResult
  val exitFuncResult = funcResult
  end
@@ -427,7 +489,7 @@ fun makeGeometryFuncs(env, cxt, span, meshData, geometry, inverse, forwardInfo) 
       val badReturn = AST.S_Return(AST.E_Seq([neg1, neg1], retTy));
       (*Could insert test here*)
      in
-      AST.S_Block(printRet::ret::[])
+      AST.S_Block(ret::[])
      end
 
  local
@@ -592,7 +654,8 @@ fun makeGeometryFuncs(env, cxt, span, meshData, geometry, inverse, forwardInfo) 
       val dstFace = makePrim'(BV.subscript, [nextCellAndFace, AST.E_Lit(Literal.intLit 1)], [Ty.T_Sequence(Ty.T_Int, SOME(Ty.DimConst 2)), Ty.T_Int], Ty.T_Int)
       val dstFacetPrint = makePrinStatement("dstFacet: ", [dstFace], "\n");
       val solveBody = buildSolveBlock(dim, srcFacet, dstFace, meshExp, newCell, newVec, geometry)
-      val return = AST.S_Block([srcFacetPrint,dstFacetPrint, AST.S_Return(solveBody)])
+      (* srcFacetPrint,dstFacetPrint, *)
+      val return = AST.S_Block([AST.S_Return(solveBody)])
       val boundaryMeshPos = AST.E_ExtractFemItemN([meshExp, newVec], [meshTy, vecTy], posTy, (FemOpt.InvalidBuildBoundary, posData), NONE)
       val failReturnMesh = AST.S_Return(boundaryMeshPos)
       val condition = makePrim'(BV.neq_ii, [AST.E_Lit(Literal.intLit (~1)), newCell], [Ty.T_Int, Ty.T_Int], Ty.T_Bool)
@@ -664,48 +727,34 @@ fun makeGeometryFuncs(env, cxt, span, meshData, geometry, inverse, forwardInfo) 
  
  (*meshPos.exit/meshCell.exit*)
  (*issue: have world vs. have reference... make a toggle...*)
- fun buildWorldIntersectsExp (true, meshExp, cellExp, cellIntExp, refVec1Exp, vec1Exp, vec2Exp) =
+ fun buildWorldIntersectsExp (true, exitEnter, meshExp, cellExp, cellIntExp, refVec1Exp, vec1Exp, vec2Exp) =
      let
-      val invTransformField = makeInvTransformFunc([cellExp])
       val transformField = makeTransformFunc([cellExp])
       val vec1Exp = if Option.isSome(refVec1Exp)
       		    then let val SOME(new') = refVec1Exp in new' end
       		    else vec1Exp
 			   
-      val dInvTransformField = if Option.isSome(refVec1Exp)
- 			       then
- 				let
- 				 val temp = makePrim'(BV.op_Dotimes, [transformField], [invTransformFieldTy], dTransformFieldTy)
- 				 val inverse = if dim = 2
- 					       then BV.fn_inv2_f
- 					       else if dim = 3
- 					       then BV.fn_inv3_f
- 					       else raise Fail "dim <> 2 and dim <> 3"
-							  
- 				 val invTemp = makePrim'(inverse, [temp], [dTransformFieldTy], dTransformFieldTy)
-							
- 				in
- 				 invTemp
- 				end
- 			       else
- 				makePrim'(BV.op_Dotimes, [invTransformField], [invTransformFieldTy], dTransformFieldTy)
-					 
-					 
+      val (dInvAtZero, inverted) = makeInvTransformFunc([cellExp], vec1Exp)
       val trans1 =  if Option.isSome(refVec1Exp)
  		    then vec1Exp
- 		    else makePrim'(BV.op_probe, [invTransformField, vec1Exp], [invTransformFieldTy, vecTy], vecTy)
+ 		    else inverted
 				  
-      val derv = makePrim'(BV.op_probe, [dInvTransformField, vec1Exp], [dTransformFieldTy, vecTy], matTy)
-      val trans2 = makePrim'(BV.op_inner_tt, [derv, vec2Exp], [matTy, vecTy], vecTy)
-
-      val ((_, exitFuncVar), _) = hiddenExitFuncResult
-      val seqResult = AST.E_Apply((exitFuncVar, span), [trans1, trans2], vec2SeqTy)
-				 (* val ret = AST.E_Slice(seqResult, [SOME(AST.E_Lit(Literal.intLit 0))], Ty.realTy) *)
+      val derv = dInvAtZero 
+      val trans2 = makePrim'(BV.op_inner_tt, [derv, vec2Exp], [matTy, vecTy], vecTy) handle exn => raise exn
+      val appFunc  = if exitEnter
+		     then let val ((_, enterFuncVar), _) = hiddenEnterFuncResult
+			  in enterFuncVar end
+		     else let val ((_, exitFuncVar), _) = hiddenExitFuncResult
+			  in exitFuncVar end
+      
+      val seqResult = AST.E_Apply((appFunc, span), [trans1, trans2], vec2SeqTy)
+      val ret = AST.E_Slice(seqResult, [SOME(AST.E_Lit(Literal.intLit 0))], Ty.realTy)
 				 (*other exit call...*)
+				 
      in
-      seqResult
+      ret
      end
-   | buildWorldIntersectsExp (false, meshExp, cellExp, cellIntExp, refVec1Exp, vec1Exp, vec2Exp) = raise Fail "later"
+   | buildWorldIntersectsExp (false, exitEnter, meshExp, cellExp, cellIntExp, refVec1Exp, vec1Exp, vec2Exp) = raise Fail "later"
 
 
 
@@ -715,7 +764,7 @@ fun makeGeometryFuncs(env, cxt, span, meshData, geometry, inverse, forwardInfo) 
   val FT.Mesh(mesh) = meshData
   val cellHiddenExit = Atom.atom "$cellExit" (*hidden*)
   val cellHiddenExitTy = Ty.T_Fun([meshTy, cellTy, Ty.T_Int, vecTy, vecTy, vecTy], vec2SeqTy)
-  fun cellHiddenExitFun(v1, v2, v3, v4, v5, v6) = buildWorldIntersectsExp(FemData.isAffine mesh, v1, v2, v3, v4, v5, v6)
+  fun cellHiddenExitFun(b,v1, v2, v3, v4, v5, v6) = buildWorldIntersectsExp(FemData.isAffine mesh,b, v1, v2, v3, v4, v5, v6)
 
 
 									 
@@ -729,8 +778,8 @@ fun makeGeometryFuncs(env, cxt, span, meshData, geometry, inverse, forwardInfo) 
        val cellExp =  AST.E_LoadFem(cellData, SOME(mesh), SOME(cellInt))
        val refPos = AST.E_ExtractFemItem(v1, vecTy, (FemOpt.RefPos, meshData))
        val transformField = makeTransformFunc([cellExp])
-       val worldPos =  makePrim'(BV.op_probe, [transformField, refPos], [transformFieldTy, vecTy], vecTy) (*TODO: fix worldPos*)
-       val result = cellHiddenExitFun(mesh, cellExp, cellInt, SOME(refPos), worldPos, v2)
+       val worldPos =  makePrim'(BV.op_probe, [transformField, refPos], [transformFieldTy, vecTy], vecTy) handle exn => raise exn (*TODO: fix worldPos*)
+       val result = cellHiddenExitFun(false, mesh, cellExp, cellInt, SOME(refPos), worldPos, v2)
 
       in
        result
@@ -745,7 +794,7 @@ fun makeGeometryFuncs(env, cxt, span, meshData, geometry, inverse, forwardInfo) 
        val cellExp = v1
        val cellInt = AST.E_ExtractFemItem(v1, Ty.T_Int, (FO.CellIndex, cellData))
        val refVecExp = NONE (*transform from v2*)
-       val result = cellHiddenExitFun(mesh, cellExp, cellInt, NONE, v2, v3)
+       val result = cellHiddenExitFun(true, mesh, cellExp, cellInt, NONE, v2, v3)
       in
        result
       end
@@ -766,7 +815,6 @@ fun makeGeometryFuncs(env, cxt, span, meshData, geometry, inverse, forwardInfo) 
       val cellInt = AST.E_ExtractFemItem(posExp, Ty.T_Int, (FO.CellIndex, posData))
       val cellExp =  AST.E_LoadFem(cellData, SOME(mesh), SOME(cellInt))
 				  
-      val invTransformField = makeInvTransformFunc([cellExp])
       val transformField = makeTransformFunc([cellExp])
       val invertVar = if dim = 2
  		      then BV.fn_inv2_f
@@ -803,7 +851,7 @@ fun makeGeometryFuncs(env, cxt, span, meshData, geometry, inverse, forwardInfo) 
  (*My schedule: deal with maps later if we need them - we probably don't for the moment.*)
 
 							  
- val refActualFuncs = [hiddenExitFuncResult, cellFunc,cellFunc4, refPosExitFunc]
+ val refActualFuncs = [hiddenExitFuncResult, hiddenEnterFuncResult, cellFunc, cellFunc4, refPosExitFunc]
  val (refActualFuncsInfo, refActualFuncDcls) = ListPair.unzip refActualFuncs
  val refReplaceFuncs = [exitFuncResult, refExitPosReplace, enterFuncResult]
 
