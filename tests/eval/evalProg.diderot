@@ -1,0 +1,38 @@
+#version 3.0
+
+
+type mesh mesh_t = file("evalProg.json");
+type functionSpace{mesh_t}[] fns_t = file("evalProg.json");
+type femFunction{fns_t} func_t = file("evalProg.json");
+
+const int d = mesh_t.dim;
+input tensor[d][] points;
+
+input mesh_t cube;
+input fns_t space = fns_t(cube);
+input func_t data = func_t(space);
+field(d)[] F = data.F;
+
+strand gg(tensor[d] i){
+  output tensor[d] target = i;
+  output tensor[d] translated = nan[d];
+  output bool valid = false;
+  output cell{mesh_t} c = cube.cells[0];
+  output real result = nan;
+  output tensor[d] gradResult = nan[d];
+  update {
+    print("Running on ", target, "\n");
+    position{mesh_t} p = cube.findPos(target);
+    valid = p.isValid();
+    if(valid){
+      c = p.mc();
+      translated = p.refPos;
+      result = F(target);
+      gradResult = ∇F(target);
+    }
+    else {
+      print("Warning: Invalid!\n");
+    }
+    stabilize;
+  }
+} create_collection {gg(i) | i in points};
