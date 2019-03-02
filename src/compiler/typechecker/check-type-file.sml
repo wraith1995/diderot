@@ -1089,6 +1089,9 @@ fun paresRefCell(env, cxt, refCellJson, dim, machinePres, meshName) =
 fun parseAccelerate(env, cxt, json, meshName) =
     let
      val acc = findField "accelerate" json
+     val use = Option.mapPartial (findField "use") acc
+     val use' = Option.mapPartial (optionBool) (use)
+     val useTest = Option.isSome(use') andalso (Option.valOf(use'))
 
      val insert = warnIfNo(env, cxt, "insert", "accelerate", meshName) acc
      val includes = warnIfNo(env, cxt, "includes", "accelerate", meshName) acc
@@ -1115,7 +1118,9 @@ fun parseAccelerate(env, cxt, json, meshName) =
     in
      (case parseInsert
        of SOME(file) => if OS.FileSys.access(file, [])
-			then SOME(Atom.atom file, conservative')
+			then if useTest
+			     then SOME(Atom.atom file, conservative')
+			     else NONE
 			else
 			 (TypeError.warning(cxt, [S"File ", S(file), S" does not exist."]);
 			  NONE))
@@ -1161,7 +1166,7 @@ fun parseMesh(env, cxt, tyName, json) =
 
      val dimMethods = Option.getOpt(Option.map (fn (x,y) => y) refCellData, [])
 
-     val optionalAcceleration = Option.mapPartial (fn  x => parseAccelerate(env, cxt, x, tyName)) mesh
+     val optionalAcceleration = Option.mapPartial (fn x => parseAccelerate(env, cxt, x, tyName)) mesh
      val meshVal = Option.map (fn (x,y,z,basis, cell) => FT.mkMesh(x,y,z,
 							     basis,
 							     tyName, cell, optionalAcceleration))

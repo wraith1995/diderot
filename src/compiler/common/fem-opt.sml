@@ -14,6 +14,7 @@ structure FemOpt : sig
 			      | ExtractDofs
 			      | ExtractIndices |  ExtractDofsSeq
 			      | NumCell  | ExtractIndex | ExtractDof (* primitize all*)
+			      | StartCell
 			      | CellIndex | PromoteCell (* primitize, cells*)
 			      (*mesh pos operations:*)
 			      | Valid | RefPos | WorldPos of Atom.atom option * Stamp.t option | UWorldPos
@@ -46,7 +47,7 @@ structure FemOpt : sig
 datatype femOpts = Cells | RefCell
 		 | ExtractDofs
 		 | ExtractIndices |  ExtractDofsSeq
-		 | NumCell  | ExtractIndex | ExtractDof (* primitize all*)
+		 | NumCell  | StartCell | ExtractIndex | ExtractDof (* primitize all*)
 		 | CellIndex | PromoteCell (* primitize, cells*)
 		 (*mesh pos operations:*)
 		 | Valid | RefPos | WorldPos of Atom.atom option * Stamp.t option | UWorldPos (*function to do Transform*)
@@ -100,12 +101,14 @@ fun toStringOpt v =
        | CellConnectivity => "CellConnectivity"
        | CellFaceCell => "CellFaceCell"
        | InsideInsert(a) => "InsideInsert(File="^(Atom.toString a) ^")"
+       | StartCell => "StartCell"
     (* end case*))
 
 fun toString (v, d) = toStringOpt(v) ^ "(" ^ (FT.toString d) ^ ")"
          
 
 fun arity (NumCell) = 1
+  | arity (StartCell) = 1
   | arity (Cells) = 1
   | arity (CellIndex) = 1
   | arity (ExtractDofs) = 2
@@ -157,6 +160,7 @@ fun hash (NumCell, d) = 0w1 + FT.hash d
   | hash (InvalidBuildBoundary, d) = 0w97 + FT.hash d
   | hash (CellFaceCell, d) = 0w101 + FT.hash d
   | hash (InsideInsert(a),d) = 0w103 + (Atom.hash a) * 0w107 +  FT.hash d
+  | hash (StartCell, d) = 0w107 + FT.hash d
 fun sameR ((a1,s1), (a2,s2)) = (case (a1, a2)
 				 of (SOME(a1'), SOME(a2')) => Atom.same(a1', a2')
 				  | (SOME(_), NONE) => false
@@ -194,6 +198,7 @@ fun same ((v1, d1),(v2, d2)) = FT.same(d1,d2) andalso
        | (InvalidBuildBoundary,InvalidBuildBoundary) => true
        | (CellFaceCell, CellFaceCell) => true
        | (InsideInsert(a1), InsideInsert(a2)) => Atom.same(a1,a2)
+       | (StartCell, StartCell) => true
        | _ => false
     (*end case*))
 

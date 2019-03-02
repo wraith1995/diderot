@@ -1,0 +1,52 @@
+#version 3.0
+
+type mesh msh = file("test.json");
+type functionSpace{msh}[] fns = file("test.json");
+type femFunction{fns} FUNC = file("test.json");
+
+input msh a;
+input fns b = fns(a);
+input FUNC c = FUNC(b);
+refCell{msh} AAA = a.refcell();
+field(2)[] F = c.F;
+int[] umm = {1,2,3};
+strand gg(cell{msh} j){
+  output vec2 pos = [0.333333333333333333, 0.333333333333333];
+  output position{msh} mpos = j.meshPos(pos);
+  update{
+    if (mpos.isValid){
+      real t1 = AAA.exit(mpos, [-1,0]);
+      real t2 = AAA.exit(mpos, [0,-1]);
+      real t3 = AAA.exit(mpos, [1,1]);
+      print("intersection times:", [t1,t2,t3],"\n");
+
+      position{msh} mpos1 = AAA.exitPos(mpos, [-1, 0]);
+      position{msh} mpos2 = AAA.exitPos(mpos, [0, -1]);
+      position{msh} mpos3 = AAA.exitPos(mpos, [1, 1]);
+      print("Validity:", mpos1.isValid(), mpos2.isValid(), mpos3.isValid(),"\n");
+      if (mpos1.isValid()){
+	print("1: intersect cell, ref, and worldpos:",mpos1.mc(), mpos1.refPos, mpos1.worldPos(), "\n");
+	vec2 n = mpos.refPos + [-1,0]*t1;
+      }
+      if (mpos2.isValid()){
+	print("2: intersect ref and worldpos:",mpos2.mc(), mpos2.refPos, mpos2.worldPos(), "\n");
+	print("umm:", mpos2.mc().transform(mpos2.refPos),"\n");
+	print("grr:", mpos2.mc().transform([0,0]), mpos2.mc().transform([0,1]), "\n");
+	vec2 n = mpos.refPos + [-1,0]*t1;
+	print("smesh:", n);
+      }
+      if (mpos3.isValid()){
+	print("3: intersect ref and worldpos:",mpos3.mc(), mpos3.refPos, mpos3.worldPos(), "\n");
+	print("umm:", mpos3.mc().transform(mpos3.refPos),"\n");
+	print("grr:", mpos2.mc().transform([0,0]), mpos2.mc().transform([1,0]), "\n");
+	vec2 n = mpos.refPos + [1,1]*t1;
+	print("smesh:", n);
+	
+      }
+    }
+    else {
+      print("Cell ", j, " fails to build meshPos.\n");
+    }
+    stabilize;
+  }
+} create_collection {gg(k) |k in a.cells()};

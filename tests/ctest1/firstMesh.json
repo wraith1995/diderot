@@ -1,0 +1,27 @@
+{
+    "constants" : [],
+    "mesh" : {
+	"constants" : [
+	    {
+		"name" : "dim",
+		"type" : "int",
+		"value" : 2
+	    },
+	    {
+		"name" : "meshMapDim",
+		"type" : "int",
+		"value" : 4
+	    },
+	    {
+		"name" : "degree",
+		"type" : "int",
+		"value" : 1
+	    }],
+	"basis" : [
+	    [1.0,0.0,0.0,0.0],
+	    [0.0,1.0,0.0,0.0],
+	    [0.0,0.0,1.0,0.0],
+	    [0.0,0.0,0.0,1.0]]
+    }
+}
+    

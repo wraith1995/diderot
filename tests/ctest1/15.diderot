@@ -1,0 +1,14 @@
+#version 2.0
+
+input tensor[15] atest = [0,1,2,3,4,5,6,8,9,10,11,12,13,14,15];
+int[] a = {1};
+strand gg(int i){
+  output tensor[15] umm = atest;
+  output real temp = 0;
+
+  update{
+    temp = umm • umm;
+    print(temp);
+    stabilize;
+  }
+} create_collection {gg(j) | j in a}

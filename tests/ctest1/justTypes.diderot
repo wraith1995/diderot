@@ -1,0 +1,41 @@
+#version 3.0
+type mesh msh = file("firstMesh.json");
+/* type functionSpace{msh}[12] fns; */
+/* type femFunction{fns} FUNC; */
+
+input msh a;
+/* input fns b = fns(a); */
+/* input FUNC c = FUNC(b);  */
+field(2)[2] F = a.cells()[0].transform;
+int[] a1 = {k + 2 | k in {1+j | j in 0..10}};
+real[] a2 = {k + 2.0 | k in {1.0+j | j in 0..10}};
+
+function real f(real g, int j){
+  return(g*j);
+}
+
+function real s(real k){
+  print(a1);
+  return(k);
+}
+
+
+strand gg(int i, cell{msh} j){
+
+  output real result = 1.0*i;
+  output tensor[2,2] z = ∇⊗F([0,0]);
+
+  int j0 = 2;
+
+  update{
+
+
+    result = f(result, i*10);
+    int cellCount = a.numCell();
+    tensor[msh.transformDofShape] a = j.transformDofs();
+    print(result, "\n", "numCell:", cellCount ,"\n", a1,a2, "\n", s(2.0), "\n", j, "\n",a );
+
+
+    stabilize;
+  }
+} create_collection {gg(j,k) | j in a1, k in a.cells()};

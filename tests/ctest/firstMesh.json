@@ -1,0 +1,111 @@
+{
+    "constants" : [],
+    "mesh" : {
+	"constants" : [
+	    {
+		"name" : "dim",
+		"type" : "int",
+		"value" : 2
+	    },
+	    {
+		"name" : "meshMapDim",
+		"type" : "int",
+		"value" : 4
+	    },
+	    {
+		"name" : "degree",
+		"type" : "int",
+		"value" : 2
+	    }],
+	"basis" : {"polys"
+		   : [
+		       {"coeffs":  [1.0,0.0,0.0,0.0],
+			"degree": 1},
+		       {"coeffs":  [0.0,1.0,0.0,0.0],
+			"degree": 1},
+		       {"coeffs":  [0.0,0.0,1.0,0.0],
+			"degree": 1},
+		       [0.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0]
+		   ]
+		  },
+	"refCell" : {
+	    "type" : "simplex",
+	    "epsilon" : 0.0000001,
+	    "newtonParams" : {
+		"contraction" : true,
+		"itters" : 20,
+		"killAfterTol" : false,
+		"newtonTol" : 0.0001
+	    },
+	    "geometry": {
+		"vertices" : [[0.0,0.0], [1.0, 0.0], [0.0, 1.0]],
+		"toNode" : [0, 1, 2],
+		"object1" :  [{"entity" : [0,1], "plane" : [0,1]},
+			      {"entity" : [1,2], "plane" : [1,2]},
+			      {"entity" : [0,2], "plane" : [0,2]}]
+		
+	    }
+	    
+	},
+	"accelerate" : {
+	    "insert" : "spat.in",
+	    "conservative" : false,
+	    "includes" : [
+		"<spatialindex/capi/sidx_api.h>",
+		"<spatialindex/capi/sidx_impl.h>"
+	    ],
+	    "linkDirs" : [
+		
+	    ],
+	    "includeDirs" : [
+		
+	    ],
+	    "libs" : [
+		"lspatialindex_c",
+		"lspatialindex"
+	    ]
+	}
+    },
+    "space" : {
+	"constants" : [
+	    {
+		"name" : "dim",
+		"type" : "int",
+		"value" : 2
+	    },
+	    {
+		"name" : "spaceMapDim",
+		"type" : "int",
+		"value" : 4
+	    },
+	    {
+		"name" : "shape",
+		"type" : "int[2]",
+		"value" : [2,2]
+	    },
+	    {
+		"name" : "degree",
+		"type" : "int",
+		"value" : 2
+	    }
+	],
+	"basis" : {"polys"
+		   : [
+		       {"coeffs":  [1.0,0.0,0.0,0.0],
+			"degree": 1},
+		       {"coeffs":  [0.0,1.0,0.0,0.0],
+			"degree": 1},
+		       {"coeffs":  [0.0,0.0,1.0,0.0],
+			"degree": 1},
+		       [0.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0]
+		   ]
+		  }
+    },
+    "function" : {
+	"constants" : [
+	]
+	
+    }
+    
+}
+

@@ -1,0 +1,15 @@
+#version 3.0
+int shape = 10;
+input image(3)[3] A;
+field#4(3)[3] F0 = c4hexic ⊛ A; //scalar field
+strand f(int i, int j, int k){
+  tensor[3] val = [i,j,k] * (1/shape) * (4.0) + [-2,-2,-2];
+  output tensor[3,3] result = [[0,0,0],[0,0,0],[0,0,0]];
+  update {
+    if (inside(val, F0)){
+      result = ∇⊗F0(val);
+    }
+    stabilize;
+  }
+}
+ create_array {f(i,j,k) | i in 0..shape-1, j in 0..shape-1, k in 0..shape-1}; 

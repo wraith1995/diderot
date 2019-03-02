@@ -1,0 +1,11 @@
+NRRD0003
+# Complete NRRD file format specification at:
+# http://teem.sourceforge.net/nrrd/format.html
+type: double
+dimension: 2
+sizes: 2 4
+kinds: 2-vector list
+endian: little
+encoding: raw
+
+p	I pÄÌ?@ÏWDmã?@ÏWDmã?ğzâáİÖè?ğzâáİÖè? =iùé?Ig˜âë?…ÊEA—€ì?

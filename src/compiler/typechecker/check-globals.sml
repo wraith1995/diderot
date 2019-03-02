@@ -676,7 +676,9 @@ structure CheckGlobals : sig
 		    val tolExpr = newtonTol
 		    val maxNewtonExpr = newtonAttempts
 
-		    val numCellExpr = AST.E_ExtractFemItem(meshExpr, Ty.T_Int, (FemOpt.NumCell, meshData))
+		    val numCellExpr' = AST.E_ExtractFemItem(meshExpr, Ty.T_Int, (FemOpt.NumCell, meshData))
+		    val numCellExpr = makePrim'(BV.sub_ii, [numCellExpr', one], [Ty.T_Int, Ty.T_Int], Ty.T_Int)
+		    val dummExp = AST.E_ExtractFemItem(meshExpr, Ty.T_Int, (FemOpt.StartCell, meshData))
 		    val numCellVar = Var.new(Atom.atom "numCell", span, Var.LocalVar, Ty.T_Int)
 		    val numCellAssign = AST.S_Assign((numCellVar, span), numCellExpr)
 		    val numCellVarExpr = AST.E_Var((numCellVar, span))
@@ -693,7 +695,7 @@ structure CheckGlobals : sig
 		    val cellItterVar = Var.new(Atom.atom "cellInt", span, Var.LocalVar, Ty.T_Int)
 		    val newtonItterVar = Var.new(Atom.atom "newtonInt", span, Var.LocalVar, Ty.T_Int)
 		    val newtonReset =  AST.S_Assign((newtonItterVar, span), zero)
-		    val initStms = newtonReset::AST.S_Assign((cellItterVar, span), zero)::initStms;
+		    val initStms = newtonReset::AST.S_Assign((cellItterVar, span), dummExp)::initStms;
 		    val cellItterVarExp = AST.E_Var((cellItterVar, span))
 		    val newtonItterVarExp = AST.E_Var((newtonItterVar, span))
 
@@ -747,7 +749,8 @@ structure CheckGlobals : sig
 						      AST.S_Block([succesReturn]),
 						      emptyBlock)
 				    ]),
-			 AST.S_Block([incC,newtonReset]))
+			 emptyBlock)
+		    val incrementNewton = incN
 
 		    val ifStm' = AST.S_IfThenElse(
 			 deltaNormTest,
@@ -761,7 +764,7 @@ structure CheckGlobals : sig
 			 AST.S_Block([newtonReset,
 				      AST.S_IfThenElse(cTest,
 						       AST.S_Block([failReturn]),
-						       emptyBlock)]), emptyBlock)
+						       AST.S_Block([incC]))]), emptyBlock)
 
 		    (*incrementN, icrementC, *)
 		    (*reoriegnet: extraSetup, updateDetlaStm, updateCurrentPosStm*)
@@ -799,6 +802,7 @@ structure CheckGlobals : sig
 									 updateDeltaStm,
 									 updateCurrentPosStm,
 									 ifStm,
+									 incrementNewton,
 									 cellNTest]))
 		    val loopStms =
 			(case FemData.meshAccInsert mesh
@@ -844,8 +848,8 @@ structure CheckGlobals : sig
 			(*end case*))
 		   
 
-
-		    val bodyStms = loopStms@[makePrinStatement("leaving\n",[],"\n"), failReturn]
+		    (*makePrinStatement("leaving\n",[],"\n"),*)
+		    val bodyStms = loopStms@[failReturn]
 			 
 		    val bodyStms' = initStms@bodyStms
 		    val body = AST.S_Block(bodyStms')
@@ -1107,6 +1111,7 @@ structure CheckGlobals : sig
 			 val meshName = FT.nameOf meshData
 			 val meshArgTy = Ty.T_Named(tyName, Ty.T_Fem(femInfo))
 			 val meshCellTy = Ty.T_Fem(FT.MeshCell(m), SOME(tyName))
+			 val meshPosTy = Ty.T_Fem(FT.MeshPos(m), SOME(tyName))
 			 val numCell = Atom.atom "numCell"
 			 val meshType = Ty.T_Fem(FT.Mesh(m), SOME(tyName))
 			 val numCellFuncTy = Ty.T_Fun([meshArgTy],Ty.T_Int)
@@ -1228,7 +1233,18 @@ structure CheckGlobals : sig
 			 val nEqFuncPair = (atom2, funVar2)
 			 end
 
-						     
+
+
+			 local
+			  (*invalidPos*)
+			  (*invalidCell*)
+			  val invalidPos = Atom.atom (FemName.invalidPos)
+			  val invalidPosTy = Ty.T_Fun([meshArgTy], meshPosTy)
+			  fun invalidPosFun([v1]) = AST.E_ExtractFemItemN([v1], [meshArgTy], meshPosTy, (FemOpt.InvalidBuild, FT.MeshPos(m)), NONE)
+			    | invalidPosFun(_)  = raise Fail "typechecker error."
+			 in
+			 val invalidReplace = (invalidPos, invalidPosFun, invalidPosTy)
+			 end
 
 		
 
@@ -1236,7 +1252,7 @@ structure CheckGlobals : sig
 			in
 			 ([(numCell, numCellFuncVar), (cells', cellFuncVar'), (refCellName, refCellFuncVar), (meshPosFuncAtom, meshPosFuncVar), eqFuncPair, nEqFuncPair],
 			  [numCellFun, cellsFun', cellsFun, refCellFunc, meshPosFunc, eqFunc, nEqFunc],
-			  [(cells, makeCells, cellTypeFuncTy), (meshInsideAtom, meshInsideFunc, meshInsideType)],
+			  [(cells, makeCells, cellTypeFuncTy), (meshInsideAtom, meshInsideFunc, meshInsideType), invalidReplace],
 			  [eqFuncPair, nEqFuncPair])
 			end
 

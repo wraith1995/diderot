@@ -1,0 +1,825 @@
+/* ParseTree: After parsing */
+  Program @ [ugg.diderot:2.1-24.0] 
+    [
+      Func: f @ [ugg.diderot:2.1-16.1] 
+        Tensor @ [ugg.diderot:2.10-15] 
+          [ ]
+        [
+          Param: g @ [ugg.diderot:2.17-23] 
+            Tensor @ [ugg.diderot:2.17-22] 
+              [ ]
+        ]
+        Stmt @ [ugg.diderot:2.1-16.1] 
+          Block @ [ugg.diderot:2.24-14.0] 
+            [
+              Decl @ [ugg.diderot:2.24-14.0] 
+                Decl: a= @ [ugg.diderot:3.3-4.0] 
+                  BinOp: * @ [ugg.diderot:3.12-15] 
+                    Var: g @ [ugg.diderot:3.12-13] 
+                    Lit: 2 @ [ugg.diderot:3.14-15] 
+              Foreach @ [ugg.diderot:4.3-12.0] 
+                Int @ [ugg.diderot:4.12-16] 
+                Iterator: i @ [ugg.diderot:4.16-27] 
+                  Range @ [ugg.diderot:4.21-27] 
+                    Lit: 0 @ [ugg.diderot:4.21-22] 
+                    Lit: 10 @ [ugg.diderot:4.25-27] 
+                IfThenElse @ [ugg.diderot:5.5-11.0] 
+                  BinOp: > @ [ugg.diderot:5.9-16] 
+                    Var: i @ [ugg.diderot:5.9-10] 
+                    BinOp: * @ [ugg.diderot:5.13-16] 
+                      Var: g @ [ugg.diderot:5.13-14] 
+                      Lit: 5 @ [ugg.diderot:5.15-16] 
+                  Return @ [ugg.diderot:6.7-7.0] 
+                    Lit: 0 @ [ugg.diderot:6.14-15] 
+                  Assign: a+= @ [ugg.diderot:9.5-10.0] 
+                    BinOp: * @ [ugg.diderot:9.8-13] 
+                      Var: g @ [ugg.diderot:9.8-9] 
+                      Lit: 0.2e0 @ [ugg.diderot:9.10-13] 
+              Return @ [ugg.diderot:12.3-13.0] 
+                Var: a @ [ugg.diderot:12.10-11] 
+            ]
+    ]
+    Strand: gg @ [ugg.diderot:16.1-23.3] 
+      [
+        Param: i @ [ugg.diderot:16.11-16] 
+          Int @ [ugg.diderot:16.11-15] 
+      ]
+      [
+        VarDcl: output @ [ugg.diderot:17.3-18.0] 
+      ]
+      [
+        Method: Update @ [ugg.diderot:18.3-23.1] 
+          Block @ [ugg.diderot:18.9-23.0] 
+            [
+              Assign: result= @ [ugg.diderot:19.5-20.0] 
+                Apply @ [ugg.diderot:19.14-23] 
+                  Var: f @ [ugg.diderot:19.14-15] 
+                  [
+                    Var: result @ [ugg.diderot:19.16-22] 
+                  ]
+              Print @ [ugg.diderot:20.5-21.0] 
+                [
+                  Var: result @ [ugg.diderot:20.11-17] 
+                  Lit: "\n" @ [ugg.diderot:20.19-23] 
+                ]
+              Stabilize @ [ugg.diderot:21.5-22.0] 
+            ]
+      ]
+    Collection @ [ugg.diderot:23.3-24.0] 
+      Comprehension @ [ugg.diderot:23.21-40] 
+        Apply @ [ugg.diderot:23.22-27] 
+          Var: gg @ [ugg.diderot:23.22-24] 
+          [
+            Var: j @ [ugg.diderot:23.25-26] 
+          ]
+        [
+          Iterator: j @ [ugg.diderot:23.30-39] 
+            Range @ [ugg.diderot:23.35-39] 
+              Lit: 0 @ [ugg.diderot:23.35-36] 
+              Lit: 4 @ [ugg.diderot:23.38-39] 
+        ]
+/* end program */
+/* AST: After typechecking */
+properties: none
+function real f (real g)
+{
+  real a = * (g, (real)2);
+  foreach (int i in $range (0, 10)) {
+    if > ((real)i, * (g, (real)5)) {
+      return 0.e0;
+      }
+    else {
+      a = +<$[]> (a, * (g, 0.2e0));
+      }
+    }
+  return a;
+  }
+strand gg (int i)
+{
+  output real result = * (0.1e1, (real)i);
+  update {
+    result = f (result);
+    print (result, "\n");
+    stabilize;
+    }
+  
+}
+collection {
+    foreach (int j in $range (0, 4)) {
+      new gg (j);
+      }
+    }
+  
+/* Program end */
+##### high-ir: after simple-to-high translation ####
+## properties
+  
+## globals
+## functions
+  function real f024C (real g0227#3) {
+    ENTRY024B:  preds = []
+      real _t0228#1 = 0.2e1;
+      real a022A#1 = λ(T0[],T1[])<(T0 * T1)> (g0227,_t0228);
+      int _t022C#1 = 0;
+      int _t022E#1 = 10;
+      int[] _t0230#1 = Range(_t022C,_t022E);
+    FOREACH0234:  preds = [ASSIGN0231,NEXT0249]
+      foreach (i0232 in _t0230) on exit goto RETURN(a0233)024A
+        real a0233#2 = phi(a022A,a0246)
+      real _t0235#1 = IntToReal(i0232);
+      real _t0237#1 = 0.5e1;
+      real _t0239#1 = λ(T0[],T1[])<(T0 * T1)> (g0227,_t0237);
+      bool _t023B#1 = GT<real>(_t0235,_t0239);
+      if _t023B then goto ASSIGN023F else goto ASSIGN0242
+    ASSIGN023F:  preds = [COND0248]
+      real _t023E#1 = 0.e0;
+      return _t023E
+      goto JOIN023D
+    JOIN023D:  preds = [*RETURN(_t023E)0240,ASSIGN0247]
+      real a0246#1 = phi(a0245)
+      goto FOREACH0234
+    ASSIGN0242:  preds = [COND0248]
+      real _t0241#1 = 0.2e0;
+      real _t0243#1 = λ(T0[],T1[])<(T0 * T1)> (g0227,_t0241);
+      real a0245#1 = λ(T0[],T1[])<(T0 + T1)> (a0233,_t0243);
+      goto JOIN023D
+    RETURN(a0233)024A:  preds = [FOREACH0234]
+      return a0233
+}
+## input initialization
+  ENTRY0225:  preds = []
+    return
+## global-variable initialization
+  ENTRY024D:  preds = []
+    return
+## strand
+  strand gg (int i025B#1)
+    state:
+      output real result;
+    state init
+      ENTRY0264:  preds = []
+        real _t025E#1 = 0.1e1;
+        real _t0260#1 = IntToReal(i025B);
+        real result0262#1 = λ(T0[],T1[])<(T0 * T1)> (_t025E,_t0260);
+        self.result = result0262;
+        return
+    end state init
+    method update
+        ENTRY0270:  preds = []
+          real result0267#1 = self.result;
+          real result0269#2 = f024C (result0267);
+          string _t026B#1 = "\n";
+          Print<[real,string]>(result0269,_t026B);
+          self.result = result0269;
+          stabilize
+    end update
+  end gg
+## initial strand creation
+  COLLECTION
+    ENTRY0259:  preds = []
+      int _t024F#1 = 0;
+      int _t0251#1 = 4;
+      int[] _t0253#1 = Range(_t024F,_t0251);
+    FOREACH0256:  preds = [ASSIGN0254,NEXT0258]
+      foreach (j0255 in _t0253) on exit goto RETURN025A
+      new gg(j0255);
+      goto FOREACH0256
+    RETURN025A:  preds = [FOREACH0256]
+      return
+#### end program ####
+##### high-ir: after value numbering ####
+## properties
+  
+## globals
+## functions
+  function real f024C (real g0227#3) {
+    ENTRY024B:  preds = []
+      real _t0228#1 = 0.2e1;
+      real a022A#1 = λ(T0[],T1[])<(T0 * T1)> (g0227,_t0228);
+      int _t022C#1 = 0;
+      int _t022E#1 = 10;
+      int[] _t0230#1 = Range(_t022C,_t022E);
+    FOREACH0234:  preds = [ASSIGN0231,NEXT0249]
+      foreach (i0232 in _t0230) on exit goto RETURN(a0233)024A
+        real a0233#2 = phi(a022A,a0246)
+      real _t0235#1 = IntToReal(i0232);
+      real _t0237#1 = 0.5e1;
+      real _t0239#1 = λ(T0[],T1[])<(T0 * T1)> (g0227,_t0237);
+      bool _t023B#1 = GT<real>(_t0235,_t0239);
+      if _t023B then goto ASSIGN023F else goto ASSIGN0242
+    ASSIGN023F:  preds = [COND0248]
+      real _t023E#1 = 0.e0;
+      return _t023E
+      goto JOIN023D
+    JOIN023D:  preds = [*RETURN(_t023E)0240,ASSIGN0247]
+      real a0246#1 = phi(a0245)
+      goto FOREACH0234
+    ASSIGN0242:  preds = [COND0248]
+      real _t0241#1 = 0.2e0;
+      real _t0243#1 = λ(T0[],T1[])<(T0 * T1)> (g0227,_t0241);
+      real a0245#1 = λ(T0[],T1[])<(T0 + T1)> (a0233,_t0243);
+      goto JOIN023D
+    RETURN(a0233)024A:  preds = [FOREACH0234]
+      return a0233
+}
+## input initialization
+  ENTRY0225:  preds = []
+    return
+## global-variable initialization
+  ENTRY024D:  preds = []
+    return
+## strand
+  strand gg (int i025B#1)
+    state:
+      output real result;
+    state init
+      ENTRY0264:  preds = []
+        real _t025E#1 = 0.1e1;
+        real _t0260#1 = IntToReal(i025B);
+        real result0262#1 = λ(T0[],T1[])<(T0 * T1)> (_t025E,_t0260);
+        self.result = result0262;
+        return
+    end state init
+    method update
+        ENTRY0270:  preds = []
+          real result0267#1 = self.result;
+          real result0269#2 = f024C (result0267);
+          string _t026B#1 = "\n";
+          Print<[real,string]>(result0269,_t026B);
+          self.result = result0269;
+          stabilize
+    end update
+  end gg
+## initial strand creation
+  COLLECTION
+    ENTRY0259:  preds = []
+      int _t024F#1 = 0;
+      int _t0251#1 = 4;
+      int[] _t0253#1 = Range(_t024F,_t0251);
+    FOREACH0256:  preds = [ASSIGN0254,NEXT0258]
+      foreach (j0255 in _t0253) on exit goto RETURN025A
+      new gg(j0255);
+      goto FOREACH0256
+    RETURN025A:  preds = [FOREACH0256]
+      return
+#### end program ####
+##### high-ir: after normalization rewriting ####
+## properties
+  
+## globals
+## functions
+  function real f024C (real g0227#3) {
+    ENTRY024B:  preds = []
+      real _t0228#1 = 0.2e1;
+      real a022A#1 = λ(T0[],T1[])<(T0 * T1)> (g0227,_t0228);
+      int _t022C#1 = 0;
+      int _t022E#1 = 10;
+      int[] _t0230#1 = Range(_t022C,_t022E);
+    FOREACH0234:  preds = [ASSIGN0231,NEXT0249]
+      foreach (i0232 in _t0230) on exit goto RETURN(a0233)024A
+        real a0233#2 = phi(a022A,a0246)
+      real _t0235#1 = IntToReal(i0232);
+      real _t0237#1 = 0.5e1;
+      real _t0239#1 = λ(T0[],T1[])<(T0 * T1)> (g0227,_t0237);
+      bool _t023B#1 = GT<real>(_t0235,_t0239);
+      if _t023B then goto ASSIGN023F else goto ASSIGN0242
+    ASSIGN023F:  preds = [COND0248]
+      real _t023E#1 = 0.e0;
+      return _t023E
+      goto JOIN023D
+    JOIN023D:  preds = [*RETURN(_t023E)0240,ASSIGN0272]
+      real a0246#1 = phi(a0245)
+      goto FOREACH0234
+    ASSIGN0242:  preds = [COND0248]
+      real _t0241#1 = 0.2e0;
+      real a0245#1 = λ(T0[],T1[],T2[])<(T0 + (T1 * T2))> (a0233,g0227,_t0241);
+      goto JOIN023D
+    RETURN(a0233)024A:  preds = [FOREACH0234]
+      return a0233
+}
+## input initialization
+  ENTRY0225:  preds = []
+    return
+## global-variable initialization
+  ENTRY024D:  preds = []
+    return
+## strand
+  strand gg (int i025B#1)
+    state:
+      output real result;
+    state init
+      ENTRY0264:  preds = []
+        real _t025E#1 = 0.1e1;
+        real _t0260#1 = IntToReal(i025B);
+        real result0262#1 = λ(T0[],T1[])<(T0 * T1)> (_t025E,_t0260);
+        self.result = result0262;
+        return
+    end state init
+    method update
+        ENTRY0270:  preds = []
+          real result0267#1 = self.result;
+          real result0269#2 = f024C (result0267);
+          string _t026B#1 = "\n";
+          Print<[real,string]>(result0269,_t026B);
+          self.result = result0269;
+          stabilize
+    end update
+  end gg
+## initial strand creation
+  COLLECTION
+    ENTRY0259:  preds = []
+      int _t024F#1 = 0;
+      int _t0251#1 = 4;
+      int[] _t0253#1 = Range(_t024F,_t0251);
+    FOREACH0256:  preds = [ASSIGN0254,NEXT0258]
+      foreach (j0255 in _t0253) on exit goto RETURN025A
+      new gg(j0255);
+      goto FOREACH0256
+    RETURN025A:  preds = [FOREACH0256]
+      return
+#### end program ####
+##### high-ir: after normalization promotion ####
+## properties
+  
+## globals
+## functions
+  function real f024C (real g0227#3) {
+    ENTRY024B:  preds = []
+      real _t0228#1 = 0.2e1;
+      real a022A#1 = λ(T0[],T1[])<(T0 * T1)> (g0227,_t0228);
+      int _t022C#1 = 0;
+      int _t022E#1 = 10;
+      int[] _t0230#1 = Range(_t022C,_t022E);
+    FOREACH0234:  preds = [ASSIGN0231,NEXT0249]
+      foreach (i0232 in _t0230) on exit goto RETURN(a0233)024A
+        real a0233#2 = phi(a022A,a0246)
+      real _t0235#1 = IntToReal(i0232);
+      real _t0237#1 = 0.5e1;
+      real _t0239#1 = λ(T0[],T1[])<(T0 * T1)> (g0227,_t0237);
+      bool _t023B#1 = GT<real>(_t0235,_t0239);
+      if _t023B then goto ASSIGN023F else goto ASSIGN0242
+    ASSIGN023F:  preds = [COND0248]
+      real _t023E#1 = 0.e0;
+      return _t023E
+      goto JOIN023D
+    JOIN023D:  preds = [*RETURN(_t023E)0240,ASSIGN0272]
+      real a0246#1 = phi(a0245)
+      goto FOREACH0234
+    ASSIGN0242:  preds = [COND0248]
+      real _t0241#1 = 0.2e0;
+      real a0245#1 = λ(T0[],T1[],T2[])<(T0 + (T1 * T2))> (a0233,g0227,_t0241);
+      goto JOIN023D
+    RETURN(a0233)024A:  preds = [FOREACH0234]
+      return a0233
+}
+## input initialization
+  ENTRY0225:  preds = []
+    return
+## global-variable initialization
+  ENTRY024D:  preds = []
+    return
+## strand
+  strand gg (int i025B#1)
+    state:
+      output real result;
+    state init
+      ENTRY0264:  preds = []
+        real _t025E#1 = 0.1e1;
+        real _t0260#1 = IntToReal(i025B);
+        real result0262#1 = λ(T0[],T1[])<(T0 * T1)> (_t025E,_t0260);
+        self.result = result0262;
+        return
+    end state init
+    method update
+        ENTRY0270:  preds = []
+          real result0267#1 = self.result;
+          real result0269#2 = f024C (result0267);
+          string _t026B#1 = "\n";
+          Print<[real,string]>(result0269,_t026B);
+          self.result = result0269;
+          stabilize
+    end update
+  end gg
+## initial strand creation
+  COLLECTION
+    ENTRY0259:  preds = []
+      int _t024F#1 = 0;
+      int _t0251#1 = 4;
+      int[] _t0253#1 = Range(_t024F,_t0251);
+    FOREACH0256:  preds = [ASSIGN0254,NEXT0258]
+      foreach (j0255 in _t0253) on exit goto RETURN025A
+      new gg(j0255);
+      goto FOREACH0256
+    RETURN025A:  preds = [FOREACH0256]
+      return
+#### end program ####
+##### low-ir: after mid-to-low translation ####
+## properties
+  
+## globals
+## functions
+  function real f02D3 (real g02D4#3) {
+    ENTRY02D5:  preds = []
+      real _t02D6#1 = 0.2e1;
+      real a02D8#1 = RMul(g02D4,_t02D6);
+      int _t02DB#1 = 0;
+      int _t02DD#1 = 10;
+      int[] _t02DF#1 = Range(_t02DB,_t02DD);
+    FOREACH02E2:  preds = [ASSIGN02E0,NEXT02F3]
+      foreach (i02E1 in _t02DF) on exit goto RETURN(a02F9)02FC
+        real a02F9#2 = phi(a02D8,a02F0)
+      real _t02E3#1 = IntToReal(i02E1);
+      real _t02E5#1 = 0.5e1;
+      real _t02E7#1 = RMul(g02D4,_t02E5);
+      bool _t02EA#1 = GT<real>(_t02E3,_t02E7);
+      if _t02EA then goto ASSIGN02EE else goto ASSIGN02F5
+    ASSIGN02EE:  preds = [COND02EC]
+      real _t02ED#1 = 0.e0;
+      return _t02ED
+      goto JOIN02F2
+    JOIN02F2:  preds = [*RETURN(_t02ED)02EF,ASSIGN02FB]
+      real a02F0#1 = phi(a02F1)
+      goto FOREACH02E2
+    ASSIGN02F5:  preds = [COND02EC]
+      real _t02F4#1 = 0.2e0;
+      real op1_e3_l_302F6#1 = RMul(g02D4,_t02F4);
+      real a02F1#1 = RAdd(a02F9,op1_e3_l_302F6);
+      goto JOIN02F2
+    RETURN(a02F9)02FC:  preds = [FOREACH02E2]
+      return a02F9
+}
+## input initialization
+  ENTRY02BF:  preds = []
+    return
+## global-variable initialization
+  ENTRY02C1:  preds = []
+    return
+## strand
+  strand gg (int i02C3#1)
+    state:
+      output real result;
+    state init
+      ENTRY02C5:  preds = []
+        real _t02C6#1 = 0.1e1;
+        real _t02C8#1 = IntToReal(i02C3);
+        real result02CA#1 = RMul(_t02C6,_t02C8);
+        self.result = result02CA;
+        return
+    end state init
+    method update
+        ENTRY02CF:  preds = []
+          real result02D0#1 = self.result;
+          real result02D2#2 = f02D3 (result02D0);
+          string _t02FE#1 = "\n";
+          Print<[real,string]>(result02D2,_t02FE);
+          self.result = result02D2;
+          stabilize
+    end update
+  end gg
+## initial strand creation
+  COLLECTION
+    ENTRY0304:  preds = []
+      int _t0305#1 = 0;
+      int _t0307#1 = 4;
+      int[] _t0309#1 = Range(_t0305,_t0307);
+    FOREACH030C:  preds = [ASSIGN030A,NEXT030E]
+      foreach (j030B in _t0309) on exit goto RETURN030F
+      new gg(j030B);
+      goto FOREACH030C
+    RETURN030F:  preds = [FOREACH030C]
+      return
+#### end program ####
+##### low-ir: after contraction(1) ####
+## properties
+  
+## globals
+## functions
+  function real f02D3 (real g02D4#3) {
+    ENTRY02D5:  preds = []
+      real _t02D6#1 = 0.2e1;
+      real a02D8#1 = RMul(g02D4,_t02D6);
+      int _t02DB#1 = 0;
+      int _t02DD#1 = 10;
+      int[] _t02DF#1 = Range(_t02DB,_t02DD);
+    FOREACH02E2:  preds = [ASSIGN02E0,NEXT02F3]
+      foreach (i02E1 in _t02DF) on exit goto RETURN(a02F9)02FC
+        real a02F9#2 = phi(a02D8,a02F0)
+      real _t02E3#1 = IntToReal(i02E1);
+      real _t02E5#1 = 0.5e1;
+      real _t02E7#1 = RMul(g02D4,_t02E5);
+      bool _t02EA#1 = GT<real>(_t02E3,_t02E7);
+      if _t02EA then goto ASSIGN02EE else goto ASSIGN02F5
+    ASSIGN02EE:  preds = [COND02EC]
+      real _t02ED#1 = 0.e0;
+      return _t02ED
+      goto JOIN02F2
+    JOIN02F2:  preds = [*RETURN(_t02ED)02EF,ASSIGN02FB]
+      real a02F0#1 = phi(a02F1)
+      goto FOREACH02E2
+    ASSIGN02F5:  preds = [COND02EC]
+      real _t02F4#1 = 0.2e0;
+      real op1_e3_l_302F6#1 = RMul(g02D4,_t02F4);
+      real a02F1#1 = RAdd(a02F9,op1_e3_l_302F6);
+      goto JOIN02F2
+    RETURN(a02F9)02FC:  preds = [FOREACH02E2]
+      return a02F9
+}
+## input initialization
+  ENTRY02BF:  preds = []
+    return
+## global-variable initialization
+  ENTRY02C1:  preds = []
+    return
+## strand
+  strand gg (int i02C3#1)
+    state:
+      output real result;
+    state init
+      ENTRY02C5:  preds = []
+        real _t02C6#1 = 0.1e1;
+        real _t02C8#1 = IntToReal(i02C3);
+        real result02CA#1 = RMul(_t02C6,_t02C8);
+        self.result = result02CA;
+        return
+    end state init
+    method update
+        ENTRY02CF:  preds = []
+          real result02D0#1 = self.result;
+          real result02D2#2 = f02D3 (result02D0);
+          string _t02FE#1 = "\n";
+          Print<[real,string]>(result02D2,_t02FE);
+          self.result = result02D2;
+          stabilize
+    end update
+  end gg
+## initial strand creation
+  COLLECTION
+    ENTRY0304:  preds = []
+      int _t0305#1 = 0;
+      int _t0307#1 = 4;
+      int[] _t0309#1 = Range(_t0305,_t0307);
+    FOREACH030C:  preds = [ASSIGN030A,NEXT030E]
+      foreach (j030B in _t0309) on exit goto RETURN030F
+      new gg(j030B);
+      goto FOREACH030C
+    RETURN030F:  preds = [FOREACH030C]
+      return
+#### end program ####
+##### low-ir: after value numbering ####
+## properties
+  
+## globals
+## functions
+  function real f02D3 (real g02D4#3) {
+    ENTRY02D5:  preds = []
+      real _t02D6#1 = 0.2e1;
+      real a02D8#1 = RMul(g02D4,_t02D6);
+      int _t02DB#1 = 0;
+      int _t02DD#1 = 10;
+      int[] _t02DF#1 = Range(_t02DB,_t02DD);
+    FOREACH02E2:  preds = [ASSIGN02E0,NEXT02F3]
+      foreach (i02E1 in _t02DF) on exit goto RETURN(a02F9)02FC
+        real a02F9#2 = phi(a02D8,a02F0)
+      real _t02E3#1 = IntToReal(i02E1);
+      real _t02E5#1 = 0.5e1;
+      real _t02E7#1 = RMul(g02D4,_t02E5);
+      bool _t02EA#1 = GT<real>(_t02E3,_t02E7);
+      if _t02EA then goto ASSIGN02EE else goto ASSIGN02F5
+    ASSIGN02EE:  preds = [COND02EC]
+      real _t02ED#1 = 0.e0;
+      return _t02ED
+      goto JOIN02F2
+    JOIN02F2:  preds = [*RETURN(_t02ED)02EF,ASSIGN02FB]
+      real a02F0#1 = phi(a02F1)
+      goto FOREACH02E2
+    ASSIGN02F5:  preds = [COND02EC]
+      real _t02F4#1 = 0.2e0;
+      real op1_e3_l_302F6#1 = RMul(g02D4,_t02F4);
+      real a02F1#1 = RAdd(a02F9,op1_e3_l_302F6);
+      goto JOIN02F2
+    RETURN(a02F9)02FC:  preds = [FOREACH02E2]
+      return a02F9
+}
+## input initialization
+  ENTRY02BF:  preds = []
+    return
+## global-variable initialization
+  ENTRY02C1:  preds = []
+    return
+## strand
+  strand gg (int i02C3#1)
+    state:
+      output real result;
+    state init
+      ENTRY02C5:  preds = []
+        real _t02C6#1 = 0.1e1;
+        real _t02C8#1 = IntToReal(i02C3);
+        real result02CA#1 = RMul(_t02C6,_t02C8);
+        self.result = result02CA;
+        return
+    end state init
+    method update
+        ENTRY02CF:  preds = []
+          real result02D0#1 = self.result;
+          real result02D2#2 = f02D3 (result02D0);
+          string _t02FE#1 = "\n";
+          Print<[real,string]>(result02D2,_t02FE);
+          self.result = result02D2;
+          stabilize
+    end update
+  end gg
+## initial strand creation
+  COLLECTION
+    ENTRY0304:  preds = []
+      int _t0305#1 = 0;
+      int _t0307#1 = 4;
+      int[] _t0309#1 = Range(_t0305,_t0307);
+    FOREACH030C:  preds = [ASSIGN030A,NEXT030E]
+      foreach (j030B in _t0309) on exit goto RETURN030F
+      new gg(j030B);
+      goto FOREACH030C
+    RETURN030F:  preds = [FOREACH030C]
+      return
+#### end program ####
+##### low-ir: after contraction(2) ####
+## properties
+  
+## globals
+## functions
+  function real f02D3 (real g02D4#3) {
+    ENTRY02D5:  preds = []
+      real _t02D6#1 = 0.2e1;
+      real a02D8#1 = RMul(g02D4,_t02D6);
+      int _t02DB#1 = 0;
+      int _t02DD#1 = 10;
+      int[] _t02DF#1 = Range(_t02DB,_t02DD);
+    FOREACH02E2:  preds = [ASSIGN02E0,NEXT02F3]
+      foreach (i02E1 in _t02DF) on exit goto RETURN(a02F9)02FC
+        real a02F9#2 = phi(a02D8,a02F0)
+      real _t02E3#1 = IntToReal(i02E1);
+      real _t02E5#1 = 0.5e1;
+      real _t02E7#1 = RMul(g02D4,_t02E5);
+      bool _t02EA#1 = GT<real>(_t02E3,_t02E7);
+      if _t02EA then goto ASSIGN02EE else goto ASSIGN02F5
+    ASSIGN02EE:  preds = [COND02EC]
+      real _t02ED#1 = 0.e0;
+      return _t02ED
+      goto JOIN02F2
+    JOIN02F2:  preds = [*RETURN(_t02ED)02EF,ASSIGN02FB]
+      real a02F0#1 = phi(a02F1)
+      goto FOREACH02E2
+    ASSIGN02F5:  preds = [COND02EC]
+      real _t02F4#1 = 0.2e0;
+      real op1_e3_l_302F6#1 = RMul(g02D4,_t02F4);
+      real a02F1#1 = RAdd(a02F9,op1_e3_l_302F6);
+      goto JOIN02F2
+    RETURN(a02F9)02FC:  preds = [FOREACH02E2]
+      return a02F9
+}
+## input initialization
+  ENTRY02BF:  preds = []
+    return
+## global-variable initialization
+  ENTRY02C1:  preds = []
+    return
+## strand
+  strand gg (int i02C3#1)
+    state:
+      output real result;
+    state init
+      ENTRY02C5:  preds = []
+        real _t02C6#1 = 0.1e1;
+        real _t02C8#1 = IntToReal(i02C3);
+        real result02CA#1 = RMul(_t02C6,_t02C8);
+        self.result = result02CA;
+        return
+    end state init
+    method update
+        ENTRY02CF:  preds = []
+          real result02D0#1 = self.result;
+          real result02D2#2 = f02D3 (result02D0);
+          string _t02FE#1 = "\n";
+          Print<[real,string]>(result02D2,_t02FE);
+          self.result = result02D2;
+          stabilize
+    end update
+  end gg
+## initial strand creation
+  COLLECTION
+    ENTRY0304:  preds = []
+      int _t0305#1 = 0;
+      int _t0307#1 = 4;
+      int[] _t0309#1 = Range(_t0305,_t0307);
+    FOREACH030C:  preds = [ASSIGN030A,NEXT030E]
+      foreach (j030B in _t0309) on exit goto RETURN030F
+      new gg(j030B);
+      goto FOREACH030C
+    RETURN030F:  preds = [FOREACH030C]
+      return
+#### end program ####
+##### low-ir: after flatten ####
+## properties
+  
+## globals
+## functions
+  function real f02D3 (real g02D4#3) {
+    ENTRY02D5:  preds = []
+      real _t02D6#1 = 0.2e1;
+      real a02D8#1 = RMul(g02D4,_t02D6);
+      int _t02DB#1 = 0;
+      int _t02DD#1 = 10;
+      int[] _t02DF#1 = Range(_t02DB,_t02DD);
+    FOREACH02E2:  preds = [ASSIGN02E0,NEXT02F3]
+      foreach (i02E1 in _t02DF) on exit goto RETURN(a02F9)02FC
+        real a02F9#2 = phi(a02D8,a02F0)
+      real _t02E3#1 = IntToReal(i02E1);
+      real _t02E5#1 = 0.5e1;
+      real _t02E7#1 = RMul(g02D4,_t02E5);
+      bool _t02EA#1 = GT<real>(_t02E3,_t02E7);
+      if _t02EA then goto ASSIGN02EE else goto ASSIGN02F5
+    ASSIGN02EE:  preds = [COND02EC]
+      real _t02ED#1 = 0.e0;
+      return _t02ED
+      goto JOIN02F2
+    JOIN02F2:  preds = [*RETURN(_t02ED)02EF,ASSIGN02FB]
+      real a02F0#1 = phi(a02F1)
+      goto FOREACH02E2
+    ASSIGN02F5:  preds = [COND02EC]
+      real _t02F4#1 = 0.2e0;
+      real op1_e3_l_302F6#1 = RMul(g02D4,_t02F4);
+      real a02F1#1 = RAdd(a02F9,op1_e3_l_302F6);
+      goto JOIN02F2
+    RETURN(a02F9)02FC:  preds = [FOREACH02E2]
+      return a02F9
+}
+## input initialization
+  ENTRY02BF:  preds = []
+    return
+## global-variable initialization
+  ENTRY02C1:  preds = []
+    return
+## strand
+  strand gg (int i02C3#1)
+    state:
+      output real result;
+    state init
+      ENTRY02C5:  preds = []
+        real _t02C6#1 = 0.1e1;
+        real _t02C8#1 = IntToReal(i02C3);
+        real result02CA#1 = RMul(_t02C6,_t02C8);
+        self.result = result02CA;
+        return
+    end state init
+    method update
+        ENTRY02CF:  preds = []
+          real result02D0#1 = self.result;
+          real result02D2#2 = f02D3 (result02D0);
+          string _t02FE#1 = "\n";
+          Print<[real,string]>(result02D2,_t02FE);
+          self.result = result02D2;
+          stabilize
+    end update
+  end gg
+## initial strand creation
+  COLLECTION
+    ENTRY0304:  preds = []
+      int _t0305#1 = 0;
+      int _t0307#1 = 4;
+      int[] _t0309#1 = Range(_t0305,_t0307);
+    FOREACH030C:  preds = [ASSIGN030A,NEXT030E]
+      foreach (j030B in _t0309) on exit goto RETURN030F
+      new gg(j030B);
+      goto FOREACH030C
+    RETURN030F:  preds = [FOREACH030C]
+      return
+#### end program ####
+/usr/bin/clang++ -fPIC -m64 -c -Wreturn-type -Wuninitialized -march=native -O3 -DNDEBUG -mavx2 -msse4.2 -I/home/teocollin/gitcode/diderot/include -I/usr/local/include ugg.cxx
+/usr/bin/clang++ -fPIC -m64 -o ugg ugg.o /home/teocollin/gitcode/diderot/lib/diderot-rt-seq.o -Wl,-rpath=/usr/local/lib -L/usr/local/lib -lteem -lm
+                                       Phase                                         Exclusive    Total  
+  compiler ..........................................................................   0.002     0.697
+    front end .......................................................................   0.003     0.007
+      parser ........................................................................   0.003     0.003
+      typechecker ...................................................................   0.001     0.001
+      simplify ......................................................................   0.000     0.000
+    translate .......................................................................   0.001     0.001
+    High IR optimization ............................................................   0.004     0.005
+      High IR value numbering .......................................................   0.001     0.001
+      High IR normalization .........................................................   0.000     0.000
+      High IR checking ..............................................................   0.000     0.000
+    High to Mid translation .........................................................   0.001     0.001
+    Mid IR optimization .............................................................   0.000     0.001
+      Mid IR contraction ............................................................   0.000     0.000
+      Mid IR value numbering ........................................................   0.001     0.001
+      Mid IR border control .........................................................   0.000     0.000
+      Mid IR checking ...............................................................   0.000     0.000
+    Mid to Low translation ..........................................................   0.001     0.001
+    Low IR optimization .............................................................   0.002     0.003
+      Low IR contraction ............................................................   0.000     0.000
+      Low IR value numbering ........................................................   0.001     0.001
+      Low IR checking ...............................................................   0.000     0.000
+    Low to Tree translation .........................................................   0.001     0.001
+    Tree IR optimization ............................................................   0.000     0.000
+      Tree IR contraction ...........................................................   0.000     0.000
+      Tree IR checking ..............................................................   0.000     0.000
+    code generation .................................................................   0.006     0.676
+      C compiler ....................................................................   0.670     0.670

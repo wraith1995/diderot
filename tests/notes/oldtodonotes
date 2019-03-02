@@ -1,0 +1,196 @@
+
+
+Somehwere in here the namespace needs to be cleaned:
+MORNING:
+refField:
+1.MakeFem cells via promotion function (look at debug directive) and normalize names of these types for god sake
+---have to generate the c code for that
+2.Get Fem dofs --split at the index location
+3. Do it.
+
+
+RefCell:
+0. add refCell function
+1. add inside mesh parsing (C string-in infustructure, diderot function, simplex???)
+-Add newton inverse associated to the mesh.
+
+MeshPos:
+-Add descendent type
+-Add basic ref pos way of creating
+-Add global way of creating it.
+
+---NEW EIN STUFF
+
+
+
+Somehwere in here the namespace needs to be cleaned
+refField:
+1.MakeFem cells via promotion function (look at debug directive) and normalize names of these types for god sake
+2.Get Fem dofs
+3. Do it.
+
+RefCell:
+0. add refCell function
+1. add inside mesh parsing (C string-in infustructure, diderot function, simplex???)
+-Add newton inverse associated to the mesh.
+
+MeshPos:
+-Add descendent type
+-Add basic ref pos way of creating
+-Add global way of creating it.
+
+---NEW EIN STUFF
+current todo:
+Normalize fem interface (mesh, space, func)
+Deal with more fiedlds and more files to prase
+--parsing files
+--add more fields from it
+advance basis function types (basis info)
+--Lots of stuff in fem doesn't typecheck like it should.
+JSON SCHEMA
+Current error: 
+
+List of todo:
+-Okay there is a confusion aboout indexDatalower and so forth -> main issue is confusion of when things are loaded
+-arrayNd cyclying them
+-universal shape library
+-how to evaluate kernal -> Op
+---vectorization -> what the fuck is going on here
+---Remove potential for dim=1 things to exists.
+-Cleanup check-expr
+-loading of individual cells and single cell sequences
+-clean up print statements in other code
+---- still missing consisten finding of things and making sure things are gotten
+-expand ideas to other types
+-pointer issue
+-bordercontrol in FemItem
+-loading nrrds
+-insert C cde srtings, use lib index, check ir
+-misue of degree/dim
+-special transforms
+-equality testing
+-checking ir/check femOpt
+-removing () in select
+-verticies, inside, etc
+
+
+Notes:
+
+Map of current things to mod:
+
+
+probe-ein.sml:284:          val E.Probe(E.Conv(Vid, alpha, hid, dx), E.Tensor(tid, _)) = probe
+probe-ein.sml:330:                of [] => ([], index, E.Conv(0, alpha, 1, dx'))
+probe-ein.sml:331:                | _ => CleanIndex.clean(E.Conv(0, alpha, 1, dx'), index, sxx)
+probe-ein.sml:336:          val E.Conv(_, alpha', _, dx) = ec
+probe-ein.sml:343:          val E.Probe(E.Conv(Vid, alpha, hid, dx), E.Tensor(tid, _)) = probe
+probe-ein.sml:374:           of (E.Probe(E.Conv(_, _, _, []) ,_)) =>
+probe-ein.sml:376:            | (E.Probe(E.Conv(_, alpha, _, dx) ,_)) =>
+probe-ein.sml:378:            | (E.Sum(sx, p as E.Probe(E.Conv(_, _, _, []), _))) =>
+probe-ein.sml:380:            | (E.Sum(sx, p as E.Probe(E.Conv(_, [], _, dx), _))) =>
+
+float-ein.sml:30:                    body = E.Probe(E.Conv(V, [c1], h, dx), pos),
+float-ein.sml:37:          val unshiftedBody = E.Probe(E.Conv(V, [E.V newvx], h, dx), pos)
+float-ein.sml:171:    fun transform (y, ein as Ein.EIN{body=E.Probe (E.Conv _, _), ...}, args) =
+float-ein.sml:173:      | transform (y, ein as Ein.EIN{body=E.Sum(_, E.Probe (E.Conv _, _)), ...}, args) =
+float-ein.sml:190:                 of E.Probe(E.Conv(_, [E.C _], _, []), _) =>
+float-ein.sml:192:                  | E.Probe(E.Conv(_, [E.C _ ], _, [E.V 0]), _) =>
+float-ein.sml:194:                  | E.Probe(E.Conv(_, [E.C _ ], _, [E.V 0, E.V 1]), _) =>
+float-ein.sml:196:                  | E.Probe(E.Conv(_, [E.C _ ], _, [E.V 0, E.V 1, E.V 2]), _) =>
+
+
+
+Notes on evaluation:
+Issues:
+Vecortization
+redudant work between polys of the same basis
+redudant work between derivatives of the same polynomial
+redudant work given structure
+Evaluation scheme for an a polynomial
+organization of basis functions evaluations into a tensor
+
+Choices group of things togeather:
+Global level: CSE
+Zero choose: how we evaluate the basis and store it in a tensor -- for the basis, doing Dof at the end means we can exclude some of them
+First Choose: keeping of home basis function and stuff togeather
+Second choose: write of the main coeff convolution -- we use the structure here - dsum and oprod - 
+Third choice: evaluation of basis values as a group and possible rediction into another basis
+
+Note: kernel case is 
+
+
+Changes:
+1.
+-Ask for more information when parsing in the basis functoins
+coeffs, vars, degree, minCoeeffs
+Ask for prod and sum
+Fix hashing problem?
+
+2.
+in basis infustructure, reprsent as a sum, product, or regular thing
+fix hashing problem
+offer analyzer
+build a collection reprsentation
+
+Analyze this in femfieldreconstruction
+Pass into evaluations of 1,2,3d collections of things by derivative level with original thing attached
+
+3.
+Pass basis evaluation (so a collection of basis at a particular derivative level with the original attached)
+--Use common information to do vectorization to evaluate basis functoins (coeeffs are vector)
+--do horner rules for each basis function -- no vectorization
+--vectorize hornre rule over the coefficients?
+--include a string form that mandates evaluation
+
+
+For now, we will just forward groups by deriative with the original
+--do mononomial basic with vectorization or horner rule with vectorizatoin over coeffs or detecth monominal
+--go back and figure shit out
+--attach the evaluated variables and build into mono rep
+--horner's rule for mults can be vectorized via Vscale and vAdd
+
+By degree evaluation of polys at the same point:
+vscale(coeeffs, x^n y^n) -- ones of the same adgree
+vadd(coeffs, vscape(,..,))
+--organize things and coeff vectors by degree.
+--sum along the needed scalings
+
+==================WHICH REGRESSION TEST?
+
+
+
+
+Code notes:
+---Does pushing this out as various functions lead to miss ops for common code?
+---have to think about that tomorrow after we provide meshPos ops
+---Think about holding the functions in blocks longer? Recongize them more?
+---full field is currently just a composition that recongizes something, but it could be based on three compositions that notice something thought that is numerically risky
+
+-Check-globals, check-type files, check-expr are kind of messy - need to be cleabed and better errormessages - lots of options need to be checed to generated err cxt messesages
+---and needs to be inside.
+-Fem interface needs checkers/validations
+-check-ir parts need components
+-fem-name name needs to be more consistently used
+-FIELDS will be done by having functions attached to both and analyzing comp to make a call, a probe, and so forth.
+-debug section via insert prints would be useful.
+--try to figure that out
+-TEST with affine and something else.
+--add itter based on affine - analyze that somehow...
+
+x_{n+1} = x_{n} - DF(x_{o or n})^{-1}[F(x_{n}) - pos]
+
+
+
+
+
+Current:
+Push on newton function call with regard to A^{-1} check and how that is a single itteration.
+---make sure to do newton for inverse function right -- currently is wrong
+---make sure to set up the function in a nice manner with useful prim setups
+-FIX EIN's function derivative: https://math.stackexchange.com/questions/96265/differentiating-an-inner-product
+--Push down
+
+
+
+
+

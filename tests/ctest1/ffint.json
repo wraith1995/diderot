@@ -1,0 +1,14 @@
+{
+    "constants" : [
+	{
+	    "name" : "ffff",
+	    "type" : "int",
+	    "value" : 2
+	},
+	{
+	    "name" : "bunt",
+	    "type" : "int[2]",
+	    "value" : [2,2]
+	}
+    ]
+}

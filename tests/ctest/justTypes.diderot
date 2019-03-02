@@ -1,0 +1,81 @@
+#version 3.0
+
+type mesh msh = file("test1.json");
+type functionSpace{msh}[] fns = file("test1.json");
+type femFunction{fns} FUNC = file("test1.json");
+
+input msh a;
+input fns b = fns(a);
+input FUNC c = FUNC(b);
+refCell{msh} AAA = a.refcell();
+field(3)[] F = c.F;
+int[] umm = {1,2,3};
+
+function vec3 tester(cell{msh} srcCell, vec3 next, real time, position{msh} pos) {
+  if (pos.isValid())
+    {
+
+      vec3 srcRefPos = [0.25, 0.25,0.25] + time * next;
+      vec3 srcWorldPos = srcCell.transform(srcRefPos);
+      cell{msh} newCell = pos.mc();
+      /* print("srcCell: ", srcCell, " dstCell: ", newCell,"\n"); */
+      vec3 cDstPos = (newCell.inverseTransform)(srcWorldPos);
+      vec3 posDestPos =  pos.refPos();
+      
+      vec3 testTarget = cDstPos - posDestPos;
+      /* print("On srcfCate", srcRefPos, " pos on dstfacet", posDestPos, " and transformed ", cDstPos,"\n"); */
+      /* print("cell worldPos:", pos.worldPos(), "and src worldpos", srcWorldPos, "\n"); */
+      return testTarget;
+	}
+  else
+    { return([0,0,0]);}
+}
+
+
+strand gg(cell{msh} j){
+  
+  output vec3 pos = [0.25, 0.25,0.25];
+  update{
+
+
+      vec3 startPos = [0.1, -1.0, 0.1];
+      vec3 transStartPos = inv(∇⊗( j.transform )([0.0,0.0,0.0])) •(startPos - j.transform([0.0,0.0,0.0]));
+      vec3 dpos = [0,1,0];
+      vec3 transDpos =  inv(∇⊗( j.transform )([0.0,0.0,0.0])) • dpos;
+      
+      real t5 = j.enter(startPos, dpos);
+      real t6  = AAA.enter(transStartPos, transDpos);
+      vec3 result = startPos + t5*dpos;
+      vec3 result' = startPos + t6*dpos;
+      print("\n");
+      print("We have time ",t5, " and result", result, "\n");
+      print("We have time ",t6, " and result", result', "\n");
+      print("\n");
+    /*   if (mpos1.isValid()){ */
+    /* 	print("1: intersect cell, ref, and worldpos:",mpos1.mc(), mpos1.refPos, mpos1.worldPos(), "\n"); */
+    /* 	vec2 n = mpos.refPos + [-1,0]*t1; */
+    /*   } */
+    /*   if (mpos2.isValid()){ */
+    /* 	print("2: intersect ref and worldpos:",mpos2.mc(), mpos2.refPos, mpos2.worldPos(), "\n"); */
+    /* 	print("umm:", mpos2.mc().transform(mpos2.refPos),"\n"); */
+    /* 	print("grr:", mpos2.mc().transform([0,0]), mpos2.mc().transform([0,1]), "\n"); */
+    /* 	vec2 n = mpos.refPos + [-1,0]*t1; */
+    /* 	print("smesh:", n); */
+    /*   } */
+    /*   if (mpos3.isValid()){ */
+    /* 	print("3: intersect ref and worldpos:",mpos3.mc(), mpos3.refPos, mpos3.worldPos(), "\n"); */
+    /* 	print("umm:", mpos3.mc().transform(mpos3.refPos),"\n"); */
+    /* 	print("grr:", mpos2.mc().transform([0,0]), mpos2.mc().transform([1,0]), "\n"); */
+    /* 	vec2 n = mpos.refPos + [1,1]*t1; */
+    /* 	print("smesh:", n); */
+	
+    /*   } */
+    /* } */
+    /* else { */
+    /*   print("Cell ", j, " fails to build meshPos.\n"); */
+    /* } */
+   
+  
+    stabilize;
+  }
+} create_collection {gg(k) |k in a.cells()};

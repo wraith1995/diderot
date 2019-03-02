@@ -1,0 +1,242 @@
+0. Basis function problems
+1. exit problems
+2. input trick in simplify not working problems!
+3. ALl the rest of this shit - notes5 from last meeting contains ideas like overloda () and so forth
+4. All of this behind it.
+
+
+LEFT:
+ACTUAL features: mapping inserts for exit, exitPos, enter
+ACTUAL features: parsing issues
+ACTUAL features: tagging cells...
+MUST DO: clean up names, clean up geometry, typechecking in there, c data could be nicer outlined - more pointers and management thereof.. 
+Optimizations: worldPos, data analysis, basis stuff, pointers and grab indexical data...
+USEFUL: read in from files...
+
+Right now:
+1. Reorder python code.
+2. Write two simple ray programs as one.
+---Before we go in the next 3 hours..
+3. Lang design
+4. Gordon's data
+
+--Have a sort function for sequences... - tuple extra - 
+
+GOAL: By monday night, have language design code compile.
+Next schedule:
+Sunday: 2. Build affine versions of of the above 4 and otherwise some insert - instead of pointers - more sophisciated inserts - look at infustructure--Killed
+
+
+
+HEHRE:TUESDAY: 2. Build world version and build language design with script.
+
+
+
+Monday: 3. Get language design based on this
+Tuesday: 4. Nektar Data and other issues as above?
+NOTE: meshPos ordering...
+Next: Test these refCell things on actual geometry... need to build connectivity
+Next: error checking in there (normal, 3d case,) - FIGURE I WANT IS FOR LANGUAGE DESIGN SECTION
+Next: Other optimizatoins/ a thing that gordon wants/Figures.
+Next: inserting code.
+NEXT: test derivatives, transformed ref field - probably work fine though...\
+NEXT: Look for argue reveraal
+NEXT: ADD global enterpos?
+
+ACTUAL LEFT:
+meshPos not refPos geometry:
+i.e inserts with func pointers (exit, exitPos, enterPos, enter)
+i.e verticies for ref and cell.
+i.e attaching metadata
+Selct precedence issue
+Optimization
+ - also syntax things needed to be deal with
+---enterPos -- should it be a mesh method?
+3.
+-Correct our names. Correct possible errors in the above code.
+-Optimize: affine, basis function evaluation, pos issue
+-What else needs to be done? Review
+-error checking in the damn ray moving thing: normals, planes, on the plane.
+-Build per cell data attachment?
+-What about verticies?
+-add refCell to verticies?
+4.
+Testing the ray moving thing:
+-- Build global, build meshCell method for building 
+-- Try this on a simple mesh - see what it looks like.
+5. Figures and Language design section
+
+Missing: mesh.isInside, meshCell.vertices, meshCell.isValid, meshCell.meshPos, meshCell.enterPos?
+Missing:meshPos.cellExit, celExitPos
+missing: refCell verticies
+Missing: meshCell cellTypes
+Note: add mapping options for the two cell options.
+Note: cellExit, cellExitPos for mesh: isAffine, we map-otherwise, we need a map
+
+Sschedule:
+1 and 2 on Thursday/Friday.-- also fix other - needs inside inserts and __inline__ directive -- the hsape issue - the shape of the function space to begin with - UGGGGG wrong...-general dislike - tensor product information - reconsider extra paramters in struct - not needed as much
+
+3 and 4 on Friday and Saturday
+5 on Sunday...
+
+Tomorrow/Sunday::
+Two 4 hour sections
+Fix the damn inverse
+Affine - Look above.
+Clean up the whole thing - fix the random things that are left besides meshPos methods
+Test the refcell ones via the global one
+
+
+
+
+Minor code task:
+make newtoneps return a meshpos - better for error checking?
+Means error code can be inserted when done
+Make authorative list of places to call error code.
+Steps:
+in simplyfStrand:
+-find pos var - add _pos and great property - find it as needed and replcae
+in ast:
+-modify the spatial query options
+-two places...
+-or do basis vars
+---spatial querry check--sphere
+New TODO:
+LATER:0. FIGURE OUT FUNCTION NAMES ISSUE
+DONE: 1. Fix pos mechanics: lazyness, use in template, SAVING
+LATER:2. Fix precedence.
+DONE: 3. Figure out portion of functionality completed in correspondence with spec, clean up the names
+4. RefCell, MeshPos methods along with C++ code inserts, call backs, mesh file, new variables hanging out of cells, export of mesh struct, verticies.
+5. Loading in meshCells sequences, funcCell Sequences, meshPos: saving out both meshCell, funcCell, and meshPos sequences - meshCell is all that is needed.
+EXPAND: (1(half), 2, 4,5)
+-precdence
+-Load in meshCells, sequences of meshCells
+-meshPos, functions - disallow import sequences of meshes, etc?
+-geometrices queries for newton
+-cell connectivity, verticies, other imports
+-refCeoo geomery queries, C code insets
+-meshPos geometry queriesi
+6. More general cleanup of the function name message, the use of femItemN, and the names in checkGlobal and hiding of hte env
+7. Considerations to the rpesentation of data in the C++: the use of pointers vs. raw data, how and when to extract from pointers.
+8. Considerpations in simple to make mesh,fns, etc more like images - i.e kind last definition of something and follow back to it.
+9. Better basis functoin evaluation scanning of tensor and sum product basises: https://arxiv.org/pdf/1711.02473.pdf
+10. Identification of linear derivatives and replacement of this -- afine
+11. Loading nrrd files as a group for loading fem stuff.
+12. Living tuning in newton paramters
+13. Debbuging logs and performance logs: (see 15, think about basis evaluation counts - better tools for performance analysis.)
+14. Border Control applied to a mesh.
+15. Error checking and warning: located and identified at certian points: check if indecies are valid before doing certain calls: basically when indexing into arrays, we should generate bordercontrol, error test.
+16. Inconsteycny in ast construction of fem types: SOME(name) vs none, use of fem type when it should be named type
+17. Caching data: mid-ir
+18. Test with KirbyData
+19. Closer thing about the big field data.
+20. indexed by meshHang outs
+21. Better type checking: checktypefile doesn't type check much against the rest of the file... to what extent are they compatible - what about loading them togeather
+22. Better import structsfor femdata - currently mirror when they shouldn't - generally better header op
+23. Sumshift potentially incorrect index numbering in ein?
+24. Would be nice to integrate fem stuff into type vars
+25. conflict in basis evaluation
+8. Field parsing: c.t, field variables in a function, or field arguments to a function or c$T (binding strength of .) -- diffOp diff expression and suffix are out of order -- move selct suffix into diffExpr optioin - atomixExpr (SR)* 
+26. Add basis evaluation functions?
+27. wrapping expanded func calls and potential mistakes there.
+28. more sequence operations; break operation
+29. Debug MODE....
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+What I want to do before figures:
+-C code inserts for geometries
+-C code inserts for for Meshpos geometric queries and function coordination
+-Geometric data structure
+-load in meshcells, seqs of mesh cells
+-border control
+During:
+-Precdence
+-Basis eval better
+-Caching/locality
+-verticies
+
+
+Settled solution to cell seq, pos seq, cell, pos etc loads with an extra argument - assume if default is non-emtpy that there is something
+Expand consts to include these defaults.
+-generate input with two things
+-do the copying work there
+-Figure out how the get works for defaults---fuck---ignore the get function - supress it.
+-All work in the: 
+-generation of dynamic sequence types (gen-tys-ops.sml)
+-gen-inputs (headers and actual functions.)
+--need to be override for fem stuff.
+
+---load the dynamic sequence
+---itter over it.
+
+GORDON:
+-NO DEFAULTS FOR CELL Inputs (constants issue)
+-$ issue
+-tupple, _ fields, Transform->T
+-Write more for me.
+
+
+
+
+
+CHAINGS:
+Add opt: loadCells, loadPositions
+Take int or sequence * mesh or func--MAIN
+Take vec7{} * mesh--LATER
+Look for them as constants
+-In simple input processing, if you get an input, you change it to the sequence ty
+-pass it through loadCells
+-so your inputs become lists of ints
+-just with funcs,etc - generate arbitrary forloop length function
+
+
+NOTE ON OUTPUTS:
+possible int32 to double conversions when converting meshPos
+
+
+just restrict cell inputs
+mesh pointer, mesh have id; fixing printing
+
+gen-inputs.sml
+GenAPI.inputSetbyName....
+make sure builder functions are are exported...
+We will provide ints and other things...
