@@ -1,0 +1,3797 @@
+/* ParseTree: After parsing */
+  Program @ [justTypes.diderot:2.1-42.0] 
+    [
+      Type: msh= @ [justTypes.diderot:2.1-3.0] 
+        Mesh @ [justTypes.diderot:2.6-10] 
+        From File : firstMesh.json @ [justTypes.diderot:2.1-3.0] 
+      Input: a @ [justTypes.diderot:6.1-7.0] 
+      Var @ [justTypes.diderot:9.1-10.0] 
+        Decl: F= @ [justTypes.diderot:9.1-10.0] 
+          Select @ [justTypes.diderot:9.17-39] 
+            Subscript @ [justTypes.diderot:9.17-39] 
+              Apply @ [justTypes.diderot:9.17-39] 
+                Select @ [justTypes.diderot:9.17-39] 
+                  Var: a @ [justTypes.diderot:9.17-18] 
+                  cells
+                [ ]
+              [
+                Lit: 0 @ [justTypes.diderot:9.27-28] 
+              ]
+            transform
+      Var @ [justTypes.diderot:10.1-11.0] 
+        Decl: a1= @ [justTypes.diderot:10.1-11.0] 
+          SeqComp @ [justTypes.diderot:10.12-45] 
+            Comprehension @ [justTypes.diderot:10.12-45] 
+              BinOp: + @ [justTypes.diderot:10.13-19] 
+                Var: k @ [justTypes.diderot:10.13-14] 
+                Lit: 2 @ [justTypes.diderot:10.17-18] 
+              [
+                Iterator: k @ [justTypes.diderot:10.21-44] 
+                  SeqComp @ [justTypes.diderot:10.26-44] 
+                    Comprehension @ [justTypes.diderot:10.26-44] 
+                      BinOp: + @ [justTypes.diderot:10.27-31] 
+                        Lit: 1 @ [justTypes.diderot:10.27-28] 
+                        Var: j @ [justTypes.diderot:10.29-30] 
+                      [
+                        Iterator: j @ [justTypes.diderot:10.33-43] 
+                          Range @ [justTypes.diderot:10.38-43] 
+                            Lit: 0 @ [justTypes.diderot:10.38-39] 
+                            Lit: 10 @ [justTypes.diderot:10.41-43] 
+                      ]
+              ]
+      Var @ [justTypes.diderot:11.1-12.0] 
+        Decl: a2= @ [justTypes.diderot:11.1-12.0] 
+          SeqComp @ [justTypes.diderot:11.13-50] 
+            Comprehension @ [justTypes.diderot:11.13-50] 
+              BinOp: + @ [justTypes.diderot:11.14-22] 
+                Var: k @ [justTypes.diderot:11.14-15] 
+                Lit: 0.2e1 @ [justTypes.diderot:11.18-21] 
+              [
+                Iterator: k @ [justTypes.diderot:11.24-49] 
+                  SeqComp @ [justTypes.diderot:11.29-49] 
+                    Comprehension @ [justTypes.diderot:11.29-49] 
+                      BinOp: + @ [justTypes.diderot:11.30-36] 
+                        Lit: 0.1e1 @ [justTypes.diderot:11.30-33] 
+                        Var: j @ [justTypes.diderot:11.34-35] 
+                      [
+                        Iterator: j @ [justTypes.diderot:11.38-48] 
+                          Range @ [justTypes.diderot:11.43-48] 
+                            Lit: 0 @ [justTypes.diderot:11.43-44] 
+                            Lit: 10 @ [justTypes.diderot:11.46-48] 
+                      ]
+              ]
+      Func: f @ [justTypes.diderot:13.1-17.1] 
+        Tensor @ [justTypes.diderot:13.10-15] 
+          [ ]
+        [
+          Param: g @ [justTypes.diderot:13.17-23] 
+            Tensor @ [justTypes.diderot:13.17-22] 
+              [ ]
+          Param: j @ [justTypes.diderot:13.25-30] 
+            Int @ [justTypes.diderot:13.25-29] 
+        ]
+        Stmt @ [justTypes.diderot:13.1-17.1] 
+          Return @ [justTypes.diderot:14.3-15.0] 
+            BinOp: * @ [justTypes.diderot:14.10-13] 
+              Var: g @ [justTypes.diderot:14.10-11] 
+              Var: j @ [justTypes.diderot:14.12-13] 
+      Func: s @ [justTypes.diderot:17.1-23.1] 
+        Tensor @ [justTypes.diderot:17.10-15] 
+          [ ]
+        [
+          Param: k @ [justTypes.diderot:17.17-23] 
+            Tensor @ [justTypes.diderot:17.17-22] 
+              [ ]
+        ]
+        Stmt @ [justTypes.diderot:17.1-23.1] 
+          Block @ [justTypes.diderot:17.24-21.0] 
+            [
+              Print @ [justTypes.diderot:18.3-19.0] 
+                [
+                  Var: a1 @ [justTypes.diderot:18.9-11] 
+                ]
+              Return @ [justTypes.diderot:19.3-20.0] 
+                Var: k @ [justTypes.diderot:19.10-11] 
+            ]
+    ]
+    Strand: gg @ [justTypes.diderot:23.1-41.3] 
+      [
+        Param: i @ [justTypes.diderot:23.11-16] 
+          Int @ [justTypes.diderot:23.11-15] 
+        Param: j @ [justTypes.diderot:23.18-29] 
+          Cell(msh) @ [justTypes.diderot:23.18-27] 
+      ]
+      [
+        VarDcl: output @ [justTypes.diderot:25.3-26.0] 
+        VarDcl: output @ [justTypes.diderot:26.3-27.0] 
+        VarDcl @ [justTypes.diderot:28.3-29.0] 
+      ]
+      [
+        Method: Update @ [justTypes.diderot:30.3-41.1] 
+          Block @ [justTypes.diderot:30.9-41.0] 
+            [
+              Assign: result= @ [justTypes.diderot:33.5-34.0] 
+                Apply @ [justTypes.diderot:33.14-29] 
+                  Var: f @ [justTypes.diderot:33.14-15] 
+                  [
+                    Var: result @ [justTypes.diderot:33.16-22] 
+                    BinOp: * @ [justTypes.diderot:33.24-28] 
+                      Var: i @ [justTypes.diderot:33.24-25] 
+                      Lit: 10 @ [justTypes.diderot:33.26-28] 
+                  ]
+              Decl @ [justTypes.diderot:30.9-41.0] 
+                Decl: cellCount= @ [justTypes.diderot:34.5-35.0] 
+                  Apply @ [justTypes.diderot:34.21-32] 
+                    Select @ [justTypes.diderot:34.21-32] 
+                      Var: a @ [justTypes.diderot:34.21-22] 
+                      numCell
+                    [ ]
+              Decl @ [justTypes.diderot:30.9-41.0] 
+                Decl: a= @ [justTypes.diderot:35.5-36.0] 
+                  Apply @ [justTypes.diderot:35.39-56] 
+                    Select @ [justTypes.diderot:35.39-56] 
+                      Var: j @ [justTypes.diderot:35.39-40] 
+                      transformDofs
+                    [ ]
+              Print @ [justTypes.diderot:36.5-37.0] 
+                [
+                  Var: result @ [justTypes.diderot:36.11-17] 
+                  Lit: "\n" @ [justTypes.diderot:36.19-23] 
+                  Lit: "numCell:" @ [justTypes.diderot:36.25-35] 
+                  Var: cellCount @ [justTypes.diderot:36.37-46] 
+                  Lit: "\n" @ [justTypes.diderot:36.48-52] 
+                  Var: a1 @ [justTypes.diderot:36.54-56] 
+                  Var: a2 @ [justTypes.diderot:36.57-59] 
+                  Lit: "\n" @ [justTypes.diderot:36.61-65] 
+                  Apply @ [justTypes.diderot:36.67-73] 
+                    Var: s @ [justTypes.diderot:36.67-68] 
+                    [
+                      Lit: 0.2e1 @ [justTypes.diderot:36.69-72] 
+                    ]
+                  Lit: "\n" @ [justTypes.diderot:36.75-79] 
+                  Var: j @ [justTypes.diderot:36.81-82] 
+                  Lit: "\n" @ [justTypes.diderot:36.84-88] 
+                  Var: a @ [justTypes.diderot:36.89-90] 
+                ]
+              Stabilize @ [justTypes.diderot:39.5-40.0] 
+            ]
+      ]
+    Collection @ [justTypes.diderot:41.3-42.0] 
+      Comprehension @ [justTypes.diderot:41.21-56] 
+        Apply @ [justTypes.diderot:41.22-29] 
+          Var: gg @ [justTypes.diderot:41.22-24] 
+          [
+            Var: j @ [justTypes.diderot:41.25-26] 
+            Var: k @ [justTypes.diderot:41.27-28] 
+          ]
+        [
+          Iterator: j @ [justTypes.diderot:41.32-39] 
+            Var: a1 @ [justTypes.diderot:41.37-39] 
+          Iterator: k @ [justTypes.diderot:41.41-55] 
+            Apply @ [justTypes.diderot:41.46-55] 
+              Select @ [justTypes.diderot:41.46-55] 
+                Var: a @ [justTypes.diderot:41.46-47] 
+                cells
+              [ ]
+        ]
+/* end program */
+/* AST: After typechecking */
+properties: HasInputs,HasGlobals
+input FemType: Mesh with type var:NONE a = loadFem(Mesh);
+function FemType: MeshCell with type var:NONE[] cells (FemType: Mesh with type var:NONE arg0)
+{
+  return extractFemItem(arg0, FemType: MeshCell with type var:NONE[], Cells(Mesh));
+  }
+function FemType: MeshCell with type var:NONE[] cells (FemType: Mesh with type var:NONE arg0)
+{
+  return {loadFem(MeshCell) | int i in $range (0, extractFemItem(arg0, int, NumCell(Mesh)))};
+  }
+function int numCell (FemType: Mesh with type var:NONE arg0)
+{
+  return extractFemItem(arg0, int, NumCell(Mesh));
+  }
+field(2)[2] F = femField(extractFem(Mesh,$dynsub<FemType: MeshCell with type var:NONE> (extractFemItem(a, FemType: MeshCell with type var:NONE[], Cells(Mesh)), 0) ),extractFemItem($dynsub<FemType: MeshCell with type var:NONE> (extractFemItem(a, FemType: MeshCell with type var:NONE[], Cells(Mesh)), 0), int, CellIndex(MeshCell)),field(2)[2], Transform, );
+int[] a1 = {+ (k, 2) | int k in {+ (1, j) | int j in $range (0, 10)}};
+real[] a2 = {+<$[]> (k, 0.2e1) | real k in {+<$[]> (0.1e1, (real)j) | int j in $range (0, 10)}};
+function real f (real g, int j)
+{
+  return * (g, (real)j);
+  }
+function real s (real k)
+{
+  print (a1);
+  return k;
+  }
+strand gg (int i, FemType: MeshCell with type var:NONE j)
+{
+  output real result = * (0.1e1, (real)i);
+  output mat2 z = @<#; %2; $[2,2]> (∇⊗<#; %2; $[]; %2> (F), [0.e0, 0.e0]);
+  int j0 = 2;
+  update {
+    result = f (result, * (i, 10));
+    int cellCount = numCell (a);
+    tensor[4,2] a = extractFemItem(extractFem(Mesh,j ), extractFemItem(j, int, CellIndex(MeshCell)) : int, tensor[4,2], ExtractDofs(Mesh));
+    print (result, "\n", "numCell:", cellCount, "\n", a1, a2, "\n", s (0.2e1), "\n", j, "\n", a);
+    stabilize;
+    }
+  
+}
+collection {
+    foreach (int j in a1) {
+      foreach (FemType: MeshCell with type var:NONE k in extractFemItem(a, FemType: MeshCell with type var:NONE[], Cells(Mesh))) {
+        new gg (j, k);
+        }
+      }
+    }
+  
+/* Program end */
+/* Simplified Program (after after simplify) start */
+properties: GlobalInit,HasInputs,HasGlobals
+input FemData:Mesh a0223;
+constants { }
+global Femdata: MeshCell[] 0cell_a0224;
+global field(2)[2] F023F;
+global int[] a1024B;
+global real[] a20258;
+function Femdata: MeshCell[]#0 cells022C (Femdata: Mesh arg0022D)
+{
+  Femdata: MeshCell[] _t022E = extractFemItem(Cells(Mesh), Femdata: MeshCell[], arg0022D);
+  return _t022E;
+}
+function Femdata: MeshCell[]#0 cells022F (Femdata: Mesh arg0022D)
+{
+  int _t0230 = 0;
+  int _t0231 = extractFemItem(NumCell(Mesh), int, arg0022D);
+  int[] _t0232 = prim $range01BF (_t0230, _t0231);
+  Femdata: MeshCell[] accum0235 = {};
+  foreach i0233 in _t0232 {
+    Femdata: MeshCell _t0234 = loadFem(MeshCell, arg0022D, i0233);
+    accum0235 = prim @0010<Femdata: MeshCell> (accum0235, _t0234);
+  }
+  return accum0235;
+}
+function int#1 numCell0236 (Femdata: Mesh arg00237)
+{
+  int _t0238 = extractFemItem(NumCell(Mesh), int, arg00237);
+  return _t0238;
+}
+function real#1 f0259 (real g025A, int j025B)
+{
+  real _t025C = (real)j025B;
+  real _t025D = prim *0034 (g025A, _t025C);
+  return _t025D;
+}
+function real#1 s025E (real k025F)
+{
+  print (a1024B);
+  return k025F;
+}
+globalInit {
+  int _t0225 = 0;
+  int _t0226 = extractFemItem(NumCell(Mesh), int, a0223);
+  int[] _t0229 = prim $range01BF (_t0225, _t0226);
+  Femdata: MeshCell[] _t022A = {};
+  foreach _t0228 in _t0229 {
+    Femdata: MeshCell _t022B = loadFem(MeshCell, a0223, _t0228);
+    _t022A = prim @0010<Femdata: MeshCell> (_t022A, _t022B);
+  }
+  0cell_a0224 = _t022A;
+  int _t0239 = 0;
+  Femdata: MeshCell _t023A = prim $dynsub01BE<Femdata: MeshCell> (0cell_a0224, _t0239);
+  Femdata: Mesh _t023B = extractFem(_t023A, Mesh);
+  int _t023C = 0;
+  Femdata: MeshCell _t023D = prim $dynsub01BE<Femdata: MeshCell> (0cell_a0224, _t023C);
+  int _t023E = extractFemItem(CellIndex(MeshCell), int, _t023D);
+  F023F = femField(_t023B,_t023E,field(2)[2],Transform,);
+  int _t0240 = 0;
+  int _t0241 = 10;
+  int[] _t0242 = prim $range01BF (_t0240, _t0241);
+  int[] accum0246 = {};
+  foreach j0244 in _t0242 {
+    int _t0243 = 1;
+    int _t0245 = prim +0015 (_t0243, j0244);
+    accum0246 = prim @0010<int> (accum0246, _t0245);
+  }
+  int[] accum024A = {};
+  foreach k0247 in accum0246 {
+    int _t0248 = 2;
+    int _t0249 = prim +0015 (k0247, _t0248);
+    accum024A = prim @0010<int> (accum024A, _t0249);
+  }
+  a1024B = accum024A;
+  int _t024C = 0;
+  int _t024D = 10;
+  int[] _t024E = prim $range01BF (_t024C, _t024D);
+  real[] accum0253 = {};
+  foreach j0250 in _t024E {
+    real _t024F = 0.1e1;
+    real _t0251 = (real)j0250;
+    real _t0252 = prim +0017<$[]> (_t024F, _t0251);
+    accum0253 = prim @0010<real> (accum0253, _t0252);
+  }
+  real[] accum0257 = {};
+  foreach k0254 in accum0253 {
+    real _t0255 = 0.2e1;
+    real _t0256 = prim +0017<$[]> (k0254, _t0255);
+    accum0257 = prim @0010<real> (accum0257, _t0256);
+  }
+  a20258 = accum0257;
+}
+strand gg (int i0260, Femdata: MeshCell j0261) {
+  output real result0262;
+  output tensor[2,2] z0265;
+  int j0026A;
+  {
+    real _t0263 = 0.1e1;
+    real _t0264 = (real)i0260;
+    result0262 = prim *0034 (_t0263, _t0264);
+    field(2)[2,2] _t0266 = prim ∇⊗00AD<#∞; %2; $[]; %2> (F023F);
+    real _t0267 = 0.e0;
+    real _t0268 = 0.e0;
+    vec2 _t0269 = [_t0267, _t0268];
+    z0265 = prim @00A5<#∞; %2; $[2,2]> (_t0266, _t0269);
+    j0026A = 2;
+  }
+  update
+  {
+    int _t026B = 10;
+    int _t026C = prim *0033 (i0260, _t026B);
+    result0262 = func f0259 (result0262, _t026C);
+    int cellCount026D = func numCell0236 (a0223);
+    Femdata: Mesh _t026E = extractFem(j0261, Mesh);
+    int _t026F = extractFemItem(CellIndex(MeshCell), int, j0261);
+    tensor[4,2] a0270 = extractFemItem2(ExtractDofs(Mesh), int, _t026E, _t026F : int);
+    string _t0271 = "\n";
+    string _t0272 = "numCell:";
+    string _t0273 = "\n";
+    string _t0274 = "\n";
+    real _t0275 = 0.2e1;
+    real _t0276 = func s025E (_t0275);
+    string _t0277 = "\n";
+    string _t0278 = "\n";
+    print (result0262, _t0271, _t0272, cellCount026D, _t0273, a1024B, a20258, _t0274, _t0276, _t0277, j0261, _t0278, a0270);
+    stabilize;
+  }
+}
+collection {
+  foreach j0279 in a1024B {
+    foreach k027A in 0cell_a0224 {
+      new gg (j0279, k027A);
+    }
+  }
+}
+/* Program end */
+/* Simplified Program (after after contraction (1)) start */
+properties: GlobalInit,HasInputs,HasGlobals
+input FemData:Mesh a0223;
+constants { }
+global Femdata: MeshCell[] 0cell_a0224;
+global field(2)[2] F023F;
+global int[] a1024B;
+global real[] a20258;
+function Femdata: MeshCell[]#0 cells022C (Femdata: Mesh arg0022D)
+{
+  Femdata: MeshCell[] _t022E = extractFemItem(Cells(Mesh), Femdata: MeshCell[], arg0022D);
+  return _t022E;
+}
+function Femdata: MeshCell[]#0 cells022F (Femdata: Mesh arg0022D)
+{
+  int _t0230 = 0;
+  int _t0231 = extractFemItem(NumCell(Mesh), int, arg0022D);
+  int[] _t0232 = prim $range01BF (_t0230, _t0231);
+  Femdata: MeshCell[] accum0235 = {};
+  foreach i0233 in _t0232 {
+    Femdata: MeshCell _t0234 = loadFem(MeshCell, arg0022D, i0233);
+    accum0235 = prim @0010<Femdata: MeshCell> (accum0235, _t0234);
+  }
+  return accum0235;
+}
+function int#1 numCell0236 (Femdata: Mesh arg00237)
+{
+  int _t0238 = extractFemItem(NumCell(Mesh), int, arg00237);
+  return _t0238;
+}
+function real#1 f0259 (real g025A, int j025B)
+{
+  real _t025C = (real)j025B;
+  real _t025D = prim *0034 (g025A, _t025C);
+  return _t025D;
+}
+function real#1 s025E (real k025F)
+{
+  print (a1024B);
+  return k025F;
+}
+globalInit {
+  int _t0225 = 0;
+  int _t0226 = extractFemItem(NumCell(Mesh), int, a0223);
+  int[] _t0229 = prim $range01BF (_t0225, _t0226);
+  Femdata: MeshCell[] _t022A = {};
+  foreach _t0228 in _t0229 {
+    Femdata: MeshCell _t022B = loadFem(MeshCell, a0223, _t0228);
+    _t022A = prim @0010<Femdata: MeshCell> (_t022A, _t022B);
+  }
+  0cell_a0224 = _t022A;
+  int _t0239 = 0;
+  Femdata: MeshCell _t023A = prim $dynsub01BE<Femdata: MeshCell> (0cell_a0224, _t0239);
+  Femdata: Mesh _t023B = extractFem(_t023A, Mesh);
+  int _t023C = 0;
+  Femdata: MeshCell _t023D = prim $dynsub01BE<Femdata: MeshCell> (0cell_a0224, _t023C);
+  int _t023E = extractFemItem(CellIndex(MeshCell), int, _t023D);
+  F023F = femField(_t023B,_t023E,field(2)[2],Transform,);
+  int _t0240 = 0;
+  int _t0241 = 10;
+  int[] _t0242 = prim $range01BF (_t0240, _t0241);
+  int[] accum0246 = {};
+  foreach j0244 in _t0242 {
+    int _t0243 = 1;
+    int _t0245 = prim +0015 (_t0243, j0244);
+    accum0246 = prim @0010<int> (accum0246, _t0245);
+  }
+  int[] accum024A = {};
+  foreach k0247 in accum0246 {
+    int _t0248 = 2;
+    int _t0249 = prim +0015 (k0247, _t0248);
+    accum024A = prim @0010<int> (accum024A, _t0249);
+  }
+  a1024B = accum024A;
+  int _t024C = 0;
+  int _t024D = 10;
+  int[] _t024E = prim $range01BF (_t024C, _t024D);
+  real[] accum0253 = {};
+  foreach j0250 in _t024E {
+    real _t024F = 0.1e1;
+    real _t0251 = (real)j0250;
+    real _t0252 = prim +0017<$[]> (_t024F, _t0251);
+    accum0253 = prim @0010<real> (accum0253, _t0252);
+  }
+  real[] accum0257 = {};
+  foreach k0254 in accum0253 {
+    real _t0255 = 0.2e1;
+    real _t0256 = prim +0017<$[]> (k0254, _t0255);
+    accum0257 = prim @0010<real> (accum0257, _t0256);
+  }
+  a20258 = accum0257;
+}
+strand gg (int i0260, Femdata: MeshCell j0261) {
+  output real result0262;
+  output tensor[2,2] z0265;
+  {
+    real _t0263 = 0.1e1;
+    real _t0264 = (real)i0260;
+    result0262 = prim *0034 (_t0263, _t0264);
+    field(2)[2,2] _t0266 = prim ∇⊗00AD<#∞; %2; $[]; %2> (F023F);
+    real _t0267 = 0.e0;
+    real _t0268 = 0.e0;
+    vec2 _t0269 = [_t0267, _t0268];
+    z0265 = prim @00A5<#∞; %2; $[2,2]> (_t0266, _t0269);
+  }
+  update
+  {
+    int _t026B = 10;
+    int _t026C = prim *0033 (i0260, _t026B);
+    result0262 = func f0259 (result0262, _t026C);
+    int cellCount026D = func numCell0236 (a0223);
+    Femdata: Mesh _t026E = extractFem(j0261, Mesh);
+    int _t026F = extractFemItem(CellIndex(MeshCell), int, j0261);
+    tensor[4,2] a0270 = extractFemItem2(ExtractDofs(Mesh), int, _t026E, _t026F : int);
+    string _t0271 = "\n";
+    string _t0272 = "numCell:";
+    string _t0273 = "\n";
+    string _t0274 = "\n";
+    real _t0275 = 0.2e1;
+    real _t0276 = func s025E (_t0275);
+    string _t0277 = "\n";
+    string _t0278 = "\n";
+    print (result0262, _t0271, _t0272, cellCount026D, _t0273, a1024B, a20258, _t0274, _t0276, _t0277, j0261, _t0278, a0270);
+    stabilize;
+  }
+}
+collection {
+  foreach j0279 in a1024B {
+    foreach k027A in 0cell_a0224 {
+      new gg (j0279, k027A);
+    }
+  }
+}
+/* Program end */
+/* Simplified Program (after after map-reduce-fusion) start */
+properties: GlobalInit,HasInputs,HasGlobals
+input FemData:Mesh a0223;
+constants { }
+global Femdata: MeshCell[] 0cell_a0224;
+global field(2)[2] F023F;
+global int[] a1024B;
+global real[] a20258;
+function Femdata: MeshCell[]#0 cells022C (Femdata: Mesh arg0022D)
+{
+  Femdata: MeshCell[] _t022E = extractFemItem(Cells(Mesh), Femdata: MeshCell[], arg0022D);
+  return _t022E;
+}
+function Femdata: MeshCell[]#0 cells022F (Femdata: Mesh arg0022D)
+{
+  int _t0230 = 0;
+  int _t0231 = extractFemItem(NumCell(Mesh), int, arg0022D);
+  int[] _t0232 = prim $range01BF (_t0230, _t0231);
+  Femdata: MeshCell[] accum0235 = {};
+  foreach i0233 in _t0232 {
+    Femdata: MeshCell _t0234 = loadFem(MeshCell, arg0022D, i0233);
+    accum0235 = prim @0010<Femdata: MeshCell> (accum0235, _t0234);
+  }
+  return accum0235;
+}
+function int#1 numCell0236 (Femdata: Mesh arg00237)
+{
+  int _t0238 = extractFemItem(NumCell(Mesh), int, arg00237);
+  return _t0238;
+}
+function real#1 f0259 (real g025A, int j025B)
+{
+  real _t025C = (real)j025B;
+  real _t025D = prim *0034 (g025A, _t025C);
+  return _t025D;
+}
+function real#1 s025E (real k025F)
+{
+  print (a1024B);
+  return k025F;
+}
+globalInit {
+  int _t0225 = 0;
+  int _t0226 = extractFemItem(NumCell(Mesh), int, a0223);
+  int[] _t0229 = prim $range01BF (_t0225, _t0226);
+  Femdata: MeshCell[] _t022A = {};
+  foreach _t0228 in _t0229 {
+    Femdata: MeshCell _t022B = loadFem(MeshCell, a0223, _t0228);
+    _t022A = prim @0010<Femdata: MeshCell> (_t022A, _t022B);
+  }
+  0cell_a0224 = _t022A;
+  int _t0239 = 0;
+  Femdata: MeshCell _t023A = prim $dynsub01BE<Femdata: MeshCell> (0cell_a0224, _t0239);
+  Femdata: Mesh _t023B = extractFem(_t023A, Mesh);
+  int _t023C = 0;
+  Femdata: MeshCell _t023D = prim $dynsub01BE<Femdata: MeshCell> (0cell_a0224, _t023C);
+  int _t023E = extractFemItem(CellIndex(MeshCell), int, _t023D);
+  F023F = femField(_t023B,_t023E,field(2)[2],Transform,);
+  int _t0240 = 0;
+  int _t0241 = 10;
+  int[] _t0242 = prim $range01BF (_t0240, _t0241);
+  int[] accum0246 = {};
+  foreach j0244 in _t0242 {
+    int _t0243 = 1;
+    int _t0245 = prim +0015 (_t0243, j0244);
+    accum0246 = prim @0010<int> (accum0246, _t0245);
+  }
+  int[] accum024A = {};
+  foreach k0247 in accum0246 {
+    int _t0248 = 2;
+    int _t0249 = prim +0015 (k0247, _t0248);
+    accum024A = prim @0010<int> (accum024A, _t0249);
+  }
+  a1024B = accum024A;
+  int _t024C = 0;
+  int _t024D = 10;
+  int[] _t024E = prim $range01BF (_t024C, _t024D);
+  real[] accum0253 = {};
+  foreach j0250 in _t024E {
+    real _t024F = 0.1e1;
+    real _t0251 = (real)j0250;
+    real _t0252 = prim +0017<$[]> (_t024F, _t0251);
+    accum0253 = prim @0010<real> (accum0253, _t0252);
+  }
+  real[] accum0257 = {};
+  foreach k0254 in accum0253 {
+    real _t0255 = 0.2e1;
+    real _t0256 = prim +0017<$[]> (k0254, _t0255);
+    accum0257 = prim @0010<real> (accum0257, _t0256);
+  }
+  a20258 = accum0257;
+}
+strand gg (int i0260, Femdata: MeshCell j0261) {
+  output real result0262;
+  output tensor[2,2] z0265;
+  {
+    real _t0263 = 0.1e1;
+    real _t0264 = (real)i0260;
+    result0262 = prim *0034 (_t0263, _t0264);
+    field(2)[2,2] _t0266 = prim ∇⊗00AD<#∞; %2; $[]; %2> (F023F);
+    real _t0267 = 0.e0;
+    real _t0268 = 0.e0;
+    vec2 _t0269 = [_t0267, _t0268];
+    z0265 = prim @00A5<#∞; %2; $[2,2]> (_t0266, _t0269);
+  }
+  update
+  {
+    int _t026B = 10;
+    int _t026C = prim *0033 (i0260, _t026B);
+    result0262 = func f0259 (result0262, _t026C);
+    int cellCount026D = func numCell0236 (a0223);
+    Femdata: Mesh _t026E = extractFem(j0261, Mesh);
+    int _t026F = extractFemItem(CellIndex(MeshCell), int, j0261);
+    tensor[4,2] a0270 = extractFemItem2(ExtractDofs(Mesh), int, _t026E, _t026F : int);
+    string _t0271 = "\n";
+    string _t0272 = "numCell:";
+    string _t0273 = "\n";
+    string _t0274 = "\n";
+    real _t0275 = 0.2e1;
+    real _t0276 = func s025E (_t0275);
+    string _t0277 = "\n";
+    string _t0278 = "\n";
+    print (result0262, _t0271, _t0272, cellCount026D, _t0273, a1024B, a20258, _t0274, _t0276, _t0277, j0261, _t0278, a0270);
+    stabilize;
+  }
+}
+collection {
+  foreach j0279 in a1024B {
+    foreach k027A in 0cell_a0224 {
+      new gg (j0279, k027A);
+    }
+  }
+}
+/* Program end */
+/* Simplified Program (after after inlining) start */
+properties: GlobalInit,HasInputs,HasGlobals
+input FemData:Mesh a0223;
+constants { }
+global Femdata: MeshCell[] 0cell_a0224;
+global field(2)[2] F023F;
+global int[] a1024B;
+global real[] a20258;
+globalInit {
+  int _t0225 = 0;
+  int _t0226 = extractFemItem(NumCell(Mesh), int, a0223);
+  int[] _t0229 = prim $range01BF (_t0225, _t0226);
+  Femdata: MeshCell[] _t022A = {};
+  foreach _t0228 in _t0229 {
+    Femdata: MeshCell _t022B = loadFem(MeshCell, a0223, _t0228);
+    _t022A = prim @0010<Femdata: MeshCell> (_t022A, _t022B);
+  }
+  0cell_a0224 = _t022A;
+  int _t0239 = 0;
+  Femdata: MeshCell _t023A = prim $dynsub01BE<Femdata: MeshCell> (0cell_a0224, _t0239);
+  Femdata: Mesh _t023B = extractFem(_t023A, Mesh);
+  int _t023C = 0;
+  Femdata: MeshCell _t023D = prim $dynsub01BE<Femdata: MeshCell> (0cell_a0224, _t023C);
+  int _t023E = extractFemItem(CellIndex(MeshCell), int, _t023D);
+  F023F = femField(_t023B,_t023E,field(2)[2],Transform,);
+  int _t0240 = 0;
+  int _t0241 = 10;
+  int[] _t0242 = prim $range01BF (_t0240, _t0241);
+  int[] accum0246 = {};
+  foreach j0244 in _t0242 {
+    int _t0243 = 1;
+    int _t0245 = prim +0015 (_t0243, j0244);
+    accum0246 = prim @0010<int> (accum0246, _t0245);
+  }
+  int[] accum024A = {};
+  foreach k0247 in accum0246 {
+    int _t0248 = 2;
+    int _t0249 = prim +0015 (k0247, _t0248);
+    accum024A = prim @0010<int> (accum024A, _t0249);
+  }
+  a1024B = accum024A;
+  int _t024C = 0;
+  int _t024D = 10;
+  int[] _t024E = prim $range01BF (_t024C, _t024D);
+  real[] accum0253 = {};
+  foreach j0250 in _t024E {
+    real _t024F = 0.1e1;
+    real _t0251 = (real)j0250;
+    real _t0252 = prim +0017<$[]> (_t024F, _t0251);
+    accum0253 = prim @0010<real> (accum0253, _t0252);
+  }
+  real[] accum0257 = {};
+  foreach k0254 in accum0253 {
+    real _t0255 = 0.2e1;
+    real _t0256 = prim +0017<$[]> (k0254, _t0255);
+    accum0257 = prim @0010<real> (accum0257, _t0256);
+  }
+  a20258 = accum0257;
+}
+strand gg (int i0260, Femdata: MeshCell j0261) {
+  output real result0262;
+  output tensor[2,2] z0265;
+  {
+    real _t0263 = 0.1e1;
+    real _t0264 = (real)i0260;
+    result0262 = prim *0034 (_t0263, _t0264);
+    field(2)[2,2] _t0266 = prim ∇⊗00AD<#∞; %2; $[]; %2> (F023F);
+    real _t0267 = 0.e0;
+    real _t0268 = 0.e0;
+    vec2 _t0269 = [_t0267, _t0268];
+    z0265 = prim @00A5<#∞; %2; $[2,2]> (_t0266, _t0269);
+  }
+  update
+  {
+    int _t026B = 10;
+    int _t026C = prim *0033 (i0260, _t026B);
+    real result027C;
+    real _t027D = (real)_t026C;
+    real _t027E = prim *0034 (result0262, _t027D);
+    result027C = _t027E;
+    result0262 = result027C;
+    int cellCount026D;
+    int _t027B = extractFemItem(NumCell(Mesh), int, a0223);
+    cellCount026D = _t027B;
+    Femdata: Mesh _t026E = extractFem(j0261, Mesh);
+    int _t026F = extractFemItem(CellIndex(MeshCell), int, j0261);
+    tensor[4,2] a0270 = extractFemItem2(ExtractDofs(Mesh), int, _t026E, _t026F : int);
+    string _t0271 = "\n";
+    string _t0272 = "numCell:";
+    string _t0273 = "\n";
+    string _t0274 = "\n";
+    real _t0275 = 0.2e1;
+    real _t0276;
+    print (a1024B);
+    _t0276 = _t0275;
+    string _t0277 = "\n";
+    string _t0278 = "\n";
+    print (result0262, _t0271, _t0272, cellCount026D, _t0273, a1024B, a20258, _t0274, _t0276, _t0277, j0261, _t0278, a0270);
+    stabilize;
+  }
+}
+collection {
+  foreach j0279 in a1024B {
+    foreach k027A in 0cell_a0224 {
+      new gg (j0279, k027A);
+    }
+  }
+}
+/* Program end */
+/* Simplified Program (after after contraction (2)) start */
+properties: GlobalInit,HasInputs,HasGlobals
+input FemData:Mesh a0223;
+constants { }
+global Femdata: MeshCell[] 0cell_a0224;
+global field(2)[2] F023F;
+global int[] a1024B;
+global real[] a20258;
+globalInit {
+  int _t0225 = 0;
+  int _t0226 = extractFemItem(NumCell(Mesh), int, a0223);
+  int[] _t0229 = prim $range01BF (_t0225, _t0226);
+  Femdata: MeshCell[] _t022A = {};
+  foreach _t0228 in _t0229 {
+    Femdata: MeshCell _t022B = loadFem(MeshCell, a0223, _t0228);
+    _t022A = prim @0010<Femdata: MeshCell> (_t022A, _t022B);
+  }
+  0cell_a0224 = _t022A;
+  int _t0239 = 0;
+  Femdata: MeshCell _t023A = prim $dynsub01BE<Femdata: MeshCell> (0cell_a0224, _t0239);
+  Femdata: Mesh _t023B = extractFem(_t023A, Mesh);
+  int _t023C = 0;
+  Femdata: MeshCell _t023D = prim $dynsub01BE<Femdata: MeshCell> (0cell_a0224, _t023C);
+  int _t023E = extractFemItem(CellIndex(MeshCell), int, _t023D);
+  F023F = femField(_t023B,_t023E,field(2)[2],Transform,);
+  int _t0240 = 0;
+  int _t0241 = 10;
+  int[] _t0242 = prim $range01BF (_t0240, _t0241);
+  int[] accum0246 = {};
+  foreach j0244 in _t0242 {
+    int _t0243 = 1;
+    int _t0245 = prim +0015 (_t0243, j0244);
+    accum0246 = prim @0010<int> (accum0246, _t0245);
+  }
+  int[] accum024A = {};
+  foreach k0247 in accum0246 {
+    int _t0248 = 2;
+    int _t0249 = prim +0015 (k0247, _t0248);
+    accum024A = prim @0010<int> (accum024A, _t0249);
+  }
+  a1024B = accum024A;
+  int _t024C = 0;
+  int _t024D = 10;
+  int[] _t024E = prim $range01BF (_t024C, _t024D);
+  real[] accum0253 = {};
+  foreach j0250 in _t024E {
+    real _t024F = 0.1e1;
+    real _t0251 = (real)j0250;
+    real _t0252 = prim +0017<$[]> (_t024F, _t0251);
+    accum0253 = prim @0010<real> (accum0253, _t0252);
+  }
+  real[] accum0257 = {};
+  foreach k0254 in accum0253 {
+    real _t0255 = 0.2e1;
+    real _t0256 = prim +0017<$[]> (k0254, _t0255);
+    accum0257 = prim @0010<real> (accum0257, _t0256);
+  }
+  a20258 = accum0257;
+}
+strand gg (int i0260, Femdata: MeshCell j0261) {
+  output real result0262;
+  output tensor[2,2] z0265;
+  {
+    real _t0263 = 0.1e1;
+    real _t0264 = (real)i0260;
+    result0262 = prim *0034 (_t0263, _t0264);
+    field(2)[2,2] _t0266 = prim ∇⊗00AD<#∞; %2; $[]; %2> (F023F);
+    real _t0267 = 0.e0;
+    real _t0268 = 0.e0;
+    vec2 _t0269 = [_t0267, _t0268];
+    z0265 = prim @00A5<#∞; %2; $[2,2]> (_t0266, _t0269);
+  }
+  update
+  {
+    int _t026B = 10;
+    int _t026C = prim *0033 (i0260, _t026B);
+    real result027C;
+    real _t027D = (real)_t026C;
+    real _t027E = prim *0034 (result0262, _t027D);
+    result027C = _t027E;
+    result0262 = result027C;
+    int cellCount026D;
+    int _t027B = extractFemItem(NumCell(Mesh), int, a0223);
+    cellCount026D = _t027B;
+    Femdata: Mesh _t026E = extractFem(j0261, Mesh);
+    int _t026F = extractFemItem(CellIndex(MeshCell), int, j0261);
+    tensor[4,2] a0270 = extractFemItem2(ExtractDofs(Mesh), int, _t026E, _t026F : int);
+    string _t0271 = "\n";
+    string _t0272 = "numCell:";
+    string _t0273 = "\n";
+    string _t0274 = "\n";
+    real _t0275 = 0.2e1;
+    real _t0276;
+    print (a1024B);
+    _t0276 = _t0275;
+    string _t0277 = "\n";
+    string _t0278 = "\n";
+    print (result0262, _t0271, _t0272, cellCount026D, _t0273, a1024B, a20258, _t0274, _t0276, _t0277, j0261, _t0278, a0270);
+    stabilize;
+  }
+}
+collection {
+  foreach j0279 in a1024B {
+    foreach k027A in 0cell_a0224 {
+      new gg (j0279, k027A);
+    }
+  }
+}
+/* Program end */
+/* Simplified Program (after after simplify fields) start */
+properties: GlobalInit,HasInputs,HasGlobals
+input FemData:Mesh a0223;
+constants { }
+global Femdata: MeshCell[] 0cell_a0224;
+global field(2)[2] F023F;
+global int[] a1024B;
+global real[] a20258;
+globalInit {
+  int _t0225 = 0;
+  int _t0226 = extractFemItem(NumCell(Mesh), int, a0223);
+  int[] _t0229 = prim $range01BF (_t0225, _t0226);
+  Femdata: MeshCell[] _t022A = {};
+  foreach _t0228 in _t0229 {
+    Femdata: MeshCell _t022B = loadFem(MeshCell, a0223, _t0228);
+    _t022A = prim @0010<Femdata: MeshCell> (_t022A, _t022B);
+  }
+  0cell_a0224 = _t022A;
+  int _t0239 = 0;
+  Femdata: MeshCell _t023A = prim $dynsub01BE<Femdata: MeshCell> (0cell_a0224, _t0239);
+  Femdata: Mesh _t023B = extractFem(_t023A, Mesh);
+  int _t023C = 0;
+  Femdata: MeshCell _t023D = prim $dynsub01BE<Femdata: MeshCell> (0cell_a0224, _t023C);
+  int _t023E = extractFemItem(CellIndex(MeshCell), int, _t023D);
+  F023F = femField(_t023B,_t023E,field(2)[2],Transform,);
+  int _t0240 = 0;
+  int _t0241 = 10;
+  int[] _t0242 = prim $range01BF (_t0240, _t0241);
+  int[] accum0246 = {};
+  foreach j0244 in _t0242 {
+    int _t0243 = 1;
+    int _t0245 = prim +0015 (_t0243, j0244);
+    accum0246 = prim @0010<int> (accum0246, _t0245);
+  }
+  int[] accum024A = {};
+  foreach k0247 in accum0246 {
+    int _t0248 = 2;
+    int _t0249 = prim +0015 (k0247, _t0248);
+    accum024A = prim @0010<int> (accum024A, _t0249);
+  }
+  a1024B = accum024A;
+  int _t024C = 0;
+  int _t024D = 10;
+  int[] _t024E = prim $range01BF (_t024C, _t024D);
+  real[] accum0253 = {};
+  foreach j0250 in _t024E {
+    real _t024F = 0.1e1;
+    real _t0251 = (real)j0250;
+    real _t0252 = prim +0017<$[]> (_t024F, _t0251);
+    accum0253 = prim @0010<real> (accum0253, _t0252);
+  }
+  real[] accum0257 = {};
+  foreach k0254 in accum0253 {
+    real _t0255 = 0.2e1;
+    real _t0256 = prim +0017<$[]> (k0254, _t0255);
+    accum0257 = prim @0010<real> (accum0257, _t0256);
+  }
+  a20258 = accum0257;
+}
+strand gg (int i0260, Femdata: MeshCell j0261) {
+  output real result0262;
+  output tensor[2,2] z0265;
+  {
+    real _t0263 = 0.1e1;
+    real _t0264 = (real)i0260;
+    result0262 = prim *0034 (_t0263, _t0264);
+    field(2)[2,2] _t0266 = prim ∇⊗00AD<#∞; %2; $[]; %2> (F023F);
+    real _t0267 = 0.e0;
+    real _t0268 = 0.e0;
+    vec2 _t0269 = [_t0267, _t0268];
+    z0265 = prim @00A5<#∞; %2; $[2,2]> (_t0266, _t0269);
+  }
+  update
+  {
+    int _t026B = 10;
+    int _t026C = prim *0033 (i0260, _t026B);
+    real result027C;
+    real _t027D = (real)_t026C;
+    real _t027E = prim *0034 (result0262, _t027D);
+    result027C = _t027E;
+    result0262 = result027C;
+    int cellCount026D;
+    int _t027B = extractFemItem(NumCell(Mesh), int, a0223);
+    cellCount026D = _t027B;
+    Femdata: Mesh _t026E = extractFem(j0261, Mesh);
+    int _t026F = extractFemItem(CellIndex(MeshCell), int, j0261);
+    tensor[4,2] a0270 = extractFemItem2(ExtractDofs(Mesh), int, _t026E, _t026F : int);
+    string _t0271 = "\n";
+    string _t0272 = "numCell:";
+    string _t0273 = "\n";
+    string _t0274 = "\n";
+    real _t0275 = 0.2e1;
+    real _t0276;
+    print (a1024B);
+    _t0276 = _t0275;
+    string _t0277 = "\n";
+    string _t0278 = "\n";
+    print (result0262, _t0271, _t0272, cellCount026D, _t0273, a1024B, a20258, _t0274, _t0276, _t0277, j0261, _t0278, a0270);
+    stabilize;
+  }
+}
+collection {
+  foreach j0279 in a1024B {
+    foreach k027A in 0cell_a0224 {
+      new gg (j0279, k027A);
+    }
+  }
+}
+/* Program end */
+/* Simplified Program (after after simplify variables) start */
+properties: GlobalInit,HasInputs,HasGlobals
+input FemData:Mesh a0223;
+constants { }
+global Femdata: MeshCell[] 0cell_a0224;
+global field(2)[2] F023F;
+global int[] a1024B;
+global real[] a20258;
+globalInit {
+  int _t0225 = 0;
+  int _t0226 = extractFemItem(NumCell(Mesh), int, a0223);
+  int[] _t0229 = prim $range01BF (_t0225, _t0226);
+  Femdata: MeshCell[] _t022A = {};
+  foreach _t0228 in _t0229 {
+    Femdata: MeshCell _t022B = loadFem(MeshCell, a0223, _t0228);
+    _t022A = prim @0010<Femdata: MeshCell> (_t022A, _t022B);
+  }
+  0cell_a0224 = _t022A;
+  int _t0239 = 0;
+  Femdata: MeshCell _t023A = prim $dynsub01BE<Femdata: MeshCell> (0cell_a0224, _t0239);
+  Femdata: Mesh _t023B = extractFem(_t023A, Mesh);
+  int _t023C = 0;
+  Femdata: MeshCell _t023D = prim $dynsub01BE<Femdata: MeshCell> (0cell_a0224, _t023C);
+  int _t023E = extractFemItem(CellIndex(MeshCell), int, _t023D);
+  F023F = femField(_t023B,_t023E,field(2)[2],Transform,);
+  int _t0240 = 0;
+  int _t0241 = 10;
+  int[] _t0242 = prim $range01BF (_t0240, _t0241);
+  int[] accum0246 = {};
+  foreach j0244 in _t0242 {
+    int _t0243 = 1;
+    int _t0245 = prim +0015 (_t0243, j0244);
+    accum0246 = prim @0010<int> (accum0246, _t0245);
+  }
+  int[] accum024A = {};
+  foreach k0247 in accum0246 {
+    int _t0248 = 2;
+    int _t0249 = prim +0015 (k0247, _t0248);
+    accum024A = prim @0010<int> (accum024A, _t0249);
+  }
+  a1024B = accum024A;
+  int _t024C = 0;
+  int _t024D = 10;
+  int[] _t024E = prim $range01BF (_t024C, _t024D);
+  real[] accum0253 = {};
+  foreach j0250 in _t024E {
+    real _t024F = 0.1e1;
+    real _t0251 = (real)j0250;
+    real _t0252 = prim +0017<$[]> (_t024F, _t0251);
+    accum0253 = prim @0010<real> (accum0253, _t0252);
+  }
+  real[] accum0257 = {};
+  foreach k0254 in accum0253 {
+    real _t0255 = 0.2e1;
+    real _t0256 = prim +0017<$[]> (k0254, _t0255);
+    accum0257 = prim @0010<real> (accum0257, _t0256);
+  }
+  a20258 = accum0257;
+}
+strand gg (int i0260, Femdata: MeshCell j0261) {
+  output real result0262;
+  output tensor[2,2] z0265;
+  int i0280;
+  Femdata: MeshCell j027F;
+  {
+    real _t0263 = 0.1e1;
+    real _t0264 = (real)i0260;
+    result0262 = prim *0034 (_t0263, _t0264);
+    field(2)[2,2] _t0266 = prim ∇⊗00AD<#∞; %2; $[]; %2> (F023F);
+    real _t0267 = 0.e0;
+    real _t0268 = 0.e0;
+    vec2 _t0269 = [_t0267, _t0268];
+    z0265 = prim @00A5<#∞; %2; $[2,2]> (_t0266, _t0269);
+    i0280 = i0260;
+    j027F = j0261;
+  }
+  update
+  {
+    int _t026B = 10;
+    int _t026C = prim *0033 (i0280, _t026B);
+    real result027C;
+    real _t027D = (real)_t026C;
+    real _t027E = prim *0034 (result0262, _t027D);
+    result027C = _t027E;
+    result0262 = result027C;
+    int cellCount026D;
+    int _t027B = extractFemItem(NumCell(Mesh), int, a0223);
+    cellCount026D = _t027B;
+    Femdata: Mesh _t026E = extractFem(j027F, Mesh);
+    int _t026F = extractFemItem(CellIndex(MeshCell), int, j027F);
+    tensor[4,2] a0270 = extractFemItem2(ExtractDofs(Mesh), int, _t026E, _t026F : int);
+    string _t0271 = "\n";
+    string _t0272 = "numCell:";
+    string _t0273 = "\n";
+    string _t0274 = "\n";
+    real _t0275 = 0.2e1;
+    real _t0276;
+    print (a1024B);
+    _t0276 = _t0275;
+    string _t0277 = "\n";
+    string _t0278 = "\n";
+    print (result0262, _t0271, _t0272, cellCount026D, _t0273, a1024B, a20258, _t0274, _t0276, _t0277, j027F, _t0278, a0270);
+    stabilize;
+  }
+}
+collection {
+  foreach j0279 in a1024B {
+    foreach k027A in 0cell_a0224 {
+      new gg (j0279, k027A);
+    }
+  }
+}
+/* Program end */
+/* Simplified Program (after after simplify fem vars) start */
+properties: GlobalInit,HasInputs,HasGlobals
+input FemData:Mesh a0223;
+constants { }
+global Femdata: MeshCell[] 0cell_a0224;
+global field(2)[2] F023F;
+global int[] a1024B;
+global real[] a20258;
+globalInit {
+  int _t0225 = 0;
+  int _t0226 = extractFemItem(NumCell(Mesh), int, a0223);
+  int[] _t0229 = prim $range01BF (_t0225, _t0226);
+  Femdata: MeshCell[] _t022A = {};
+  foreach _t0228 in _t0229 {
+    Femdata: MeshCell _t022B = loadFem(MeshCell, a0223, _t0228);
+    _t022A = prim @0010<Femdata: MeshCell> (_t022A, _t022B);
+  }
+  0cell_a0224 = _t022A;
+  int _t0239 = 0;
+  Femdata: MeshCell _t023A = prim $dynsub01BE<Femdata: MeshCell> (0cell_a0224, _t0239);
+  Femdata: Mesh _t023B = extractFem(_t023A, Mesh);
+  int _t023C = 0;
+  Femdata: MeshCell _t023D = prim $dynsub01BE<Femdata: MeshCell> (0cell_a0224, _t023C);
+  int _t023E = extractFemItem(CellIndex(MeshCell), int, _t023D);
+  F023F = femField(_t023B,_t023E,field(2)[2],Transform,);
+  int _t0240 = 0;
+  int _t0241 = 10;
+  int[] _t0242 = prim $range01BF (_t0240, _t0241);
+  int[] accum0246 = {};
+  foreach j0244 in _t0242 {
+    int _t0243 = 1;
+    int _t0245 = prim +0015 (_t0243, j0244);
+    accum0246 = prim @0010<int> (accum0246, _t0245);
+  }
+  int[] accum024A = {};
+  foreach k0247 in accum0246 {
+    int _t0248 = 2;
+    int _t0249 = prim +0015 (k0247, _t0248);
+    accum024A = prim @0010<int> (accum024A, _t0249);
+  }
+  a1024B = accum024A;
+  int _t024C = 0;
+  int _t024D = 10;
+  int[] _t024E = prim $range01BF (_t024C, _t024D);
+  real[] accum0253 = {};
+  foreach j0250 in _t024E {
+    real _t024F = 0.1e1;
+    real _t0251 = (real)j0250;
+    real _t0252 = prim +0017<$[]> (_t024F, _t0251);
+    accum0253 = prim @0010<real> (accum0253, _t0252);
+  }
+  real[] accum0257 = {};
+  foreach k0254 in accum0253 {
+    real _t0255 = 0.2e1;
+    real _t0256 = prim +0017<$[]> (k0254, _t0255);
+    accum0257 = prim @0010<real> (accum0257, _t0256);
+  }
+  a20258 = accum0257;
+}
+strand gg (int i0260, Femdata: MeshCell j0261) {
+  output real result0262;
+  output tensor[2,2] z0265;
+  int i0280;
+  Femdata: MeshCell j027F;
+  {
+    real _t0263 = 0.1e1;
+    real _t0264 = (real)i0260;
+    result0262 = prim *0034 (_t0263, _t0264);
+    field(2)[2,2] _t0266 = prim ∇⊗00AD<#∞; %2; $[]; %2> (F023F);
+    real _t0267 = 0.e0;
+    real _t0268 = 0.e0;
+    vec2 _t0269 = [_t0267, _t0268];
+    z0265 = prim @00A5<#∞; %2; $[2,2]> (_t0266, _t0269);
+    i0280 = i0260;
+    j027F = j0261;
+  }
+  update
+  {
+    int _t026B = 10;
+    int _t026C = prim *0033 (i0280, _t026B);
+    real result027C;
+    real _t027D = (real)_t026C;
+    real _t027E = prim *0034 (result0262, _t027D);
+    result027C = _t027E;
+    result0262 = result027C;
+    int cellCount026D;
+    int _t027B = extractFemItem(NumCell(Mesh), int, a0223);
+    cellCount026D = _t027B;
+    Femdata: Mesh _t026E = extractFem(j027F, Mesh);
+    int _t026F = extractFemItem(CellIndex(MeshCell), int, j027F);
+    tensor[4,2] a0270 = extractFemItem2(ExtractDofs(Mesh), int, _t026E, _t026F : int);
+    string _t0271 = "\n";
+    string _t0272 = "numCell:";
+    string _t0273 = "\n";
+    string _t0274 = "\n";
+    real _t0275 = 0.2e1;
+    real _t0276;
+    print (a1024B);
+    _t0276 = _t0275;
+    string _t0277 = "\n";
+    string _t0278 = "\n";
+    print (result0262, _t0271, _t0272, cellCount026D, _t0273, a1024B, a20258, _t0274, _t0276, _t0277, j027F, _t0278, a0270);
+    stabilize;
+  }
+}
+collection {
+  foreach j0279 in a1024B {
+    foreach k027A in 0cell_a0224 {
+      new gg (j0279, k027A);
+    }
+  }
+}
+/* Program end */
+##### high-ir: after simple-to-high translation ####
+## properties
+  GlobalInit HasInputs HasGlobals
+## globals
+  input a0281 (a) = <no-default>
+  global femData:MeshCell[] 0cell_a0284
+  global field F0285
+  global int[] a10286
+  global real[] a20287
+## functions
+## input initialization
+  ENTRY0282:  preds = []
+    return
+## global-variable initialization
+  ENTRY02F0:  preds = []
+    femData:Mesh a0288#2 = globals.a0281;
+    int _t028A#1 = 0;
+    int _t028C#1 = ExtractFemItem<int,NumCell(Mesh)>(a0288);
+    int[] _t028E#1 = Range(_t028A,_t028C);
+    femData:MeshCell[] _t0290#1 = <femData:MeshCell[]>{};
+  FOREACH0294:  preds = [ASSIGN0291,NEXT0299]
+    foreach (_t0292 in _t028E) on exit goto ASSIGN029B
+      femData:MeshCell[] _t0293#2 = phi(_t0290,_t0297)
+    femData:MeshCell _t0295#1 = LoadFem<femData:MeshCell>(a0288,_t0292);
+    femData:MeshCell[] _t0297#1 = Append<femData:MeshCell>(_t0293,_t0295);
+    goto FOREACH0294
+  ASSIGN029B:  preds = [FOREACH0294]
+    femData:MeshCell[] 0cell_a029A#3 = _t0293;
+    globals.0cell_a0284 = 0cell_a029A;
+    int _t029D#1 = 0;
+    femData:MeshCell _t029F#1 = Subscript<femData:MeshCell[]>(0cell_a029A,_t029D);
+    femData:Mesh _t02A1#2 = ExtractFem<femData:Mesh,femData:MeshCell>(_t029F);
+    int _t02A3#1 = 0;
+    femData:MeshCell _t02A5#1 = Subscript<femData:MeshCell[]>(0cell_a029A,_t02A3);
+    int _t02A7#1 = ExtractFemItem<int,CellIndex(MeshCell)>(_t02A5);
+    field F02A9#1 = λ(INT0,FEM(msh)1,FEM(msh)2)<femV(0, 1, 2)_{i0}⊛Basis()>_{2} (_t02A7,_t02A1,_t02A1);
+    globals.F0285 = F02A9;
+    int _t02AC#1 = 0;
+    int _t02AE#1 = 10;
+    int[] _t02B0#1 = Range(_t02AC,_t02AE);
+    int[] accum02B2#1 = <int[]>{};
+  FOREACH02B6:  preds = [ASSIGN02B3,NEXT02BD]
+    foreach (j02B4 in _t02B0) on exit goto ASSIGN02BF
+      int[] accum02B5#2 = phi(accum02B2,accum02BB)
+    int _t02B7#1 = 1;
+    int _t02B9#1 = IAdd(_t02B7,j02B4);
+    int[] accum02BB#1 = Append<int>(accum02B5,_t02B9);
+    goto FOREACH02B6
+  ASSIGN02BF:  preds = [FOREACH02B6]
+    int[] accum02BE#1 = <int[]>{};
+  FOREACH02C2:  preds = [ASSIGN02BF,NEXT02C9]
+    foreach (k02C0 in accum02B5) on exit goto ASSIGN02CB
+      int[] accum02C1#2 = phi(accum02BE,accum02C7)
+    int _t02C3#1 = 2;
+    int _t02C5#1 = IAdd(k02C0,_t02C3);
+    int[] accum02C7#1 = Append<int>(accum02C1,_t02C5);
+    goto FOREACH02C2
+  ASSIGN02CB:  preds = [FOREACH02C2]
+    int[] a102CA#1 = accum02C1;
+    globals.a10286 = a102CA;
+    int _t02CD#1 = 0;
+    int _t02CF#1 = 10;
+    int[] _t02D1#1 = Range(_t02CD,_t02CF);
+    real[] accum02D3#1 = <real[]>{};
+  FOREACH02D7:  preds = [ASSIGN02D4,NEXT02E0]
+    foreach (j02D5 in _t02D1) on exit goto ASSIGN02E2
+      real[] accum02D6#2 = phi(accum02D3,accum02DE)
+    real _t02D8#1 = 0.1e1;
+    real _t02DA#1 = IntToReal(j02D5);
+    real _t02DC#1 = λ(T0[],T1[])<(T0 + T1)> (_t02D8,_t02DA);
+    real[] accum02DE#1 = Append<real>(accum02D6,_t02DC);
+    goto FOREACH02D7
+  ASSIGN02E2:  preds = [FOREACH02D7]
+    real[] accum02E1#1 = <real[]>{};
+  FOREACH02E5:  preds = [ASSIGN02E2,NEXT02EC]
+    foreach (k02E3 in accum02D6) on exit goto ASSIGN02EE
+      real[] accum02E4#2 = phi(accum02E1,accum02EA)
+    real _t02E6#1 = 0.2e1;
+    real _t02E8#1 = λ(T0[],T1[])<(T0 + T1)> (k02E3,_t02E6);
+    real[] accum02EA#1 = Append<real>(accum02E4,_t02E8);
+    goto FOREACH02E5
+  ASSIGN02EE:  preds = [FOREACH02E5]
+    real[] a202ED#1 = accum02E4;
+    globals.a20287 = a202ED;
+    return
+## strand
+  strand gg (int i02FF#2, femData:MeshCell j0300#1)
+    state:
+      output real result;
+      output tensor[2,2] z;
+      int i;
+      femData:MeshCell j;
+    state init
+      ENTRY031F:  preds = []
+        field F0305#1 = globals.F0285;
+        real _t030B#1 = 0.1e1;
+        real _t030D#1 = IntToReal(i02FF);
+        real result030F#1 = λ(T0[],T1[])<(T0 * T1)> (_t030B,_t030D);
+        field _t0311#1 = λ(F0[2])<∂/∂x_{i1}@(F0_{i0})>_{2 2} (F0305);
+        real _t0313#1 = 0.e0;
+        real _t0315#1 = 0.e0;
+        tensor[2] _t0317#1 = <tensor[2]>[_t0313,_t0315];
+        tensor[2,2] z0319#1 = λ(F0[2],T1[2])<Probe(F0_{i0,i1},T1)>_{2 2} (_t0311,_t0317);
+        int i031B#1 = i02FF;
+        femData:MeshCell j031D#1 = j0300;
+        self.result = result030F;
+        self.z = z0319;
+        self.i = i031B;
+        self.j = j031D;
+        return
+    end state init
+    method update
+        ENTRY0360:  preds = []
+          femData:Mesh a0327#1 = globals.a0281;
+          int[] a10326#2 = globals.a10286;
+          real[] a20325#1 = globals.a20287;
+          real result032B#1 = self.result;
+          tensor[2,2] z032C#0 = self.z;
+          int i032D#1 = self.i;
+          femData:MeshCell j032E#3 = self.j;
+          int _t0333#1 = 10;
+          int _t0335#1 = IMul(i032D,_t0333);
+          real _t0338#1 = IntToReal(_t0335);
+          real _t033A#1 = λ(T0[],T1[])<(T0 * T1)> (result032B,_t0338);
+          real result033C#1 = _t033A;
+          real result033E#2 = result033C;
+          int _t0341#1 = ExtractFemItem<int,NumCell(Mesh)>(a0327);
+          int cellCount0343#1 = _t0341;
+          femData:Mesh _t0345#1 = ExtractFem<femData:Mesh,femData:MeshCell>(j032E);
+          int _t0347#1 = ExtractFemItem<int,CellIndex(MeshCell)>(j032E);
+          tensor[4,2] a0349#1 = ExtractFemItem2<int,tensor[4,2],ExtractDofs(Mesh)>(_t0345,_t0347);
+          string _t034B#1 = "\n";
+          string _t034D#1 = "numCell:";
+          string _t034F#1 = "\n";
+          string _t0351#1 = "\n";
+          real _t0353#1 = 0.2e1;
+          Print<[int[]]>(a10326);
+          real _t0357#1 = _t0353;
+          string _t0359#1 = "\n";
+          string _t035B#1 = "\n";
+          Print<[real,string,string,int,string,int[],real[],string,real,string,femData:MeshCell,string,tensor[4,2]]>(result033E,_t034B,_t034D,cellCount0343,_t034F,a10326,a20325,_t0351,_t0357,_t0359,j032E,_t035B,a0349);
+          self.result = result033E;
+          stabilize
+    end update
+  end gg
+## initial strand creation
+  COLLECTION
+    ENTRY02FD:  preds = []
+      femData:MeshCell[] 0cell_a02F3#1 = globals.0cell_a0284;
+      int[] a102F2#1 = globals.a10286;
+    FOREACH02F7:  preds = [ASSIGN02F5,NEXT02FC]
+      foreach (j02F6 in a102F2) on exit goto RETURN02FE
+    FOREACH02F9:  preds = [FOREACH02F7,NEXT02FB]
+      foreach (k02F8 in 0cell_a02F3) on exit goto NEXT02FC
+      new gg(j02F6,k02F8);
+      goto FOREACH02F9
+    NEXT02FC:  preds = [FOREACH02F9]
+      goto FOREACH02F7
+    RETURN02FE:  preds = [FOREACH02F7]
+      return
+#### end program ####
+##### high-ir: after value numbering ####
+## properties
+  GlobalInit HasInputs HasGlobals
+## globals
+  input a0281 (a) = <no-default>
+  global femData:MeshCell[] 0cell_a0284
+  global field F0285
+  global int[] a10286
+  global real[] a20287
+## functions
+## input initialization
+  ENTRY0282:  preds = []
+    return
+## global-variable initialization
+  ENTRY02F0:  preds = []
+    femData:Mesh a0288#2 = globals.a0281;
+    int _t028A#3 = 0;
+    int _t028C#1 = ExtractFemItem<int,NumCell(Mesh)>(a0288);
+    int[] _t028E#1 = Range(_t028A,_t028C);
+    femData:MeshCell[] _t0290#1 = <femData:MeshCell[]>{};
+  FOREACH0294:  preds = [ASSIGN0291,NEXT0299]
+    foreach (_t0292 in _t028E) on exit goto GASSIGN0362
+      femData:MeshCell[] _t0293#3 = phi(_t0290,_t0297)
+    femData:MeshCell _t0295#1 = LoadFem<femData:MeshCell>(a0288,_t0292);
+    femData:MeshCell[] _t0297#1 = Append<femData:MeshCell>(_t0293,_t0295);
+    goto FOREACH0294
+  GASSIGN0362:  preds = [FOREACH0294]
+    globals.0cell_a0284 = _t0293;
+    femData:MeshCell _t029F#2 = Subscript<femData:MeshCell[]>(_t0293,_t028A);
+    femData:Mesh _t02A1#2 = ExtractFem<femData:Mesh,femData:MeshCell>(_t029F);
+    int _t02A7#1 = ExtractFemItem<int,CellIndex(MeshCell)>(_t029F);
+    field F02A9#1 = λ(INT0,FEM(msh)1,FEM(msh)2)<femV(0, 1, 2)_{i0}⊛Basis()>_{2} (_t02A7,_t02A1,_t02A1);
+    globals.F0285 = F02A9;
+    int _t02AE#1 = 10;
+    int[] _t02B0#2 = Range(_t028A,_t02AE);
+    int[] accum02B2#1 = <int[]>{};
+  FOREACH02B6:  preds = [ASSIGN02B3,NEXT02BD]
+    foreach (j02B4 in _t02B0) on exit goto ASSIGN02BF
+      int[] accum02B5#2 = phi(accum02B2,accum02BB)
+    int _t02B7#1 = 1;
+    int _t02B9#1 = IAdd(_t02B7,j02B4);
+    int[] accum02BB#1 = Append<int>(accum02B5,_t02B9);
+    goto FOREACH02B6
+  ASSIGN02BF:  preds = [FOREACH02B6]
+    int[] accum02BE#1 = <int[]>{};
+  FOREACH02C2:  preds = [ASSIGN02BF,NEXT02C9]
+    foreach (k02C0 in accum02B5) on exit goto GASSIGN0366
+      int[] accum02C1#2 = phi(accum02BE,accum02C7)
+    int _t02C3#1 = 2;
+    int _t02C5#1 = IAdd(k02C0,_t02C3);
+    int[] accum02C7#1 = Append<int>(accum02C1,_t02C5);
+    goto FOREACH02C2
+  GASSIGN0366:  preds = [FOREACH02C2]
+    globals.a10286 = accum02C1;
+    real[] accum02D3#1 = <real[]>{};
+  FOREACH02D7:  preds = [ASSIGN02D4,NEXT02E0]
+    foreach (j02D5 in _t02B0) on exit goto ASSIGN02E2
+      real[] accum02D6#2 = phi(accum02D3,accum02DE)
+    real _t02D8#1 = 0.1e1;
+    real _t02DA#1 = IntToReal(j02D5);
+    real _t02DC#1 = λ(T0[],T1[])<(T0 + T1)> (_t02D8,_t02DA);
+    real[] accum02DE#1 = Append<real>(accum02D6,_t02DC);
+    goto FOREACH02D7
+  ASSIGN02E2:  preds = [FOREACH02D7]
+    real[] accum02E1#1 = <real[]>{};
+  FOREACH02E5:  preds = [ASSIGN02E2,NEXT02EC]
+    foreach (k02E3 in accum02D6) on exit goto GASSIGN0367
+      real[] accum02E4#2 = phi(accum02E1,accum02EA)
+    real _t02E6#1 = 0.2e1;
+    real _t02E8#1 = λ(T0[],T1[])<(T0 + T1)> (k02E3,_t02E6);
+    real[] accum02EA#1 = Append<real>(accum02E4,_t02E8);
+    goto FOREACH02E5
+  GASSIGN0367:  preds = [FOREACH02E5]
+    globals.a20287 = accum02E4;
+    return
+## strand
+  strand gg (int i02FF#2, femData:MeshCell j0300#1)
+    state:
+      output real result;
+      output tensor[2,2] z;
+      int i;
+      femData:MeshCell j;
+    state init
+      ENTRY031F:  preds = []
+        field F0305#1 = globals.F0285;
+        real _t030B#1 = 0.1e1;
+        real _t030D#1 = IntToReal(i02FF);
+        real result030F#1 = λ(T0[],T1[])<(T0 * T1)> (_t030B,_t030D);
+        field _t0311#1 = λ(F0[2])<∂/∂x_{i1}@(F0_{i0})>_{2 2} (F0305);
+        real _t0313#2 = 0.e0;
+        tensor[2] _t0317#1 = <tensor[2]>[_t0313,_t0313];
+        tensor[2,2] z0319#1 = λ(F0[2],T1[2])<Probe(F0_{i0,i1},T1)>_{2 2} (_t0311,_t0317);
+        self.result = result030F;
+        self.z = z0319;
+        self.i = i02FF;
+        self.j = j0300;
+        return
+    end state init
+    method update
+        ENTRY0360:  preds = []
+          femData:Mesh a0327#1 = globals.a0281;
+          int[] a10326#2 = globals.a10286;
+          real[] a20325#1 = globals.a20287;
+          real result032B#1 = self.result;
+          tensor[2,2] z032C#0 = self.z;
+          int i032D#1 = self.i;
+          femData:MeshCell j032E#3 = self.j;
+          int _t0333#1 = 10;
+          int _t0335#1 = IMul(i032D,_t0333);
+          real _t0338#1 = IntToReal(_t0335);
+          real _t033A#2 = λ(T0[],T1[])<(T0 * T1)> (result032B,_t0338);
+          int _t0341#1 = ExtractFemItem<int,NumCell(Mesh)>(a0327);
+          femData:Mesh _t0345#1 = ExtractFem<femData:Mesh,femData:MeshCell>(j032E);
+          int _t0347#1 = ExtractFemItem<int,CellIndex(MeshCell)>(j032E);
+          tensor[4,2] a0349#1 = ExtractFemItem2<int,tensor[4,2],ExtractDofs(Mesh)>(_t0345,_t0347);
+          string _t034B#5 = "\n";
+          string _t034D#1 = "numCell:";
+          real _t0353#1 = 0.2e1;
+          Print<[int[]]>(a10326);
+          Print<[real,string,string,int,string,int[],real[],string,real,string,femData:MeshCell,string,tensor[4,2]]>(_t033A,_t034B,_t034D,_t0341,_t034B,a10326,a20325,_t034B,_t0353,_t034B,j032E,_t034B,a0349);
+          self.result = _t033A;
+          stabilize
+    end update
+  end gg
+## initial strand creation
+  COLLECTION
+    ENTRY02FD:  preds = []
+      femData:MeshCell[] 0cell_a02F3#1 = globals.0cell_a0284;
+      int[] a102F2#1 = globals.a10286;
+    FOREACH02F7:  preds = [ASSIGN02F5,NEXT02FC]
+      foreach (j02F6 in a102F2) on exit goto RETURN02FE
+    FOREACH02F9:  preds = [FOREACH02F7,NEXT02FB]
+      foreach (k02F8 in 0cell_a02F3) on exit goto NEXT02FC
+      new gg(j02F6,k02F8);
+      goto FOREACH02F9
+    NEXT02FC:  preds = [FOREACH02F9]
+      goto FOREACH02F7
+    RETURN02FE:  preds = [FOREACH02F7]
+      return
+#### end program ####
+##### high-ir: after normalization rewriting ####
+## properties
+  GlobalInit HasInputs HasGlobals
+## globals
+  input a0281 (a) = <no-default>
+  global femData:MeshCell[] 0cell_a0284
+  global int[] a10286
+  global real[] a20287
+## functions
+## input initialization
+  ENTRY0282:  preds = []
+    return
+## global-variable initialization
+  ENTRY02F0:  preds = []
+    femData:Mesh a0288#2 = globals.a0281;
+    int _t028A#3 = 0;
+    int _t028C#1 = ExtractFemItem<int,NumCell(Mesh)>(a0288);
+    int[] _t028E#1 = Range(_t028A,_t028C);
+    femData:MeshCell[] _t0290#1 = <femData:MeshCell[]>{};
+  FOREACH0294:  preds = [ASSIGN0291,NEXT0299]
+    foreach (_t0292 in _t028E) on exit goto GASSIGN0362
+      femData:MeshCell[] _t0293#3 = phi(_t0290,_t0297)
+    femData:MeshCell _t0295#1 = LoadFem<femData:MeshCell>(a0288,_t0292);
+    femData:MeshCell[] _t0297#1 = Append<femData:MeshCell>(_t0293,_t0295);
+    goto FOREACH0294
+  GASSIGN0362:  preds = [FOREACH0294]
+    globals.0cell_a0284 = _t0293;
+    femData:MeshCell _t029F#2 = Subscript<femData:MeshCell[]>(_t0293,_t028A);
+    femData:Mesh _t02A1#2 = ExtractFem<femData:Mesh,femData:MeshCell>(_t029F);
+    int _t02A7#1 = ExtractFemItem<int,CellIndex(MeshCell)>(_t029F);
+    int _t02AE#1 = 10;
+    int[] _t02B0#2 = Range(_t028A,_t02AE);
+    int[] accum02B2#1 = <int[]>{};
+  FOREACH02B6:  preds = [ASSIGN02B3,NEXT02BD]
+    foreach (j02B4 in _t02B0) on exit goto ASSIGN02BF
+      int[] accum02B5#2 = phi(accum02B2,accum02BB)
+    int _t02B7#1 = 1;
+    int _t02B9#1 = IAdd(_t02B7,j02B4);
+    int[] accum02BB#1 = Append<int>(accum02B5,_t02B9);
+    goto FOREACH02B6
+  ASSIGN02BF:  preds = [FOREACH02B6]
+    int[] accum02BE#1 = <int[]>{};
+  FOREACH02C2:  preds = [ASSIGN02BF,NEXT02C9]
+    foreach (k02C0 in accum02B5) on exit goto GASSIGN0366
+      int[] accum02C1#2 = phi(accum02BE,accum02C7)
+    int _t02C3#1 = 2;
+    int _t02C5#1 = IAdd(k02C0,_t02C3);
+    int[] accum02C7#1 = Append<int>(accum02C1,_t02C5);
+    goto FOREACH02C2
+  GASSIGN0366:  preds = [FOREACH02C2]
+    globals.a10286 = accum02C1;
+    real[] accum02D3#1 = <real[]>{};
+  FOREACH02D7:  preds = [ASSIGN02D4,NEXT02E0]
+    foreach (j02D5 in _t02B0) on exit goto ASSIGN02E2
+      real[] accum02D6#2 = phi(accum02D3,accum02DE)
+    real _t02D8#1 = 0.1e1;
+    real _t02DA#1 = IntToReal(j02D5);
+    real _t02DC#1 = λ(T0[],T1[])<(T0 + T1)> (_t02D8,_t02DA);
+    real[] accum02DE#1 = Append<real>(accum02D6,_t02DC);
+    goto FOREACH02D7
+  ASSIGN02E2:  preds = [FOREACH02D7]
+    real[] accum02E1#1 = <real[]>{};
+  FOREACH02E5:  preds = [ASSIGN02E2,NEXT02EC]
+    foreach (k02E3 in accum02D6) on exit goto GASSIGN0367
+      real[] accum02E4#2 = phi(accum02E1,accum02EA)
+    real _t02E6#1 = 0.2e1;
+    real _t02E8#1 = λ(T0[],T1[])<(T0 + T1)> (k02E3,_t02E6);
+    real[] accum02EA#1 = Append<real>(accum02E4,_t02E8);
+    goto FOREACH02E5
+  GASSIGN0367:  preds = [FOREACH02E5]
+    globals.a20287 = accum02E4;
+    return
+## strand
+  strand gg (int i02FF#2, femData:MeshCell j0300#1)
+    state:
+      output real result;
+      output tensor[2,2] z;
+      int i;
+      femData:MeshCell j;
+    state init
+      ENTRY031F:  preds = []
+        real _t030B#1 = 0.1e1;
+        real _t030D#1 = IntToReal(i02FF);
+        real result030F#1 = λ(T0[],T1[])<(T0 * T1)> (_t030B,_t030D);
+        real _t0313#2 = 0.e0;
+        tensor[2] _t0317#1 = <tensor[2]>[_t0313,_t0313];
+        tensor[2,2] z0319#1 = λ(INT0,FEM(msh)1,FEM(msh)2,T3[2])<Probe(femV(0, 1, 1)_{i0}⊛Basis()dx_{i1},T3)>_{2 2} (_t02A7,_t02A1,_t02A1,_t0317);
+        self.result = result030F;
+        self.z = z0319;
+        self.i = i02FF;
+        self.j = j0300;
+        return
+    end state init
+    method update
+        ENTRY0360:  preds = []
+          femData:Mesh a0327#1 = globals.a0281;
+          int[] a10326#2 = globals.a10286;
+          real[] a20325#1 = globals.a20287;
+          real result032B#1 = self.result;
+          int i032D#1 = self.i;
+          femData:MeshCell j032E#3 = self.j;
+          int _t0333#1 = 10;
+          int _t0335#1 = IMul(i032D,_t0333);
+          real _t0338#1 = IntToReal(_t0335);
+          real _t033A#2 = λ(T0[],T1[])<(T0 * T1)> (result032B,_t0338);
+          int _t0341#1 = ExtractFemItem<int,NumCell(Mesh)>(a0327);
+          femData:Mesh _t0345#1 = ExtractFem<femData:Mesh,femData:MeshCell>(j032E);
+          int _t0347#1 = ExtractFemItem<int,CellIndex(MeshCell)>(j032E);
+          tensor[4,2] a0349#1 = ExtractFemItem2<int,tensor[4,2],ExtractDofs(Mesh)>(_t0345,_t0347);
+          string _t034B#5 = "\n";
+          string _t034D#1 = "numCell:";
+          real _t0353#1 = 0.2e1;
+          Print<[int[]]>(a10326);
+          Print<[real,string,string,int,string,int[],real[],string,real,string,femData:MeshCell,string,tensor[4,2]]>(_t033A,_t034B,_t034D,_t0341,_t034B,a10326,a20325,_t034B,_t0353,_t034B,j032E,_t034B,a0349);
+          self.result = _t033A;
+          stabilize
+    end update
+  end gg
+## initial strand creation
+  COLLECTION
+    ENTRY02FD:  preds = []
+      femData:MeshCell[] 0cell_a02F3#1 = globals.0cell_a0284;
+      int[] a102F2#1 = globals.a10286;
+    FOREACH02F7:  preds = [ASSIGN02F5,NEXT02FC]
+      foreach (j02F6 in a102F2) on exit goto RETURN02FE
+    FOREACH02F9:  preds = [FOREACH02F7,NEXT02FB]
+      foreach (k02F8 in 0cell_a02F3) on exit goto NEXT02FC
+      new gg(j02F6,k02F8);
+      goto FOREACH02F9
+    NEXT02FC:  preds = [FOREACH02F9]
+      goto FOREACH02F7
+    RETURN02FE:  preds = [FOREACH02F7]
+      return
+#### end program ####
+promote _t02A7 --> globals._t0370
+promote _t02A1 --> globals._tX0373
+##### high-ir: after normalization promotion ####
+## properties
+  GlobalInit HasInputs HasGlobals
+## globals
+  input a0281 (a) = <no-default>
+  global femData:MeshCell[] 0cell_a0284
+  global int[] a10286
+  global real[] a20287
+  global int _t0370
+  global femData:Mesh _tX0373
+## functions
+## input initialization
+  ENTRY0282:  preds = []
+    return
+## global-variable initialization
+  ENTRY02F0:  preds = []
+    femData:Mesh a0288#2 = globals.a0281;
+    int _t028A#3 = 0;
+    int _t028C#1 = ExtractFemItem<int,NumCell(Mesh)>(a0288);
+    int[] _t028E#1 = Range(_t028A,_t028C);
+    femData:MeshCell[] _t0290#1 = <femData:MeshCell[]>{};
+  FOREACH0294:  preds = [ASSIGN0291,NEXT0299]
+    foreach (_t0292 in _t028E) on exit goto GASSIGN0362
+      femData:MeshCell[] _t0293#3 = phi(_t0290,_t0297)
+    femData:MeshCell _t0295#1 = LoadFem<femData:MeshCell>(a0288,_t0292);
+    femData:MeshCell[] _t0297#1 = Append<femData:MeshCell>(_t0293,_t0295);
+    goto FOREACH0294
+  GASSIGN0362:  preds = [FOREACH0294]
+    globals.0cell_a0284 = _t0293;
+    femData:MeshCell _t029F#2 = Subscript<femData:MeshCell[]>(_t0293,_t028A);
+    femData:Mesh _t02A1#1 = ExtractFem<femData:Mesh,femData:MeshCell>(_t029F);
+    int _t02A7#1 = ExtractFemItem<int,CellIndex(MeshCell)>(_t029F);
+    int _t02AE#1 = 10;
+    int[] _t02B0#2 = Range(_t028A,_t02AE);
+    int[] accum02B2#1 = <int[]>{};
+  FOREACH02B6:  preds = [ASSIGN02B3,NEXT02BD]
+    foreach (j02B4 in _t02B0) on exit goto ASSIGN02BF
+      int[] accum02B5#2 = phi(accum02B2,accum02BB)
+    int _t02B7#1 = 1;
+    int _t02B9#1 = IAdd(_t02B7,j02B4);
+    int[] accum02BB#1 = Append<int>(accum02B5,_t02B9);
+    goto FOREACH02B6
+  ASSIGN02BF:  preds = [FOREACH02B6]
+    int[] accum02BE#1 = <int[]>{};
+  FOREACH02C2:  preds = [ASSIGN02BF,NEXT02C9]
+    foreach (k02C0 in accum02B5) on exit goto GASSIGN0366
+      int[] accum02C1#2 = phi(accum02BE,accum02C7)
+    int _t02C3#1 = 2;
+    int _t02C5#1 = IAdd(k02C0,_t02C3);
+    int[] accum02C7#1 = Append<int>(accum02C1,_t02C5);
+    goto FOREACH02C2
+  GASSIGN0366:  preds = [FOREACH02C2]
+    globals.a10286 = accum02C1;
+    real[] accum02D3#1 = <real[]>{};
+  FOREACH02D7:  preds = [ASSIGN02D4,NEXT02E0]
+    foreach (j02D5 in _t02B0) on exit goto ASSIGN02E2
+      real[] accum02D6#2 = phi(accum02D3,accum02DE)
+    real _t02D8#1 = 0.1e1;
+    real _t02DA#1 = IntToReal(j02D5);
+    real _t02DC#1 = λ(T0[],T1[])<(T0 + T1)> (_t02D8,_t02DA);
+    real[] accum02DE#1 = Append<real>(accum02D6,_t02DC);
+    goto FOREACH02D7
+  ASSIGN02E2:  preds = [FOREACH02D7]
+    real[] accum02E1#1 = <real[]>{};
+  FOREACH02E5:  preds = [ASSIGN02E2,NEXT02EC]
+    foreach (k02E3 in accum02D6) on exit goto GASSIGN0367
+      real[] accum02E4#2 = phi(accum02E1,accum02EA)
+    real _t02E6#1 = 0.2e1;
+    real _t02E8#1 = λ(T0[],T1[])<(T0 + T1)> (k02E3,_t02E6);
+    real[] accum02EA#1 = Append<real>(accum02E4,_t02E8);
+    goto FOREACH02E5
+  GASSIGN0367:  preds = [FOREACH02E5]
+    globals.a20287 = accum02E4;
+    globals._t0370 = _t02A7;
+    globals._tX0373 = _t02A1;
+    return
+## strand
+  strand gg (int i02FF#2, femData:MeshCell j0300#1)
+    state:
+      output real result;
+      output tensor[2,2] z;
+      int i;
+      femData:MeshCell j;
+    state init
+      ENTRY031F:  preds = []
+        int _t0371#1 = globals._t0370;
+        femData:Mesh _t0374#2 = globals._tX0373;
+        real _t030B#1 = 0.1e1;
+        real _t030D#1 = IntToReal(i02FF);
+        real result030F#1 = λ(T0[],T1[])<(T0 * T1)> (_t030B,_t030D);
+        real _t0313#2 = 0.e0;
+        tensor[2] _t0317#1 = <tensor[2]>[_t0313,_t0313];
+        tensor[2,2] z0319#1 = λ(INT0,FEM(msh)1,FEM(msh)2,T3[2])<Probe(femV(0, 1, 1)_{i0}⊛Basis()dx_{i1},T3)>_{2 2} (_t0371,_t0374,_t0374,_t0317);
+        self.result = result030F;
+        self.z = z0319;
+        self.i = i02FF;
+        self.j = j0300;
+        return
+    end state init
+    method update
+        ENTRY0360:  preds = []
+          femData:Mesh a0327#1 = globals.a0281;
+          int[] a10326#2 = globals.a10286;
+          real[] a20325#1 = globals.a20287;
+          real result032B#1 = self.result;
+          int i032D#1 = self.i;
+          femData:MeshCell j032E#3 = self.j;
+          int _t0333#1 = 10;
+          int _t0335#1 = IMul(i032D,_t0333);
+          real _t0338#1 = IntToReal(_t0335);
+          real _t033A#2 = λ(T0[],T1[])<(T0 * T1)> (result032B,_t0338);
+          int _t0341#1 = ExtractFemItem<int,NumCell(Mesh)>(a0327);
+          femData:Mesh _t0345#1 = ExtractFem<femData:Mesh,femData:MeshCell>(j032E);
+          int _t0347#1 = ExtractFemItem<int,CellIndex(MeshCell)>(j032E);
+          tensor[4,2] a0349#1 = ExtractFemItem2<int,tensor[4,2],ExtractDofs(Mesh)>(_t0345,_t0347);
+          string _t034B#5 = "\n";
+          string _t034D#1 = "numCell:";
+          real _t0353#1 = 0.2e1;
+          Print<[int[]]>(a10326);
+          Print<[real,string,string,int,string,int[],real[],string,real,string,femData:MeshCell,string,tensor[4,2]]>(_t033A,_t034B,_t034D,_t0341,_t034B,a10326,a20325,_t034B,_t0353,_t034B,j032E,_t034B,a0349);
+          self.result = _t033A;
+          stabilize
+    end update
+  end gg
+## initial strand creation
+  COLLECTION
+    ENTRY02FD:  preds = []
+      femData:MeshCell[] 0cell_a02F3#1 = globals.0cell_a0284;
+      int[] a102F2#1 = globals.a10286;
+    FOREACH02F7:  preds = [ASSIGN02F5,NEXT02FC]
+      foreach (j02F6 in a102F2) on exit goto RETURN02FE
+    FOREACH02F9:  preds = [FOREACH02F7,NEXT02FB]
+      foreach (k02F8 in 0cell_a02F3) on exit goto NEXT02FC
+      new gg(j02F6,k02F8);
+      goto FOREACH02F9
+    NEXT02FC:  preds = [FOREACH02F9]
+      goto FOREACH02F7
+    RETURN02FE:  preds = [FOREACH02F7]
+      return
+#### end program ####
+##### mid-ir: after high-to-mid translation ####
+## properties
+  GlobalInit HasInputs HasGlobals
+## globals
+  input a037A (a) = <no-default>
+  global femData:MeshCell[] 0cell_a037B
+  global int[] a1037C
+  global real[] a2037D
+  global int _t037E
+  global femData:Mesh _tX037F
+## functions
+## input initialization
+  ENTRY0380:  preds = []
+    return
+## global-variable initialization
+  ENTRY0382:  preds = []
+    femData:Mesh a0383#2 = globals.a037A;
+    int _t0385#3 = 0;
+    int _t0387#1 = ExtractFemItem<int,NumCell(Mesh)>(a0383);
+    int[] _t0389#1 = Range(_t0385,_t0387);
+    femData:MeshCell[] _t038B#1 = <femData:MeshCell[]>{};
+  FOREACH038E:  preds = [ASSIGN038C,NEXT0394]
+    foreach (_t038D in _t0389) on exit goto GASSIGN0395
+      femData:MeshCell[] _t0392#3 = phi(_t038B,_t0391)
+    femData:MeshCell _t038F#1 = LoadFem<femData:MeshCell>(a0383,_t038D);
+    femData:MeshCell[] _t0391#1 = Append<femData:MeshCell>(_t0392,_t038F);
+    goto FOREACH038E
+  GASSIGN0395:  preds = [FOREACH038E]
+    globals.0cell_a037B = _t0392;
+    femData:MeshCell _t0396#2 = Subscript<femData:MeshCell[]>(_t0392,_t0385);
+    femData:Mesh _t0398#1 = ExtractFem<femData:Mesh,femData:MeshCell>(_t0396);
+    int _t039A#1 = ExtractFemItem<int,CellIndex(MeshCell)>(_t0396);
+    int _t039C#1 = 10;
+    int[] _t039E#2 = Range(_t0385,_t039C);
+    int[] accum03A0#1 = <int[]>{};
+  FOREACH03A3:  preds = [ASSIGN03A1,NEXT03AB]
+    foreach (j03A2 in _t039E) on exit goto ASSIGN03AD
+      int[] accum03A9#2 = phi(accum03A0,accum03A8)
+    int _t03A4#1 = 1;
+    int _t03A6#1 = IAdd(_t03A4,j03A2);
+    int[] accum03A8#1 = Append<int>(accum03A9,_t03A6);
+    goto FOREACH03A3
+  ASSIGN03AD:  preds = [FOREACH03A3]
+    int[] accum03AC#1 = <int[]>{};
+  FOREACH03AF:  preds = [ASSIGN03AD,NEXT03B7]
+    foreach (k03AE in accum03A9) on exit goto GASSIGN03B8
+      int[] accum03B5#2 = phi(accum03AC,accum03B4)
+    int _t03B0#1 = 2;
+    int _t03B2#1 = IAdd(k03AE,_t03B0);
+    int[] accum03B4#1 = Append<int>(accum03B5,_t03B2);
+    goto FOREACH03AF
+  GASSIGN03B8:  preds = [FOREACH03AF]
+    globals.a1037C = accum03B5;
+    real[] accum03B9#1 = <real[]>{};
+  FOREACH03BC:  preds = [ASSIGN03BA,NEXT03C6]
+    foreach (j03BB in _t039E) on exit goto ASSIGN03C8
+      real[] accum03C4#2 = phi(accum03B9,accum03C3)
+    real _t03BD#1 = 0.1e1;
+    real _t03BF#1 = IntToReal(j03BB);
+    real _t03C1#1 = λ(T0[],T1[])<(T0 + T1)> (_t03BD,_t03BF);
+    real[] accum03C3#1 = Append<real>(accum03C4,_t03C1);
+    goto FOREACH03BC
+  ASSIGN03C8:  preds = [FOREACH03BC]
+    real[] accum03C7#1 = <real[]>{};
+  FOREACH03CA:  preds = [ASSIGN03C8,NEXT03D2]
+    foreach (k03C9 in accum03C4) on exit goto GASSIGN03D3
+      real[] accum03D0#2 = phi(accum03C7,accum03CF)
+    real _t03CB#1 = 0.2e1;
+    real _t03CD#1 = λ(T0[],T1[])<(T0 + T1)> (k03C9,_t03CB);
+    real[] accum03CF#1 = Append<real>(accum03D0,_t03CD);
+    goto FOREACH03CA
+  GASSIGN03D3:  preds = [FOREACH03CA]
+    globals.a2037D = accum03D0;
+    globals._t037E = _t039A;
+    globals._tX037F = _t0398;
+    return
+## strand
+  strand gg (int i03D7#2, femData:MeshCell j03D8#1)
+    state:
+      output real result;
+      output tensor[2,2] z;
+      int i;
+      femData:MeshCell j;
+    state init
+      ENTRY03DD:  preds = []
+        int _t03DE#2 = globals._t037E;
+        femData:Mesh _t03E0#4 = globals._tX037F;
+        real _t03E2#1 = 0.1e1;
+        real _t03E4#1 = IntToReal(i03D7);
+        real result03E6#1 = λ(T0[],T1[])<(T0 * T1)> (_t03E2,_t03E4);
+        real _t03E8#2 = 0.e0;
+        tensor[2] _t03EA#2 = <tensor[2]>[_t03E8,_t03E8];
+        int[4] femIndicies03EE#1 = ExtractFemItem2<int,int[4],ExtractIndices(Mesh)>(_t03E0,_t03DE);
+        tensor[4,2] femDofs03EF#1 = ExtractFemItem2<int[4],tensor[4,2],ExtractDofsSeq(Mesh)>(_t03E0,femIndicies03EE);
+        tensor[4,2] dofs03ED#1 = femDofs03EF;
+        tensor[2,4] basisResult03F0#1 = EvaluateBasis<BasisArray>(_t03EA);
+        tensor[2,2] z03EC#1 = λ(INT0,FEM(msh)1,FEM(msh)2,T3[2],T4[4 2],T5[2 4])<Σ(i3=0..3)<((T4_{i3,i0} * T5_{i1,i3}))>(i3=0..3)>_{2 2} (_t03DE,_t03E0,_t03E0,_t03EA,dofs03ED,basisResult03F0);
+        self.result = result03E6;
+        self.z = z03EC;
+        self.i = i03D7;
+        self.j = j03D8;
+        return
+    end state init
+    method update
+        ENTRY03FB:  preds = []
+          femData:Mesh a03FC#1 = globals.a037A;
+          int[] a103FE#2 = globals.a1037C;
+          real[] a20400#1 = globals.a2037D;
+          real result0402#1 = self.result;
+          int i0404#1 = self.i;
+          femData:MeshCell j0406#3 = self.j;
+          int _t0408#1 = 10;
+          int _t040A#1 = IMul(i0404,_t0408);
+          real _t040C#1 = IntToReal(_t040A);
+          real _t040E#2 = λ(T0[],T1[])<(T0 * T1)> (result0402,_t040C);
+          int _t0410#1 = ExtractFemItem<int,NumCell(Mesh)>(a03FC);
+          femData:Mesh _t0412#2 = ExtractFem<femData:Mesh,femData:MeshCell>(j0406);
+          int _t0414#1 = ExtractFemItem<int,CellIndex(MeshCell)>(j0406);
+          int[4] femIndicies0417#1 = ExtractFemItem2<int,int[4],ExtractIndices(Mesh)>(_t0412,_t0414);
+          tensor[4,2] femDofs0418#1 = ExtractFemItem2<int[4],tensor[4,2],ExtractDofsSeq(Mesh)>(_t0412,femIndicies0417);
+          tensor[4,2] a0416#1 = femDofs0418;
+          string _t041C#5 = "\n";
+          string _t041E#1 = "numCell:";
+          real _t0420#1 = 0.2e1;
+          Print<[int[]]>(a103FE);
+          Print<[real,string,string,int,string,int[],real[],string,real,string,femData:MeshCell,string,tensor[4,2]]>(_t040E,_t041C,_t041E,_t0410,_t041C,a103FE,a20400,_t041C,_t0420,_t041C,j0406,_t041C,a0416);
+          self.result = _t040E;
+          stabilize
+    end update
+  end gg
+## initial strand creation
+  COLLECTION
+    ENTRY0427:  preds = []
+      femData:MeshCell[] 0cell_a0428#1 = globals.0cell_a037B;
+      int[] a1042A#1 = globals.a1037C;
+    FOREACH042D:  preds = [ASSIGN042B,NEXT0432]
+      foreach (j042C in a1042A) on exit goto RETURN0433
+    FOREACH042F:  preds = [FOREACH042D,NEXT0431]
+      foreach (k042E in 0cell_a0428) on exit goto NEXT0432
+      new gg(j042C,k042E);
+      goto FOREACH042F
+    NEXT0432:  preds = [FOREACH042F]
+      goto FOREACH042D
+    RETURN0433:  preds = [FOREACH042D]
+      return
+#### end program ####
+##### mid-ir: after value numbering ####
+## properties
+  GlobalInit HasInputs HasGlobals
+## globals
+  input a037A (a) = <no-default>
+  global femData:MeshCell[] 0cell_a037B
+  global int[] a1037C
+  global real[] a2037D
+  global int _t037E
+  global femData:Mesh _tX037F
+## functions
+## input initialization
+  ENTRY0380:  preds = []
+    return
+## global-variable initialization
+  ENTRY0382:  preds = []
+    femData:Mesh a0383#2 = globals.a037A;
+    int _t0385#3 = 0;
+    int _t0387#1 = ExtractFemItem<int,NumCell(Mesh)>(a0383);
+    int[] _t0389#1 = Range(_t0385,_t0387);
+    femData:MeshCell[] _t038B#1 = <femData:MeshCell[]>{};
+  FOREACH038E:  preds = [ASSIGN038C,NEXT0394]
+    foreach (_t038D in _t0389) on exit goto GASSIGN0395
+      femData:MeshCell[] _t0392#3 = phi(_t038B,_t0391)
+    femData:MeshCell _t038F#1 = LoadFem<femData:MeshCell>(a0383,_t038D);
+    femData:MeshCell[] _t0391#1 = Append<femData:MeshCell>(_t0392,_t038F);
+    goto FOREACH038E
+  GASSIGN0395:  preds = [FOREACH038E]
+    globals.0cell_a037B = _t0392;
+    femData:MeshCell _t0396#2 = Subscript<femData:MeshCell[]>(_t0392,_t0385);
+    femData:Mesh _t0398#1 = ExtractFem<femData:Mesh,femData:MeshCell>(_t0396);
+    int _t039A#1 = ExtractFemItem<int,CellIndex(MeshCell)>(_t0396);
+    int _t039C#1 = 10;
+    int[] _t039E#2 = Range(_t0385,_t039C);
+    int[] accum03A0#1 = <int[]>{};
+  FOREACH03A3:  preds = [ASSIGN03A1,NEXT03AB]
+    foreach (j03A2 in _t039E) on exit goto ASSIGN03AD
+      int[] accum03A9#2 = phi(accum03A0,accum03A8)
+    int _t03A4#1 = 1;
+    int _t03A6#1 = IAdd(_t03A4,j03A2);
+    int[] accum03A8#1 = Append<int>(accum03A9,_t03A6);
+    goto FOREACH03A3
+  ASSIGN03AD:  preds = [FOREACH03A3]
+    int[] accum03AC#1 = <int[]>{};
+  FOREACH03AF:  preds = [ASSIGN03AD,NEXT03B7]
+    foreach (k03AE in accum03A9) on exit goto GASSIGN03B8
+      int[] accum03B5#2 = phi(accum03AC,accum03B4)
+    int _t03B0#1 = 2;
+    int _t03B2#1 = IAdd(k03AE,_t03B0);
+    int[] accum03B4#1 = Append<int>(accum03B5,_t03B2);
+    goto FOREACH03AF
+  GASSIGN03B8:  preds = [FOREACH03AF]
+    globals.a1037C = accum03B5;
+    real[] accum03B9#1 = <real[]>{};
+  FOREACH03BC:  preds = [ASSIGN03BA,NEXT03C6]
+    foreach (j03BB in _t039E) on exit goto ASSIGN03C8
+      real[] accum03C4#2 = phi(accum03B9,accum03C3)
+    real _t03BD#1 = 0.1e1;
+    real _t03BF#1 = IntToReal(j03BB);
+    real _t03C1#1 = λ(T0[],T1[])<(T0 + T1)> (_t03BD,_t03BF);
+    real[] accum03C3#1 = Append<real>(accum03C4,_t03C1);
+    goto FOREACH03BC
+  ASSIGN03C8:  preds = [FOREACH03BC]
+    real[] accum03C7#1 = <real[]>{};
+  FOREACH03CA:  preds = [ASSIGN03C8,NEXT03D2]
+    foreach (k03C9 in accum03C4) on exit goto GASSIGN03D3
+      real[] accum03D0#2 = phi(accum03C7,accum03CF)
+    real _t03CB#1 = 0.2e1;
+    real _t03CD#1 = λ(T0[],T1[])<(T0 + T1)> (k03C9,_t03CB);
+    real[] accum03CF#1 = Append<real>(accum03D0,_t03CD);
+    goto FOREACH03CA
+  GASSIGN03D3:  preds = [FOREACH03CA]
+    globals.a2037D = accum03D0;
+    globals._t037E = _t039A;
+    globals._tX037F = _t0398;
+    return
+## strand
+  strand gg (int i03D7#2, femData:MeshCell j03D8#1)
+    state:
+      output real result;
+      output tensor[2,2] z;
+      int i;
+      femData:MeshCell j;
+    state init
+      ENTRY03DD:  preds = []
+        int _t03DE#2 = globals._t037E;
+        femData:Mesh _t03E0#4 = globals._tX037F;
+        real _t03E2#1 = 0.1e1;
+        real _t03E4#1 = IntToReal(i03D7);
+        real result03E6#1 = λ(T0[],T1[])<(T0 * T1)> (_t03E2,_t03E4);
+        real _t03E8#2 = 0.e0;
+        tensor[2] _t03EA#2 = <tensor[2]>[_t03E8,_t03E8];
+        int[4] femIndicies03EE#1 = ExtractFemItem2<int,int[4],ExtractIndices(Mesh)>(_t03E0,_t03DE);
+        tensor[4,2] femDofs03EF#1 = ExtractFemItem2<int[4],tensor[4,2],ExtractDofsSeq(Mesh)>(_t03E0,femIndicies03EE);
+        tensor[2,4] basisResult03F0#1 = EvaluateBasis<BasisArray>(_t03EA);
+        tensor[2,2] z03EC#1 = λ(INT0,FEM(msh)1,FEM(msh)2,T3[2],T4[4 2],T5[2 4])<Σ(i3=0..3)<((T4_{i3,i0} * T5_{i1,i3}))>(i3=0..3)>_{2 2} (_t03DE,_t03E0,_t03E0,_t03EA,femDofs03EF,basisResult03F0);
+        self.result = result03E6;
+        self.z = z03EC;
+        self.i = i03D7;
+        self.j = j03D8;
+        return
+    end state init
+    method update
+        ENTRY03FB:  preds = []
+          femData:Mesh a03FC#1 = globals.a037A;
+          int[] a103FE#2 = globals.a1037C;
+          real[] a20400#1 = globals.a2037D;
+          real result0402#1 = self.result;
+          int i0404#1 = self.i;
+          femData:MeshCell j0406#3 = self.j;
+          int _t0408#1 = 10;
+          int _t040A#1 = IMul(i0404,_t0408);
+          real _t040C#1 = IntToReal(_t040A);
+          real _t040E#2 = λ(T0[],T1[])<(T0 * T1)> (result0402,_t040C);
+          int _t0410#1 = ExtractFemItem<int,NumCell(Mesh)>(a03FC);
+          femData:Mesh _t0412#2 = ExtractFem<femData:Mesh,femData:MeshCell>(j0406);
+          int _t0414#1 = ExtractFemItem<int,CellIndex(MeshCell)>(j0406);
+          int[4] femIndicies0417#1 = ExtractFemItem2<int,int[4],ExtractIndices(Mesh)>(_t0412,_t0414);
+          tensor[4,2] femDofs0418#1 = ExtractFemItem2<int[4],tensor[4,2],ExtractDofsSeq(Mesh)>(_t0412,femIndicies0417);
+          string _t041C#5 = "\n";
+          string _t041E#1 = "numCell:";
+          real _t0420#1 = 0.2e1;
+          Print<[int[]]>(a103FE);
+          Print<[real,string,string,int,string,int[],real[],string,real,string,femData:MeshCell,string,tensor[4,2]]>(_t040E,_t041C,_t041E,_t0410,_t041C,a103FE,a20400,_t041C,_t0420,_t041C,j0406,_t041C,femDofs0418);
+          self.result = _t040E;
+          stabilize
+    end update
+  end gg
+## initial strand creation
+  COLLECTION
+    ENTRY0427:  preds = []
+      femData:MeshCell[] 0cell_a0428#1 = globals.0cell_a037B;
+      int[] a1042A#1 = globals.a1037C;
+    FOREACH042D:  preds = [ASSIGN042B,NEXT0432]
+      foreach (j042C in a1042A) on exit goto RETURN0433
+    FOREACH042F:  preds = [FOREACH042D,NEXT0431]
+      foreach (k042E in 0cell_a0428) on exit goto NEXT0432
+      new gg(j042C,k042E);
+      goto FOREACH042F
+    NEXT0432:  preds = [FOREACH042F]
+      goto FOREACH042D
+    RETURN0433:  preds = [FOREACH042D]
+      return
+#### end program ####
+##### mid-ir: after contraction ####
+## properties
+  GlobalInit HasInputs HasGlobals
+## globals
+  input a037A (a) = <no-default>
+  global femData:MeshCell[] 0cell_a037B
+  global int[] a1037C
+  global real[] a2037D
+  global int _t037E
+  global femData:Mesh _tX037F
+## functions
+## input initialization
+  ENTRY0380:  preds = []
+    return
+## global-variable initialization
+  ENTRY0382:  preds = []
+    femData:Mesh a0383#2 = globals.a037A;
+    int _t0385#3 = 0;
+    int _t0387#1 = ExtractFemItem<int,NumCell(Mesh)>(a0383);
+    int[] _t0389#1 = Range(_t0385,_t0387);
+    femData:MeshCell[] _t038B#1 = <femData:MeshCell[]>{};
+  FOREACH038E:  preds = [ASSIGN038C,NEXT0394]
+    foreach (_t038D in _t0389) on exit goto GASSIGN0395
+      femData:MeshCell[] _t0392#3 = phi(_t038B,_t0391)
+    femData:MeshCell _t038F#1 = LoadFem<femData:MeshCell>(a0383,_t038D);
+    femData:MeshCell[] _t0391#1 = Append<femData:MeshCell>(_t0392,_t038F);
+    goto FOREACH038E
+  GASSIGN0395:  preds = [FOREACH038E]
+    globals.0cell_a037B = _t0392;
+    femData:MeshCell _t0396#2 = Subscript<femData:MeshCell[]>(_t0392,_t0385);
+    femData:Mesh _t0398#1 = ExtractFem<femData:Mesh,femData:MeshCell>(_t0396);
+    int _t039A#1 = ExtractFemItem<int,CellIndex(MeshCell)>(_t0396);
+    int _t039C#1 = 10;
+    int[] _t039E#2 = Range(_t0385,_t039C);
+    int[] accum03A0#1 = <int[]>{};
+  FOREACH03A3:  preds = [ASSIGN03A1,NEXT03AB]
+    foreach (j03A2 in _t039E) on exit goto ASSIGN03AD
+      int[] accum03A9#2 = phi(accum03A0,accum03A8)
+    int _t03A4#1 = 1;
+    int _t03A6#1 = IAdd(_t03A4,j03A2);
+    int[] accum03A8#1 = Append<int>(accum03A9,_t03A6);
+    goto FOREACH03A3
+  ASSIGN03AD:  preds = [FOREACH03A3]
+    int[] accum03AC#1 = <int[]>{};
+  FOREACH03AF:  preds = [ASSIGN03AD,NEXT03B7]
+    foreach (k03AE in accum03A9) on exit goto GASSIGN03B8
+      int[] accum03B5#2 = phi(accum03AC,accum03B4)
+    int _t03B0#1 = 2;
+    int _t03B2#1 = IAdd(k03AE,_t03B0);
+    int[] accum03B4#1 = Append<int>(accum03B5,_t03B2);
+    goto FOREACH03AF
+  GASSIGN03B8:  preds = [FOREACH03AF]
+    globals.a1037C = accum03B5;
+    real[] accum03B9#1 = <real[]>{};
+  FOREACH03BC:  preds = [ASSIGN03BA,NEXT03C6]
+    foreach (j03BB in _t039E) on exit goto ASSIGN03C8
+      real[] accum03C4#2 = phi(accum03B9,accum03C3)
+    real _t03BD#1 = 0.1e1;
+    real _t03BF#1 = IntToReal(j03BB);
+    real _t03C1#1 = λ(T0[],T1[])<(T0 + T1)> (_t03BD,_t03BF);
+    real[] accum03C3#1 = Append<real>(accum03C4,_t03C1);
+    goto FOREACH03BC
+  ASSIGN03C8:  preds = [FOREACH03BC]
+    real[] accum03C7#1 = <real[]>{};
+  FOREACH03CA:  preds = [ASSIGN03C8,NEXT03D2]
+    foreach (k03C9 in accum03C4) on exit goto GASSIGN03D3
+      real[] accum03D0#2 = phi(accum03C7,accum03CF)
+    real _t03CB#1 = 0.2e1;
+    real _t03CD#1 = λ(T0[],T1[])<(T0 + T1)> (k03C9,_t03CB);
+    real[] accum03CF#1 = Append<real>(accum03D0,_t03CD);
+    goto FOREACH03CA
+  GASSIGN03D3:  preds = [FOREACH03CA]
+    globals.a2037D = accum03D0;
+    globals._t037E = _t039A;
+    globals._tX037F = _t0398;
+    return
+## strand
+  strand gg (int i03D7#2, femData:MeshCell j03D8#1)
+    state:
+      output real result;
+      output tensor[2,2] z;
+      int i;
+      femData:MeshCell j;
+    state init
+      ENTRY03DD:  preds = []
+        int _t03DE#2 = globals._t037E;
+        femData:Mesh _t03E0#4 = globals._tX037F;
+        real _t03E2#1 = 0.1e1;
+        real _t03E4#1 = IntToReal(i03D7);
+        real result03E6#1 = λ(T0[],T1[])<(T0 * T1)> (_t03E2,_t03E4);
+        real _t03E8#2 = 0.e0;
+        tensor[2] _t03EA#2 = <tensor[2]>[_t03E8,_t03E8];
+        int[4] femIndicies03EE#1 = ExtractFemItem2<int,int[4],ExtractIndices(Mesh)>(_t03E0,_t03DE);
+        tensor[4,2] femDofs03EF#1 = ExtractFemItem2<int[4],tensor[4,2],ExtractDofsSeq(Mesh)>(_t03E0,femIndicies03EE);
+        tensor[2,4] basisResult03F0#1 = EvaluateBasis<BasisArray>(_t03EA);
+        tensor[2,2] z03EC#1 = λ(INT0,FEM(msh)1,FEM(msh)2,T3[2],T4[4 2],T5[2 4])<Σ(i3=0..3)<((T4_{i3,i0} * T5_{i1,i3}))>(i3=0..3)>_{2 2} (_t03DE,_t03E0,_t03E0,_t03EA,femDofs03EF,basisResult03F0);
+        self.result = result03E6;
+        self.z = z03EC;
+        self.i = i03D7;
+        self.j = j03D8;
+        return
+    end state init
+    method update
+        ENTRY03FB:  preds = []
+          femData:Mesh a03FC#1 = globals.a037A;
+          int[] a103FE#2 = globals.a1037C;
+          real[] a20400#1 = globals.a2037D;
+          real result0402#1 = self.result;
+          int i0404#1 = self.i;
+          femData:MeshCell j0406#3 = self.j;
+          int _t0408#1 = 10;
+          int _t040A#1 = IMul(i0404,_t0408);
+          real _t040C#1 = IntToReal(_t040A);
+          real _t040E#2 = λ(T0[],T1[])<(T0 * T1)> (result0402,_t040C);
+          int _t0410#1 = ExtractFemItem<int,NumCell(Mesh)>(a03FC);
+          femData:Mesh _t0412#2 = ExtractFem<femData:Mesh,femData:MeshCell>(j0406);
+          int _t0414#1 = ExtractFemItem<int,CellIndex(MeshCell)>(j0406);
+          int[4] femIndicies0417#1 = ExtractFemItem2<int,int[4],ExtractIndices(Mesh)>(_t0412,_t0414);
+          tensor[4,2] femDofs0418#1 = ExtractFemItem2<int[4],tensor[4,2],ExtractDofsSeq(Mesh)>(_t0412,femIndicies0417);
+          string _t041C#5 = "\n";
+          string _t041E#1 = "numCell:";
+          real _t0420#1 = 0.2e1;
+          Print<[int[]]>(a103FE);
+          Print<[real,string,string,int,string,int[],real[],string,real,string,femData:MeshCell,string,tensor[4,2]]>(_t040E,_t041C,_t041E,_t0410,_t041C,a103FE,a20400,_t041C,_t0420,_t041C,j0406,_t041C,femDofs0418);
+          self.result = _t040E;
+          stabilize
+    end update
+  end gg
+## initial strand creation
+  COLLECTION
+    ENTRY0427:  preds = []
+      femData:MeshCell[] 0cell_a0428#1 = globals.0cell_a037B;
+      int[] a1042A#1 = globals.a1037C;
+    FOREACH042D:  preds = [ASSIGN042B,NEXT0432]
+      foreach (j042C in a1042A) on exit goto RETURN0433
+    FOREACH042F:  preds = [FOREACH042D,NEXT0431]
+      foreach (k042E in 0cell_a0428) on exit goto NEXT0432
+      new gg(j042C,k042E);
+      goto FOREACH042F
+    NEXT0432:  preds = [FOREACH042F]
+      goto FOREACH042D
+    RETURN0433:  preds = [FOREACH042D]
+      return
+#### end program ####
+##### mid-ir: after border control ####
+## properties
+  GlobalInit HasInputs HasGlobals
+## globals
+  input a037A (a) = <no-default>
+  global femData:MeshCell[] 0cell_a037B
+  global int[] a1037C
+  global real[] a2037D
+  global int _t037E
+  global femData:Mesh _tX037F
+## functions
+## input initialization
+  ENTRY0380:  preds = []
+    return
+## global-variable initialization
+  ENTRY0382:  preds = []
+    femData:Mesh a0383#2 = globals.a037A;
+    int _t0385#3 = 0;
+    int _t0387#1 = ExtractFemItem<int,NumCell(Mesh)>(a0383);
+    int[] _t0389#1 = Range(_t0385,_t0387);
+    femData:MeshCell[] _t038B#1 = <femData:MeshCell[]>{};
+  FOREACH038E:  preds = [ASSIGN038C,NEXT0394]
+    foreach (_t038D in _t0389) on exit goto GASSIGN0395
+      femData:MeshCell[] _t0392#3 = phi(_t038B,_t0391)
+    femData:MeshCell _t038F#1 = LoadFem<femData:MeshCell>(a0383,_t038D);
+    femData:MeshCell[] _t0391#1 = Append<femData:MeshCell>(_t0392,_t038F);
+    goto FOREACH038E
+  GASSIGN0395:  preds = [FOREACH038E]
+    globals.0cell_a037B = _t0392;
+    femData:MeshCell _t0396#2 = Subscript<femData:MeshCell[]>(_t0392,_t0385);
+    femData:Mesh _t0398#1 = ExtractFem<femData:Mesh,femData:MeshCell>(_t0396);
+    int _t039A#1 = ExtractFemItem<int,CellIndex(MeshCell)>(_t0396);
+    int _t039C#1 = 10;
+    int[] _t039E#2 = Range(_t0385,_t039C);
+    int[] accum03A0#1 = <int[]>{};
+  FOREACH03A3:  preds = [ASSIGN03A1,NEXT03AB]
+    foreach (j03A2 in _t039E) on exit goto ASSIGN03AD
+      int[] accum03A9#2 = phi(accum03A0,accum03A8)
+    int _t03A4#1 = 1;
+    int _t03A6#1 = IAdd(_t03A4,j03A2);
+    int[] accum03A8#1 = Append<int>(accum03A9,_t03A6);
+    goto FOREACH03A3
+  ASSIGN03AD:  preds = [FOREACH03A3]
+    int[] accum03AC#1 = <int[]>{};
+  FOREACH03AF:  preds = [ASSIGN03AD,NEXT03B7]
+    foreach (k03AE in accum03A9) on exit goto GASSIGN03B8
+      int[] accum03B5#2 = phi(accum03AC,accum03B4)
+    int _t03B0#1 = 2;
+    int _t03B2#1 = IAdd(k03AE,_t03B0);
+    int[] accum03B4#1 = Append<int>(accum03B5,_t03B2);
+    goto FOREACH03AF
+  GASSIGN03B8:  preds = [FOREACH03AF]
+    globals.a1037C = accum03B5;
+    real[] accum03B9#1 = <real[]>{};
+  FOREACH03BC:  preds = [ASSIGN03BA,NEXT03C6]
+    foreach (j03BB in _t039E) on exit goto ASSIGN03C8
+      real[] accum03C4#2 = phi(accum03B9,accum03C3)
+    real _t03BD#1 = 0.1e1;
+    real _t03BF#1 = IntToReal(j03BB);
+    real _t03C1#1 = λ(T0[],T1[])<(T0 + T1)> (_t03BD,_t03BF);
+    real[] accum03C3#1 = Append<real>(accum03C4,_t03C1);
+    goto FOREACH03BC
+  ASSIGN03C8:  preds = [FOREACH03BC]
+    real[] accum03C7#1 = <real[]>{};
+  FOREACH03CA:  preds = [ASSIGN03C8,NEXT03D2]
+    foreach (k03C9 in accum03C4) on exit goto GASSIGN03D3
+      real[] accum03D0#2 = phi(accum03C7,accum03CF)
+    real _t03CB#1 = 0.2e1;
+    real _t03CD#1 = λ(T0[],T1[])<(T0 + T1)> (k03C9,_t03CB);
+    real[] accum03CF#1 = Append<real>(accum03D0,_t03CD);
+    goto FOREACH03CA
+  GASSIGN03D3:  preds = [FOREACH03CA]
+    globals.a2037D = accum03D0;
+    globals._t037E = _t039A;
+    globals._tX037F = _t0398;
+    return
+## strand
+  strand gg (int i03D7#2, femData:MeshCell j03D8#1)
+    state:
+      output real result;
+      output tensor[2,2] z;
+      int i;
+      femData:MeshCell j;
+    state init
+      ENTRY03DD:  preds = []
+        int _t03DE#2 = globals._t037E;
+        femData:Mesh _t03E0#4 = globals._tX037F;
+        real _t03E2#1 = 0.1e1;
+        real _t03E4#1 = IntToReal(i03D7);
+        real result03E6#1 = λ(T0[],T1[])<(T0 * T1)> (_t03E2,_t03E4);
+        real _t03E8#2 = 0.e0;
+        tensor[2] _t03EA#2 = <tensor[2]>[_t03E8,_t03E8];
+        int[4] femIndicies03EE#1 = ExtractFemItem2<int,int[4],ExtractIndices(Mesh)>(_t03E0,_t03DE);
+        tensor[4,2] femDofs03EF#1 = ExtractFemItem2<int[4],tensor[4,2],ExtractDofsSeq(Mesh)>(_t03E0,femIndicies03EE);
+        tensor[2,4] basisResult03F0#1 = EvaluateBasis<BasisArray>(_t03EA);
+        tensor[2,2] z03EC#1 = λ(INT0,FEM(msh)1,FEM(msh)2,T3[2],T4[4 2],T5[2 4])<Σ(i3=0..3)<((T4_{i3,i0} * T5_{i1,i3}))>(i3=0..3)>_{2 2} (_t03DE,_t03E0,_t03E0,_t03EA,femDofs03EF,basisResult03F0);
+        self.result = result03E6;
+        self.z = z03EC;
+        self.i = i03D7;
+        self.j = j03D8;
+        return
+    end state init
+    method update
+        ENTRY03FB:  preds = []
+          femData:Mesh a03FC#1 = globals.a037A;
+          int[] a103FE#2 = globals.a1037C;
+          real[] a20400#1 = globals.a2037D;
+          real result0402#1 = self.result;
+          int i0404#1 = self.i;
+          femData:MeshCell j0406#3 = self.j;
+          int _t0408#1 = 10;
+          int _t040A#1 = IMul(i0404,_t0408);
+          real _t040C#1 = IntToReal(_t040A);
+          real _t040E#2 = λ(T0[],T1[])<(T0 * T1)> (result0402,_t040C);
+          int _t0410#1 = ExtractFemItem<int,NumCell(Mesh)>(a03FC);
+          femData:Mesh _t0412#2 = ExtractFem<femData:Mesh,femData:MeshCell>(j0406);
+          int _t0414#1 = ExtractFemItem<int,CellIndex(MeshCell)>(j0406);
+          int[4] femIndicies0417#1 = ExtractFemItem2<int,int[4],ExtractIndices(Mesh)>(_t0412,_t0414);
+          tensor[4,2] femDofs0418#1 = ExtractFemItem2<int[4],tensor[4,2],ExtractDofsSeq(Mesh)>(_t0412,femIndicies0417);
+          string _t041C#5 = "\n";
+          string _t041E#1 = "numCell:";
+          real _t0420#1 = 0.2e1;
+          Print<[int[]]>(a103FE);
+          Print<[real,string,string,int,string,int[],real[],string,real,string,femData:MeshCell,string,tensor[4,2]]>(_t040E,_t041C,_t041E,_t0410,_t041C,a103FE,a20400,_t041C,_t0420,_t041C,j0406,_t041C,femDofs0418);
+          self.result = _t040E;
+          stabilize
+    end update
+  end gg
+## initial strand creation
+  COLLECTION
+    ENTRY0427:  preds = []
+      femData:MeshCell[] 0cell_a0428#1 = globals.0cell_a037B;
+      int[] a1042A#1 = globals.a1037C;
+    FOREACH042D:  preds = [ASSIGN042B,NEXT0432]
+      foreach (j042C in a1042A) on exit goto RETURN0433
+    FOREACH042F:  preds = [FOREACH042D,NEXT0431]
+      foreach (k042E in 0cell_a0428) on exit goto NEXT0432
+      new gg(j042C,k042E);
+      goto FOREACH042F
+    NEXT0432:  preds = [FOREACH042F]
+      goto FOREACH042D
+    RETURN0433:  preds = [FOREACH042D]
+      return
+#### end program ####
+##### low-ir: after mid-to-low translation ####
+## properties
+  GlobalInit HasInputs HasGlobals
+## globals
+  input a0436 (a) = <no-default>
+  global femData:MeshCell[] 0cell_a0437
+  global int[] a10438
+  global real[] a20439
+  global int _t043A
+  global femData:Mesh _tX043B
+## functions
+## input initialization
+  ENTRY043C:  preds = []
+    return
+## global-variable initialization
+  ENTRY043E:  preds = []
+    femData:Mesh a043F#2 = globals.a0436;
+    int _t0441#3 = 0;
+    int _t0443#1 = ExtractFemItem<int,NumCell(Mesh)>(a043F);
+    int[] _t0445#1 = Range(_t0441,_t0443);
+    femData:MeshCell[] _t0447#1 = <femData:MeshCell[]>{};
+  FOREACH044A:  preds = [ASSIGN0448,NEXT0450]
+    foreach (_t0449 in _t0445) on exit goto GASSIGN0451
+      femData:MeshCell[] _t044E#3 = phi(_t0447,_t044D)
+    femData:MeshCell _t044B#1 = LoadFem<femData:MeshCell>(a043F,_t0449);
+    femData:MeshCell[] _t044D#1 = Append<femData:MeshCell>(_t044E,_t044B);
+    goto FOREACH044A
+  GASSIGN0451:  preds = [FOREACH044A]
+    globals.0cell_a0437 = _t044E;
+    femData:MeshCell _t0452#2 = Subscript<femData:MeshCell[]>(_t044E,_t0441);
+    femData:Mesh _t0454#1 = ExtractFem<femData:Mesh,femData:MeshCell>(_t0452);
+    int _t0456#1 = ExtractFemItem<int,CellIndex(MeshCell)>(_t0452);
+    int _t0458#1 = 10;
+    int[] _t045A#2 = Range(_t0441,_t0458);
+    int[] accum045C#1 = <int[]>{};
+  FOREACH045F:  preds = [ASSIGN045D,NEXT0467]
+    foreach (j045E in _t045A) on exit goto ASSIGN0469
+      int[] accum0465#2 = phi(accum045C,accum0464)
+    int _t0460#1 = 1;
+    int _t0462#1 = IAdd(_t0460,j045E);
+    int[] accum0464#1 = Append<int>(accum0465,_t0462);
+    goto FOREACH045F
+  ASSIGN0469:  preds = [FOREACH045F]
+    int[] accum0468#1 = <int[]>{};
+  FOREACH046B:  preds = [ASSIGN0469,NEXT0473]
+    foreach (k046A in accum0465) on exit goto GASSIGN0474
+      int[] accum0471#2 = phi(accum0468,accum0470)
+    int _t046C#1 = 2;
+    int _t046E#1 = IAdd(k046A,_t046C);
+    int[] accum0470#1 = Append<int>(accum0471,_t046E);
+    goto FOREACH046B
+  GASSIGN0474:  preds = [FOREACH046B]
+    globals.a10438 = accum0471;
+    real[] accum0475#1 = <real[]>{};
+  FOREACH0478:  preds = [ASSIGN0476,NEXT0483]
+    foreach (j0477 in _t045A) on exit goto ASSIGN0485
+      real[] accum0481#2 = phi(accum0475,accum0480)
+    real _t0479#1 = 0.1e1;
+    real _t047B#1 = IntToReal(j0477);
+    real _t047D#1 = RAdd(_t0479,_t047B);
+    real[] accum0480#1 = Append<real>(accum0481,_t047D);
+    goto FOREACH0478
+  ASSIGN0485:  preds = [FOREACH0478]
+    real[] accum0484#1 = <real[]>{};
+  FOREACH0487:  preds = [ASSIGN0485,NEXT0490]
+    foreach (k0486 in accum0481) on exit goto GASSIGN0491
+      real[] accum048E#2 = phi(accum0484,accum048D)
+    real _t0488#1 = 0.2e1;
+    real _t048A#1 = RAdd(k0486,_t0488);
+    real[] accum048D#1 = Append<real>(accum048E,_t048A);
+    goto FOREACH0487
+  GASSIGN0491:  preds = [FOREACH0487]
+    globals.a20439 = accum048E;
+    globals._t043A = _t0456;
+    globals._tX043B = _t0454;
+    return
+## strand
+  strand gg (int i0495#2, femData:MeshCell j0496#1)
+    state:
+      output real result;
+      output tensor[2,2] z;
+      int i;
+      femData:MeshCell j;
+    state init
+      ENTRY049B:  preds = []
+        int _t049C#4 = globals._t043A;
+        femData:Mesh _t049E#12 = globals._tX043B;
+        real _t04A0#1 = 0.1e1;
+        real _t04A2#1 = IntToReal(i0495);
+        real result04A4#1 = RMul(_t04A0,_t04A2);
+        real _t04A7#2 = 0.e0;
+        tensor[2] _t04A9#2 = <tensor[2]>[_t04A7,_t04A7];
+        int ilit04AC#1 = 0;
+        int addRes04AD#1 = IAdd(_t049C,ilit04AC);
+        int idx04AE#1 = ExtractFemItem2<int,int,ExtractIndex(Mesh)>(_t049E,addRes04AD);
+        int ilit04AF#1 = 1;
+        int addRes04B0#1 = IAdd(_t049C,ilit04AF);
+        int idx04B1#1 = ExtractFemItem2<int,int,ExtractIndex(Mesh)>(_t049E,addRes04B0);
+        int ilit04B2#1 = 2;
+        int addRes04B3#1 = IAdd(_t049C,ilit04B2);
+        int idx04B4#1 = ExtractFemItem2<int,int,ExtractIndex(Mesh)>(_t049E,addRes04B3);
+        int ilit04B5#1 = 3;
+        int addRes04B6#1 = IAdd(_t049C,ilit04B5);
+        int idx04B7#1 = ExtractFemItem2<int,int,ExtractIndex(Mesh)>(_t049E,addRes04B6);
+        int[4] seq04B8#1 = <int[4]>{idx04AE,idx04B1,idx04B4,idx04B7};
+        int[4] femIndicies04AB#4 = seq04B8;
+        int ilit04C8#5 = 0;
+        int ilit04C9#5 = 2;
+        int idx04CA#1 = Subscript<int>(femIndicies04AB,ilit04C8);
+        int mulRes04CB#2 = IMul(ilit04C9,idx04CA);
+        int addRes04CC#1 = IAdd(ilit04C8,mulRes04CB);
+        int ilit04CD#5 = 1;
+        int addRes04CE#1 = IAdd(ilit04CD,mulRes04CB);
+        real dof_load04CF#1 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t049E,addRes04CC);
+        real dof_load04D0#1 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t049E,addRes04CE);
+        tensor[2] interCons04D1#1 = <tensor[2]>[dof_load04CF,dof_load04D0];
+        int idx04D2#1 = Subscript<int>(femIndicies04AB,ilit04CD);
+        int mulRes04D3#2 = IMul(ilit04C9,idx04D2);
+        int addRes04D4#1 = IAdd(ilit04C8,mulRes04D3);
+        int addRes04D5#1 = IAdd(ilit04CD,mulRes04D3);
+        real dof_load04D6#1 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t049E,addRes04D4);
+        real dof_load04D7#1 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t049E,addRes04D5);
+        tensor[2] interCons04D8#1 = <tensor[2]>[dof_load04D6,dof_load04D7];
+        int idx04D9#1 = Subscript<int>(femIndicies04AB,ilit04C9);
+        int mulRes04DA#2 = IMul(ilit04C9,idx04D9);
+        int addRes04DB#1 = IAdd(ilit04C8,mulRes04DA);
+        int addRes04DC#1 = IAdd(ilit04CD,mulRes04DA);
+        real dof_load04DD#1 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t049E,addRes04DB);
+        real dof_load04DE#1 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t049E,addRes04DC);
+        tensor[2] interCons04DF#1 = <tensor[2]>[dof_load04DD,dof_load04DE];
+        int ilit04E0#1 = 3;
+        int idx04E1#1 = Subscript<int>(femIndicies04AB,ilit04E0);
+        int mulRes04E2#2 = IMul(ilit04C9,idx04E1);
+        int addRes04E3#1 = IAdd(ilit04C8,mulRes04E2);
+        int addRes04E4#1 = IAdd(ilit04CD,mulRes04E2);
+        real dof_load04E5#1 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t049E,addRes04E3);
+        real dof_load04E6#1 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t049E,addRes04E4);
+        tensor[2] interCons04E7#1 = <tensor[2]>[dof_load04E5,dof_load04E6];
+        tensor[4,2] dofs04E8#1 = <tensor[4,2]>[interCons04D1,interCons04D8,interCons04DF,interCons04E7];
+        tensor[4,2] femDofs04C7#8 = dofs04E8;
+        real varAcc050C#0 = VIndex<2,0>(_t04A9);
+        real varAcc050D#0 = VIndex<2,1>(_t04A9);
+        real basisEval050E#4 = 0.e0;
+        real coeff050F#3 = 0.1e1;
+        real prod0510#1 = RMul(coeff050F,coeff050F);
+        real coeffs0511#1 = coeff050F;
+        real powers0512#1 = prod0510;
+        real basisEval0513#4 = RMul(coeffs0511,powers0512);
+        tensor[4] intermediateCons0514#1 = <tensor[4]>[basisEval050E,basisEval050E,basisEval0513,basisEval0513];
+        tensor[4] intermediateCons0515#1 = <tensor[4]>[basisEval050E,basisEval0513,basisEval050E,basisEval0513];
+        tensor[2,4] intermediateCons0516#1 = <tensor[2,4]>[intermediateCons0515,intermediateCons0514];
+        tensor[2,4] basisResult050B#8 = intermediateCons0516;
+        real r0524#2 = TensorIndex<tensor[4,2],[0,0]>(femDofs04C7);
+        real r0525#2 = TensorIndex<tensor[2,4],[0,0]>(basisResult050B);
+        real r0526#1 = RMul(r0524,r0525);
+        real r0527#2 = TensorIndex<tensor[4,2],[1,0]>(femDofs04C7);
+        real r0528#2 = TensorIndex<tensor[2,4],[0,1]>(basisResult050B);
+        real r0529#1 = RMul(r0527,r0528);
+        real r052A#2 = TensorIndex<tensor[4,2],[2,0]>(femDofs04C7);
+        real r052B#2 = TensorIndex<tensor[2,4],[0,2]>(basisResult050B);
+        real r052C#1 = RMul(r052A,r052B);
+        real r052D#2 = TensorIndex<tensor[4,2],[3,0]>(femDofs04C7);
+        real r052E#2 = TensorIndex<tensor[2,4],[0,3]>(basisResult050B);
+        real r052F#1 = RMul(r052D,r052E);
+        real r0530#1 = RAdd(r0526,r0529);
+        real r0531#1 = RAdd(r0530,r052C);
+        real r0532#1 = RAdd(r0531,r052F);
+        real r0533#2 = TensorIndex<tensor[2,4],[1,0]>(basisResult050B);
+        real r0534#1 = RMul(r0524,r0533);
+        real r0535#2 = TensorIndex<tensor[2,4],[1,1]>(basisResult050B);
+        real r0536#1 = RMul(r0527,r0535);
+        real r0537#2 = TensorIndex<tensor[2,4],[1,2]>(basisResult050B);
+        real r0538#1 = RMul(r052A,r0537);
+        real r0539#2 = TensorIndex<tensor[2,4],[1,3]>(basisResult050B);
+        real r053A#1 = RMul(r052D,r0539);
+        real r053B#1 = RAdd(r0534,r0536);
+        real r053C#1 = RAdd(r053B,r0538);
+        real r053D#1 = RAdd(r053C,r053A);
+        tensor[2] tensor053E#1 = <tensor[2]>[r0532,r053D];
+        real r053F#2 = TensorIndex<tensor[4,2],[0,1]>(femDofs04C7);
+        real r0540#1 = RMul(r053F,r0525);
+        real r0541#2 = TensorIndex<tensor[4,2],[1,1]>(femDofs04C7);
+        real r0542#1 = RMul(r0541,r0528);
+        real r0543#2 = TensorIndex<tensor[4,2],[2,1]>(femDofs04C7);
+        real r0544#1 = RMul(r0543,r052B);
+        real r0545#2 = TensorIndex<tensor[4,2],[3,1]>(femDofs04C7);
+        real r0546#1 = RMul(r0545,r052E);
+        real r0547#1 = RAdd(r0540,r0542);
+        real r0548#1 = RAdd(r0547,r0544);
+        real r0549#1 = RAdd(r0548,r0546);
+        real r054A#1 = RMul(r053F,r0533);
+        real r054B#1 = RMul(r0541,r0535);
+        real r054C#1 = RMul(r0543,r0537);
+        real r054D#1 = RMul(r0545,r0539);
+        real r054E#1 = RAdd(r054A,r054B);
+        real r054F#1 = RAdd(r054E,r054C);
+        real r0550#1 = RAdd(r054F,r054D);
+        tensor[2] tensor0551#1 = <tensor[2]>[r0549,r0550];
+        tensor[2,2] z0523#1 = <tensor[2,2]>[tensor053E,tensor0551];
+        self.result = result04A4;
+        self.z = z0523;
+        self.i = i0495;
+        self.j = j0496;
+        return
+    end state init
+    method update
+        ENTRY0587:  preds = []
+          femData:Mesh a0588#1 = globals.a0436;
+          int[] a1058A#2 = globals.a10438;
+          real[] a2058C#1 = globals.a20439;
+          real result058E#1 = self.result;
+          int i0590#1 = self.i;
+          femData:MeshCell j0592#3 = self.j;
+          int _t0594#1 = 10;
+          int _t0596#1 = IMul(i0590,_t0594);
+          real _t0598#1 = IntToReal(_t0596);
+          real _t059A#2 = RMul(result058E,_t0598);
+          int _t059D#1 = ExtractFemItem<int,NumCell(Mesh)>(a0588);
+          femData:Mesh _t059F#12 = ExtractFem<femData:Mesh,femData:MeshCell>(j0592);
+          int _t05A1#4 = ExtractFemItem<int,CellIndex(MeshCell)>(j0592);
+          int ilit05A4#1 = 0;
+          int addRes05A5#1 = IAdd(_t05A1,ilit05A4);
+          int idx05A6#1 = ExtractFemItem2<int,int,ExtractIndex(Mesh)>(_t059F,addRes05A5);
+          int ilit05A7#1 = 1;
+          int addRes05A8#1 = IAdd(_t05A1,ilit05A7);
+          int idx05A9#1 = ExtractFemItem2<int,int,ExtractIndex(Mesh)>(_t059F,addRes05A8);
+          int ilit05AA#1 = 2;
+          int addRes05AB#1 = IAdd(_t05A1,ilit05AA);
+          int idx05AC#1 = ExtractFemItem2<int,int,ExtractIndex(Mesh)>(_t059F,addRes05AB);
+          int ilit05AD#1 = 3;
+          int addRes05AE#1 = IAdd(_t05A1,ilit05AD);
+          int idx05AF#1 = ExtractFemItem2<int,int,ExtractIndex(Mesh)>(_t059F,addRes05AE);
+          int[4] seq05B0#1 = <int[4]>{idx05A6,idx05A9,idx05AC,idx05AF};
+          int[4] femIndicies05A3#4 = seq05B0;
+          int ilit05C0#5 = 0;
+          int ilit05C1#5 = 2;
+          int idx05C2#1 = Subscript<int>(femIndicies05A3,ilit05C0);
+          int mulRes05C3#2 = IMul(ilit05C1,idx05C2);
+          int addRes05C4#1 = IAdd(ilit05C0,mulRes05C3);
+          int ilit05C5#5 = 1;
+          int addRes05C6#1 = IAdd(ilit05C5,mulRes05C3);
+          real dof_load05C7#1 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t059F,addRes05C4);
+          real dof_load05C8#1 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t059F,addRes05C6);
+          tensor[2] interCons05C9#1 = <tensor[2]>[dof_load05C7,dof_load05C8];
+          int idx05CA#1 = Subscript<int>(femIndicies05A3,ilit05C5);
+          int mulRes05CB#2 = IMul(ilit05C1,idx05CA);
+          int addRes05CC#1 = IAdd(ilit05C0,mulRes05CB);
+          int addRes05CD#1 = IAdd(ilit05C5,mulRes05CB);
+          real dof_load05CE#1 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t059F,addRes05CC);
+          real dof_load05CF#1 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t059F,addRes05CD);
+          tensor[2] interCons05D0#1 = <tensor[2]>[dof_load05CE,dof_load05CF];
+          int idx05D1#1 = Subscript<int>(femIndicies05A3,ilit05C1);
+          int mulRes05D2#2 = IMul(ilit05C1,idx05D1);
+          int addRes05D3#1 = IAdd(ilit05C0,mulRes05D2);
+          int addRes05D4#1 = IAdd(ilit05C5,mulRes05D2);
+          real dof_load05D5#1 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t059F,addRes05D3);
+          real dof_load05D6#1 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t059F,addRes05D4);
+          tensor[2] interCons05D7#1 = <tensor[2]>[dof_load05D5,dof_load05D6];
+          int ilit05D8#1 = 3;
+          int idx05D9#1 = Subscript<int>(femIndicies05A3,ilit05D8);
+          int mulRes05DA#2 = IMul(ilit05C1,idx05D9);
+          int addRes05DB#1 = IAdd(ilit05C0,mulRes05DA);
+          int addRes05DC#1 = IAdd(ilit05C5,mulRes05DA);
+          real dof_load05DD#1 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t059F,addRes05DB);
+          real dof_load05DE#1 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t059F,addRes05DC);
+          tensor[2] interCons05DF#1 = <tensor[2]>[dof_load05DD,dof_load05DE];
+          tensor[4,2] dofs05E0#1 = <tensor[4,2]>[interCons05C9,interCons05D0,interCons05D7,interCons05DF];
+          tensor[4,2] femDofs05BF#1 = dofs05E0;
+          string _t0603#5 = "\n";
+          string _t0605#1 = "numCell:";
+          real _t0607#1 = 0.2e1;
+          Print<[int[]]>(a1058A);
+          Print<[real,string,string,int,string,int[],real[],string,real,string,femData:MeshCell,string,tensor[4,2]]>(_t059A,_t0603,_t0605,_t059D,_t0603,a1058A,a2058C,_t0603,_t0607,_t0603,j0592,_t0603,femDofs05BF);
+          self.result = _t059A;
+          stabilize
+    end update
+  end gg
+## initial strand creation
+  COLLECTION
+    ENTRY060E:  preds = []
+      femData:MeshCell[] 0cell_a060F#1 = globals.0cell_a0437;
+      int[] a10611#1 = globals.a10438;
+    FOREACH0614:  preds = [ASSIGN0612,NEXT0619]
+      foreach (j0613 in a10611) on exit goto RETURN061A
+    FOREACH0616:  preds = [FOREACH0614,NEXT0618]
+      foreach (k0615 in 0cell_a060F) on exit goto NEXT0619
+      new gg(j0613,k0615);
+      goto FOREACH0616
+    NEXT0619:  preds = [FOREACH0616]
+      goto FOREACH0614
+    RETURN061A:  preds = [FOREACH0614]
+      return
+#### end program ####
+##### low-ir: after contraction(1) ####
+## properties
+  GlobalInit HasInputs HasGlobals
+## globals
+  input a0436 (a) = <no-default>
+  global femData:MeshCell[] 0cell_a0437
+  global int[] a10438
+  global real[] a20439
+  global int _t043A
+  global femData:Mesh _tX043B
+## functions
+## input initialization
+  ENTRY043C:  preds = []
+    return
+## global-variable initialization
+  ENTRY043E:  preds = []
+    femData:Mesh a043F#2 = globals.a0436;
+    int _t0441#3 = 0;
+    int _t0443#1 = ExtractFemItem<int,NumCell(Mesh)>(a043F);
+    int[] _t0445#1 = Range(_t0441,_t0443);
+    femData:MeshCell[] _t0447#1 = <femData:MeshCell[]>{};
+  FOREACH044A:  preds = [ASSIGN0448,NEXT0450]
+    foreach (_t0449 in _t0445) on exit goto GASSIGN0451
+      femData:MeshCell[] _t044E#3 = phi(_t0447,_t044D)
+    femData:MeshCell _t044B#1 = LoadFem<femData:MeshCell>(a043F,_t0449);
+    femData:MeshCell[] _t044D#1 = Append<femData:MeshCell>(_t044E,_t044B);
+    goto FOREACH044A
+  GASSIGN0451:  preds = [FOREACH044A]
+    globals.0cell_a0437 = _t044E;
+    femData:MeshCell _t0452#2 = Subscript<femData:MeshCell[]>(_t044E,_t0441);
+    femData:Mesh _t0454#1 = ExtractFem<femData:Mesh,femData:MeshCell>(_t0452);
+    int _t0456#1 = ExtractFemItem<int,CellIndex(MeshCell)>(_t0452);
+    int _t0458#1 = 10;
+    int[] _t045A#2 = Range(_t0441,_t0458);
+    int[] accum045C#1 = <int[]>{};
+  FOREACH045F:  preds = [ASSIGN045D,NEXT0467]
+    foreach (j045E in _t045A) on exit goto ASSIGN0469
+      int[] accum0465#2 = phi(accum045C,accum0464)
+    int _t0460#1 = 1;
+    int _t0462#1 = IAdd(_t0460,j045E);
+    int[] accum0464#1 = Append<int>(accum0465,_t0462);
+    goto FOREACH045F
+  ASSIGN0469:  preds = [FOREACH045F]
+    int[] accum0468#1 = <int[]>{};
+  FOREACH046B:  preds = [ASSIGN0469,NEXT0473]
+    foreach (k046A in accum0465) on exit goto GASSIGN0474
+      int[] accum0471#2 = phi(accum0468,accum0470)
+    int _t046C#1 = 2;
+    int _t046E#1 = IAdd(k046A,_t046C);
+    int[] accum0470#1 = Append<int>(accum0471,_t046E);
+    goto FOREACH046B
+  GASSIGN0474:  preds = [FOREACH046B]
+    globals.a10438 = accum0471;
+    real[] accum0475#1 = <real[]>{};
+  FOREACH0478:  preds = [ASSIGN0476,NEXT0483]
+    foreach (j0477 in _t045A) on exit goto ASSIGN0485
+      real[] accum0481#2 = phi(accum0475,accum0480)
+    real _t0479#1 = 0.1e1;
+    real _t047B#1 = IntToReal(j0477);
+    real _t047D#1 = RAdd(_t0479,_t047B);
+    real[] accum0480#1 = Append<real>(accum0481,_t047D);
+    goto FOREACH0478
+  ASSIGN0485:  preds = [FOREACH0478]
+    real[] accum0484#1 = <real[]>{};
+  FOREACH0487:  preds = [ASSIGN0485,NEXT0490]
+    foreach (k0486 in accum0481) on exit goto GASSIGN0491
+      real[] accum048E#2 = phi(accum0484,accum048D)
+    real _t0488#1 = 0.2e1;
+    real _t048A#1 = RAdd(k0486,_t0488);
+    real[] accum048D#1 = Append<real>(accum048E,_t048A);
+    goto FOREACH0487
+  GASSIGN0491:  preds = [FOREACH0487]
+    globals.a20439 = accum048E;
+    globals._t043A = _t0456;
+    globals._tX043B = _t0454;
+    return
+## strand
+  strand gg (int i0495#2, femData:MeshCell j0496#1)
+    state:
+      output real result;
+      output tensor[2,2] z;
+      int i;
+      femData:MeshCell j;
+    state init
+      ENTRY049B:  preds = []
+        int _t049C#4 = globals._t043A;
+        femData:Mesh _t049E#12 = globals._tX043B;
+        real _t04A0#1 = 0.1e1;
+        real _t04A2#1 = IntToReal(i0495);
+        real result04A4#1 = RMul(_t04A0,_t04A2);
+        int addRes04AD#1 = _t049C;
+        int idx04AE#1 = ExtractFemItem2<int,int,ExtractIndex(Mesh)>(_t049E,addRes04AD);
+        int ilit04AF#1 = 1;
+        int addRes04B0#1 = IAdd(_t049C,ilit04AF);
+        int idx04B1#1 = ExtractFemItem2<int,int,ExtractIndex(Mesh)>(_t049E,addRes04B0);
+        int ilit04B2#1 = 2;
+        int addRes04B3#1 = IAdd(_t049C,ilit04B2);
+        int idx04B4#1 = ExtractFemItem2<int,int,ExtractIndex(Mesh)>(_t049E,addRes04B3);
+        int ilit04B5#1 = 3;
+        int addRes04B6#1 = IAdd(_t049C,ilit04B5);
+        int idx04B7#1 = ExtractFemItem2<int,int,ExtractIndex(Mesh)>(_t049E,addRes04B6);
+        int ilit04C9#4 = 2;
+        int idx04CA#1 = idx04AE;
+        int mulRes04CB#2 = IMul(ilit04C9,idx04CA);
+        int addRes04CC#1 = mulRes04CB;
+        int ilit04CD#4 = 1;
+        int addRes04CE#1 = IAdd(ilit04CD,mulRes04CB);
+        real dof_load04CF#1 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t049E,addRes04CC);
+        real dof_load04D0#1 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t049E,addRes04CE);
+        int idx04D2#1 = idx04B1;
+        int mulRes04D3#2 = IMul(ilit04C9,idx04D2);
+        int addRes04D4#1 = mulRes04D3;
+        int addRes04D5#1 = IAdd(ilit04CD,mulRes04D3);
+        real dof_load04D6#1 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t049E,addRes04D4);
+        real dof_load04D7#1 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t049E,addRes04D5);
+        int idx04D9#1 = idx04B4;
+        int mulRes04DA#2 = IMul(ilit04C9,idx04D9);
+        int addRes04DB#1 = mulRes04DA;
+        int addRes04DC#1 = IAdd(ilit04CD,mulRes04DA);
+        real dof_load04DD#1 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t049E,addRes04DB);
+        real dof_load04DE#1 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t049E,addRes04DC);
+        int idx04E1#1 = idx04B7;
+        int mulRes04E2#2 = IMul(ilit04C9,idx04E1);
+        int addRes04E3#1 = mulRes04E2;
+        int addRes04E4#1 = IAdd(ilit04CD,mulRes04E2);
+        real dof_load04E5#1 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t049E,addRes04E3);
+        real dof_load04E6#1 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t049E,addRes04E4);
+        real basisEval050E#4 = 0.e0;
+        real coeff050F#3 = 0.1e1;
+        real prod0510#1 = RMul(coeff050F,coeff050F);
+        real coeffs0511#1 = coeff050F;
+        real powers0512#1 = prod0510;
+        real basisEval0513#4 = RMul(coeffs0511,powers0512);
+        real r0524#2 = dof_load04CF;
+        real r0525#2 = basisEval050E;
+        real r0526#1 = RMul(r0524,r0525);
+        real r0527#2 = dof_load04D6;
+        real r0528#2 = basisEval0513;
+        real r0529#1 = RMul(r0527,r0528);
+        real r052A#2 = dof_load04DD;
+        real r052B#2 = basisEval050E;
+        real r052C#1 = RMul(r052A,r052B);
+        real r052D#2 = dof_load04E5;
+        real r052E#2 = basisEval0513;
+        real r052F#1 = RMul(r052D,r052E);
+        real r0530#1 = RAdd(r0526,r0529);
+        real r0531#1 = RAdd(r0530,r052C);
+        real r0532#1 = RAdd(r0531,r052F);
+        real r0533#2 = basisEval050E;
+        real r0534#1 = RMul(r0524,r0533);
+        real r0535#2 = basisEval050E;
+        real r0536#1 = RMul(r0527,r0535);
+        real r0537#2 = basisEval0513;
+        real r0538#1 = RMul(r052A,r0537);
+        real r0539#2 = basisEval0513;
+        real r053A#1 = RMul(r052D,r0539);
+        real r053B#1 = RAdd(r0534,r0536);
+        real r053C#1 = RAdd(r053B,r0538);
+        real r053D#1 = RAdd(r053C,r053A);
+        tensor[2] tensor053E#1 = <tensor[2]>[r0532,r053D];
+        real r053F#2 = dof_load04D0;
+        real r0540#1 = RMul(r053F,r0525);
+        real r0541#2 = dof_load04D7;
+        real r0542#1 = RMul(r0541,r0528);
+        real r0543#2 = dof_load04DE;
+        real r0544#1 = RMul(r0543,r052B);
+        real r0545#2 = dof_load04E6;
+        real r0546#1 = RMul(r0545,r052E);
+        real r0547#1 = RAdd(r0540,r0542);
+        real r0548#1 = RAdd(r0547,r0544);
+        real r0549#1 = RAdd(r0548,r0546);
+        real r054A#1 = RMul(r053F,r0533);
+        real r054B#1 = RMul(r0541,r0535);
+        real r054C#1 = RMul(r0543,r0537);
+        real r054D#1 = RMul(r0545,r0539);
+        real r054E#1 = RAdd(r054A,r054B);
+        real r054F#1 = RAdd(r054E,r054C);
+        real r0550#1 = RAdd(r054F,r054D);
+        tensor[2] tensor0551#1 = <tensor[2]>[r0549,r0550];
+        tensor[2,2] z0523#1 = <tensor[2,2]>[tensor053E,tensor0551];
+        self.result = result04A4;
+        self.z = z0523;
+        self.i = i0495;
+        self.j = j0496;
+        return
+    end state init
+    method update
+        ENTRY0587:  preds = []
+          femData:Mesh a0588#1 = globals.a0436;
+          int[] a1058A#2 = globals.a10438;
+          real[] a2058C#1 = globals.a20439;
+          real result058E#1 = self.result;
+          int i0590#1 = self.i;
+          femData:MeshCell j0592#3 = self.j;
+          int _t0594#1 = 10;
+          int _t0596#1 = IMul(i0590,_t0594);
+          real _t0598#1 = IntToReal(_t0596);
+          real _t059A#2 = RMul(result058E,_t0598);
+          int _t059D#1 = ExtractFemItem<int,NumCell(Mesh)>(a0588);
+          femData:Mesh _t059F#12 = ExtractFem<femData:Mesh,femData:MeshCell>(j0592);
+          int _t05A1#4 = ExtractFemItem<int,CellIndex(MeshCell)>(j0592);
+          int addRes05A5#1 = _t05A1;
+          int idx05A6#1 = ExtractFemItem2<int,int,ExtractIndex(Mesh)>(_t059F,addRes05A5);
+          int ilit05A7#1 = 1;
+          int addRes05A8#1 = IAdd(_t05A1,ilit05A7);
+          int idx05A9#1 = ExtractFemItem2<int,int,ExtractIndex(Mesh)>(_t059F,addRes05A8);
+          int ilit05AA#1 = 2;
+          int addRes05AB#1 = IAdd(_t05A1,ilit05AA);
+          int idx05AC#1 = ExtractFemItem2<int,int,ExtractIndex(Mesh)>(_t059F,addRes05AB);
+          int ilit05AD#1 = 3;
+          int addRes05AE#1 = IAdd(_t05A1,ilit05AD);
+          int idx05AF#1 = ExtractFemItem2<int,int,ExtractIndex(Mesh)>(_t059F,addRes05AE);
+          int ilit05C1#4 = 2;
+          int idx05C2#1 = idx05A6;
+          int mulRes05C3#2 = IMul(ilit05C1,idx05C2);
+          int addRes05C4#1 = mulRes05C3;
+          int ilit05C5#4 = 1;
+          int addRes05C6#1 = IAdd(ilit05C5,mulRes05C3);
+          real dof_load05C7#1 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t059F,addRes05C4);
+          real dof_load05C8#1 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t059F,addRes05C6);
+          tensor[2] interCons05C9#1 = <tensor[2]>[dof_load05C7,dof_load05C8];
+          int idx05CA#1 = idx05A9;
+          int mulRes05CB#2 = IMul(ilit05C1,idx05CA);
+          int addRes05CC#1 = mulRes05CB;
+          int addRes05CD#1 = IAdd(ilit05C5,mulRes05CB);
+          real dof_load05CE#1 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t059F,addRes05CC);
+          real dof_load05CF#1 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t059F,addRes05CD);
+          tensor[2] interCons05D0#1 = <tensor[2]>[dof_load05CE,dof_load05CF];
+          int idx05D1#1 = idx05AC;
+          int mulRes05D2#2 = IMul(ilit05C1,idx05D1);
+          int addRes05D3#1 = mulRes05D2;
+          int addRes05D4#1 = IAdd(ilit05C5,mulRes05D2);
+          real dof_load05D5#1 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t059F,addRes05D3);
+          real dof_load05D6#1 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t059F,addRes05D4);
+          tensor[2] interCons05D7#1 = <tensor[2]>[dof_load05D5,dof_load05D6];
+          int idx05D9#1 = idx05AF;
+          int mulRes05DA#2 = IMul(ilit05C1,idx05D9);
+          int addRes05DB#1 = mulRes05DA;
+          int addRes05DC#1 = IAdd(ilit05C5,mulRes05DA);
+          real dof_load05DD#1 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t059F,addRes05DB);
+          real dof_load05DE#1 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t059F,addRes05DC);
+          tensor[2] interCons05DF#1 = <tensor[2]>[dof_load05DD,dof_load05DE];
+          tensor[4,2] dofs05E0#1 = <tensor[4,2]>[interCons05C9,interCons05D0,interCons05D7,interCons05DF];
+          tensor[4,2] femDofs05BF#1 = dofs05E0;
+          string _t0603#5 = "\n";
+          string _t0605#1 = "numCell:";
+          real _t0607#1 = 0.2e1;
+          Print<[int[]]>(a1058A);
+          Print<[real,string,string,int,string,int[],real[],string,real,string,femData:MeshCell,string,tensor[4,2]]>(_t059A,_t0603,_t0605,_t059D,_t0603,a1058A,a2058C,_t0603,_t0607,_t0603,j0592,_t0603,femDofs05BF);
+          self.result = _t059A;
+          stabilize
+    end update
+  end gg
+## initial strand creation
+  COLLECTION
+    ENTRY060E:  preds = []
+      femData:MeshCell[] 0cell_a060F#1 = globals.0cell_a0437;
+      int[] a10611#1 = globals.a10438;
+    FOREACH0614:  preds = [ASSIGN0612,NEXT0619]
+      foreach (j0613 in a10611) on exit goto RETURN061A
+    FOREACH0616:  preds = [FOREACH0614,NEXT0618]
+      foreach (k0615 in 0cell_a060F) on exit goto NEXT0619
+      new gg(j0613,k0615);
+      goto FOREACH0616
+    NEXT0619:  preds = [FOREACH0616]
+      goto FOREACH0614
+    RETURN061A:  preds = [FOREACH0614]
+      return
+#### end program ####
+##### low-ir: after value numbering ####
+## properties
+  GlobalInit HasInputs HasGlobals
+## globals
+  input a0436 (a) = <no-default>
+  global femData:MeshCell[] 0cell_a0437
+  global int[] a10438
+  global real[] a20439
+  global int _t043A
+  global femData:Mesh _tX043B
+## functions
+## input initialization
+  ENTRY043C:  preds = []
+    return
+## global-variable initialization
+  ENTRY043E:  preds = []
+    femData:Mesh a043F#2 = globals.a0436;
+    int _t0441#3 = 0;
+    int _t0443#1 = ExtractFemItem<int,NumCell(Mesh)>(a043F);
+    int[] _t0445#1 = Range(_t0441,_t0443);
+    femData:MeshCell[] _t0447#1 = <femData:MeshCell[]>{};
+  FOREACH044A:  preds = [ASSIGN0448,NEXT0450]
+    foreach (_t0449 in _t0445) on exit goto GASSIGN0451
+      femData:MeshCell[] _t044E#3 = phi(_t0447,_t044D)
+    femData:MeshCell _t044B#1 = LoadFem<femData:MeshCell>(a043F,_t0449);
+    femData:MeshCell[] _t044D#1 = Append<femData:MeshCell>(_t044E,_t044B);
+    goto FOREACH044A
+  GASSIGN0451:  preds = [FOREACH044A]
+    globals.0cell_a0437 = _t044E;
+    femData:MeshCell _t0452#2 = Subscript<femData:MeshCell[]>(_t044E,_t0441);
+    femData:Mesh _t0454#1 = ExtractFem<femData:Mesh,femData:MeshCell>(_t0452);
+    int _t0456#1 = ExtractFemItem<int,CellIndex(MeshCell)>(_t0452);
+    int _t0458#1 = 10;
+    int[] _t045A#2 = Range(_t0441,_t0458);
+    int[] accum045C#1 = <int[]>{};
+  FOREACH045F:  preds = [ASSIGN045D,NEXT0467]
+    foreach (j045E in _t045A) on exit goto ASSIGN0469
+      int[] accum0465#2 = phi(accum045C,accum0464)
+    int _t0460#1 = 1;
+    int _t0462#1 = IAdd(_t0460,j045E);
+    int[] accum0464#1 = Append<int>(accum0465,_t0462);
+    goto FOREACH045F
+  ASSIGN0469:  preds = [FOREACH045F]
+    int[] accum0468#1 = <int[]>{};
+  FOREACH046B:  preds = [ASSIGN0469,NEXT0473]
+    foreach (k046A in accum0465) on exit goto GASSIGN0474
+      int[] accum0471#2 = phi(accum0468,accum0470)
+    int _t046C#1 = 2;
+    int _t046E#1 = IAdd(k046A,_t046C);
+    int[] accum0470#1 = Append<int>(accum0471,_t046E);
+    goto FOREACH046B
+  GASSIGN0474:  preds = [FOREACH046B]
+    globals.a10438 = accum0471;
+    real[] accum0475#1 = <real[]>{};
+  FOREACH0478:  preds = [ASSIGN0476,NEXT0483]
+    foreach (j0477 in _t045A) on exit goto ASSIGN0485
+      real[] accum0481#2 = phi(accum0475,accum0480)
+    real _t0479#1 = 0.1e1;
+    real _t047B#1 = IntToReal(j0477);
+    real _t047D#1 = RAdd(_t0479,_t047B);
+    real[] accum0480#1 = Append<real>(accum0481,_t047D);
+    goto FOREACH0478
+  ASSIGN0485:  preds = [FOREACH0478]
+    real[] accum0484#1 = <real[]>{};
+  FOREACH0487:  preds = [ASSIGN0485,NEXT0490]
+    foreach (k0486 in accum0481) on exit goto GASSIGN0491
+      real[] accum048E#2 = phi(accum0484,accum048D)
+    real _t0488#1 = 0.2e1;
+    real _t048A#1 = RAdd(k0486,_t0488);
+    real[] accum048D#1 = Append<real>(accum048E,_t048A);
+    goto FOREACH0487
+  GASSIGN0491:  preds = [FOREACH0487]
+    globals.a20439 = accum048E;
+    globals._t043A = _t0456;
+    globals._tX043B = _t0454;
+    return
+## strand
+  strand gg (int i0495#2, femData:MeshCell j0496#1)
+    state:
+      output real result;
+      output tensor[2,2] z;
+      int i;
+      femData:MeshCell j;
+    state init
+      ENTRY049B:  preds = []
+        int _t049C#4 = globals._t043A;
+        femData:Mesh _t049E#12 = globals._tX043B;
+        real _t04A0#4 = 0.1e1;
+        real _t04A2#1 = IntToReal(i0495);
+        real result04A4#1 = RMul(_t04A0,_t04A2);
+        int idx04AE#1 = ExtractFemItem2<int,int,ExtractIndex(Mesh)>(_t049E,_t049C);
+        int ilit04AF#5 = 1;
+        int addRes04B0#1 = IAdd(_t049C,ilit04AF);
+        int idx04B1#1 = ExtractFemItem2<int,int,ExtractIndex(Mesh)>(_t049E,addRes04B0);
+        int ilit04B2#5 = 2;
+        int addRes04B3#1 = IAdd(_t049C,ilit04B2);
+        int idx04B4#1 = ExtractFemItem2<int,int,ExtractIndex(Mesh)>(_t049E,addRes04B3);
+        int ilit04B5#1 = 3;
+        int addRes04B6#1 = IAdd(_t049C,ilit04B5);
+        int idx04B7#1 = ExtractFemItem2<int,int,ExtractIndex(Mesh)>(_t049E,addRes04B6);
+        int mulRes04CB#2 = IMul(ilit04B2,idx04AE);
+        int addRes04CE#1 = IAdd(ilit04AF,mulRes04CB);
+        real dof_load04CF#1 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t049E,mulRes04CB);
+        real dof_load04D0#1 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t049E,addRes04CE);
+        int mulRes04D3#2 = IMul(ilit04B2,idx04B1);
+        int addRes04D5#1 = IAdd(ilit04AF,mulRes04D3);
+        real dof_load04D6#2 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t049E,mulRes04D3);
+        real dof_load04D7#2 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t049E,addRes04D5);
+        int mulRes04DA#2 = IMul(ilit04B2,idx04B4);
+        int addRes04DC#1 = IAdd(ilit04AF,mulRes04DA);
+        real dof_load04DD#2 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t049E,mulRes04DA);
+        real dof_load04DE#2 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t049E,addRes04DC);
+        int mulRes04E2#2 = IMul(ilit04B2,idx04B7);
+        int addRes04E4#1 = IAdd(ilit04AF,mulRes04E2);
+        real dof_load04E5#1 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t049E,mulRes04E2);
+        real dof_load04E6#1 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t049E,addRes04E4);
+        real basisEval050E#6 = 0.e0;
+        real prod0510#1 = RMul(_t04A0,_t04A0);
+        real basisEval0513#6 = RMul(_t04A0,prod0510);
+        real r0526#2 = RMul(dof_load04CF,basisEval050E);
+        real r0529#1 = RMul(dof_load04D6,basisEval0513);
+        real r052C#1 = RMul(dof_load04DD,basisEval050E);
+        real r052F#2 = RMul(dof_load04E5,basisEval0513);
+        real r0530#1 = RAdd(r0526,r0529);
+        real r0531#1 = RAdd(r0530,r052C);
+        real r0532#1 = RAdd(r0531,r052F);
+        real r0536#1 = RMul(dof_load04D6,basisEval050E);
+        real r0538#1 = RMul(dof_load04DD,basisEval0513);
+        real r053B#1 = RAdd(r0526,r0536);
+        real r053C#1 = RAdd(r053B,r0538);
+        real r053D#1 = RAdd(r053C,r052F);
+        tensor[2] tensor053E#1 = <tensor[2]>[r0532,r053D];
+        real r0540#2 = RMul(dof_load04D0,basisEval050E);
+        real r0542#1 = RMul(dof_load04D7,basisEval0513);
+        real r0544#1 = RMul(dof_load04DE,basisEval050E);
+        real r0546#2 = RMul(dof_load04E6,basisEval0513);
+        real r0547#1 = RAdd(r0540,r0542);
+        real r0548#1 = RAdd(r0547,r0544);
+        real r0549#1 = RAdd(r0548,r0546);
+        real r054B#1 = RMul(dof_load04D7,basisEval050E);
+        real r054C#1 = RMul(dof_load04DE,basisEval0513);
+        real r054E#1 = RAdd(r0540,r054B);
+        real r054F#1 = RAdd(r054E,r054C);
+        real r0550#1 = RAdd(r054F,r0546);
+        tensor[2] tensor0551#1 = <tensor[2]>[r0549,r0550];
+        tensor[2,2] z0523#1 = <tensor[2,2]>[tensor053E,tensor0551];
+        self.result = result04A4;
+        self.z = z0523;
+        self.i = i0495;
+        self.j = j0496;
+        return
+    end state init
+    method update
+        ENTRY0587:  preds = []
+          femData:Mesh a0588#1 = globals.a0436;
+          int[] a1058A#2 = globals.a10438;
+          real[] a2058C#1 = globals.a20439;
+          real result058E#1 = self.result;
+          int i0590#1 = self.i;
+          femData:MeshCell j0592#3 = self.j;
+          int _t0594#1 = 10;
+          int _t0596#1 = IMul(i0590,_t0594);
+          real _t0598#1 = IntToReal(_t0596);
+          real _t059A#2 = RMul(result058E,_t0598);
+          int _t059D#1 = ExtractFemItem<int,NumCell(Mesh)>(a0588);
+          femData:Mesh _t059F#12 = ExtractFem<femData:Mesh,femData:MeshCell>(j0592);
+          int _t05A1#4 = ExtractFemItem<int,CellIndex(MeshCell)>(j0592);
+          int idx05A6#1 = ExtractFemItem2<int,int,ExtractIndex(Mesh)>(_t059F,_t05A1);
+          int ilit05A7#5 = 1;
+          int addRes05A8#1 = IAdd(_t05A1,ilit05A7);
+          int idx05A9#1 = ExtractFemItem2<int,int,ExtractIndex(Mesh)>(_t059F,addRes05A8);
+          int ilit05AA#5 = 2;
+          int addRes05AB#1 = IAdd(_t05A1,ilit05AA);
+          int idx05AC#1 = ExtractFemItem2<int,int,ExtractIndex(Mesh)>(_t059F,addRes05AB);
+          int ilit05AD#1 = 3;
+          int addRes05AE#1 = IAdd(_t05A1,ilit05AD);
+          int idx05AF#1 = ExtractFemItem2<int,int,ExtractIndex(Mesh)>(_t059F,addRes05AE);
+          int mulRes05C3#2 = IMul(ilit05AA,idx05A6);
+          int addRes05C6#1 = IAdd(ilit05A7,mulRes05C3);
+          real dof_load05C7#1 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t059F,mulRes05C3);
+          real dof_load05C8#1 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t059F,addRes05C6);
+          tensor[2] interCons05C9#1 = <tensor[2]>[dof_load05C7,dof_load05C8];
+          int mulRes05CB#2 = IMul(ilit05AA,idx05A9);
+          int addRes05CD#1 = IAdd(ilit05A7,mulRes05CB);
+          real dof_load05CE#1 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t059F,mulRes05CB);
+          real dof_load05CF#1 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t059F,addRes05CD);
+          tensor[2] interCons05D0#1 = <tensor[2]>[dof_load05CE,dof_load05CF];
+          int mulRes05D2#2 = IMul(ilit05AA,idx05AC);
+          int addRes05D4#1 = IAdd(ilit05A7,mulRes05D2);
+          real dof_load05D5#1 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t059F,mulRes05D2);
+          real dof_load05D6#1 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t059F,addRes05D4);
+          tensor[2] interCons05D7#1 = <tensor[2]>[dof_load05D5,dof_load05D6];
+          int mulRes05DA#2 = IMul(ilit05AA,idx05AF);
+          int addRes05DC#1 = IAdd(ilit05A7,mulRes05DA);
+          real dof_load05DD#1 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t059F,mulRes05DA);
+          real dof_load05DE#1 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t059F,addRes05DC);
+          tensor[2] interCons05DF#1 = <tensor[2]>[dof_load05DD,dof_load05DE];
+          tensor[4,2] dofs05E0#1 = <tensor[4,2]>[interCons05C9,interCons05D0,interCons05D7,interCons05DF];
+          string _t0603#5 = "\n";
+          string _t0605#1 = "numCell:";
+          real _t0607#1 = 0.2e1;
+          Print<[int[]]>(a1058A);
+          Print<[real,string,string,int,string,int[],real[],string,real,string,femData:MeshCell,string,tensor[4,2]]>(_t059A,_t0603,_t0605,_t059D,_t0603,a1058A,a2058C,_t0603,_t0607,_t0603,j0592,_t0603,dofs05E0);
+          self.result = _t059A;
+          stabilize
+    end update
+  end gg
+## initial strand creation
+  COLLECTION
+    ENTRY060E:  preds = []
+      femData:MeshCell[] 0cell_a060F#1 = globals.0cell_a0437;
+      int[] a10611#1 = globals.a10438;
+    FOREACH0614:  preds = [ASSIGN0612,NEXT0619]
+      foreach (j0613 in a10611) on exit goto RETURN061A
+    FOREACH0616:  preds = [FOREACH0614,NEXT0618]
+      foreach (k0615 in 0cell_a060F) on exit goto NEXT0619
+      new gg(j0613,k0615);
+      goto FOREACH0616
+    NEXT0619:  preds = [FOREACH0616]
+      goto FOREACH0614
+    RETURN061A:  preds = [FOREACH0614]
+      return
+#### end program ####
+##### low-ir: after contraction(2) ####
+## properties
+  GlobalInit HasInputs HasGlobals
+## globals
+  input a0436 (a) = <no-default>
+  global femData:MeshCell[] 0cell_a0437
+  global int[] a10438
+  global real[] a20439
+  global int _t043A
+  global femData:Mesh _tX043B
+## functions
+## input initialization
+  ENTRY043C:  preds = []
+    return
+## global-variable initialization
+  ENTRY043E:  preds = []
+    femData:Mesh a043F#2 = globals.a0436;
+    int _t0441#3 = 0;
+    int _t0443#1 = ExtractFemItem<int,NumCell(Mesh)>(a043F);
+    int[] _t0445#1 = Range(_t0441,_t0443);
+    femData:MeshCell[] _t0447#1 = <femData:MeshCell[]>{};
+  FOREACH044A:  preds = [ASSIGN0448,NEXT0450]
+    foreach (_t0449 in _t0445) on exit goto GASSIGN0451
+      femData:MeshCell[] _t044E#3 = phi(_t0447,_t044D)
+    femData:MeshCell _t044B#1 = LoadFem<femData:MeshCell>(a043F,_t0449);
+    femData:MeshCell[] _t044D#1 = Append<femData:MeshCell>(_t044E,_t044B);
+    goto FOREACH044A
+  GASSIGN0451:  preds = [FOREACH044A]
+    globals.0cell_a0437 = _t044E;
+    femData:MeshCell _t0452#2 = Subscript<femData:MeshCell[]>(_t044E,_t0441);
+    femData:Mesh _t0454#1 = ExtractFem<femData:Mesh,femData:MeshCell>(_t0452);
+    int _t0456#1 = ExtractFemItem<int,CellIndex(MeshCell)>(_t0452);
+    int _t0458#1 = 10;
+    int[] _t045A#2 = Range(_t0441,_t0458);
+    int[] accum045C#1 = <int[]>{};
+  FOREACH045F:  preds = [ASSIGN045D,NEXT0467]
+    foreach (j045E in _t045A) on exit goto ASSIGN0469
+      int[] accum0465#2 = phi(accum045C,accum0464)
+    int _t0460#1 = 1;
+    int _t0462#1 = IAdd(_t0460,j045E);
+    int[] accum0464#1 = Append<int>(accum0465,_t0462);
+    goto FOREACH045F
+  ASSIGN0469:  preds = [FOREACH045F]
+    int[] accum0468#1 = <int[]>{};
+  FOREACH046B:  preds = [ASSIGN0469,NEXT0473]
+    foreach (k046A in accum0465) on exit goto GASSIGN0474
+      int[] accum0471#2 = phi(accum0468,accum0470)
+    int _t046C#1 = 2;
+    int _t046E#1 = IAdd(k046A,_t046C);
+    int[] accum0470#1 = Append<int>(accum0471,_t046E);
+    goto FOREACH046B
+  GASSIGN0474:  preds = [FOREACH046B]
+    globals.a10438 = accum0471;
+    real[] accum0475#1 = <real[]>{};
+  FOREACH0478:  preds = [ASSIGN0476,NEXT0483]
+    foreach (j0477 in _t045A) on exit goto ASSIGN0485
+      real[] accum0481#2 = phi(accum0475,accum0480)
+    real _t0479#1 = 0.1e1;
+    real _t047B#1 = IntToReal(j0477);
+    real _t047D#1 = RAdd(_t0479,_t047B);
+    real[] accum0480#1 = Append<real>(accum0481,_t047D);
+    goto FOREACH0478
+  ASSIGN0485:  preds = [FOREACH0478]
+    real[] accum0484#1 = <real[]>{};
+  FOREACH0487:  preds = [ASSIGN0485,NEXT0490]
+    foreach (k0486 in accum0481) on exit goto GASSIGN0491
+      real[] accum048E#2 = phi(accum0484,accum048D)
+    real _t0488#1 = 0.2e1;
+    real _t048A#1 = RAdd(k0486,_t0488);
+    real[] accum048D#1 = Append<real>(accum048E,_t048A);
+    goto FOREACH0487
+  GASSIGN0491:  preds = [FOREACH0487]
+    globals.a20439 = accum048E;
+    globals._t043A = _t0456;
+    globals._tX043B = _t0454;
+    return
+## strand
+  strand gg (int i0495#2, femData:MeshCell j0496#1)
+    state:
+      output real result;
+      output tensor[2,2] z;
+      int i;
+      femData:MeshCell j;
+    state init
+      ENTRY049B:  preds = []
+        int _t049C#4 = globals._t043A;
+        femData:Mesh _t049E#12 = globals._tX043B;
+        real _t04A0#4 = 0.1e1;
+        real _t04A2#1 = IntToReal(i0495);
+        real result04A4#1 = RMul(_t04A0,_t04A2);
+        int idx04AE#1 = ExtractFemItem2<int,int,ExtractIndex(Mesh)>(_t049E,_t049C);
+        int ilit04AF#5 = 1;
+        int addRes04B0#1 = IAdd(_t049C,ilit04AF);
+        int idx04B1#1 = ExtractFemItem2<int,int,ExtractIndex(Mesh)>(_t049E,addRes04B0);
+        int ilit04B2#5 = 2;
+        int addRes04B3#1 = IAdd(_t049C,ilit04B2);
+        int idx04B4#1 = ExtractFemItem2<int,int,ExtractIndex(Mesh)>(_t049E,addRes04B3);
+        int ilit04B5#1 = 3;
+        int addRes04B6#1 = IAdd(_t049C,ilit04B5);
+        int idx04B7#1 = ExtractFemItem2<int,int,ExtractIndex(Mesh)>(_t049E,addRes04B6);
+        int mulRes04CB#2 = IMul(ilit04B2,idx04AE);
+        int addRes04CE#1 = IAdd(ilit04AF,mulRes04CB);
+        real dof_load04CF#1 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t049E,mulRes04CB);
+        real dof_load04D0#1 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t049E,addRes04CE);
+        int mulRes04D3#2 = IMul(ilit04B2,idx04B1);
+        int addRes04D5#1 = IAdd(ilit04AF,mulRes04D3);
+        real dof_load04D6#2 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t049E,mulRes04D3);
+        real dof_load04D7#2 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t049E,addRes04D5);
+        int mulRes04DA#2 = IMul(ilit04B2,idx04B4);
+        int addRes04DC#1 = IAdd(ilit04AF,mulRes04DA);
+        real dof_load04DD#2 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t049E,mulRes04DA);
+        real dof_load04DE#2 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t049E,addRes04DC);
+        int mulRes04E2#2 = IMul(ilit04B2,idx04B7);
+        int addRes04E4#1 = IAdd(ilit04AF,mulRes04E2);
+        real dof_load04E5#1 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t049E,mulRes04E2);
+        real dof_load04E6#1 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t049E,addRes04E4);
+        real basisEval050E#6 = 0.e0;
+        real prod0510#1 = RMul(_t04A0,_t04A0);
+        real basisEval0513#6 = RMul(_t04A0,prod0510);
+        real r0526#2 = RMul(dof_load04CF,basisEval050E);
+        real r0529#1 = RMul(dof_load04D6,basisEval0513);
+        real r052C#1 = RMul(dof_load04DD,basisEval050E);
+        real r052F#2 = RMul(dof_load04E5,basisEval0513);
+        real r0530#1 = RAdd(r0526,r0529);
+        real r0531#1 = RAdd(r0530,r052C);
+        real r0532#1 = RAdd(r0531,r052F);
+        real r0536#1 = RMul(dof_load04D6,basisEval050E);
+        real r0538#1 = RMul(dof_load04DD,basisEval0513);
+        real r053B#1 = RAdd(r0526,r0536);
+        real r053C#1 = RAdd(r053B,r0538);
+        real r053D#1 = RAdd(r053C,r052F);
+        tensor[2] tensor053E#1 = <tensor[2]>[r0532,r053D];
+        real r0540#2 = RMul(dof_load04D0,basisEval050E);
+        real r0542#1 = RMul(dof_load04D7,basisEval0513);
+        real r0544#1 = RMul(dof_load04DE,basisEval050E);
+        real r0546#2 = RMul(dof_load04E6,basisEval0513);
+        real r0547#1 = RAdd(r0540,r0542);
+        real r0548#1 = RAdd(r0547,r0544);
+        real r0549#1 = RAdd(r0548,r0546);
+        real r054B#1 = RMul(dof_load04D7,basisEval050E);
+        real r054C#1 = RMul(dof_load04DE,basisEval0513);
+        real r054E#1 = RAdd(r0540,r054B);
+        real r054F#1 = RAdd(r054E,r054C);
+        real r0550#1 = RAdd(r054F,r0546);
+        tensor[2] tensor0551#1 = <tensor[2]>[r0549,r0550];
+        tensor[2,2] z0523#1 = <tensor[2,2]>[tensor053E,tensor0551];
+        self.result = result04A4;
+        self.z = z0523;
+        self.i = i0495;
+        self.j = j0496;
+        return
+    end state init
+    method update
+        ENTRY0587:  preds = []
+          femData:Mesh a0588#1 = globals.a0436;
+          int[] a1058A#2 = globals.a10438;
+          real[] a2058C#1 = globals.a20439;
+          real result058E#1 = self.result;
+          int i0590#1 = self.i;
+          femData:MeshCell j0592#3 = self.j;
+          int _t0594#1 = 10;
+          int _t0596#1 = IMul(i0590,_t0594);
+          real _t0598#1 = IntToReal(_t0596);
+          real _t059A#2 = RMul(result058E,_t0598);
+          int _t059D#1 = ExtractFemItem<int,NumCell(Mesh)>(a0588);
+          femData:Mesh _t059F#12 = ExtractFem<femData:Mesh,femData:MeshCell>(j0592);
+          int _t05A1#4 = ExtractFemItem<int,CellIndex(MeshCell)>(j0592);
+          int idx05A6#1 = ExtractFemItem2<int,int,ExtractIndex(Mesh)>(_t059F,_t05A1);
+          int ilit05A7#5 = 1;
+          int addRes05A8#1 = IAdd(_t05A1,ilit05A7);
+          int idx05A9#1 = ExtractFemItem2<int,int,ExtractIndex(Mesh)>(_t059F,addRes05A8);
+          int ilit05AA#5 = 2;
+          int addRes05AB#1 = IAdd(_t05A1,ilit05AA);
+          int idx05AC#1 = ExtractFemItem2<int,int,ExtractIndex(Mesh)>(_t059F,addRes05AB);
+          int ilit05AD#1 = 3;
+          int addRes05AE#1 = IAdd(_t05A1,ilit05AD);
+          int idx05AF#1 = ExtractFemItem2<int,int,ExtractIndex(Mesh)>(_t059F,addRes05AE);
+          int mulRes05C3#2 = IMul(ilit05AA,idx05A6);
+          int addRes05C6#1 = IAdd(ilit05A7,mulRes05C3);
+          real dof_load05C7#1 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t059F,mulRes05C3);
+          real dof_load05C8#1 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t059F,addRes05C6);
+          tensor[2] interCons05C9#1 = <tensor[2]>[dof_load05C7,dof_load05C8];
+          int mulRes05CB#2 = IMul(ilit05AA,idx05A9);
+          int addRes05CD#1 = IAdd(ilit05A7,mulRes05CB);
+          real dof_load05CE#1 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t059F,mulRes05CB);
+          real dof_load05CF#1 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t059F,addRes05CD);
+          tensor[2] interCons05D0#1 = <tensor[2]>[dof_load05CE,dof_load05CF];
+          int mulRes05D2#2 = IMul(ilit05AA,idx05AC);
+          int addRes05D4#1 = IAdd(ilit05A7,mulRes05D2);
+          real dof_load05D5#1 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t059F,mulRes05D2);
+          real dof_load05D6#1 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t059F,addRes05D4);
+          tensor[2] interCons05D7#1 = <tensor[2]>[dof_load05D5,dof_load05D6];
+          int mulRes05DA#2 = IMul(ilit05AA,idx05AF);
+          int addRes05DC#1 = IAdd(ilit05A7,mulRes05DA);
+          real dof_load05DD#1 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t059F,mulRes05DA);
+          real dof_load05DE#1 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t059F,addRes05DC);
+          tensor[2] interCons05DF#1 = <tensor[2]>[dof_load05DD,dof_load05DE];
+          tensor[4,2] dofs05E0#1 = <tensor[4,2]>[interCons05C9,interCons05D0,interCons05D7,interCons05DF];
+          string _t0603#5 = "\n";
+          string _t0605#1 = "numCell:";
+          real _t0607#1 = 0.2e1;
+          Print<[int[]]>(a1058A);
+          Print<[real,string,string,int,string,int[],real[],string,real,string,femData:MeshCell,string,tensor[4,2]]>(_t059A,_t0603,_t0605,_t059D,_t0603,a1058A,a2058C,_t0603,_t0607,_t0603,j0592,_t0603,dofs05E0);
+          self.result = _t059A;
+          stabilize
+    end update
+  end gg
+## initial strand creation
+  COLLECTION
+    ENTRY060E:  preds = []
+      femData:MeshCell[] 0cell_a060F#1 = globals.0cell_a0437;
+      int[] a10611#1 = globals.a10438;
+    FOREACH0614:  preds = [ASSIGN0612,NEXT0619]
+      foreach (j0613 in a10611) on exit goto RETURN061A
+    FOREACH0616:  preds = [FOREACH0614,NEXT0618]
+      foreach (k0615 in 0cell_a060F) on exit goto NEXT0619
+      new gg(j0613,k0615);
+      goto FOREACH0616
+    NEXT0619:  preds = [FOREACH0616]
+      goto FOREACH0614
+    RETURN061A:  preds = [FOREACH0614]
+      return
+#### end program ####
+##### low-ir: after flatten ####
+## properties
+  GlobalInit HasInputs HasGlobals
+## globals
+  input a0436 (a) = <no-default>
+  global femData:MeshCell[] 0cell_a0437
+  global int[] a10438
+  global real[] a20439
+  global int _t043A
+  global femData:Mesh _tX043B
+## functions
+## input initialization
+  ENTRY043C:  preds = []
+    return
+## global-variable initialization
+  ENTRY043E:  preds = []
+    femData:Mesh a043F#2 = globals.a0436;
+    int _t0441#4 = 0;
+    int _t0443#1 = ExtractFemItem<int,NumCell(Mesh)>(a043F);
+    int[] _t0445#1 = Range(_t0441,_t0443);
+    femData:MeshCell[] _t0447#1 = <femData:MeshCell[]>{};
+  FOREACH044A:  preds = [ASSIGN0448,NEXT0450]
+    foreach (_t0449 in _t0445) on exit goto GASSIGN0451
+      femData:MeshCell[] _t044E#3 = phi(_t0447,_t044D)
+    femData:MeshCell _t044B#1 = LoadFem<femData:MeshCell>(a043F,_t0449);
+    femData:MeshCell[] _t044D#1 = Append<femData:MeshCell>(_t044E,_t044B);
+    goto FOREACH044A
+  GASSIGN0451:  preds = [FOREACH044A]
+    globals.0cell_a0437 = _t044E;
+    femData:MeshCell _t0452#2 = Subscript<femData:MeshCell[]>(_t044E,_t0441);
+    femData:Mesh _t0454#1 = ExtractFem<femData:Mesh,femData:MeshCell>(_t0452);
+    int _t0456#1 = ExtractFemItem<int,CellIndex(MeshCell)>(_t0452);
+    int _t0458#2 = 10;
+    int[] _t045A#1 = Range(_t0441,_t0458);
+    int[] accum045C#1 = <int[]>{};
+  FOREACH045F:  preds = [ASSIGN045D,NEXT0467]
+    foreach (j045E in _t045A) on exit goto ASSIGN0469
+      int[] accum0465#2 = phi(accum045C,accum0464)
+    int _t0460#1 = 1;
+    int _t0462#1 = IAdd(_t0460,j045E);
+    int[] accum0464#1 = Append<int>(accum0465,_t0462);
+    goto FOREACH045F
+  ASSIGN0469:  preds = [FOREACH045F]
+    int[] accum0468#1 = <int[]>{};
+  FOREACH046B:  preds = [ASSIGN0469,NEXT0473]
+    foreach (k046A in accum0465) on exit goto GASSIGN0474
+      int[] accum0471#2 = phi(accum0468,accum0470)
+    int _t046C#1 = 2;
+    int _t046E#1 = IAdd(k046A,_t046C);
+    int[] accum0470#1 = Append<int>(accum0471,_t046E);
+    goto FOREACH046B
+  GASSIGN0474:  preds = [FOREACH046B]
+    globals.a10438 = accum0471;
+    real[] accum0475#1 = <real[]>{};
+    int[] _t066C#1 = Range(_t0441,_t0458);
+  FOREACH0478:  preds = [ASSIGN066D,NEXT0483]
+    foreach (j0477 in _t066C) on exit goto ASSIGN0485
+      real[] accum0481#2 = phi(accum0475,accum0480)
+    real _t0479#1 = 0.1e1;
+    real _t047B#1 = IntToReal(j0477);
+    real _t047D#1 = RAdd(_t0479,_t047B);
+    real[] accum0480#1 = Append<real>(accum0481,_t047D);
+    goto FOREACH0478
+  ASSIGN0485:  preds = [FOREACH0478]
+    real[] accum0484#1 = <real[]>{};
+  FOREACH0487:  preds = [ASSIGN0485,NEXT0490]
+    foreach (k0486 in accum0481) on exit goto GASSIGN0491
+      real[] accum048E#2 = phi(accum0484,accum048D)
+    real _t0488#1 = 0.2e1;
+    real _t048A#1 = RAdd(k0486,_t0488);
+    real[] accum048D#1 = Append<real>(accum048E,_t048A);
+    goto FOREACH0487
+  GASSIGN0491:  preds = [FOREACH0487]
+    globals.a20439 = accum048E;
+    globals._t043A = _t0456;
+    globals._tX043B = _t0454;
+    return
+## strand
+  strand gg (int i0495#2, femData:MeshCell j0496#1)
+    state:
+      output real result;
+      output tensor[2,2] z;
+      int i;
+      femData:MeshCell j;
+    state init
+      ENTRY049B:  preds = []
+        int _t049C#4 = globals._t043A;
+        femData:Mesh _t049E#12 = globals._tX043B;
+        real _t04A0#4 = 0.1e1;
+        real _t04A2#1 = IntToReal(i0495);
+        real result04A4#1 = RMul(_t04A0,_t04A2);
+        int idx04AE#1 = ExtractFemItem2<int,int,ExtractIndex(Mesh)>(_t049E,_t049C);
+        int ilit04AF#5 = 1;
+        int addRes04B0#1 = IAdd(_t049C,ilit04AF);
+        int idx04B1#1 = ExtractFemItem2<int,int,ExtractIndex(Mesh)>(_t049E,addRes04B0);
+        int ilit04B2#5 = 2;
+        int addRes04B3#1 = IAdd(_t049C,ilit04B2);
+        int idx04B4#1 = ExtractFemItem2<int,int,ExtractIndex(Mesh)>(_t049E,addRes04B3);
+        int ilit04B5#1 = 3;
+        int addRes04B6#1 = IAdd(_t049C,ilit04B5);
+        int idx04B7#1 = ExtractFemItem2<int,int,ExtractIndex(Mesh)>(_t049E,addRes04B6);
+        int mulRes04CB#2 = IMul(ilit04B2,idx04AE);
+        int addRes04CE#1 = IAdd(ilit04AF,mulRes04CB);
+        real dof_load04CF#1 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t049E,mulRes04CB);
+        real dof_load04D0#1 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t049E,addRes04CE);
+        int mulRes04D3#2 = IMul(ilit04B2,idx04B1);
+        int addRes04D5#1 = IAdd(ilit04AF,mulRes04D3);
+        real dof_load04D6#2 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t049E,mulRes04D3);
+        real dof_load04D7#2 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t049E,addRes04D5);
+        int mulRes04DA#2 = IMul(ilit04B2,idx04B4);
+        int addRes04DC#1 = IAdd(ilit04AF,mulRes04DA);
+        real dof_load04DD#2 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t049E,mulRes04DA);
+        real dof_load04DE#2 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t049E,addRes04DC);
+        int mulRes04E2#2 = IMul(ilit04B2,idx04B7);
+        int addRes04E4#1 = IAdd(ilit04AF,mulRes04E2);
+        real dof_load04E5#1 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t049E,mulRes04E2);
+        real dof_load04E6#1 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t049E,addRes04E4);
+        real basisEval050E#6 = 0.e0;
+        real prod0510#1 = RMul(_t04A0,_t04A0);
+        real basisEval0513#6 = RMul(_t04A0,prod0510);
+        real r0526#2 = RMul(dof_load04CF,basisEval050E);
+        real r0529#1 = RMul(dof_load04D6,basisEval0513);
+        real r052C#1 = RMul(dof_load04DD,basisEval050E);
+        real r052F#2 = RMul(dof_load04E5,basisEval0513);
+        real r0530#1 = RAdd(r0526,r0529);
+        real r0531#1 = RAdd(r0530,r052C);
+        real r0532#1 = RAdd(r0531,r052F);
+        real r0536#1 = RMul(dof_load04D6,basisEval050E);
+        real r0538#1 = RMul(dof_load04DD,basisEval0513);
+        real r053B#1 = RAdd(r0526,r0536);
+        real r053C#1 = RAdd(r053B,r0538);
+        real r053D#1 = RAdd(r053C,r052F);
+        real r0540#2 = RMul(dof_load04D0,basisEval050E);
+        real r0542#1 = RMul(dof_load04D7,basisEval0513);
+        real r0544#1 = RMul(dof_load04DE,basisEval050E);
+        real r0546#2 = RMul(dof_load04E6,basisEval0513);
+        real r0547#1 = RAdd(r0540,r0542);
+        real r0548#1 = RAdd(r0547,r0544);
+        real r0549#1 = RAdd(r0548,r0546);
+        real r054B#1 = RMul(dof_load04D7,basisEval050E);
+        real r054C#1 = RMul(dof_load04DE,basisEval0513);
+        real r054E#1 = RAdd(r0540,r054B);
+        real r054F#1 = RAdd(r054E,r054C);
+        real r0550#1 = RAdd(r054F,r0546);
+        tensor[2,2] z0523#1 = <tensor[2,2]>[r0532,r053D,r0549,r0550];
+        self.result = result04A4;
+        self.z = z0523;
+        self.i = i0495;
+        self.j = j0496;
+        return
+    end state init
+    method update
+        ENTRY0587:  preds = []
+          femData:Mesh a0588#1 = globals.a0436;
+          int[] a1058A#2 = globals.a10438;
+          real[] a2058C#1 = globals.a20439;
+          real result058E#1 = self.result;
+          int i0590#1 = self.i;
+          femData:MeshCell j0592#3 = self.j;
+          int _t0594#1 = 10;
+          int _t0596#1 = IMul(i0590,_t0594);
+          real _t0598#1 = IntToReal(_t0596);
+          real _t059A#2 = RMul(result058E,_t0598);
+          int _t059D#1 = ExtractFemItem<int,NumCell(Mesh)>(a0588);
+          femData:Mesh _t059F#12 = ExtractFem<femData:Mesh,femData:MeshCell>(j0592);
+          int _t05A1#4 = ExtractFemItem<int,CellIndex(MeshCell)>(j0592);
+          int idx05A6#1 = ExtractFemItem2<int,int,ExtractIndex(Mesh)>(_t059F,_t05A1);
+          int ilit05A7#5 = 1;
+          int addRes05A8#1 = IAdd(_t05A1,ilit05A7);
+          int idx05A9#1 = ExtractFemItem2<int,int,ExtractIndex(Mesh)>(_t059F,addRes05A8);
+          int ilit05AA#5 = 2;
+          int addRes05AB#1 = IAdd(_t05A1,ilit05AA);
+          int idx05AC#1 = ExtractFemItem2<int,int,ExtractIndex(Mesh)>(_t059F,addRes05AB);
+          int ilit05AD#1 = 3;
+          int addRes05AE#1 = IAdd(_t05A1,ilit05AD);
+          int idx05AF#1 = ExtractFemItem2<int,int,ExtractIndex(Mesh)>(_t059F,addRes05AE);
+          int mulRes05C3#2 = IMul(ilit05AA,idx05A6);
+          int addRes05C6#1 = IAdd(ilit05A7,mulRes05C3);
+          real dof_load05C7#1 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t059F,mulRes05C3);
+          real dof_load05C8#1 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t059F,addRes05C6);
+          int mulRes05CB#2 = IMul(ilit05AA,idx05A9);
+          int addRes05CD#1 = IAdd(ilit05A7,mulRes05CB);
+          real dof_load05CE#1 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t059F,mulRes05CB);
+          real dof_load05CF#1 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t059F,addRes05CD);
+          int mulRes05D2#2 = IMul(ilit05AA,idx05AC);
+          int addRes05D4#1 = IAdd(ilit05A7,mulRes05D2);
+          real dof_load05D5#1 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t059F,mulRes05D2);
+          real dof_load05D6#1 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t059F,addRes05D4);
+          int mulRes05DA#2 = IMul(ilit05AA,idx05AF);
+          int addRes05DC#1 = IAdd(ilit05A7,mulRes05DA);
+          real dof_load05DD#1 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t059F,mulRes05DA);
+          real dof_load05DE#1 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(_t059F,addRes05DC);
+          tensor[4,2] dofs05E0#1 = <tensor[4,2]>[dof_load05C7,dof_load05C8,dof_load05CE,dof_load05CF,dof_load05D5,dof_load05D6,dof_load05DD,dof_load05DE];
+          string _t0603#5 = "\n";
+          string _t0605#1 = "numCell:";
+          real _t0607#1 = 0.2e1;
+          Print<[int[]]>(a1058A);
+          Print<[real,string,string,int,string,int[],real[],string,real,string,femData:MeshCell,string,tensor[4,2]]>(_t059A,_t0603,_t0605,_t059D,_t0603,a1058A,a2058C,_t0603,_t0607,_t0603,j0592,_t0603,dofs05E0);
+          self.result = _t059A;
+          stabilize
+    end update
+  end gg
+## initial strand creation
+  COLLECTION
+    ENTRY060E:  preds = []
+      femData:MeshCell[] 0cell_a060F#1 = globals.0cell_a0437;
+      int[] a10611#1 = globals.a10438;
+    FOREACH0614:  preds = [ASSIGN0612,NEXT0619]
+      foreach (j0613 in a10611) on exit goto RETURN061A
+    FOREACH0616:  preds = [FOREACH0614,NEXT0618]
+      foreach (k0615 in 0cell_a060F) on exit goto NEXT0619
+      new gg(j0613,k0615);
+      goto FOREACH0616
+    NEXT0619:  preds = [FOREACH0616]
+      goto FOREACH0614
+    RETURN061A:  preds = [FOREACH0614]
+      return
+#### end program ####
+##### TreeIR: after low-to-tree translation ####
+//***** PROPERTIES *****
+  GlobalInit HasInputs HasGlobals
+//***** CONSTS *****
+//***** INPUTS *****
+input femData(Mesh) a;
+//***** CONST INIT *****
+  {
+  }
+//***** GLOBALS *****
+global femData(MeshCell)[] 0cell_a;
+global int[] a1;
+global real[] a2;
+global int _t;
+global femData(Mesh) _tX;
+//***** FUNCTIONS *****
+//***** GLOBAL VARIABLE INIT *****
+  {
+    real[] l_accum_11;
+    real[] l_accum_9;
+    int[] l_accum_7;
+    int[] l_accum_3;
+    femData(MeshCell)[] l__t_0;
+    l__t_0 = <femData(MeshCell)[]>{};
+    for i__t_1 = 0 to ExtractFemItem<int,NumCell(Mesh)>(globals.a) {
+      l__t_0 = Append<femData(MeshCell),femData(MeshCell)>(l__t_0,LoadFem<femData(MeshCell)>(globals.a,i__t_1));
+    }
+    globals.0cell_a = l__t_0;
+    femData(MeshCell) l__t_2 = Subscript<femData(MeshCell)[]>(l__t_0,0);
+    l_accum_3 = <int[]>{};
+    femData(Mesh) l__t_5 = ExtractFem<femData(Mesh),femData(MeshCell)>(l__t_2);
+    int l__t_6 = ExtractFemItem<int,CellIndex(MeshCell)>(l__t_2);
+    for i_j_4 = 0 to 10 {
+      l_accum_3 = Append<int,int>(l_accum_3,IAdd(1,i_j_4));
+    }
+    l_accum_7 = <int[]>{};
+    foreach int i_k_8 in l_accum_3 {
+      l_accum_7 = Append<int,int>(l_accum_7,IAdd(i_k_8,2));
+    }
+    globals.a1 = l_accum_7;
+    l_accum_9 = <real[]>{};
+    for i_j_10 = 0 to 10 {
+      l_accum_9 = Append<real,real>(l_accum_9,RAdd(0.1e1,IntToReal(i_j_10)));
+    }
+    l_accum_11 = <real[]>{};
+    foreach real i_k_12 in l_accum_9 {
+      l_accum_11 = Append<real,real>(l_accum_11,RAdd(i_k_12,0.2e1));
+    }
+    globals.a2 = l_accum_11;
+    globals._t = l__t_6;
+    globals._tX = l__t_5;
+  }
+//***** STRAND *****
+strand gg (int p_i_13,femData(MeshCell) p_j_14) {
+  varying output real result;
+  output tensor[2,2] z;
+  int i;
+  femData(MeshCell) j;
+  initialize (globals) {
+    int l_mulRes_15 = IMul(2,ExtractFemItem2<int,int,ExtractIndex(Mesh)>(globals._tX,globals._t));
+    int l_mulRes_16 = IMul(2,ExtractFemItem2<int,int,ExtractIndex(Mesh)>(globals._tX,IAdd(globals._t,1)));
+    real l_dof_load_17 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(globals._tX,l_mulRes_16);
+    real l_dof_load_18 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(globals._tX,IAdd(1,l_mulRes_16));
+    int l_mulRes_19 = IMul(2,ExtractFemItem2<int,int,ExtractIndex(Mesh)>(globals._tX,IAdd(globals._t,2)));
+    real l_dof_load_20 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(globals._tX,l_mulRes_19);
+    real l_dof_load_21 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(globals._tX,IAdd(1,l_mulRes_19));
+    int l_mulRes_22 = IMul(2,ExtractFemItem2<int,int,ExtractIndex(Mesh)>(globals._tX,IAdd(globals._t,3)));
+    real l_basisEval_23 = RMul(0.1e1,RMul(0.1e1,0.1e1));
+    real l_r_24 = RMul(ExtractFemItem2<int,real,ExtractDof(Mesh)>(globals._tX,l_mulRes_15),0.e0);
+    real l_r_25 = RMul(ExtractFemItem2<int,real,ExtractDof(Mesh)>(globals._tX,l_mulRes_22),l_basisEval_23);
+    real l_r_26 = RMul(ExtractFemItem2<int,real,ExtractDof(Mesh)>(globals._tX,IAdd(1,l_mulRes_15)),0.e0);
+    real l_r_27 = RMul(ExtractFemItem2<int,real,ExtractDof(Mesh)>(globals._tX,IAdd(1,l_mulRes_22)),l_basisEval_23);
+    self.result = RMul(0.1e1,IntToReal(p_i_13));
+    self.z = <tensor[2,2]>[RAdd(RAdd(RAdd(l_r_24,RMul(l_dof_load_17,l_basisEval_23)),RMul(l_dof_load_20,0.e0)),l_r_25),RAdd(RAdd(RAdd(l_r_24,RMul(l_dof_load_17,0.e0)),RMul(l_dof_load_20,l_basisEval_23)),l_r_25),RAdd(RAdd(RAdd(l_r_26,RMul(l_dof_load_18,l_basisEval_23)),RMul(l_dof_load_21,0.e0)),l_r_27),RAdd(RAdd(RAdd(l_r_26,RMul(l_dof_load_18,0.e0)),RMul(l_dof_load_21,l_basisEval_23)),l_r_27)];
+    self.i = p_i_13;
+    self.j = p_j_14;
+  }
+  update (world, globals) {
+    real l__t_28 = RMul(self.result,IntToReal(IMul(self.i,10)));
+    femData(Mesh) l__t_29 = ExtractFem<femData(Mesh),femData(MeshCell)>(self.j);
+    int l__t_30 = ExtractFemItem<int,CellIndex(MeshCell)>(self.j);
+    int l_mulRes_31 = IMul(2,ExtractFemItem2<int,int,ExtractIndex(Mesh)>(l__t_29,l__t_30));
+    int l_mulRes_32 = IMul(2,ExtractFemItem2<int,int,ExtractIndex(Mesh)>(l__t_29,IAdd(l__t_30,1)));
+    int l_mulRes_33 = IMul(2,ExtractFemItem2<int,int,ExtractIndex(Mesh)>(l__t_29,IAdd(l__t_30,2)));
+    int l_mulRes_34 = IMul(2,ExtractFemItem2<int,int,ExtractIndex(Mesh)>(l__t_29,IAdd(l__t_30,3)));
+    print(globals.a1);
+    tensor[4,2] t_35 = <tensor[4,2]>[ExtractFemItem2<int,real,ExtractDof(Mesh)>(l__t_29,l_mulRes_31),ExtractFemItem2<int,real,ExtractDof(Mesh)>(l__t_29,IAdd(1,l_mulRes_31)),ExtractFemItem2<int,real,ExtractDof(Mesh)>(l__t_29,l_mulRes_32),ExtractFemItem2<int,real,ExtractDof(Mesh)>(l__t_29,IAdd(1,l_mulRes_32)),ExtractFemItem2<int,real,ExtractDof(Mesh)>(l__t_29,l_mulRes_33),ExtractFemItem2<int,real,ExtractDof(Mesh)>(l__t_29,IAdd(1,l_mulRes_33)),ExtractFemItem2<int,real,ExtractDof(Mesh)>(l__t_29,l_mulRes_34),ExtractFemItem2<int,real,ExtractDof(Mesh)>(l__t_29,IAdd(1,l_mulRes_34))];
+    print(l__t_28,"\n","numCell:",ExtractFemItem<int,NumCell(Mesh)>(globals.a),"\n",globals.a1,globals.a2,"\n",0.2e1,"\n",self.j,"\n",TensorRef<[4,2]>(t_35));
+    self.result = l__t_28;
+    stabilize;
+  }
+}
+//***** CREATE COLLECTION *****
+  {
+    foreach int i_j_36 in globals.a1 {
+      foreach femData(MeshCell) i_k_37 in globals.0cell_a {
+        new gg(i_j_36,i_k_37);
+      }
+    }
+  }
+#### end program ####
+##### TreeIR: after contraction ####
+//***** PROPERTIES *****
+  GlobalInit HasInputs HasGlobals
+//***** CONSTS *****
+//***** INPUTS *****
+input femData(Mesh) a;
+//***** CONST INIT *****
+  {
+  }
+//***** GLOBALS *****
+global femData(MeshCell)[] 0cell_a;
+global int[] a1;
+global real[] a2;
+global int _t;
+global femData(Mesh) _tX;
+//***** FUNCTIONS *****
+//***** GLOBAL VARIABLE INIT *****
+  {
+    real[] l_accum_11;
+    real[] l_accum_9;
+    int[] l_accum_7;
+    int[] l_accum_3;
+    femData(MeshCell)[] l__t_0;
+    l__t_0 = <femData(MeshCell)[]>{};
+    for i__t_1 = 0 to ExtractFemItem<int,NumCell(Mesh)>(globals.a) {
+      l__t_0 = Append<femData(MeshCell),femData(MeshCell)>(l__t_0,LoadFem<femData(MeshCell)>(globals.a,i__t_1));
+    }
+    globals.0cell_a = l__t_0;
+    femData(MeshCell) l__t_2 = Subscript<femData(MeshCell)[]>(l__t_0,0);
+    l_accum_3 = <int[]>{};
+    femData(Mesh) l__t_5 = ExtractFem<femData(Mesh),femData(MeshCell)>(l__t_2);
+    int l__t_6 = ExtractFemItem<int,CellIndex(MeshCell)>(l__t_2);
+    for i_j_4 = 0 to 10 {
+      l_accum_3 = Append<int,int>(l_accum_3,IAdd(1,i_j_4));
+    }
+    l_accum_7 = <int[]>{};
+    foreach int i_k_8 in l_accum_3 {
+      l_accum_7 = Append<int,int>(l_accum_7,IAdd(i_k_8,2));
+    }
+    globals.a1 = l_accum_7;
+    l_accum_9 = <real[]>{};
+    for i_j_10 = 0 to 10 {
+      l_accum_9 = Append<real,real>(l_accum_9,RAdd(0.1e1,IntToReal(i_j_10)));
+    }
+    l_accum_11 = <real[]>{};
+    foreach real i_k_12 in l_accum_9 {
+      l_accum_11 = Append<real,real>(l_accum_11,RAdd(i_k_12,0.2e1));
+    }
+    globals.a2 = l_accum_11;
+    globals._t = l__t_6;
+    globals._tX = l__t_5;
+  }
+//***** STRAND *****
+strand gg (int p_i_13,femData(MeshCell) p_j_14) {
+  varying output real result;
+  output tensor[2,2] z;
+  int i;
+  femData(MeshCell) j;
+  initialize (globals) {
+    int l_mulRes_15 = IMul(2,ExtractFemItem2<int,int,ExtractIndex(Mesh)>(globals._tX,globals._t));
+    int l_mulRes_16 = IMul(2,ExtractFemItem2<int,int,ExtractIndex(Mesh)>(globals._tX,IAdd(globals._t,1)));
+    real l_dof_load_17 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(globals._tX,l_mulRes_16);
+    real l_dof_load_18 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(globals._tX,IAdd(1,l_mulRes_16));
+    int l_mulRes_19 = IMul(2,ExtractFemItem2<int,int,ExtractIndex(Mesh)>(globals._tX,IAdd(globals._t,2)));
+    real l_dof_load_20 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(globals._tX,l_mulRes_19);
+    real l_dof_load_21 = ExtractFemItem2<int,real,ExtractDof(Mesh)>(globals._tX,IAdd(1,l_mulRes_19));
+    int l_mulRes_22 = IMul(2,ExtractFemItem2<int,int,ExtractIndex(Mesh)>(globals._tX,IAdd(globals._t,3)));
+    real l_basisEval_23 = RMul(0.1e1,RMul(0.1e1,0.1e1));
+    real l_r_24 = RMul(ExtractFemItem2<int,real,ExtractDof(Mesh)>(globals._tX,l_mulRes_15),0.e0);
+    real l_r_25 = RMul(ExtractFemItem2<int,real,ExtractDof(Mesh)>(globals._tX,l_mulRes_22),l_basisEval_23);
+    real l_r_26 = RMul(ExtractFemItem2<int,real,ExtractDof(Mesh)>(globals._tX,IAdd(1,l_mulRes_15)),0.e0);
+    real l_r_27 = RMul(ExtractFemItem2<int,real,ExtractDof(Mesh)>(globals._tX,IAdd(1,l_mulRes_22)),l_basisEval_23);
+    self.result = RMul(0.1e1,IntToReal(p_i_13));
+    self.z = <tensor[2,2]>[RAdd(RAdd(RAdd(l_r_24,RMul(l_dof_load_17,l_basisEval_23)),RMul(l_dof_load_20,0.e0)),l_r_25),RAdd(RAdd(RAdd(l_r_24,RMul(l_dof_load_17,0.e0)),RMul(l_dof_load_20,l_basisEval_23)),l_r_25),RAdd(RAdd(RAdd(l_r_26,RMul(l_dof_load_18,l_basisEval_23)),RMul(l_dof_load_21,0.e0)),l_r_27),RAdd(RAdd(RAdd(l_r_26,RMul(l_dof_load_18,0.e0)),RMul(l_dof_load_21,l_basisEval_23)),l_r_27)];
+    self.i = p_i_13;
+    self.j = p_j_14;
+  }
+  update (world, globals) {
+    real l__t_28 = RMul(self.result,IntToReal(IMul(self.i,10)));
+    femData(Mesh) l__t_29 = ExtractFem<femData(Mesh),femData(MeshCell)>(self.j);
+    int l__t_30 = ExtractFemItem<int,CellIndex(MeshCell)>(self.j);
+    int l_mulRes_31 = IMul(2,ExtractFemItem2<int,int,ExtractIndex(Mesh)>(l__t_29,l__t_30));
+    int l_mulRes_32 = IMul(2,ExtractFemItem2<int,int,ExtractIndex(Mesh)>(l__t_29,IAdd(l__t_30,1)));
+    int l_mulRes_33 = IMul(2,ExtractFemItem2<int,int,ExtractIndex(Mesh)>(l__t_29,IAdd(l__t_30,2)));
+    int l_mulRes_34 = IMul(2,ExtractFemItem2<int,int,ExtractIndex(Mesh)>(l__t_29,IAdd(l__t_30,3)));
+    print(globals.a1);
+    tensor[4,2] t_35 = <tensor[4,2]>[ExtractFemItem2<int,real,ExtractDof(Mesh)>(l__t_29,l_mulRes_31),ExtractFemItem2<int,real,ExtractDof(Mesh)>(l__t_29,IAdd(1,l_mulRes_31)),ExtractFemItem2<int,real,ExtractDof(Mesh)>(l__t_29,l_mulRes_32),ExtractFemItem2<int,real,ExtractDof(Mesh)>(l__t_29,IAdd(1,l_mulRes_32)),ExtractFemItem2<int,real,ExtractDof(Mesh)>(l__t_29,l_mulRes_33),ExtractFemItem2<int,real,ExtractDof(Mesh)>(l__t_29,IAdd(1,l_mulRes_33)),ExtractFemItem2<int,real,ExtractDof(Mesh)>(l__t_29,l_mulRes_34),ExtractFemItem2<int,real,ExtractDof(Mesh)>(l__t_29,IAdd(1,l_mulRes_34))];
+    print(l__t_28,"\n","numCell:",ExtractFemItem<int,NumCell(Mesh)>(globals.a),"\n",globals.a1,globals.a2,"\n",0.2e1,"\n",self.j,"\n",TensorRef<[4,2]>(t_35));
+    self.result = l__t_28;
+    stabilize;
+  }
+}
+//***** CREATE COLLECTION *****
+  {
+    foreach int i_j_36 in globals.a1 {
+      foreach femData(MeshCell) i_k_37 in globals.0cell_a {
+        new gg(i_j_36,i_k_37);
+      }
+    }
+  }
+#### end program ####
+/usr/bin/clang++ -fPIC -m64 -c -Wreturn-type -Wuninitialized -march=native -O3 -DNDEBUG -mavx2 -msse4.2 -I/home/teocollin/gitcode/diderot/include -I/usr/local/include justTypes.cxx
+/usr/bin/clang++ -shared -o justTypes.so justTypes.o /home/teocollin/gitcode/diderot/lib/diderot-rt-seq.o -Wl,-rpath=/usr/local/lib -L/usr/local/lib -lteem
+                                       Phase                                         Exclusive    Total  
+  compiler ..........................................................................   0.011     1.293
+    front end .......................................................................   0.041     0.052
+      parser ........................................................................   0.007     0.007
+      typechecker ...................................................................   0.004     0.004
+      simplify ......................................................................   0.000     0.000
+    translate .......................................................................   0.002     0.002
+    High IR optimization ............................................................   0.007     0.011
+      High IR value numbering .......................................................   0.002     0.002
+      High IR normalization .........................................................   0.002     0.002
+      High IR checking ..............................................................   0.000     0.000
+    High to Mid translation .........................................................   0.002     0.002
+    Mid IR optimization .............................................................   0.005     0.007
+      Mid IR contraction ............................................................   0.000     0.000
+      Mid IR value numbering ........................................................   0.001     0.001
+      Mid IR border control .........................................................   0.000     0.000
+      Mid IR checking ...............................................................   0.000     0.000
+    Mid to Low translation ..........................................................   0.003     0.003
+    Low IR optimization .............................................................   0.007     0.014
+      Low IR contraction ............................................................   0.003     0.003
+      Low IR value numbering ........................................................   0.003     0.003
+      Low IR checking ...............................................................   0.000     0.000
+    Low to Tree translation .........................................................   0.005     0.005
+    Tree IR optimization ............................................................   0.001     0.001
+      Tree IR contraction ...........................................................   0.000     0.000
+      Tree IR checking ..............................................................   0.000     0.000
+    code generation .................................................................   0.015     1.185
+      C compiler ....................................................................   1.170     1.170

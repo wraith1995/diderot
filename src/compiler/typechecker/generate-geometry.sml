@@ -814,6 +814,7 @@ fun makeGeometryFuncs(env, cxt, span, meshData, geometry, inverse, forwardInfo, 
       val mesh = AST.E_ExtractFem(posExp, meshData)
       val cellInt = AST.E_ExtractFemItem(posExp, Ty.T_Int, (FO.CellIndex, posData))
       val cellExp =  AST.E_LoadFem(cellData, SOME(mesh), SOME(cellInt))
+      val zeroExp = AST.E_Tensor(List.tabulate(dim, fn x => AST.E_Lit(Literal.Real(RealLit.zero true))), vecTy)
 				  
       val transformField = makeTransformFunc([cellExp])
       val invertVar = if dim = 2
@@ -823,8 +824,8 @@ fun makeGeometryFuncs(env, cxt, span, meshData, geometry, inverse, forwardInfo, 
  		      else raise Fail "dim <> 2 and dim <> 3"
       val dTransformVal = makePrim'(BV.op_Dotimes, [transformField], [invTransformFieldTy], dTransformFieldTy)
       val invertedField = makePrim'(invertVar, [dTransformVal], [dTransformFieldTy], dTransformFieldTy)
-      val refPos = AST.E_ExtractFemItem(posExp, vecTy, (FemOpt.RefPos, meshData))
-      val probe = makePrim'(BV.op_probe, [invertedField, refPos], [dTransformFieldTy, vecTy], matTy)
+      (* val refPos = AST.E_ExtractFemItem(posExp, vecTy, (FemOpt.RefPos, meshData)) *)
+      val probe = makePrim'(BV.op_probe, [invertedField, zeroExp], [dTransformFieldTy, vecTy], matTy)
       val newDpos = makePrim'(BV.op_inner_tt, [probe, vecExp], [matTy, vecTy], vecTy)
 
 				   

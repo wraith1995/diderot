@@ -1,0 +1,1401 @@
+{
+    "program" : "justTypes",
+    "source-file" : "justTypes.diderot",
+    "build-cmd" : "\/",
+    "version" : "master:2016-07-29",
+    "float-size" : "64",
+    "int-size" : "32",
+    "target" : "DIDEROT_TARGET_SEQUENTIAL",
+    "inputs" : [
+        {
+            "name" : "a",
+            "type" : {
+                "kind" : "*",
+                "arg" : "void"
+              },
+            "set" : {
+                "return-ty" : "bool",
+                "name" : "justTypes_input_set_a",
+                "params" : [
+                    {
+                        "name" : "wrld",
+                        "param-ty" : {
+                            "kind" : "*",
+                            "arg" : "justTypes_world_t"
+                          },
+                        "attrs" : [
+                            "world"
+                          ]
+                      },
+                    {
+                        "name" : "v",
+                        "param-ty" : {
+                            "kind" : "*",
+                            "arg" : "void"
+                          }
+                      }
+                  ]
+              },
+            "has-default" : false
+          },
+        {
+            "name" : "b",
+            "type" : {
+                "kind" : "*",
+                "arg" : "void"
+              },
+            "set" : {
+                "return-ty" : "bool",
+                "name" : "justTypes_input_set_b",
+                "params" : [
+                    {
+                        "name" : "wrld",
+                        "param-ty" : {
+                            "kind" : "*",
+                            "arg" : "justTypes_world_t"
+                          },
+                        "attrs" : [
+                            "world"
+                          ]
+                      },
+                    {
+                        "name" : "v",
+                        "param-ty" : {
+                            "kind" : "*",
+                            "arg" : "void"
+                          }
+                      }
+                  ]
+              },
+            "has-default" : false
+          },
+        {
+            "name" : "c",
+            "type" : {
+                "kind" : "*",
+                "arg" : "void"
+              },
+            "set" : {
+                "return-ty" : "bool",
+                "name" : "justTypes_input_set_c",
+                "params" : [
+                    {
+                        "name" : "wrld",
+                        "param-ty" : {
+                            "kind" : "*",
+                            "arg" : "justTypes_world_t"
+                          },
+                        "attrs" : [
+                            "world"
+                          ]
+                      },
+                    {
+                        "name" : "v",
+                        "param-ty" : {
+                            "kind" : "*",
+                            "arg" : "void"
+                          }
+                      }
+                  ]
+              },
+            "has-default" : false
+          },
+        {
+            "name" : "isoval",
+            "type" : {
+                "kind" : "tensor",
+                "shape" : [
+                  ]
+              },
+            "set" : {
+                "return-ty" : "bool",
+                "name" : "justTypes_input_set_isoval",
+                "params" : [
+                    {
+                        "name" : "wrld",
+                        "param-ty" : {
+                            "kind" : "*",
+                            "arg" : "justTypes_world_t"
+                          },
+                        "attrs" : [
+                            "world"
+                          ]
+                      },
+                    {
+                        "name" : "v",
+                        "param-ty" : "double"
+                      }
+                  ]
+              },
+            "has-default" : true,
+            "get" : {
+                "return-ty" : "void",
+                "name" : "justTypes_input_get_isoval",
+                "params" : [
+                    {
+                        "name" : "wrld",
+                        "param-ty" : {
+                            "kind" : "*",
+                            "arg" : "justTypes_world_t"
+                          },
+                        "attrs" : [
+                            "world"
+                          ]
+                      },
+                    {
+                        "name" : "v",
+                        "param-ty" : {
+                            "kind" : "*",
+                            "arg" : "double"
+                          }
+                      }
+                  ]
+              }
+          },
+        {
+            "name" : "thick",
+            "type" : {
+                "kind" : "tensor",
+                "shape" : [
+                  ]
+              },
+            "set" : {
+                "return-ty" : "bool",
+                "name" : "justTypes_input_set_thick",
+                "params" : [
+                    {
+                        "name" : "wrld",
+                        "param-ty" : {
+                            "kind" : "*",
+                            "arg" : "justTypes_world_t"
+                          },
+                        "attrs" : [
+                            "world"
+                          ]
+                      },
+                    {
+                        "name" : "v",
+                        "param-ty" : "double"
+                      }
+                  ]
+              },
+            "has-default" : true,
+            "get" : {
+                "return-ty" : "void",
+                "name" : "justTypes_input_get_thick",
+                "params" : [
+                    {
+                        "name" : "wrld",
+                        "param-ty" : {
+                            "kind" : "*",
+                            "arg" : "justTypes_world_t"
+                          },
+                        "attrs" : [
+                            "world"
+                          ]
+                      },
+                    {
+                        "name" : "v",
+                        "param-ty" : {
+                            "kind" : "*",
+                            "arg" : "double"
+                          }
+                      }
+                  ]
+              }
+          },
+        {
+            "name" : "camEye",
+            "type" : {
+                "kind" : "tensor",
+                "shape" : [
+                    3
+                  ]
+              },
+            "set" : {
+                "return-ty" : "bool",
+                "name" : "justTypes_input_set_camEye",
+                "params" : [
+                    {
+                        "name" : "wrld",
+                        "param-ty" : {
+                            "kind" : "*",
+                            "arg" : "justTypes_world_t"
+                          },
+                        "attrs" : [
+                            "world"
+                          ]
+                      },
+                    {
+                        "name" : "v",
+                        "param-ty" : {
+                            "kind" : "[]",
+                            "size" : 3,
+                            "arg" : "double"
+                          }
+                      }
+                  ]
+              },
+            "has-default" : true,
+            "get" : {
+                "return-ty" : "void",
+                "name" : "justTypes_input_get_camEye",
+                "params" : [
+                    {
+                        "name" : "wrld",
+                        "param-ty" : {
+                            "kind" : "*",
+                            "arg" : "justTypes_world_t"
+                          },
+                        "attrs" : [
+                            "world"
+                          ]
+                      },
+                    {
+                        "name" : "v",
+                        "param-ty" : {
+                            "kind" : "[]",
+                            "size" : 3,
+                            "arg" : "double"
+                          }
+                      }
+                  ]
+              }
+          },
+        {
+            "name" : "camAt",
+            "type" : {
+                "kind" : "tensor",
+                "shape" : [
+                    3
+                  ]
+              },
+            "set" : {
+                "return-ty" : "bool",
+                "name" : "justTypes_input_set_camAt",
+                "params" : [
+                    {
+                        "name" : "wrld",
+                        "param-ty" : {
+                            "kind" : "*",
+                            "arg" : "justTypes_world_t"
+                          },
+                        "attrs" : [
+                            "world"
+                          ]
+                      },
+                    {
+                        "name" : "v",
+                        "param-ty" : {
+                            "kind" : "[]",
+                            "size" : 3,
+                            "arg" : "double"
+                          }
+                      }
+                  ]
+              },
+            "has-default" : true,
+            "get" : {
+                "return-ty" : "void",
+                "name" : "justTypes_input_get_camAt",
+                "params" : [
+                    {
+                        "name" : "wrld",
+                        "param-ty" : {
+                            "kind" : "*",
+                            "arg" : "justTypes_world_t"
+                          },
+                        "attrs" : [
+                            "world"
+                          ]
+                      },
+                    {
+                        "name" : "v",
+                        "param-ty" : {
+                            "kind" : "[]",
+                            "size" : 3,
+                            "arg" : "double"
+                          }
+                      }
+                  ]
+              }
+          },
+        {
+            "name" : "camUp",
+            "type" : {
+                "kind" : "tensor",
+                "shape" : [
+                    3
+                  ]
+              },
+            "set" : {
+                "return-ty" : "bool",
+                "name" : "justTypes_input_set_camUp",
+                "params" : [
+                    {
+                        "name" : "wrld",
+                        "param-ty" : {
+                            "kind" : "*",
+                            "arg" : "justTypes_world_t"
+                          },
+                        "attrs" : [
+                            "world"
+                          ]
+                      },
+                    {
+                        "name" : "v",
+                        "param-ty" : {
+                            "kind" : "[]",
+                            "size" : 3,
+                            "arg" : "double"
+                          }
+                      }
+                  ]
+              },
+            "has-default" : true,
+            "get" : {
+                "return-ty" : "void",
+                "name" : "justTypes_input_get_camUp",
+                "params" : [
+                    {
+                        "name" : "wrld",
+                        "param-ty" : {
+                            "kind" : "*",
+                            "arg" : "justTypes_world_t"
+                          },
+                        "attrs" : [
+                            "world"
+                          ]
+                      },
+                    {
+                        "name" : "v",
+                        "param-ty" : {
+                            "kind" : "[]",
+                            "size" : 3,
+                            "arg" : "double"
+                          }
+                      }
+                  ]
+              }
+          },
+        {
+            "name" : "camFOV",
+            "type" : {
+                "kind" : "tensor",
+                "shape" : [
+                  ]
+              },
+            "set" : {
+                "return-ty" : "bool",
+                "name" : "justTypes_input_set_camFOV",
+                "params" : [
+                    {
+                        "name" : "wrld",
+                        "param-ty" : {
+                            "kind" : "*",
+                            "arg" : "justTypes_world_t"
+                          },
+                        "attrs" : [
+                            "world"
+                          ]
+                      },
+                    {
+                        "name" : "v",
+                        "param-ty" : "double"
+                      }
+                  ]
+              },
+            "has-default" : true,
+            "get" : {
+                "return-ty" : "void",
+                "name" : "justTypes_input_get_camFOV",
+                "params" : [
+                    {
+                        "name" : "wrld",
+                        "param-ty" : {
+                            "kind" : "*",
+                            "arg" : "justTypes_world_t"
+                          },
+                        "attrs" : [
+                            "world"
+                          ]
+                      },
+                    {
+                        "name" : "v",
+                        "param-ty" : {
+                            "kind" : "*",
+                            "arg" : "double"
+                          }
+                      }
+                  ]
+              }
+          },
+        {
+            "name" : "iresU",
+            "type" : "int",
+            "set" : {
+                "return-ty" : "bool",
+                "name" : "justTypes_input_set_iresU",
+                "params" : [
+                    {
+                        "name" : "wrld",
+                        "param-ty" : {
+                            "kind" : "*",
+                            "arg" : "justTypes_world_t"
+                          },
+                        "attrs" : [
+                            "world"
+                          ]
+                      },
+                    {
+                        "name" : "v",
+                        "param-ty" : "int"
+                      }
+                  ]
+              },
+            "has-default" : true,
+            "get" : {
+                "return-ty" : "void",
+                "name" : "justTypes_input_get_iresU",
+                "params" : [
+                    {
+                        "name" : "wrld",
+                        "param-ty" : {
+                            "kind" : "*",
+                            "arg" : "justTypes_world_t"
+                          },
+                        "attrs" : [
+                            "world"
+                          ]
+                      },
+                    {
+                        "name" : "v",
+                        "param-ty" : {
+                            "kind" : "*",
+                            "arg" : "int"
+                          }
+                      }
+                  ]
+              }
+          },
+        {
+            "name" : "iresV",
+            "type" : "int",
+            "set" : {
+                "return-ty" : "bool",
+                "name" : "justTypes_input_set_iresV",
+                "params" : [
+                    {
+                        "name" : "wrld",
+                        "param-ty" : {
+                            "kind" : "*",
+                            "arg" : "justTypes_world_t"
+                          },
+                        "attrs" : [
+                            "world"
+                          ]
+                      },
+                    {
+                        "name" : "v",
+                        "param-ty" : "int"
+                      }
+                  ]
+              },
+            "has-default" : true,
+            "get" : {
+                "return-ty" : "void",
+                "name" : "justTypes_input_get_iresV",
+                "params" : [
+                    {
+                        "name" : "wrld",
+                        "param-ty" : {
+                            "kind" : "*",
+                            "arg" : "justTypes_world_t"
+                          },
+                        "attrs" : [
+                            "world"
+                          ]
+                      },
+                    {
+                        "name" : "v",
+                        "param-ty" : {
+                            "kind" : "*",
+                            "arg" : "int"
+                          }
+                      }
+                  ]
+              }
+          },
+        {
+            "name" : "camNear",
+            "type" : {
+                "kind" : "tensor",
+                "shape" : [
+                  ]
+              },
+            "set" : {
+                "return-ty" : "bool",
+                "name" : "justTypes_input_set_camNear",
+                "params" : [
+                    {
+                        "name" : "wrld",
+                        "param-ty" : {
+                            "kind" : "*",
+                            "arg" : "justTypes_world_t"
+                          },
+                        "attrs" : [
+                            "world"
+                          ]
+                      },
+                    {
+                        "name" : "v",
+                        "param-ty" : "double"
+                      }
+                  ]
+              },
+            "has-default" : true,
+            "get" : {
+                "return-ty" : "void",
+                "name" : "justTypes_input_get_camNear",
+                "params" : [
+                    {
+                        "name" : "wrld",
+                        "param-ty" : {
+                            "kind" : "*",
+                            "arg" : "justTypes_world_t"
+                          },
+                        "attrs" : [
+                            "world"
+                          ]
+                      },
+                    {
+                        "name" : "v",
+                        "param-ty" : {
+                            "kind" : "*",
+                            "arg" : "double"
+                          }
+                      }
+                  ]
+              }
+          },
+        {
+            "name" : "camFar",
+            "type" : {
+                "kind" : "tensor",
+                "shape" : [
+                  ]
+              },
+            "set" : {
+                "return-ty" : "bool",
+                "name" : "justTypes_input_set_camFar",
+                "params" : [
+                    {
+                        "name" : "wrld",
+                        "param-ty" : {
+                            "kind" : "*",
+                            "arg" : "justTypes_world_t"
+                          },
+                        "attrs" : [
+                            "world"
+                          ]
+                      },
+                    {
+                        "name" : "v",
+                        "param-ty" : "double"
+                      }
+                  ]
+              },
+            "has-default" : true,
+            "get" : {
+                "return-ty" : "void",
+                "name" : "justTypes_input_get_camFar",
+                "params" : [
+                    {
+                        "name" : "wrld",
+                        "param-ty" : {
+                            "kind" : "*",
+                            "arg" : "justTypes_world_t"
+                          },
+                        "attrs" : [
+                            "world"
+                          ]
+                      },
+                    {
+                        "name" : "v",
+                        "param-ty" : {
+                            "kind" : "*",
+                            "arg" : "double"
+                          }
+                      }
+                  ]
+              }
+          },
+        {
+            "name" : "refStep",
+            "type" : {
+                "kind" : "tensor",
+                "shape" : [
+                  ]
+              },
+            "set" : {
+                "return-ty" : "bool",
+                "name" : "justTypes_input_set_refStep",
+                "params" : [
+                    {
+                        "name" : "wrld",
+                        "param-ty" : {
+                            "kind" : "*",
+                            "arg" : "justTypes_world_t"
+                          },
+                        "attrs" : [
+                            "world"
+                          ]
+                      },
+                    {
+                        "name" : "v",
+                        "param-ty" : "double"
+                      }
+                  ]
+              },
+            "has-default" : true,
+            "get" : {
+                "return-ty" : "void",
+                "name" : "justTypes_input_get_refStep",
+                "params" : [
+                    {
+                        "name" : "wrld",
+                        "param-ty" : {
+                            "kind" : "*",
+                            "arg" : "justTypes_world_t"
+                          },
+                        "attrs" : [
+                            "world"
+                          ]
+                      },
+                    {
+                        "name" : "v",
+                        "param-ty" : {
+                            "kind" : "*",
+                            "arg" : "double"
+                          }
+                      }
+                  ]
+              }
+          },
+        {
+            "name" : "rayStep",
+            "type" : {
+                "kind" : "tensor",
+                "shape" : [
+                  ]
+              },
+            "set" : {
+                "return-ty" : "bool",
+                "name" : "justTypes_input_set_rayStep",
+                "params" : [
+                    {
+                        "name" : "wrld",
+                        "param-ty" : {
+                            "kind" : "*",
+                            "arg" : "justTypes_world_t"
+                          },
+                        "attrs" : [
+                            "world"
+                          ]
+                      },
+                    {
+                        "name" : "v",
+                        "param-ty" : "double"
+                      }
+                  ]
+              },
+            "has-default" : true,
+            "get" : {
+                "return-ty" : "void",
+                "name" : "justTypes_input_get_rayStep",
+                "params" : [
+                    {
+                        "name" : "wrld",
+                        "param-ty" : {
+                            "kind" : "*",
+                            "arg" : "justTypes_world_t"
+                          },
+                        "attrs" : [
+                            "world"
+                          ]
+                      },
+                    {
+                        "name" : "v",
+                        "param-ty" : {
+                            "kind" : "*",
+                            "arg" : "double"
+                          }
+                      }
+                  ]
+              }
+          },
+        {
+            "name" : "lightVsp",
+            "type" : {
+                "kind" : "tensor",
+                "shape" : [
+                    3
+                  ]
+              },
+            "set" : {
+                "return-ty" : "bool",
+                "name" : "justTypes_input_set_lightVsp",
+                "params" : [
+                    {
+                        "name" : "wrld",
+                        "param-ty" : {
+                            "kind" : "*",
+                            "arg" : "justTypes_world_t"
+                          },
+                        "attrs" : [
+                            "world"
+                          ]
+                      },
+                    {
+                        "name" : "v",
+                        "param-ty" : {
+                            "kind" : "[]",
+                            "size" : 3,
+                            "arg" : "double"
+                          }
+                      }
+                  ]
+              },
+            "has-default" : true,
+            "get" : {
+                "return-ty" : "void",
+                "name" : "justTypes_input_get_lightVsp",
+                "params" : [
+                    {
+                        "name" : "wrld",
+                        "param-ty" : {
+                            "kind" : "*",
+                            "arg" : "justTypes_world_t"
+                          },
+                        "attrs" : [
+                            "world"
+                          ]
+                      },
+                    {
+                        "name" : "v",
+                        "param-ty" : {
+                            "kind" : "[]",
+                            "size" : 3,
+                            "arg" : "double"
+                          }
+                      }
+                  ]
+              }
+          },
+        {
+            "name" : "phongKa",
+            "type" : {
+                "kind" : "tensor",
+                "shape" : [
+                  ]
+              },
+            "set" : {
+                "return-ty" : "bool",
+                "name" : "justTypes_input_set_phongKa",
+                "params" : [
+                    {
+                        "name" : "wrld",
+                        "param-ty" : {
+                            "kind" : "*",
+                            "arg" : "justTypes_world_t"
+                          },
+                        "attrs" : [
+                            "world"
+                          ]
+                      },
+                    {
+                        "name" : "v",
+                        "param-ty" : "double"
+                      }
+                  ]
+              },
+            "has-default" : true,
+            "get" : {
+                "return-ty" : "void",
+                "name" : "justTypes_input_get_phongKa",
+                "params" : [
+                    {
+                        "name" : "wrld",
+                        "param-ty" : {
+                            "kind" : "*",
+                            "arg" : "justTypes_world_t"
+                          },
+                        "attrs" : [
+                            "world"
+                          ]
+                      },
+                    {
+                        "name" : "v",
+                        "param-ty" : {
+                            "kind" : "*",
+                            "arg" : "double"
+                          }
+                      }
+                  ]
+              }
+          },
+        {
+            "name" : "phongKd",
+            "type" : {
+                "kind" : "tensor",
+                "shape" : [
+                  ]
+              },
+            "set" : {
+                "return-ty" : "bool",
+                "name" : "justTypes_input_set_phongKd",
+                "params" : [
+                    {
+                        "name" : "wrld",
+                        "param-ty" : {
+                            "kind" : "*",
+                            "arg" : "justTypes_world_t"
+                          },
+                        "attrs" : [
+                            "world"
+                          ]
+                      },
+                    {
+                        "name" : "v",
+                        "param-ty" : "double"
+                      }
+                  ]
+              },
+            "has-default" : true,
+            "get" : {
+                "return-ty" : "void",
+                "name" : "justTypes_input_get_phongKd",
+                "params" : [
+                    {
+                        "name" : "wrld",
+                        "param-ty" : {
+                            "kind" : "*",
+                            "arg" : "justTypes_world_t"
+                          },
+                        "attrs" : [
+                            "world"
+                          ]
+                      },
+                    {
+                        "name" : "v",
+                        "param-ty" : {
+                            "kind" : "*",
+                            "arg" : "double"
+                          }
+                      }
+                  ]
+              }
+          },
+        {
+            "name" : "debug",
+            "type" : "bool",
+            "set" : {
+                "return-ty" : "bool",
+                "name" : "justTypes_input_set_debug",
+                "params" : [
+                    {
+                        "name" : "wrld",
+                        "param-ty" : {
+                            "kind" : "*",
+                            "arg" : "justTypes_world_t"
+                          },
+                        "attrs" : [
+                            "world"
+                          ]
+                      },
+                    {
+                        "name" : "v",
+                        "param-ty" : "bool"
+                      }
+                  ]
+              },
+            "has-default" : true,
+            "get" : {
+                "return-ty" : "void",
+                "name" : "justTypes_input_get_debug",
+                "params" : [
+                    {
+                        "name" : "wrld",
+                        "param-ty" : {
+                            "kind" : "*",
+                            "arg" : "justTypes_world_t"
+                          },
+                        "attrs" : [
+                            "world"
+                          ]
+                      },
+                    {
+                        "name" : "v",
+                        "param-ty" : {
+                            "kind" : "*",
+                            "arg" : "bool"
+                          }
+                      }
+                  ]
+              }
+          },
+        {
+            "name" : "su",
+            "type" : "int",
+            "set" : {
+                "return-ty" : "bool",
+                "name" : "justTypes_input_set_su",
+                "params" : [
+                    {
+                        "name" : "wrld",
+                        "param-ty" : {
+                            "kind" : "*",
+                            "arg" : "justTypes_world_t"
+                          },
+                        "attrs" : [
+                            "world"
+                          ]
+                      },
+                    {
+                        "name" : "v",
+                        "param-ty" : "int"
+                      }
+                  ]
+              },
+            "has-default" : true,
+            "get" : {
+                "return-ty" : "void",
+                "name" : "justTypes_input_get_su",
+                "params" : [
+                    {
+                        "name" : "wrld",
+                        "param-ty" : {
+                            "kind" : "*",
+                            "arg" : "justTypes_world_t"
+                          },
+                        "attrs" : [
+                            "world"
+                          ]
+                      },
+                    {
+                        "name" : "v",
+                        "param-ty" : {
+                            "kind" : "*",
+                            "arg" : "int"
+                          }
+                      }
+                  ]
+              }
+          },
+        {
+            "name" : "sv",
+            "type" : "int",
+            "set" : {
+                "return-ty" : "bool",
+                "name" : "justTypes_input_set_sv",
+                "params" : [
+                    {
+                        "name" : "wrld",
+                        "param-ty" : {
+                            "kind" : "*",
+                            "arg" : "justTypes_world_t"
+                          },
+                        "attrs" : [
+                            "world"
+                          ]
+                      },
+                    {
+                        "name" : "v",
+                        "param-ty" : "int"
+                      }
+                  ]
+              },
+            "has-default" : true,
+            "get" : {
+                "return-ty" : "void",
+                "name" : "justTypes_input_get_sv",
+                "params" : [
+                    {
+                        "name" : "wrld",
+                        "param-ty" : {
+                            "kind" : "*",
+                            "arg" : "justTypes_world_t"
+                          },
+                        "attrs" : [
+                            "world"
+                          ]
+                      },
+                    {
+                        "name" : "v",
+                        "param-ty" : {
+                            "kind" : "*",
+                            "arg" : "int"
+                          }
+                      }
+                  ]
+              }
+          }
+      ],
+    "runtime" : [
+        {
+            "name" : "new_world",
+            "func" : {
+                "return-ty" : {
+                    "kind" : "*",
+                    "arg" : "justTypes_world_t"
+                  },
+                "name" : "justTypes_new_world",
+                "params" : [
+                  ]
+              }
+          },
+        {
+            "name" : "init_world",
+            "func" : {
+                "return-ty" : "bool",
+                "name" : "justTypes_init_world",
+                "params" : [
+                    {
+                        "name" : "wrld",
+                        "param-ty" : {
+                            "kind" : "*",
+                            "arg" : "justTypes_world_t"
+                          },
+                        "attrbs" : [
+                            "world"
+                          ]
+                      }
+                  ]
+              }
+          },
+        {
+            "name" : "create_strands",
+            "func" : {
+                "return-ty" : "bool",
+                "name" : "justTypes_create_strands",
+                "params" : [
+                    {
+                        "name" : "wrld",
+                        "param-ty" : {
+                            "kind" : "*",
+                            "arg" : "justTypes_world_t"
+                          },
+                        "attrbs" : [
+                            "world"
+                          ]
+                      }
+                  ]
+              }
+          },
+        {
+            "name" : "run",
+            "func" : {
+                "return-ty" : "uint32_t",
+                "name" : "justTypes_run",
+                "params" : [
+                    {
+                        "name" : "wrld",
+                        "param-ty" : {
+                            "kind" : "*",
+                            "arg" : "justTypes_world_t"
+                          },
+                        "attrbs" : [
+                            "world"
+                          ]
+                      },
+                    {
+                        "name" : "maxNSteps",
+                        "param-ty" : "uint32_t",
+                        "attrbs" : [
+                            "world"
+                          ]
+                      }
+                  ]
+              }
+          },
+        {
+            "name" : "shutdown",
+            "func" : {
+                "return-ty" : "void",
+                "name" : "justTypes_shutdown",
+                "params" : [
+                    {
+                        "name" : "wrld",
+                        "param-ty" : {
+                            "kind" : "*",
+                            "arg" : "justTypes_world_t"
+                          },
+                        "attrbs" : [
+                            "world"
+                          ]
+                      }
+                  ]
+              }
+          },
+        {
+            "name" : "num_strands",
+            "get" : {
+                "return-ty" : "uint32_t",
+                "name" : "justTypes_num_strands",
+                "params" : [
+                    {
+                        "name" : "wrld",
+                        "param-ty" : {
+                            "kind" : "*",
+                            "arg" : "justTypes_world_t"
+                          },
+                        "attrbs" : [
+                            "world"
+                          ]
+                      }
+                  ]
+              }
+          },
+        {
+            "name" : "num_active_strands",
+            "get" : {
+                "return-ty" : "uint32_t",
+                "name" : "justTypes_num_active_strands",
+                "params" : [
+                    {
+                        "name" : "wrld",
+                        "param-ty" : {
+                            "kind" : "*",
+                            "arg" : "justTypes_world_t"
+                          },
+                        "attrbs" : [
+                            "world"
+                          ]
+                      }
+                  ]
+              }
+          },
+        {
+            "name" : "num_stable_strands",
+            "get" : {
+                "return-ty" : "uint32_t",
+                "name" : "justTypes_num_stable_strands",
+                "params" : [
+                    {
+                        "name" : "wrld",
+                        "param-ty" : {
+                            "kind" : "*",
+                            "arg" : "justTypes_world_t"
+                          },
+                        "attrbs" : [
+                            "world"
+                          ]
+                      }
+                  ]
+              }
+          },
+        {
+            "name" : "any_errors",
+            "get" : {
+                "return-ty" : "bool",
+                "name" : "justTypes_any_errors",
+                "params" : [
+                    {
+                        "name" : "wrld",
+                        "param-ty" : {
+                            "kind" : "*",
+                            "arg" : "justTypes_world_t"
+                          },
+                        "attrbs" : [
+                            "world"
+                          ]
+                      }
+                  ]
+              }
+          },
+        {
+            "name" : "get_errors",
+            "get" : {
+                "return-ty" : {
+                    "kind" : "*",
+                    "arg" : "char"
+                  },
+                "name" : "justTypes_get_errors",
+                "params" : [
+                    {
+                        "name" : "wrld",
+                        "param-ty" : {
+                            "kind" : "*",
+                            "arg" : "justTypes_world_t"
+                          },
+                        "attrbs" : [
+                            "world"
+                          ]
+                      }
+                  ]
+              }
+          },
+        {
+            "name" : "verbose",
+            "get" : {
+                "return-ty" : "bool",
+                "name" : "justTypes_get_verbose",
+                "params" : [
+                    {
+                        "name" : "wrld",
+                        "param-ty" : {
+                            "kind" : "*",
+                            "arg" : "justTypes_world_t"
+                          },
+                        "attrbs" : [
+                            "world"
+                          ]
+                      }
+                  ]
+              },
+            "set" : {
+                "return-ty" : "void",
+                "name" : "justTypes_set_verbose",
+                "params" : [
+                    {
+                        "name" : "wrld",
+                        "param-ty" : {
+                            "kind" : "*",
+                            "arg" : "justTypes_world_t"
+                          },
+                        "attrbs" : [
+                            "world"
+                          ]
+                      },
+                    {
+                        "name" : "mode",
+                        "param-ty" : "bool",
+                        "attrbs" : [
+                            "out"
+                          ]
+                      }
+                  ]
+              }
+          },
+        {
+            "name" : "printer_cb",
+            "set" : {
+                "return-ty" : "bool",
+                "name" : "justTypes_set_printer_cb",
+                "params" : [
+                    {
+                        "name" : "wrld",
+                        "param-ty" : {
+                            "kind" : "*",
+                            "arg" : "justTypes_world_t"
+                          },
+                        "attrbs" : [
+                            "world"
+                          ]
+                      },
+                    {
+                        "name" : "pr",
+                        "param-ty" : {
+                            "kind" : "*()",
+                            "return-ty" : "bool",
+                            "params" : [
+                                {
+                                    "name" : "data",
+                                    "param-ty" : {
+                                        "kind" : "*",
+                                        "arg" : "void"
+                                      }
+                                  },
+                                {
+                                    "name" : "msg",
+                                    "param-ty" : {
+                                        "kind" : "*",
+                                        "arg" : "char"
+                                      }
+                                  }
+                              ]
+                          },
+                        "attrbs" : [
+                            "in"
+                          ]
+                      },
+                    {
+                        "name" : "data",
+                        "param-ty" : {
+                            "kind" : "*",
+                            "arg" : "void"
+                          },
+                        "attrbs" : [
+                            "in"
+                          ]
+                      }
+                  ]
+              }
+          }
+      ],
+    "outputs" : [
+        {
+            "name" : "rgba",
+            "type" : {
+                "kind" : "tensor",
+                "shape" : [
+                    4
+                  ]
+              },
+            "get" : {
+                "return-ty" : "bool",
+                "name" : "justTypes_output_get_rgba",
+                "params" : [
+                    {
+                        "name" : "wrld",
+                        "param-ty" : {
+                            "kind" : "*",
+                            "arg" : "justTypes_world_t"
+                          },
+                        "attrs" : [
+                            "world"
+                          ]
+                      },
+                    {
+                        "name" : "data",
+                        "param-ty" : {
+                            "kind" : "*",
+                            "arg" : "Nrrd"
+                          }
+                      }
+                  ]
+              }
+          },
+        {
+            "name" : "gray",
+            "type" : {
+                "kind" : "tensor",
+                "shape" : [
+                  ]
+              },
+            "get" : {
+                "return-ty" : "bool",
+                "name" : "justTypes_output_get_gray",
+                "params" : [
+                    {
+                        "name" : "wrld",
+                        "param-ty" : {
+                            "kind" : "*",
+                            "arg" : "justTypes_world_t"
+                          },
+                        "attrs" : [
+                            "world"
+                          ]
+                      },
+                    {
+                        "name" : "data",
+                        "param-ty" : {
+                            "kind" : "*",
+                            "arg" : "Nrrd"
+                          }
+                      }
+                  ]
+              }
+          }
+      ]
+  }

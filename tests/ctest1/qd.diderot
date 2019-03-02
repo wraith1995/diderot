@@ -1,0 +1,22 @@
+#version 2.0
+
+input tensor[2] v1 = [1,0];
+input tensor[2] v2 = [2,1];
+
+input tensor[3] w1 = [1,0,0];
+input tensor[3] w2 = [1,1,0];
+input tensor[3] w3 = [1,1,1];
+
+int[] itter = {1};
+
+strand dump(int i){
+  output tensor[2,2] t1 = [v1, v2];
+  output tensor[3,3] t2 = [w1, w2, w3];
+  update{
+    print(t1,"\n");
+    print(inv(t1),"\n");
+    print(t2, "\n");
+    print(inv(t2), "\n");
+    stabilize;
+  }
+} create_collection {dump(i) | i in itter};

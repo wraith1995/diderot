@@ -1,0 +1,53 @@
+#version 3.0
+
+type mesh msh = file("test.json");
+type functionSpace{msh}[] fns = file("test.json");
+type femFunction{fns} FUNC = file("test.json");
+
+input msh a;
+input fns b = fns(a);
+input FUNC c = FUNC(b);
+refCell{msh} AAA = a.refcell();
+field(2)[] F = c.F;
+int[] umm = {1,2,3};
+strand gg(cell{msh} j){
+  output vec2 pos = [0.333333333333333333, 0.333333333333333];
+
+  update{
+    /* print(a.numCell,"\n"); */
+    /* print(j.transformDofs(), "\n"); */
+    /* vec2 r = [1 - pos[0] - pos[1], pos[0], pos[1]] • j.transformDofs(); */
+    /* mat2 rr = transpose(j.transformDofs()) •( [[-1,-1], [1, 0], [0,1]] ); */
+    /* /\* print("real:", r , "\n"); *\/ */
+    /* /\* print("start:", pos, "\n"); *\/ */
+    print("cell:",j,"\n");
+    pos = j.transform(pos);
+    print("new:",pos,"\n");
+    position{msh} f = a.findPos(pos);
+    /* print(r, pos, r-pos, "\n"); */
+
+    /* mat2 m  = ∇⊗(j.transform)(pos); */
+    /* print(rr, inv(rr),"\n"); */
+    /* print("world:", pos, "\n"); */
+    vec2 pos' = j.invTransform(pos);
+    print("return:", pos', "\n");
+    /* position{msh} umm = a.findPos(pos); */
+    /* print(umm,"...", umm.refPos(),"...", umm.worldPos(),"...\n"); */
+
+    /* print("\nfin: ",∇⊗(j.invTransform)(pos) - inv(transpose(j.transformDofs()) • [[-1, -1], [1,0], [0,1]]), "\n"); */
+    /* position{msh} testPos = a.findPos(pos); */
+    /* print("ref:", testPos.refPos, "\n"); */
+    /* print("func dofs:", c.funcCell(j).dofs, "\n"); */
+    /* print("refValue:", (c.funcCell(j).refField)(pos) , "\n"); */
+    /* print("\nugg:", ∇⊗(j.invTransform)(pos), "\n"); */
+    /* print("\nfin: ", ∇⊗(j.invTransform)(pos) • ∇(c.funcCell(j).refField)(pos), "\n"); */
+    if( f.isValid()){
+      print("dumb:", ∇⊗∇F(pos),"\n");
+    }
+    else{
+      print("ops!\n");
+    }
+
+    stabilize;
+  }
+} create_collection {gg(k) |k in a.cells()};

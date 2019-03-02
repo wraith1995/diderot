@@ -1,0 +1,29 @@
+//diderot::dynseq<@intTy@> myFunction(void * index, @meshTy@ * mesh, @realTy@ * data)
+
+Index * idx = reinterpret_cast<Index*>(index);
+
+SpatialIndex::Region* r = 0;
+//float to double conversion here..
+double dataP[2] = {static_cast<double>(data[0]), static_cast<double>(data[1])};
+r = new SpatialIndex::Region(dataP, dataP, 2);
+  
+int64_t nResultCount;
+
+
+IdVisitor* visitor = new IdVisitor;
+//do the actually query
+idx->index().intersectsWithQuery(*r, *visitor);
+nResultCount = visitor->GetResultCount();
+
+std::vector<uint64_t>& results = visitor->GetResults();
+uint32_t vecSize = results.size();
+diderot::dynseq<@intTy@> result = diderot::dynseq<@intTy@>(vecSize);
+//copy data to a dynamic sequence.
+for(auto it = results.cbegin(); it != results.cend(); ++it){
+  result.append((static_cast<@intTy@>(*it)));
+
+ }
+//clean up and return.
+delete r;
+delete visitor;
+return(result);

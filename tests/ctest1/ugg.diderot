@@ -1,0 +1,24 @@
+#version 3.0
+function real f(real g, int j){
+  real a = g*2;
+  foreach (int i in 0 ..j) {
+    print(a);
+    if (i > g*5) {
+      return(0);
+    }
+    else {
+    a+=g*0.2;
+    }
+  }
+  return(a);
+}
+
+
+strand gg(int i){
+  output real result = 1.0*i;
+  update{
+    result = f(result, i*10);
+    print(result, "\n");
+    stabilize;
+  }
+} create_collection {gg(j) | j in 0..4};

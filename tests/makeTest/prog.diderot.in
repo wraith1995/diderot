@@ -1,0 +1,15 @@
+#version 3.0
+
+
+type mesh mesh_t = file("{programName}.json");
+type functionSpace{{mesh_t}}[] fns_t = file("{programName}.json");
+type femFunction{{fns_t}} func_t = file("{programName}.json");
+
+input int[] testInput;
+
+strand gg(int i){{
+  output int j = i;
+  update {{
+    stabilize;
+  }}
+}} create_collection {{gg(i) | i in testInput}};

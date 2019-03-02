@@ -1,0 +1,39 @@
+#version 3.0
+
+type int ff = file("ffint.json");
+const int l = ff.ffff;
+const int[2] ll = ff.bunt;
+const int jam = ll[0];
+int[] a1 = {k + 2 | k in {1+j | j in 0..10}};
+ff[jam] a3 = {ff(0),ff(1)};
+ff[l] a4 = {ff(0),ff(1)};
+ff[2] a5 = {ff(0),ff(1)};
+real[] a2 = {k + 2.0 | k in {1.0+j | j in 0..10}};
+tensor[2,ll] gad = [[[0.0,0.0],[0.0,0.0]],[[0.0,0.0],[0.0,0.0]]];
+tensor[ll[0],ll[1]] gad1 = [[0.0,0.0],[0.0,0.0]];
+
+function real f(real g, int j){
+  return(g*j);
+}
+
+function real s(real k){
+  print(a1);
+  return(k);
+}
+
+
+strand gg(int i, int j){
+
+  output real result = 1.0*i;
+
+  int j0 = 2;
+
+  update{
+    result = f(result, i*10);
+    print(ll[0]," ! ", ll[1], "bah\n");
+    print(result, "\n", "numCell:", 2 ,"\n", a1,a2, "\n", s(2.0), "\n", j, "\n");
+
+
+    stabilize;
+  }
+} create_collection {gg(j,k) | j in a1, k in 5..11};
