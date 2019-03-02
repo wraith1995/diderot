@@ -4,7 +4,11 @@
 3. ALl the rest of this shit - notes5 from last meeting contains ideas like overloda () and so forth
 4. All of this behind it.
 
-
+NOTES: GET THESE TWO PROGRAMS RUNNING (RAY TRACE ERROS AND POS ERROS)
+PLAN:
+-generate eval tests.
+-function and gradient
+-look at the damn circle one
 LEFT:
 ACTUAL features: mapping inserts for exit, exitPos, enter
 ACTUAL features: parsing issues

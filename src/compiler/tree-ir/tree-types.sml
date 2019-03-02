@@ -53,7 +53,7 @@ structure TreeTypes =
 			     
     fun fromAPI (APITypes.IntTy) = IntTy
       | fromAPI (APITypes.BoolTy) = BoolTy
-      | fromAPI (APITypes.TensorTy(s)) = raise Fail "not needed"
+      | fromAPI (APITypes.TensorTy(s)) = TensorTy(s) (*ignore possible issue*)
       | fromAPI (APITypes.StringTy) = StringTy
       | fromAPI (APITypes.FemData(data)) = FemData(data)
       | fromAPI (APITypes.SeqTy(ty, opt)) = SeqTy(fromAPI ty, opt)

@@ -11,7 +11,7 @@ import sys
 import argparse
 
 parser = argparse.ArgumentParser(description='Run a diderot program')
-parser.add_argument("-s", action='store_true')
+parser.add_argument("-s", action='store_true', default=False)
 args = parser.parse_args
 
 
@@ -35,7 +35,7 @@ if os.path.exists(jsonFile):
 else:
     fb.spaceToJson(space, jsonFile, refCellDefault="simplex")
 # build data
-(preFemArgs, femArgs) = fb.passAll(f, intTy, floatTy, geometric=not(args.s))
+(preFemArgs, femArgs) = fb.passAll(f, intTy, floatTy, geometric=not(arg.s))
 if args.s:
     with open(dataFile, "wb+") as f:
         dill.dump(preFemArgs, f)
