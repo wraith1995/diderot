@@ -16,7 +16,7 @@ DIDEROTINCLUDE = $(DIDEROTFEMPATH)/include
 DIDEROTLIB = $(DIDEROTFEMPATH)/lib
 TEEMLIB = $(TEEMPATH)/include
 
-DIDEROTFLAGS = --debug --log --json --dump-pt --dump-ast --dump-simple --dump-high --dump-mid --dump-low --dump-tree --double --namespace=$(NAMESPACE) 
+DIDEROTFLAGS = --debug --log --dump-pt --dump-ast --dump-simple --dump-high --dump-mid --dump-low --dump-tree --double --namespace=$(NAMESPACE) 
 INCLUDES = -I$(DIDEROTINCLUDE) -I/usr/local/include -I$(TEEMLIB) -I$(PYTHONINCLUDE)
 LDFLAGS = -L$(DIDEROTLIB) -L/usr/local/lib -L/opt/local/lib -L/usr/lib
 LIBS = -lteem -lpng -lz -lbz2

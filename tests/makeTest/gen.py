@@ -1,6 +1,6 @@
 import argparse
 import os
-
+os.chdir("/home/teocollin/gitcode/diderot/tests/makeTest")
 parser = argparse.ArgumentParser(description='Make a Diderot program wrap setup')
 parser.add_argument("--shell", type=str, default="/bin/sh")
 parser.add_argument("--python", type=str, default="python3")

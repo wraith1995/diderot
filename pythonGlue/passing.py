@@ -49,7 +49,11 @@ class Library:
         argFunc = self.get_func("input_set_" + inputName)
         ret = argFunc(*argsPrime)
         self.errorCheck(name="input_set_" + inputName, returnCheck=ret)
-
+    def set_input_by_name(self, inputName, string):
+        argsPrime = [self.world, ct.c_char_p(str.encode(string))]
+        argFunc = self.get_func("input_set_by_name_" + inputName)
+        ret = argFunc(*argsPrime)
+        self.errorCheck(name="input_set_by_name_" + inputName, returnCheck=ret)
     def create_strands(self):
         strandFunc = self.get_func("create_strands")
         strandRet = strandFunc(self.world)
@@ -88,13 +92,16 @@ class Library:
             self.errorCheck(name="Saving to nrrd: {0}".format(fileName),
                             returnCheck=saveRet)
 
-    def go(self, inputs, outputs):
+    def go(self, inputs, outputs, namedInputs=[]):
         self.create_world()
         self.init_world()
         print("Running")
         for name in inputs:
             self.set_input(name, inputs[name])
         print("Set inputs")
+        for name in namedInputs:
+            self.set_input_by_name(name, namedInputs[name])
+        print("Set named inputs")
         self.create_strands()
         print("Create Strands")
         steps = self.runStrands()
@@ -105,7 +112,8 @@ class Library:
         self.shutDown()
 
 
-
+#make sequence arg
+#make 
 # meshType = makeMeshType()
 # mesh =  meshType()
 # spaceType = makeSpaceType(meshType)
