@@ -1,6 +1,6 @@
 0. Basis function problems
 1. exit problems
-2. input trick in simplify not working problems!
+2. input trick in simplify not working problems--maybe never mind... could check with ref idea...!
 3. ALl the rest of this shit - notes5 from last meeting contains ideas like overloda () and so forth
 4. All of this behind it.
 
@@ -9,6 +9,7 @@ PLAN:
 -generate eval tests.
 -function and gradient
 -look at the damn circle one
+important opts: 1. worldPos avoid recompute; 2. Use one mesh. 3. basis function/affine call
 LEFT:
 ACTUAL features: mapping inserts for exit, exitPos, enter
 ACTUAL features: parsing issues
@@ -16,6 +17,7 @@ ACTUAL features: tagging cells...
 MUST DO: clean up names, clean up geometry, typechecking in there, c data could be nicer outlined - more pointers and management thereof.. 
 Optimizations: worldPos, data analysis, basis stuff, pointers and grab indexical data...
 USEFUL: read in from files...
+-field local in function vs. grad(c.funcCell(c).F(0,0))
 
 Right now:
 1. Reorder python code.
