@@ -454,7 +454,7 @@ structure CheckGlobals : sig
 		    val FemData.RefCellData({ty=refCellClass, eps,...}) = refCellInfo
 		    val epsExpr = AST.E_Lit(Literal.Real(eps))
 		    val one = AST.E_Lit(Literal.Real(RealLit.one))
-		    val onePlusEps = one (*TODO: FIX EPSILON and add me*)
+		    val onePlusEps = makePrim'(BV.add_tt, [one, epsExpr], [Ty.realTy, Ty.realTy], Ty.realTy)
 		    val posVar' = posVar
 		    val meshVar' = meshVar
 		    fun greaterThanTest top bot =
@@ -684,8 +684,8 @@ structure CheckGlobals : sig
 		    val numCellVarExpr = AST.E_Var((numCellVar, span))
 		    val initStms = numCellAssign::initStms
 						    
-						    
-		    val maxTotal = makePrim'(BV.mul_ii, [maxNewtonExpr, numCellVarExpr], [Ty.T_Int, Ty.T_Int], Ty.T_Int)
+		    val maxNewtonExpr' = makePrim'(BV.add_ii, [maxNewtonExpr, one], [Ty.T_Int, Ty.T_Int], Ty.T_Int)
+		    val maxTotal = makePrim'(BV.mul_ii, [maxNewtonExpr', numCellVarExpr], [Ty.T_Int, Ty.T_Int], Ty.T_Int)
 		    val itters = makePrim'(BV.range, [zero, maxTotal], [Ty.T_Int, Ty.T_Int], Ty.T_Sequence(Ty.T_Int, NONE))
 		    val itterVar = Var.new(Atom.atom "itter", span, AST.IterVar, Ty.T_Int)
 		    val itter = (itterVar, itters)
@@ -712,8 +712,9 @@ structure CheckGlobals : sig
 		    val dTransformField = makePrim'(BV.op_Dotimes,[transformField], [transformFieldTy], dTransformFieldTy)
 		    val invDTransformField = makePrim'(invVar, [dTransformField], [dTransformFieldTy], dTransformFieldTy)	    
 		    (*setup the key tests:*)
-		    val deltaNorm = makePrim'(BV.op_norm_t, [AST.E_Var((updateVar, span))], [insideVec], Ty.realTy)
-		    val deltaNormTest = makePrim'(BV.gte_rr, [tolExpr, deltaNorm], [Ty.realTy, Ty.realTy], Ty.T_Bool)
+		    val tolExpr' = makePrim'(BV.mul_rr, [tolExpr, tolExpr], [Ty.realTy, Ty.realTy], Ty.realTy)
+		    val deltaNorm = makePrim'(BV.op_inner_tt, [AST.E_Var((updateVar, span)), AST.E_Var((updateVar, span))], [insideVec, insideVec], Ty.realTy)
+		    val deltaNormTest = makePrim'(BV.gte_rr, [tolExpr', deltaNorm], [Ty.realTy, Ty.realTy], Ty.T_Bool)
 						 
 		    val insideTest = insideFunction([meshExpr, newPosVarExpr])
 		    val makeMeshPos = AST.E_ExtractFemItemN([meshExpr, cellItterVarExp,newPosVarExpr, posExpr], [meshTy, Ty.T_Int, insideVec, insideVec], meshPosType, (FemOpt.AllBuild, meshPosData), NONE)
@@ -746,7 +747,7 @@ structure CheckGlobals : sig
 			 deltaNormTest,
 			 AST.S_Block([
 				     AST.S_IfThenElse(insideTest,
-						      AST.S_Block([succesReturn]),
+						      AST.S_Block([ succesReturn]),
 						      emptyBlock)
 				    ]),
 			 emptyBlock)
@@ -797,6 +798,8 @@ structure CheckGlobals : sig
 			 in
 			  ([], updateDeltaStm, updateCurrentPosStm)
 			 end
+		    val currentlyAt = makePrinStatement("New RefPos Estimate is: ", [newPosVarExpr], "\n")
+		    val currentDelta = makePrinStatement("New Delta Estimate is: ", [AST.E_Var((updateVar, span)), deltaNorm], "\n")
 
 		    val secondForLoop = AST.S_Foreach(itter, AST.S_Block(setupVars@[
 									 updateDeltaStm,
@@ -813,6 +816,7 @@ structure CheckGlobals : sig
 			      val intSeq = Ty.T_Sequence(Ty.T_Int, NONE)
 			      val cellExpr = AST.E_ExtractFemItem2(meshExpr,posExpr,insideVec,intSeq, opt);
 			      val printSeq = makePrinStatement("Cells:", [cellExpr],"\n")
+			      val currentlyAt = makePrinStatement("RefPos Estimate is: ", [newPosVarExpr], "\n")
 			      val newCellsVar = Var.new(Atom.atom "yayCells", span, AST.LocalVar, Ty.T_Sequence(Ty.T_Int, NONE))
 			      val newAssign = AST.S_Assign((newCellsVar, span), cellExpr)
 			      (*init cell, cellCount, n, n=0*)
@@ -825,7 +829,7 @@ structure CheckGlobals : sig
 			      val itter2 = (newtonItterVar, makePrim'(BV.range, [zero, maxNewtonExpr], [Ty.T_Int, Ty.T_Int], Ty.T_Sequence(Ty.T_Int, NONE)))
 
 			      val tempAssignment = AST.S_Assign((cellItterVar, span), AST.E_Var(itterVar,span))
-			      val tempAssignment' = AST.S_Assign((cellItterVar, span), zero)
+			      val tempAssignment' = AST.S_Assign((cellItterVar, span), dummExp)
 							       
 			      (*TODO: rewrite as above maybe - interesting to compare these two*)
 			      val loop = AST.S_Foreach(
@@ -849,7 +853,7 @@ structure CheckGlobals : sig
 		   
 
 		    (*makePrinStatement("leaving\n",[],"\n"),*)
-		    val bodyStms = loopStms@[failReturn]
+		    val bodyStms = loopStms@[makePrinStatement("Bad end 2",[], "\n"), failReturn]
 			 
 		    val bodyStms' = initStms@bodyStms
 		    val body = AST.S_Block(bodyStms')
@@ -893,8 +897,9 @@ structure CheckGlobals : sig
 		    val dTransformField = makePrim'(BV.op_Dotimes,[transformField], [transformFieldTy], dTransformFieldTy)
 		    val invDTransformField = makePrim'(invVar, [dTransformField], [dTransformFieldTy], dTransformFieldTy)
 						      
-		    val deltaNorm = makePrim'(BV.op_norm_t, [AST.E_Var((updateVar, span))], [insideVec], Ty.realTy)
-		    val deltaNormTest = makePrim'(BV.gte_rr, [tolExpr, deltaNorm], [Ty.realTy, Ty.realTy], Ty.T_Bool)
+		    val deltaNorm = makePrim'(BV.op_inner_tt, [AST.E_Var((updateVar, span)),AST.E_Var((updateVar, span))], [insideVec,insideVec], Ty.realTy)
+		    val tolExpr' = makePrim'(BV.mul_rr, [tolExpr, tolExpr], [Ty.realTy, Ty.realTy], Ty.realTy)
+		    val deltaNormTest = makePrim'(BV.gte_rr, [tolExpr', deltaNorm], [Ty.realTy, Ty.realTy], Ty.T_Bool)
 		    val insideTest = insideFunction([meshExpr, newPosVarExpr])
 		    (* val combinedTest = AST.Andalso(deltaNormTest, insideTest) (*note: we might want to combined them...... it might be better to do delta test then inside test????*) *)
 

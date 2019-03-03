@@ -8,7 +8,7 @@ input fns b = fns(a);
 input FUNC c = FUNC(b);
 field(3)[] V = c.F;
 input real isoval = 0.2;  input real thick = 0.07;
-input vec3 camEye = [-3.0,-3.0,3.0];  input vec3 camAt = [0.5,0.5,0.5];   input vec3 camUp = [0,0,1];
+input vec3 camEye = [3.0,-3.0,3.0];  input vec3 camAt = [0.5,0.5,0.5];   input vec3 camUp = [0,0,1];
 input real camFOV = 13.7;  input int iresU = 500;    input int iresV = 500;
 input real camNear = -2; input real camFar = 5; // NOTE: missing from paper: sloppy code condensing
 input real refStep = 1.0; input real rayStep =0.01;
@@ -54,7 +54,7 @@ strand raycast (int ui, int vi) {
        }
        vec3 x = camEye + rayN*rayVec;
        //print("Hey:", x, val, grad,"\n");
-       if (0.0 <= x[0] && x[0] <= 1.0 && 0.0 <= x[1] && x[1] <= 1.0 && 0.0 <= x[2] && x[2] <= 1.0)
+       if (0.0 < x[0] && x[0] < 1.0 && 0.0 < x[1] && x[1] < 1.0 && 0.0 < x[2] && x[2] < 1.0)
 	 {
 	   position{msh} p = a.findPos(x);
 	   if (p.isValid()) {
@@ -68,6 +68,11 @@ strand raycast (int ui, int vi) {
 	       rgb += transp*a*depth*(phongKa + phongKd*shade)*color(x);
 	       transp *= 1 - a;
 	     }
+	     print("yay!\n");
+	   }
+	   else {
+	     print(x, "\n");
+	     print("wait what?\n");
 	   }
 	 }
       

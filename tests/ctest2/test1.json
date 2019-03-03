@@ -76,10 +76,10 @@
         ],
         "refCell": {
             "type": "simplex",
-            "epsilon": 1e-09,
+            "epsilon": 1e-05,
             "newtonParams": {
                 "contraction": true,
-                "itters": 16,
+                "itters": 2,
                 "killAfterTol": false,
                 "newtonTol": 1e-08,
                 "start": [
@@ -233,7 +233,7 @@
         },
         "accelerate": {
             "insert": "spat.in",
-            "conservative": true,
+            "conservative": false,
             "includes": [
                 "<spatialindex/capi/sidx_api.h>",
                 "<spatialindex/capi/sidx_impl.h>"

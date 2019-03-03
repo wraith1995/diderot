@@ -10,10 +10,12 @@ import dill
 import sys
 import argparse
 import numpy as np
+np.set_printoptions(threshold=np.nan)
+
 import nrrd_utils as nu
 parser = argparse.ArgumentParser(description='Run a diderot program')
 parser.add_argument("-s", action='store_true', default=False)
-parser.add_argument("--bot", default=0.0, type=float)
+parser.add_argument("--bot", default=1.0, type=float)
 parser.add_argument("--top", default=2.0, type=float)
 parser.add_argument("--n", default=5, type=int)
 parser.add_argument("--d", default=5, type=int)
@@ -30,20 +32,34 @@ floatTy = ct.c_double
 n = args.n
 mesh = UnitCubeMesh(n, n, n)
 space = FunctionSpace(mesh, "Lagrange", args.d)
-spacep = VectorFunctionSpace(mesh, "Lagrange", args.d - 1, dim=3)
+spacep = VectorFunctionSpace(mesh, "Lagrange", args.d, dim=3)
+spacep0 = FunctionSpace(mesh, "Lagrange", args.d)
 f = Function(space)
 numberOfDofs = len(f.dat.data)
 # type to get the same
-newDofs = np.array(np.random.uniform(low=args.bot, high=args.top, size=numberOfDofs),  dtype=floatTy)
-f = Function(space, val=newDofs)
-gradF = project(grad(f), spacep)
+newDofs = np.array(np.random.uniform(low=args.bot, high=args.top, size=numberOfDofs), dtype=floatTy)
+g = Function(space, val=newDofs)
+f = project(g, space)
 
-f = interpolate(Expression("(x[0]-0.5)*(x[0]-0.5) + (x[1]-0.5)*(x[1]-0.5) + (x[2]-0.5)*(x[2]-0.5)"), space)
-gradF = interpolate(grad(f), spacep)
-gradF = interpolate(Expression(("2*x[0] - 1.0", "2*x[1] - 1.0", "2*x[2] - 1.0")), spacep)
+#f = interpolate(Expression("x[0] + x[1] + x[2] + x[0]*x[1]*x[2] + x[0]*x[1]*x[2]*x[0]*x[1]*x[2] + x[0]*x[1]*x[2]*x[0]*x[1]*x[2]"), space)
+#print(f.dat.data)
+gradF = project(grad(f), spacep)
+gradF0 = project(gradF[0], spacep0)
+gradF1 = project(gradF[1], spacep0)
+gradF2 = project(gradF[2], spacep0)
+
+
+
+
+#gradF = interpolate(grad(f), spacep)
+#gradF = interpolate(Expression(("2*x[0] - 1.0", "2*x[1] - 1.0", "2*x[2] - 1.0")), spacep)
 
 # floating point b/c sparsity or something else
 # basis funcs b/c sparsity?
+# test against other diderot
+# rerun old test with no wrapping...?
+# Tests: send grad(0) - since values are the same... it should be the same...
+# Test: 
 #generate points:
 newXc = np.random.uniform(size=args.num)
 newYc = np.random.uniform(size=args.num)
@@ -62,7 +78,8 @@ def makeResult(point):
         vec = [world, world, world]
     else:
         world = f.at(point)
-        vec = gradF.at(point)
+        print(gradF0.at(point))
+        vec = [gradF0.at(point), gradF1.at(point), gradF2.at(point)] #gradF.at(point)
     return((cell, world, vec))
 
 fResults = list(map(makeResult, dataPoints))
@@ -96,7 +113,7 @@ gradResult = nu.expectedOrder(nu.get("gradResult_0.nrrd"))
 
 ourResults = zip(cells, resultValues, gradResult)
 
-eps = 0.00000001
+eps = 0.00001
 tests = zip(fResults, ourResults)
 #print(list(fResults), list(ourResults))
 cellsT = 0
@@ -104,11 +121,14 @@ valsT = 0
 gradsT = 0 
 for (idx, test) in enumerate(tests):
     print(idx)
+    print(dataPoints[idx])
     if test[0][0] != test[1][0]:
         print("Cells are different at {0}".format(idx))
         print("Got fcell {0} and cell {1}".format(test[0][0], test[1][0]))
         cellsT+=1
-    if abs(test[0][1] - test[1][1]) > eps:
+    valErr = abs(test[0][1] - test[1][1])
+    print(valErr)
+    if (valErr > eps):
         print("Values are too far aparent at {0}".format(idx))
         print("Got fvalue {0} and value {1}".format(test[0][1], test[1][1]))
         valsT+=1
@@ -116,9 +136,9 @@ for (idx, test) in enumerate(tests):
     ograd = test[1][2]
     errs = [abs(a - b) for (a, b) in zip(fgrad, ograd)]
 
-    print(errs, fgrad, ograd)
     tests = [e > eps for e in errs]
-    if any(tests):
+    testGrad = any(tests)
+    if testGrad:
         gradsT+=1
         print("Grads are to far appart at {0}".format(idx))
         print("Got fgrad {0} and grad {1}".format(fgrad, ograd))

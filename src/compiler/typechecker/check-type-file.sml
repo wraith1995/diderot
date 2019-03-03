@@ -1091,7 +1091,10 @@ fun parseAccelerate(env, cxt, json, meshName) =
      val acc = findField "accelerate" json
      val use = Option.mapPartial (findField "use") acc
      val use' = Option.mapPartial (optionBool) (use)
-     val useTest = Option.isSome(use') andalso (Option.valOf(use'))
+				  
+     val useTest = if (Option.isSome(use))
+		   then (Option.valOf(use'))
+		   else true
 
      val insert = warnIfNo(env, cxt, "insert", "accelerate", meshName) acc
      val includes = warnIfNo(env, cxt, "includes", "accelerate", meshName) acc
