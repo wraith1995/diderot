@@ -43,7 +43,7 @@ saveRun: $(TARGET).so $(PYTHONDATA) $(PYTHONSTAT)
 	$(PYTHON) $(PYTHONDATA) -s
 	$(PYTHON) $(PYTHONSTAT)
 clean:
-	rm -f $(TARGET).cxx $(TARGET).h $(TARGET).o $(TARGET).so $(TARGET).json $(TARGET).h.cffi $(TARGET)_wrap.o $(TARGET)_wrap.c _$(TARGET).so $(TARGET).py $(TARGET).
+	rm -f $(TARGET).cxx $(TARGET).h $(TARGET).o $(TARGET).so
 
 runJson: $(PYTHONDATA)
 	$(PYTHON) $(PYTHONDATA)
