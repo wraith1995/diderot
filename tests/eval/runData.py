@@ -11,14 +11,13 @@ import sys
 import argparse
 import numpy as np
 np.set_printoptions(threshold=np.nan)
-
 import nrrd_utils as nu
 parser = argparse.ArgumentParser(description='Run a diderot program')
 parser.add_argument("-s", action='store_true', default=False)
-parser.add_argument("--bot", default=1.0, type=float)
-parser.add_argument("--top", default=2.0, type=float)
+parser.add_argument("--bot", default=-10.0, type=float)
+parser.add_argument("--top", default=10.0, type=float)
 parser.add_argument("--n", default=5, type=int)
-parser.add_argument("--d", default=5, type=int)
+parser.add_argument("--d", default=4, type=int)
 parser.add_argument("--num", default=100, type=int)
 args = parser.parse_args()
 
@@ -32,23 +31,24 @@ floatTy = ct.c_double
 n = args.n
 mesh = UnitCubeMesh(n, n, n)
 space = FunctionSpace(mesh, "Lagrange", args.d)
-spacep = VectorFunctionSpace(mesh, "Lagrange", args.d, dim=3)
+spacep = VectorFunctionSpace(mesh, "DG", args.d - 1, dim=3)
 spacep0 = FunctionSpace(mesh, "Lagrange", args.d)
 f = Function(space)
 numberOfDofs = len(f.dat.data)
 # type to get the same
 newDofs = np.array(np.random.uniform(low=args.bot, high=args.top, size=numberOfDofs), dtype=floatTy)
 g = Function(space, val=newDofs)
-f = project(g, space)
+f = interpolate(g, space)
 
 #f = interpolate(Expression("x[0] + x[1] + x[2] + x[0]*x[1]*x[2] + x[0]*x[1]*x[2]*x[0]*x[1]*x[2] + x[0]*x[1]*x[2]*x[0]*x[1]*x[2]"), space)
+
 #print(f.dat.data)
 gradF = project(grad(f), spacep)
-gradF0 = project(gradF[0], spacep0)
-gradF1 = project(gradF[1], spacep0)
-gradF2 = project(gradF[2], spacep0)
+#gradF0 = project(gradF[0], spacep0)
+#gradF1 = project(gradF[1], spacep0)
+#gradF2 = project(gradF[2], spacep0)
 
-
+# taking vector or chain rule or poly eval or here..
 
 
 #gradF = interpolate(grad(f), spacep)
@@ -78,8 +78,9 @@ def makeResult(point):
         vec = [world, world, world]
     else:
         world = f.at(point)
-        print(gradF0.at(point))
-        vec = [gradF0.at(point), gradF1.at(point), gradF2.at(point)] #gradF.at(point)
+        #print(gradF0.at(point))
+        vec = gradF.at(point)
+        #[gradF0.at(point), gradF1.at(point), gradF2.at(point)] #gradF.at(point)
     return((cell, world, vec))
 
 fResults = list(map(makeResult, dataPoints))
@@ -94,6 +95,7 @@ fResults = list(map(makeResult, dataPoints))
 jsonFile = "evalProg.json"
 dataFile = "evalProg.dill"
 #fb.spaceToJson(space, jsonFile, refCellDefault="simplex")
+#exit(0)
 # build data
 (preFemArgs, femArgs) = fb.passAll(f, intTy, floatTy, geometric=not(args.s))
 programNameArg = "evalProg"
@@ -137,6 +139,8 @@ for (idx, test) in enumerate(tests):
     errs = [abs(a - b) for (a, b) in zip(fgrad, ograd)]
 
     tests = [e > eps for e in errs]
+    errMax = max(errs)
+    print(errMax)
     testGrad = any(tests)
     if testGrad:
         gradsT+=1

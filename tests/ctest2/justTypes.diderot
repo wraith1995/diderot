@@ -68,7 +68,7 @@ strand raycast (int ui, int vi) {
 	       rgb += transp*a*depth*(phongKa + phongKd*shade)*color(x);
 	       transp *= 1 - a;
 	     }
-	     print("yay!\n");
+	     //print("yay!\n");
 	   }
 	   else {
 	     print(x, "\n");

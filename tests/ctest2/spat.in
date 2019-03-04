@@ -4,8 +4,8 @@ Index * idx = reinterpret_cast<Index*>(index);
 
 SpatialIndex::Region* r = 0;
 //float to double conversion here..
-double dataP[2] = {static_cast<double>(data[0]), static_cast<double>(data[1])};
-r = new SpatialIndex::Region(dataP, dataP, 2);
+double dataP[3] = {static_cast<double>(data[0]), static_cast<double>(data[1]), static_cast<double>(data[2])};
+r = new SpatialIndex::Region(dataP, dataP, 3);
   
 int64_t nResultCount;
 

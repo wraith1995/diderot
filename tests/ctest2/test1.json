@@ -233,7 +233,7 @@
         },
         "accelerate": {
             "insert": "spat.in",
-            "conservative": false,
+            "conservative": true,
             "includes": [
                 "<spatialindex/capi/sidx_api.h>",
                 "<spatialindex/capi/sidx_impl.h>"

@@ -1,10 +1,17 @@
-0. Basis function problems
-1. exit problems
+
+
+
+
+WHY CAN'T WE VOL RENDER THE HEIGHT FIELD-INTERSECTION?
+NOTES: GET THESE TWO PROGRAMS RUNNING (RAY TRACE ERROS AND POS ERROS)
+0. Basis function problems--still a thing to investigate -- probably do horner but what the fuck?
+0.5 Correct epsilon stuff - get that shit under control as now it is a mess?
+1. exit problems--goal for Sunday night
 2. input trick in simplify not working problems--maybe never mind... could check with ref idea...!
 3. ALl the rest of this shit - notes5 from last meeting contains ideas like overloda () and so forth
 4. All of this behind it.
+5. make thing conservatie: https://github.com/firedrakeproject/firedrake/blob/master/firedrake/locate.c
 
-NOTES: GET THESE TWO PROGRAMS RUNNING (RAY TRACE ERROS AND POS ERROS)
 PLAN:
 -generate eval tests.
 -function and gradient
@@ -19,16 +26,7 @@ Optimizations: worldPos, data analysis, basis stuff, pointers and grab indexical
 USEFUL: read in from files...
 -field local in function vs. grad(c.funcCell(c).F(0,0))
 
-Right now:
-1. Reorder python code.
-2. Write two simple ray programs as one.
----Before we go in the next 3 hours..
-3. Lang design
-4. Gordon's data
 
---Have a sort function for sequences... - tuple extra - 
-
-GOAL: By monday night, have language design code compile.
 Next schedule:
 Sunday: 2. Build affine versions of of the above 4 and otherwise some insert - instead of pointers - more sophisciated inserts - look at infustructure--Killed
 

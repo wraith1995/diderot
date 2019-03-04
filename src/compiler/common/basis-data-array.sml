@@ -99,7 +99,7 @@ fun d(Array(basisArray, meta)) =
     end
 fun D(Array(basisArray, meta)) =
     let
-     val first = ArrayNd.sub(basisArray,0)
+     (*val first = ArrayNd.sub(basisArray,0) *)
      val dim = List.length (vars(meta))
      val preConcat = List.tabulate(dim, fn _ => basisArray)
      val new = ArrayNd.concat(preConcat)
