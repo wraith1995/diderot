@@ -40,25 +40,25 @@ namespace justTypes {
     typedef double vec2 __attribute__ ((vector_size (16)));
     typedef double vec3 __attribute__ ((vector_size (32)));
     typedef double vec4 __attribute__ ((vector_size (32)));
-    struct tensor_ref_2 : public diderot::tensor_ref<double,2> {
-        tensor_ref_2 (const double *src);
-        tensor_ref_2 (struct tensor_2 const & ten);
-        tensor_ref_2 (tensor_ref_2 const & ten);
-    };
     struct tensor_ref_4 : public diderot::tensor_ref<double,4> {
         tensor_ref_4 (const double *src);
         tensor_ref_4 (struct tensor_4 const & ten);
         tensor_ref_4 (tensor_ref_4 const & ten);
+    };
+    struct tensor_ref_7 : public diderot::tensor_ref<double,7> {
+        tensor_ref_7 (const double *src);
+        tensor_ref_7 (struct tensor_7 const & ten);
+        tensor_ref_7 (tensor_ref_7 const & ten);
     };
     struct tensor_ref_3 : public diderot::tensor_ref<double,3> {
         tensor_ref_3 (const double *src);
         tensor_ref_3 (struct tensor_3 const & ten);
         tensor_ref_3 (tensor_ref_3 const & ten);
     };
-    struct tensor_ref_7 : public diderot::tensor_ref<double,7> {
-        tensor_ref_7 (const double *src);
-        tensor_ref_7 (struct tensor_7 const & ten);
-        tensor_ref_7 (tensor_ref_7 const & ten);
+    struct tensor_ref_2 : public diderot::tensor_ref<double,2> {
+        tensor_ref_2 (const double *src);
+        tensor_ref_2 (struct tensor_2 const & ten);
+        tensor_ref_2 (tensor_ref_2 const & ten);
     };
     struct tensor_ref_3_2 : public diderot::tensor_ref<double,6> {
         tensor_ref_3_2 (const double *src);
@@ -68,25 +68,6 @@ namespace justTypes {
         {
             return &this->_data[i];
         }
-    };
-    struct tensor_2 : public diderot::tensor<double,2> {
-        tensor_2 ()
-            : diderot::tensor<double,2>()
-        { }
-        tensor_2 (std::initializer_list< double > const & il)
-            : diderot::tensor<double,2>(il)
-        { }
-        tensor_2 (const double *src)
-            : diderot::tensor<double,2>(src)
-        { }
-        tensor_2 (tensor_2 const & ten)
-            : diderot::tensor<double,2>(ten._data)
-        { }
-        ~tensor_2 () { }
-        tensor_2 & operator= (tensor_2 const & src);
-        tensor_2 & operator= (tensor_ref_2 const & src);
-        tensor_2 & operator= (std::initializer_list< double > const & il);
-        tensor_2 & operator= (const double *src);
     };
     struct tensor_7 : public diderot::tensor<double,7> {
         tensor_7 ()
@@ -107,6 +88,25 @@ namespace justTypes {
         tensor_7 & operator= (std::initializer_list< double > const & il);
         tensor_7 & operator= (const double *src);
     };
+    struct tensor_3 : public diderot::tensor<double,3> {
+        tensor_3 ()
+            : diderot::tensor<double,3>()
+        { }
+        tensor_3 (std::initializer_list< double > const & il)
+            : diderot::tensor<double,3>(il)
+        { }
+        tensor_3 (const double *src)
+            : diderot::tensor<double,3>(src)
+        { }
+        tensor_3 (tensor_3 const & ten)
+            : diderot::tensor<double,3>(ten._data)
+        { }
+        ~tensor_3 () { }
+        tensor_3 & operator= (tensor_3 const & src);
+        tensor_3 & operator= (tensor_ref_3 const & src);
+        tensor_3 & operator= (std::initializer_list< double > const & il);
+        tensor_3 & operator= (const double *src);
+    };
     struct tensor_4 : public diderot::tensor<double,4> {
         tensor_4 ()
             : diderot::tensor<double,4>()
@@ -126,24 +126,24 @@ namespace justTypes {
         tensor_4 & operator= (std::initializer_list< double > const & il);
         tensor_4 & operator= (const double *src);
     };
-    struct tensor_3 : public diderot::tensor<double,3> {
-        tensor_3 ()
-            : diderot::tensor<double,3>()
+    struct tensor_2 : public diderot::tensor<double,2> {
+        tensor_2 ()
+            : diderot::tensor<double,2>()
         { }
-        tensor_3 (std::initializer_list< double > const & il)
-            : diderot::tensor<double,3>(il)
+        tensor_2 (std::initializer_list< double > const & il)
+            : diderot::tensor<double,2>(il)
         { }
-        tensor_3 (const double *src)
-            : diderot::tensor<double,3>(src)
+        tensor_2 (const double *src)
+            : diderot::tensor<double,2>(src)
         { }
-        tensor_3 (tensor_3 const & ten)
-            : diderot::tensor<double,3>(ten._data)
+        tensor_2 (tensor_2 const & ten)
+            : diderot::tensor<double,2>(ten._data)
         { }
-        ~tensor_3 () { }
-        tensor_3 & operator= (tensor_3 const & src);
-        tensor_3 & operator= (tensor_ref_3 const & src);
-        tensor_3 & operator= (std::initializer_list< double > const & il);
-        tensor_3 & operator= (const double *src);
+        ~tensor_2 () { }
+        tensor_2 & operator= (tensor_2 const & src);
+        tensor_2 & operator= (tensor_ref_2 const & src);
+        tensor_2 & operator= (std::initializer_list< double > const & il);
+        tensor_2 & operator= (const double *src);
     };
     struct tensor_3_2 : public diderot::tensor<double,6> {
         tensor_3_2 ()
@@ -181,28 +181,6 @@ namespace justTypes {
             // No something with the nrrd
         }
     };
-    struct mesh_cell_msh {
-        int32_t cell;
-        msh mesh;
-        std::ostream & operator<< (std::ostream & os)
-        {
-            return os << this->cell;
-        }
-    };
-    struct fns {
-        int32_t *indexMap;
-        msh mesh;
-        fns operator= (std::string file)
-        {
-            // No something with the nrrd
-        }
-        fns loadFem (msh mesh)
-        {
-            fns space = *this;
-            space.mesh = mesh;
-            return space;
-        }
-    };
     struct mesh_pos_msh {
         msh mesh;
         int32_t cell;
@@ -227,6 +205,28 @@ namespace justTypes {
             : cell(-1), wpc(false), valid(false), mesh(mesh)
         { }
     };
+    struct fns {
+        int32_t *indexMap;
+        msh mesh;
+        fns operator= (std::string file)
+        {
+            // No something with the nrrd
+        }
+        fns loadFem (msh mesh)
+        {
+            fns space = *this;
+            space.mesh = mesh;
+            return space;
+        }
+    };
+    struct mesh_cell_msh {
+        int32_t cell;
+        msh mesh;
+        std::ostream & operator<< (std::ostream & os)
+        {
+            return os << this->cell;
+        }
+    };
     struct FUNC {
         double *coordMap;
         fns space;
@@ -241,15 +241,6 @@ namespace justTypes {
             return func;
         }
     };
-    inline tensor_ref_2::tensor_ref_2 (const double *src)
-        : diderot::tensor_ref<double,2>(src)
-    { }
-    inline tensor_ref_2::tensor_ref_2 (struct tensor_2 const & ten)
-        : diderot::tensor_ref<double,2>(ten._data)
-    { }
-    inline tensor_ref_2::tensor_ref_2 (tensor_ref_2 const & ten)
-        : diderot::tensor_ref<double,2>(ten._data)
-    { }
     inline tensor_ref_4::tensor_ref_4 (const double *src)
         : diderot::tensor_ref<double,4>(src)
     { }
@@ -258,15 +249,6 @@ namespace justTypes {
     { }
     inline tensor_ref_4::tensor_ref_4 (tensor_ref_4 const & ten)
         : diderot::tensor_ref<double,4>(ten._data)
-    { }
-    inline tensor_ref_3::tensor_ref_3 (const double *src)
-        : diderot::tensor_ref<double,3>(src)
-    { }
-    inline tensor_ref_3::tensor_ref_3 (struct tensor_3 const & ten)
-        : diderot::tensor_ref<double,3>(ten._data)
-    { }
-    inline tensor_ref_3::tensor_ref_3 (tensor_ref_3 const & ten)
-        : diderot::tensor_ref<double,3>(ten._data)
     { }
     inline tensor_ref_7::tensor_ref_7 (const double *src)
         : diderot::tensor_ref<double,7>(src)
@@ -277,6 +259,24 @@ namespace justTypes {
     inline tensor_ref_7::tensor_ref_7 (tensor_ref_7 const & ten)
         : diderot::tensor_ref<double,7>(ten._data)
     { }
+    inline tensor_ref_3::tensor_ref_3 (const double *src)
+        : diderot::tensor_ref<double,3>(src)
+    { }
+    inline tensor_ref_3::tensor_ref_3 (struct tensor_3 const & ten)
+        : diderot::tensor_ref<double,3>(ten._data)
+    { }
+    inline tensor_ref_3::tensor_ref_3 (tensor_ref_3 const & ten)
+        : diderot::tensor_ref<double,3>(ten._data)
+    { }
+    inline tensor_ref_2::tensor_ref_2 (const double *src)
+        : diderot::tensor_ref<double,2>(src)
+    { }
+    inline tensor_ref_2::tensor_ref_2 (struct tensor_2 const & ten)
+        : diderot::tensor_ref<double,2>(ten._data)
+    { }
+    inline tensor_ref_2::tensor_ref_2 (tensor_ref_2 const & ten)
+        : diderot::tensor_ref<double,2>(ten._data)
+    { }
     inline tensor_ref_3_2::tensor_ref_3_2 (const double *src)
         : diderot::tensor_ref<double,6>(src)
     { }
@@ -286,26 +286,6 @@ namespace justTypes {
     inline tensor_ref_3_2::tensor_ref_3_2 (tensor_ref_3_2 const & ten)
         : diderot::tensor_ref<double,6>(ten._data)
     { }
-    inline tensor_2 & tensor_2::operator= (tensor_2 const & src)
-    {
-        this->copy(src._data);
-        return *this;
-    }
-    inline tensor_2 & tensor_2::operator= (tensor_ref_2 const & src)
-    {
-        this->copy(src._data);
-        return *this;
-    }
-    inline tensor_2 & tensor_2::operator= (std::initializer_list< double > const & il)
-    {
-        this->copy(il);
-        return *this;
-    }
-    inline tensor_2 & tensor_2::operator= (const double *src)
-    {
-        this->copy(src);
-        return *this;
-    }
     inline tensor_7 & tensor_7::operator= (tensor_7 const & src)
     {
         this->copy(src._data);
@@ -322,26 +302,6 @@ namespace justTypes {
         return *this;
     }
     inline tensor_7 & tensor_7::operator= (const double *src)
-    {
-        this->copy(src);
-        return *this;
-    }
-    inline tensor_4 & tensor_4::operator= (tensor_4 const & src)
-    {
-        this->copy(src._data);
-        return *this;
-    }
-    inline tensor_4 & tensor_4::operator= (tensor_ref_4 const & src)
-    {
-        this->copy(src._data);
-        return *this;
-    }
-    inline tensor_4 & tensor_4::operator= (std::initializer_list< double > const & il)
-    {
-        this->copy(il);
-        return *this;
-    }
-    inline tensor_4 & tensor_4::operator= (const double *src)
     {
         this->copy(src);
         return *this;
@@ -366,6 +326,46 @@ namespace justTypes {
         this->copy(src);
         return *this;
     }
+    inline tensor_4 & tensor_4::operator= (tensor_4 const & src)
+    {
+        this->copy(src._data);
+        return *this;
+    }
+    inline tensor_4 & tensor_4::operator= (tensor_ref_4 const & src)
+    {
+        this->copy(src._data);
+        return *this;
+    }
+    inline tensor_4 & tensor_4::operator= (std::initializer_list< double > const & il)
+    {
+        this->copy(il);
+        return *this;
+    }
+    inline tensor_4 & tensor_4::operator= (const double *src)
+    {
+        this->copy(src);
+        return *this;
+    }
+    inline tensor_2 & tensor_2::operator= (tensor_2 const & src)
+    {
+        this->copy(src._data);
+        return *this;
+    }
+    inline tensor_2 & tensor_2::operator= (tensor_ref_2 const & src)
+    {
+        this->copy(src._data);
+        return *this;
+    }
+    inline tensor_2 & tensor_2::operator= (std::initializer_list< double > const & il)
+    {
+        this->copy(il);
+        return *this;
+    }
+    inline tensor_2 & tensor_2::operator= (const double *src)
+    {
+        this->copy(src);
+        return *this;
+    }
     inline tensor_3_2 & tensor_3_2::operator= (tensor_3_2 const & src)
     {
         this->copy(src._data);
@@ -385,23 +385,6 @@ namespace justTypes {
     {
         this->copy(src);
         return *this;
-    }
-    std::ostream & operator<< (std::ostream & os, const mesh_cell_msh &  cell)
-    {
-        return os << cell.cell;
-    }
-    mesh_cell_msh makeFem (msh mesh, int32_t cellInt)
-    {
-        mesh_cell_msh cell;
-        cell.cell = cellInt;
-        cell.mesh = mesh;
-        return cell;
-    }
-    char * copy_to (const mesh_cell_msh dumb, char *cp)
-    {
-        size_t nbytes = sizeof(int32_t);
-        (std::memcpy)(cp, &(dumb.cell), nbytes);
-        return cp + nbytes;
     }
     std::ostream & operator<< (std::ostream & os, const mesh_pos_msh &  pos)
     {
@@ -469,6 +452,23 @@ namespace justTypes {
         int32_t cellInt = static_cast<int32_t>(cell);
         bool test = 0 < cellInt;
         return allBuild(mesh, cellInt, ref, world, test, test);
+    }
+    std::ostream & operator<< (std::ostream & os, const mesh_cell_msh &  cell)
+    {
+        return os << cell.cell;
+    }
+    mesh_cell_msh makeFem (msh mesh, int32_t cellInt)
+    {
+        mesh_cell_msh cell;
+        cell.cell = cellInt;
+        cell.mesh = mesh;
+        return cell;
+    }
+    char * copy_to (const mesh_cell_msh dumb, char *cp)
+    {
+        size_t nbytes = sizeof(int32_t);
+        (std::memcpy)(cp, &(dumb.cell), nbytes);
+        return cp + nbytes;
     }
 } // namespace justTypes
 namespace diderot {
@@ -985,9 +985,9 @@ diderot::dynseq< int32_t > mesh_geom_msh (void *index, msh *mesh, const double *
 
     //float to double conversion here..
 
-    double dataP[2] = {static_cast<double>(data[0]), static_cast<double>(data[1])};
+    double dataP[3] = {static_cast<double>(data[0]), static_cast<double>(data[1]), static_cast<double>(data[2])};
 
-    r = new SpatialIndex::Region(dataP, dataP, 2);
+    r = new SpatialIndex::Region(dataP, dataP, 3);
 
       
 
@@ -1369,485 +1369,284 @@ static void init_defaults (globals *glob)
 }
 mesh_pos_msh fn_findPos (world *wrld, msh p_mesh_5, tensor_ref_3 p_pos_6)
 {
-    vec3 v_8;
-    int32_t l_cellInt_153;
-    int32_t l_newtonInt_154;
-    vec3 v_155;
-    int32_t l_numCell_7 = p_mesh_5.numCells - 1;
-    v_8 = vcons3(
+    vec3 v_7;
+    v_7 = vcons3(
         0.3333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333e0,
         0.3333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333e0,
         0.3333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333e0);
-    diderot::dynseq< int32_t > t_10 = mesh_geom_msh(p_mesh_5.index, &p_mesh_5, p_pos_6._data);
-    int32_t l_cellInt_11 = 0;
-    for (auto it_0 = t_10.cbegin(); it_0 != t_10.cend(); ++it_0) {
-        auto i_cellItter_9 = *it_0;
-        vec3 v_12;
-        v_12 = v_8;
-        for (int32_t i_newtonItter_13 = 0; i_newtonItter_13 <= 2; ++i_newtonItter_13) {
-            int32_t l_mulRes_14 = i_cellItter_9 * 4;
-            int32_t t_15 = p_mesh_5.indexMap[l_mulRes_14];
-            int32_t l_mulRes_16 = 3 * t_15;
-            double l_dof_load_17 = p_mesh_5.coordMap[l_mulRes_16];
-            double l_dof_load_18 = p_mesh_5.coordMap[1 + l_mulRes_16];
-            double l_dof_load_19 = p_mesh_5.coordMap[2 + l_mulRes_16];
-            int32_t t_20 = p_mesh_5.indexMap[l_mulRes_14 + 1];
-            int32_t l_mulRes_21 = 3 * t_20;
-            double l_dof_load_22 = p_mesh_5.coordMap[l_mulRes_21];
-            double l_dof_load_23 = p_mesh_5.coordMap[1 + l_mulRes_21];
-            double l_dof_load_24 = p_mesh_5.coordMap[2 + l_mulRes_21];
-            int32_t t_25 = p_mesh_5.indexMap[l_mulRes_14 + 2];
-            int32_t l_mulRes_26 = 3 * t_25;
-            double l_dof_load_27 = p_mesh_5.coordMap[l_mulRes_26];
-            double l_dof_load_28 = p_mesh_5.coordMap[1 + l_mulRes_26];
-            double l_dof_load_29 = p_mesh_5.coordMap[2 + l_mulRes_26];
-            int32_t t_30 = p_mesh_5.indexMap[l_mulRes_14 + 3];
-            int32_t l_mulRes_31 = 3 * t_30;
-            double l_dof_load_32 = p_mesh_5.coordMap[l_mulRes_31];
-            double l_dof_load_33 = p_mesh_5.coordMap[1 + l_mulRes_31];
-            double l_dof_load_34 = p_mesh_5.coordMap[2 + l_mulRes_31];
-            double l_prod_35 = 0.1e1 * 0.1e1;
-            double l_prod_36 = 0.1e1 * l_prod_35;
-            double l_basisEval_37 = -0.1e1 * l_prod_36;
-            double l_basisEval_38 = 0.1e1 * l_prod_36;
-            double l_r_39 = l_dof_load_17 * l_basisEval_37;
-            double l_r_40 = l_dof_load_27 * 0.e0;
-            double l_r_41 = l_dof_load_32 * 0.e0;
-            double l_r_42 = l_r_39 + l_dof_load_22 * l_basisEval_38 + l_r_40 + l_r_41;
-            double l_r_43 = l_r_39 + l_dof_load_22 * 0.e0;
-            double l_r_44 = l_r_43 + l_dof_load_27 * l_basisEval_38 + l_r_41;
-            double l_r_45 = l_r_43 + l_r_40 + l_dof_load_32 * l_basisEval_38;
-            double l_r_46 = l_dof_load_18 * l_basisEval_37;
-            double l_r_47 = l_dof_load_28 * 0.e0;
-            double l_r_48 = l_dof_load_33 * 0.e0;
-            double l_r_49 = l_r_46 + l_dof_load_23 * l_basisEval_38 + l_r_47 + l_r_48;
-            double l_r_50 = l_r_46 + l_dof_load_23 * 0.e0;
-            double l_r_51 = l_r_50 + l_dof_load_28 * l_basisEval_38 + l_r_48;
-            double l_r_52 = l_r_50 + l_r_47 + l_dof_load_33 * l_basisEval_38;
-            double l_r_53 = l_dof_load_19 * l_basisEval_37;
-            double l_r_54 = l_dof_load_29 * 0.e0;
-            double l_r_55 = l_dof_load_34 * 0.e0;
-            double l_r_56 = l_r_53 + l_dof_load_24 * l_basisEval_38 + l_r_54 + l_r_55;
-            double l_r_57 = l_r_53 + l_dof_load_24 * 0.e0;
-            double l_r_58 = l_r_57 + l_dof_load_29 * l_basisEval_38 + l_r_55;
-            double l_r_59 = l_r_57 + l_r_54 + l_dof_load_34 * l_basisEval_38;
-            double l_r_60 = 0.e0 * l_r_42;
-            double l_r_61 = 0.e0 * l_r_49;
-            double l_r_62 = 0.e0 * l_r_56;
-            double l_r_63 = l_r_60 + l_r_61;
-            double l_r_64 = l_r_63 + l_r_62;
-            double l_r_65 = 0.e0 * l_r_44;
-            double l_r_66 = 0.e0 * l_r_51;
-            double l_r_67 = 0.e0 * l_r_58;
-            double l_r_68 = l_r_65 + l_r_66;
-            double l_r_69 = l_r_68 + l_r_67;
-            double l_r_70 = 0.e0 * l_r_45;
-            double l_r_71 = 0.e0 * l_r_52;
-            double l_r_72 = 0.e0 * l_r_59;
-            double l_r_73 = l_r_70 + l_r_71;
-            double l_r_74 = l_r_73 + l_r_72;
-            double l_r_75 = l_r_63 + -0.1e1 * l_r_56;
-            double l_r_76 = l_r_68 + -0.1e1 * l_r_58;
-            double l_r_77 = l_r_73 + -0.1e1 * l_r_59;
-            double l_r_78 = l_r_60 + 0.1e1 * l_r_49 + l_r_62;
-            double l_r_79 = l_r_65 + 0.1e1 * l_r_51 + l_r_67;
-            double l_r_80 = l_r_70 + 0.1e1 * l_r_52 + l_r_72;
-            double l_r_81 = l_r_63 + 0.1e1 * l_r_56;
-            double l_r_82 = l_r_68 + 0.1e1 * l_r_58;
-            double l_r_83 = l_r_73 + 0.1e1 * l_r_59;
-            double l_r_84 = -0.1e1 * l_r_42 + l_r_61 + l_r_62;
-            double l_r_85 = -0.1e1 * l_r_44 + l_r_66 + l_r_67;
-            double l_r_86 = -0.1e1 * l_r_45 + l_r_71 + l_r_72;
-            double l_r_87 = l_r_60 + -0.1e1 * l_r_49 + l_r_62;
-            double l_r_88 = l_r_65 + -0.1e1 * l_r_51 + l_r_67;
-            double l_r_89 = l_r_70 + -0.1e1 * l_r_52 + l_r_72;
-            double l_r_90 = 0.1e1 * l_r_42 + l_r_61 + l_r_62;
-            double l_r_91 = 0.1e1 * l_r_44 + l_r_66 + l_r_67;
-            double l_r_92 = 0.1e1 * l_r_45 + l_r_71 + l_r_72;
-            double l_r_93 = l_r_42 * l_r_69 + l_r_49 * l_r_82 + l_r_56 * l_r_88;
-            double l_r_94 = l_r_42 * l_r_74 + l_r_49 * l_r_83 + l_r_56 * l_r_89;
-            double l_r_95 = l_r_42 * l_r_76 + l_r_49 * l_r_69 + l_r_56 * l_r_91;
-            double l_r_96 = l_r_42 * l_r_77 + l_r_49 * l_r_74 + l_r_56 * l_r_92;
-            double l_r_97 = l_r_42 * l_r_79 + l_r_49 * l_r_85 + l_r_56 * l_r_69;
-            double l_r_98 = l_r_42 * l_r_80 + l_r_49 * l_r_86 + l_r_56 * l_r_74;
-            double l_r_99 = l_r_44 * l_r_64 + l_r_51 * l_r_81 + l_r_58 * l_r_87;
-            double l_r_100 = l_r_44 * l_r_74 + l_r_51 * l_r_83 + l_r_58 * l_r_89;
-            double l_r_101 = l_r_44 * l_r_75 + l_r_51 * l_r_64 + l_r_58 * l_r_90;
-            double l_r_102 = l_r_44 * l_r_77 + l_r_51 * l_r_74 + l_r_58 * l_r_92;
-            double l_r_103 = l_r_44 * l_r_78 + l_r_51 * l_r_84 + l_r_58 * l_r_64;
-            double l_r_104 = l_r_44 * l_r_80 + l_r_51 * l_r_86 + l_r_58 * l_r_74;
-            double l_r_105 = l_r_45 * l_r_64 + l_r_52 * l_r_81 + l_r_59 * l_r_87;
-            double l_r_106 = l_r_45 * l_r_69 + l_r_52 * l_r_82 + l_r_59 * l_r_88;
-            double l_r_107 = l_r_45 * l_r_75 + l_r_52 * l_r_64 + l_r_59 * l_r_90;
-            double l_r_108 = l_r_45 * l_r_76 + l_r_52 * l_r_69 + l_r_59 * l_r_91;
-            double l_r_109 = l_r_45 * l_r_78 + l_r_52 * l_r_84 + l_r_59 * l_r_64;
-            double l_r_110 = l_r_45 * l_r_79 + l_r_52 * l_r_85 + l_r_59 * l_r_69;
-            vec3 v_111 = vcons3(l_r_44, l_r_51, l_r_58);
-            double l_r_112 = 0.e0 * (l_r_42 * l_r_64 + l_r_49 * l_r_81 + l_r_56 * l_r_87);
-            double l_r_113 = 0.e0 * l_r_94;
-            double l_r_114 = 0.e0 * l_r_99;
-            double l_r_115 = 0.e0 * (l_r_44 * l_r_69 + l_r_51 * l_r_82 + l_r_58 * l_r_88);
-            double l_r_116 = 0.e0 * l_r_105;
-            double l_r_117 = 0.e0 * (l_r_45 * l_r_74 + l_r_52 * l_r_83 + l_r_59 * l_r_89);
-            double l_r_118 = l_r_112 + 0.e0 * l_r_93;
-            double l_r_119 = 0.e0 * (l_r_42 * l_r_75 + l_r_49 * l_r_64 + l_r_56 * l_r_90);
-            double l_r_120 = 0.e0 * l_r_96;
-            double l_r_121 = 0.e0 * l_r_101;
-            double l_r_122 = 0.e0 * (l_r_44 * l_r_76 + l_r_51 * l_r_69 + l_r_58 * l_r_91);
-            double l_r_123 = 0.e0 * l_r_107;
-            double l_r_124 = 0.e0 * (l_r_45 * l_r_77 + l_r_52 * l_r_74 + l_r_59 * l_r_92);
-            double l_r_125 = l_r_119 + 0.e0 * l_r_95;
-            double l_r_126 = 0.e0 * (l_r_42 * l_r_78 + l_r_49 * l_r_84 + l_r_56 * l_r_64);
-            double l_r_127 = 0.e0 * l_r_98;
-            double l_r_128 = 0.e0 * l_r_103;
-            double l_r_129 = 0.e0 * (l_r_44 * l_r_79 + l_r_51 * l_r_85 + l_r_58 * l_r_69);
-            double l_r_130 = 0.e0 * l_r_109;
-            double l_r_131 = 0.e0 * (l_r_45 * l_r_80 + l_r_52 * l_r_86 + l_r_59 * l_r_74);
-            double l_r_132 = l_r_126 + 0.e0 * l_r_97;
+    diderot::dynseq< int32_t > t_9 = mesh_geom_msh(p_mesh_5.index, &p_mesh_5, p_pos_6._data);
+    for (auto it_0 = t_9.cbegin(); it_0 != t_9.cend(); ++it_0) {
+        auto i_cellItter_8 = *it_0;
+        vec3 v_10;
+        v_10 = v_7;
+        for (int32_t i_newtonItter_11 = 0; i_newtonItter_11 <= 2; ++i_newtonItter_11) {
+            int32_t l_mulRes_12 = i_cellItter_8 * 4;
+            int32_t t_13 = p_mesh_5.indexMap[l_mulRes_12];
+            int32_t l_mulRes_14 = 3 * t_13;
+            double l_dof_load_15 = p_mesh_5.coordMap[l_mulRes_14];
+            double l_dof_load_16 = p_mesh_5.coordMap[1 + l_mulRes_14];
+            double l_dof_load_17 = p_mesh_5.coordMap[2 + l_mulRes_14];
+            int32_t t_18 = p_mesh_5.indexMap[l_mulRes_12 + 1];
+            int32_t l_mulRes_19 = 3 * t_18;
+            double l_dof_load_20 = p_mesh_5.coordMap[l_mulRes_19];
+            double l_dof_load_21 = p_mesh_5.coordMap[1 + l_mulRes_19];
+            double l_dof_load_22 = p_mesh_5.coordMap[2 + l_mulRes_19];
+            int32_t t_23 = p_mesh_5.indexMap[l_mulRes_12 + 2];
+            int32_t l_mulRes_24 = 3 * t_23;
+            double l_dof_load_25 = p_mesh_5.coordMap[l_mulRes_24];
+            double l_dof_load_26 = p_mesh_5.coordMap[1 + l_mulRes_24];
+            double l_dof_load_27 = p_mesh_5.coordMap[2 + l_mulRes_24];
+            int32_t t_28 = p_mesh_5.indexMap[l_mulRes_12 + 3];
+            int32_t l_mulRes_29 = 3 * t_28;
+            double l_dof_load_30 = p_mesh_5.coordMap[l_mulRes_29];
+            double l_dof_load_31 = p_mesh_5.coordMap[1 + l_mulRes_29];
+            double l_dof_load_32 = p_mesh_5.coordMap[2 + l_mulRes_29];
+            double l_prod_33 = 0.1e1 * 0.1e1;
+            double l_prod_34 = 0.1e1 * l_prod_33;
+            double l_basisEval_35 = -0.1e1 * l_prod_34;
+            double l_basisEval_36 = 0.1e1 * l_prod_34;
+            double l_r_37 = l_dof_load_15 * l_basisEval_35;
+            double l_r_38 = l_dof_load_25 * 0.e0;
+            double l_r_39 = l_dof_load_30 * 0.e0;
+            double l_r_40 = l_r_37 + l_dof_load_20 * l_basisEval_36 + l_r_38 + l_r_39;
+            double l_r_41 = l_r_37 + l_dof_load_20 * 0.e0;
+            double l_r_42 = l_r_41 + l_dof_load_25 * l_basisEval_36 + l_r_39;
+            double l_r_43 = l_r_41 + l_r_38 + l_dof_load_30 * l_basisEval_36;
+            double l_r_44 = l_dof_load_16 * l_basisEval_35;
+            double l_r_45 = l_dof_load_26 * 0.e0;
+            double l_r_46 = l_dof_load_31 * 0.e0;
+            double l_r_47 = l_r_44 + l_dof_load_21 * l_basisEval_36 + l_r_45 + l_r_46;
+            double l_r_48 = l_r_44 + l_dof_load_21 * 0.e0;
+            double l_r_49 = l_r_48 + l_dof_load_26 * l_basisEval_36 + l_r_46;
+            double l_r_50 = l_r_48 + l_r_45 + l_dof_load_31 * l_basisEval_36;
+            double l_r_51 = l_dof_load_17 * l_basisEval_35;
+            double l_r_52 = l_dof_load_27 * 0.e0;
+            double l_r_53 = l_dof_load_32 * 0.e0;
+            double l_r_54 = l_r_51 + l_dof_load_22 * l_basisEval_36 + l_r_52 + l_r_53;
+            double l_r_55 = l_r_51 + l_dof_load_22 * 0.e0;
+            double l_r_56 = l_r_55 + l_dof_load_27 * l_basisEval_36 + l_r_53;
+            double l_r_57 = l_r_55 + l_r_52 + l_dof_load_32 * l_basisEval_36;
+            double l_r_58 = 0.e0 * l_r_40;
+            double l_r_59 = 0.e0 * l_r_47;
+            double l_r_60 = 0.e0 * l_r_54;
+            double l_r_61 = l_r_58 + l_r_59;
+            double l_r_62 = l_r_61 + l_r_60;
+            double l_r_63 = 0.e0 * l_r_42;
+            double l_r_64 = 0.e0 * l_r_49;
+            double l_r_65 = 0.e0 * l_r_56;
+            double l_r_66 = l_r_63 + l_r_64;
+            double l_r_67 = l_r_66 + l_r_65;
+            double l_r_68 = 0.e0 * l_r_43;
+            double l_r_69 = 0.e0 * l_r_50;
+            double l_r_70 = 0.e0 * l_r_57;
+            double l_r_71 = l_r_68 + l_r_69;
+            double l_r_72 = l_r_71 + l_r_70;
+            double l_r_73 = l_r_61 + -0.1e1 * l_r_54;
+            double l_r_74 = l_r_66 + -0.1e1 * l_r_56;
+            double l_r_75 = l_r_71 + -0.1e1 * l_r_57;
+            double l_r_76 = l_r_58 + 0.1e1 * l_r_47 + l_r_60;
+            double l_r_77 = l_r_63 + 0.1e1 * l_r_49 + l_r_65;
+            double l_r_78 = l_r_68 + 0.1e1 * l_r_50 + l_r_70;
+            double l_r_79 = l_r_61 + 0.1e1 * l_r_54;
+            double l_r_80 = l_r_66 + 0.1e1 * l_r_56;
+            double l_r_81 = l_r_71 + 0.1e1 * l_r_57;
+            double l_r_82 = -0.1e1 * l_r_40 + l_r_59 + l_r_60;
+            double l_r_83 = -0.1e1 * l_r_42 + l_r_64 + l_r_65;
+            double l_r_84 = -0.1e1 * l_r_43 + l_r_69 + l_r_70;
+            double l_r_85 = l_r_58 + -0.1e1 * l_r_47 + l_r_60;
+            double l_r_86 = l_r_63 + -0.1e1 * l_r_49 + l_r_65;
+            double l_r_87 = l_r_68 + -0.1e1 * l_r_50 + l_r_70;
+            double l_r_88 = 0.1e1 * l_r_40 + l_r_59 + l_r_60;
+            double l_r_89 = 0.1e1 * l_r_42 + l_r_64 + l_r_65;
+            double l_r_90 = 0.1e1 * l_r_43 + l_r_69 + l_r_70;
+            double l_r_91 = l_r_40 * l_r_67 + l_r_47 * l_r_80 + l_r_54 * l_r_86;
+            double l_r_92 = l_r_40 * l_r_72 + l_r_47 * l_r_81 + l_r_54 * l_r_87;
+            double l_r_93 = l_r_40 * l_r_74 + l_r_47 * l_r_67 + l_r_54 * l_r_89;
+            double l_r_94 = l_r_40 * l_r_75 + l_r_47 * l_r_72 + l_r_54 * l_r_90;
+            double l_r_95 = l_r_40 * l_r_77 + l_r_47 * l_r_83 + l_r_54 * l_r_67;
+            double l_r_96 = l_r_40 * l_r_78 + l_r_47 * l_r_84 + l_r_54 * l_r_72;
+            double l_r_97 = l_r_42 * l_r_62 + l_r_49 * l_r_79 + l_r_56 * l_r_85;
+            double l_r_98 = l_r_42 * l_r_72 + l_r_49 * l_r_81 + l_r_56 * l_r_87;
+            double l_r_99 = l_r_42 * l_r_73 + l_r_49 * l_r_62 + l_r_56 * l_r_88;
+            double l_r_100 = l_r_42 * l_r_75 + l_r_49 * l_r_72 + l_r_56 * l_r_90;
+            double l_r_101 = l_r_42 * l_r_76 + l_r_49 * l_r_82 + l_r_56 * l_r_62;
+            double l_r_102 = l_r_42 * l_r_78 + l_r_49 * l_r_84 + l_r_56 * l_r_72;
+            double l_r_103 = l_r_43 * l_r_62 + l_r_50 * l_r_79 + l_r_57 * l_r_85;
+            double l_r_104 = l_r_43 * l_r_67 + l_r_50 * l_r_80 + l_r_57 * l_r_86;
+            double l_r_105 = l_r_43 * l_r_73 + l_r_50 * l_r_62 + l_r_57 * l_r_88;
+            double l_r_106 = l_r_43 * l_r_74 + l_r_50 * l_r_67 + l_r_57 * l_r_89;
+            double l_r_107 = l_r_43 * l_r_76 + l_r_50 * l_r_82 + l_r_57 * l_r_62;
+            double l_r_108 = l_r_43 * l_r_77 + l_r_50 * l_r_83 + l_r_57 * l_r_67;
+            vec3 v_109 = vcons3(l_r_42, l_r_49, l_r_56);
+            double l_r_110 = 0.e0 * (l_r_40 * l_r_62 + l_r_47 * l_r_79 + l_r_54 * l_r_85);
+            double l_r_111 = 0.e0 * l_r_92;
+            double l_r_112 = 0.e0 * l_r_97;
+            double l_r_113 = 0.e0 * (l_r_42 * l_r_67 + l_r_49 * l_r_80 + l_r_56 * l_r_86);
+            double l_r_114 = 0.e0 * l_r_103;
+            double l_r_115 = 0.e0 * (l_r_43 * l_r_72 + l_r_50 * l_r_81 + l_r_57 * l_r_87);
+            double l_r_116 = l_r_110 + 0.e0 * l_r_91;
+            double l_r_117 = 0.e0 * (l_r_40 * l_r_73 + l_r_47 * l_r_62 + l_r_54 * l_r_88);
+            double l_r_118 = 0.e0 * l_r_94;
+            double l_r_119 = 0.e0 * l_r_99;
+            double l_r_120 = 0.e0 * (l_r_42 * l_r_74 + l_r_49 * l_r_67 + l_r_56 * l_r_89);
+            double l_r_121 = 0.e0 * l_r_105;
+            double l_r_122 = 0.e0 * (l_r_43 * l_r_75 + l_r_50 * l_r_72 + l_r_57 * l_r_90);
+            double l_r_123 = l_r_117 + 0.e0 * l_r_93;
+            double l_r_124 = 0.e0 * (l_r_40 * l_r_76 + l_r_47 * l_r_82 + l_r_54 * l_r_62);
+            double l_r_125 = 0.e0 * l_r_96;
+            double l_r_126 = 0.e0 * l_r_101;
+            double l_r_127 = 0.e0 * (l_r_42 * l_r_77 + l_r_49 * l_r_83 + l_r_56 * l_r_67);
+            double l_r_128 = 0.e0 * l_r_107;
+            double l_r_129 = 0.e0 * (l_r_43 * l_r_78 + l_r_50 * l_r_84 + l_r_57 * l_r_72);
+            double l_r_130 = l_r_124 + 0.e0 * l_r_95;
+            double l_r_131 = 0.e0 * l_r_98;
+            double l_r_132 = 0.e0 * l_r_104;
             double l_r_133 = 0.e0 * l_r_100;
             double l_r_134 = 0.e0 * l_r_106;
             double l_r_135 = 0.e0 * l_r_102;
             double l_r_136 = 0.e0 * l_r_108;
-            double l_r_137 = 0.e0 * l_r_104;
-            double l_r_138 = 0.e0 * l_r_110;
-            double l_op1_e3_l_21_139 = 0.2e1 * vdot3(vcons3(l_r_42, l_r_49, l_r_56),
-                vcons3(vdot3(v_111, vcons3(l_r_74, l_r_83, l_r_89)), vdot3(v_111, vcons3(l_r_77, l_r_74, l_r_92)),
-                    vdot3(v_111, vcons3(l_r_80, l_r_86, l_r_74))));
-            double l_prod_140 = v_12[0] * l_prod_35;
-            double l_prod_141 = 0.1e1 * (v_12[1] * 0.1e1);
-            double l_prod_142 = 0.1e1 * (0.1e1 * v_12[2]);
-            double l_sum_143 = l_basisEval_38 + (-0.1e1 * l_prod_142 + (-0.1e1 * l_prod_141 + -0.1e1 * l_prod_140));
+            double l_op1_e3_l_21_137 = 0.2e1 * vdot3(vcons3(l_r_40, l_r_47, l_r_54),
+                vcons3(vdot3(v_109, vcons3(l_r_72, l_r_81, l_r_87)), vdot3(v_109, vcons3(l_r_75, l_r_72, l_r_90)),
+                    vdot3(v_109, vcons3(l_r_78, l_r_84, l_r_72))));
+            double l_prod_138 = v_10[0] * l_prod_33;
+            double l_prod_139 = 0.1e1 * (v_10[1] * 0.1e1);
+            double l_prod_140 = 0.1e1 * (0.1e1 * v_10[2]);
+            double l_sum_141 = l_basisEval_36 + (-0.1e1 * l_prod_140 + (-0.1e1 * l_prod_139 + -0.1e1 * l_prod_138));
+            double l_basisEval_142 = 0.1e1 * l_prod_138;
+            double l_basisEval_143 = 0.1e1 * l_prod_139;
             double l_basisEval_144 = 0.1e1 * l_prod_140;
-            double l_basisEval_145 = 0.1e1 * l_prod_141;
-            double l_basisEval_146 = 0.1e1 * l_prod_142;
-            vec3 v_147 = vcons3(
-                l_dof_load_17 * l_sum_143 + l_dof_load_22 * l_basisEval_144 + l_dof_load_27 * l_basisEval_145 + l_dof_load_32 * l_basisEval_146,
-                l_dof_load_18 * l_sum_143 + l_dof_load_23 * l_basisEval_144 + l_dof_load_28 * l_basisEval_145 + l_dof_load_33 * l_basisEval_146,
-                l_dof_load_19 * l_sum_143 + l_dof_load_24 * l_basisEval_144 + l_dof_load_29 * l_basisEval_145 + l_dof_load_34 * l_basisEval_146) - vload3(
+            vec3 v_145 = vcons3(
+                l_dof_load_15 * l_sum_141 + l_dof_load_20 * l_basisEval_142 + l_dof_load_25 * l_basisEval_143 + l_dof_load_30 * l_basisEval_144,
+                l_dof_load_16 * l_sum_141 + l_dof_load_21 * l_basisEval_142 + l_dof_load_26 * l_basisEval_143 + l_dof_load_31 * l_basisEval_144,
+                l_dof_load_17 * l_sum_141 + l_dof_load_22 * l_basisEval_142 + l_dof_load_27 * l_basisEval_143 + l_dof_load_32 * l_basisEval_144) - vload3(
                 p_pos_6.addr(0));
-            vec3 v_148 = vcons3(
+            vec3 v_146 = vcons3(
                 vdot3(
                     vcons3(
-                        (l_r_118 + l_r_113 + l_r_114 + l_r_115 + 0.1e1 * l_r_100 + l_r_116 + -0.1e1 * l_r_106 + l_r_117) / l_op1_e3_l_21_139,
-                        (l_r_125 + l_r_120 + l_r_121 + l_r_122 + 0.1e1 * l_r_102 + l_r_123 + -0.1e1 * l_r_108 + l_r_124) / l_op1_e3_l_21_139,
-                        (l_r_132 + l_r_127 + l_r_128 + l_r_129 + 0.1e1 * l_r_104 + l_r_130 + -0.1e1 * l_r_110 + l_r_131) / l_op1_e3_l_21_139),
-                    v_147),
+                        (l_r_116 + l_r_111 + l_r_112 + l_r_113 + 0.1e1 * l_r_98 + l_r_114 + -0.1e1 * l_r_104 + l_r_115) / l_op1_e3_l_21_137,
+                        (l_r_123 + l_r_118 + l_r_119 + l_r_120 + 0.1e1 * l_r_100 + l_r_121 + -0.1e1 * l_r_106 + l_r_122) / l_op1_e3_l_21_137,
+                        (l_r_130 + l_r_125 + l_r_126 + l_r_127 + 0.1e1 * l_r_102 + l_r_128 + -0.1e1 * l_r_108 + l_r_129) / l_op1_e3_l_21_137),
+                    v_145),
                 vdot3(
                     vcons3(
-                        (l_r_118 + -0.1e1 * l_r_94 + l_r_114 + l_r_115 + l_r_133 + 0.1e1 * l_r_105 + l_r_134 + l_r_117) / l_op1_e3_l_21_139,
-                        (l_r_125 + -0.1e1 * l_r_96 + l_r_121 + l_r_122 + l_r_135 + 0.1e1 * l_r_107 + l_r_136 + l_r_124) / l_op1_e3_l_21_139,
-                        (l_r_132 + -0.1e1 * l_r_98 + l_r_128 + l_r_129 + l_r_137 + 0.1e1 * l_r_109 + l_r_138 + l_r_131) / l_op1_e3_l_21_139),
-                    v_147),
+                        (l_r_116 + -0.1e1 * l_r_92 + l_r_112 + l_r_113 + l_r_131 + 0.1e1 * l_r_103 + l_r_132 + l_r_115) / l_op1_e3_l_21_137,
+                        (l_r_123 + -0.1e1 * l_r_94 + l_r_119 + l_r_120 + l_r_133 + 0.1e1 * l_r_105 + l_r_134 + l_r_122) / l_op1_e3_l_21_137,
+                        (l_r_130 + -0.1e1 * l_r_96 + l_r_126 + l_r_127 + l_r_135 + 0.1e1 * l_r_107 + l_r_136 + l_r_129) / l_op1_e3_l_21_137),
+                    v_145),
                 vdot3(
                     vcons3(
-                        (l_r_112 + 0.1e1 * l_r_93 + l_r_113 + -0.1e1 * l_r_99 + l_r_115 + l_r_133 + l_r_116 + l_r_134 + l_r_117) / l_op1_e3_l_21_139,
-                        (l_r_119 + 0.1e1 * l_r_95 + l_r_120 + -0.1e1 * l_r_101 + l_r_122 + l_r_135 + l_r_123 + l_r_136 + l_r_124) / l_op1_e3_l_21_139,
-                        (l_r_126 + 0.1e1 * l_r_97 + l_r_127 + -0.1e1 * l_r_103 + l_r_129 + l_r_137 + l_r_130 + l_r_138 + l_r_131) / l_op1_e3_l_21_139),
-                    v_147));
-            vec3 v_149 = v_12 - v_148;
-            vec3 v_150 = v_149;
-            if (0.1e-7 * 0.1e-7 >= vdot3(v_148, v_148)) {
-                vec3 v_151 = vcons3(0.1e-4, 0.1e-4, 0.1e-4) + v_150;
-                if (0.1e1 + 0.1e-4 > vdot3(vcons3(0.1e1, 0.1e1, 0.1e1), v_150) && (v_151[0] > -0.e0 && (v_151[1] > -0.e0 && v_151[2] > -0.e0))) {
-                    tensor_3 _arg_152;
-                    vpack3(_arg_152, v_150);
-                    return allBuild(p_mesh_5, i_cellItter_9, _arg_152, p_pos_6, true, true);
+                        (l_r_110 + 0.1e1 * l_r_91 + l_r_111 + -0.1e1 * l_r_97 + l_r_113 + l_r_131 + l_r_114 + l_r_132 + l_r_115) / l_op1_e3_l_21_137,
+                        (l_r_117 + 0.1e1 * l_r_93 + l_r_118 + -0.1e1 * l_r_99 + l_r_120 + l_r_133 + l_r_121 + l_r_134 + l_r_122) / l_op1_e3_l_21_137,
+                        (l_r_124 + 0.1e1 * l_r_95 + l_r_125 + -0.1e1 * l_r_101 + l_r_127 + l_r_135 + l_r_128 + l_r_136 + l_r_129) / l_op1_e3_l_21_137),
+                    v_145));
+            vec3 v_147 = v_10 - v_146;
+            vec3 v_148 = v_147;
+            if (0.1e-7 * 0.1e-7 >= vdot3(v_146, v_146)) {
+                vec3 v_149 = vcons3(0.1e-4, 0.1e-4, 0.1e-4) + v_148;
+                if (0.1e1 + 0.1e-4 > vdot3(vcons3(0.1e1, 0.1e1, 0.1e1), v_148) && (v_149[0] > -0.e0 && (v_149[1] > -0.e0 && v_149[2] > -0.e0))) {
+                    tensor_3 _arg_150;
+                    vpack3(_arg_150, v_148);
+                    return allBuild(p_mesh_5, i_cellItter_8, _arg_150, p_pos_6, true, true);
                 }
             }
-            v_12 = v_150;
+            v_10 = v_148;
         }
-        v_8 = v_12;
-    }
-    l_cellInt_153 = l_cellInt_11;
-    l_newtonInt_154 = 0;
-    v_155 = v_8;
-    int32_t hi_1 = 3 * l_numCell_7;
-    for (int32_t i_itter_156 = 0; i_itter_156 <= hi_1; ++i_itter_156) {
-        int32_t l_cellInt_298;
-        int32_t l_newtonInt_299;
-        int32_t l_mulRes_157 = l_cellInt_153 * 4;
-        int32_t t_158 = p_mesh_5.indexMap[l_mulRes_157];
-        int32_t l_mulRes_159 = 3 * t_158;
-        double l_dof_load_160 = p_mesh_5.coordMap[l_mulRes_159];
-        double l_dof_load_161 = p_mesh_5.coordMap[1 + l_mulRes_159];
-        double l_dof_load_162 = p_mesh_5.coordMap[2 + l_mulRes_159];
-        int32_t t_163 = p_mesh_5.indexMap[l_mulRes_157 + 1];
-        int32_t l_mulRes_164 = 3 * t_163;
-        double l_dof_load_165 = p_mesh_5.coordMap[l_mulRes_164];
-        double l_dof_load_166 = p_mesh_5.coordMap[1 + l_mulRes_164];
-        double l_dof_load_167 = p_mesh_5.coordMap[2 + l_mulRes_164];
-        int32_t t_168 = p_mesh_5.indexMap[l_mulRes_157 + 2];
-        int32_t l_mulRes_169 = 3 * t_168;
-        double l_dof_load_170 = p_mesh_5.coordMap[l_mulRes_169];
-        double l_dof_load_171 = p_mesh_5.coordMap[1 + l_mulRes_169];
-        double l_dof_load_172 = p_mesh_5.coordMap[2 + l_mulRes_169];
-        int32_t t_173 = p_mesh_5.indexMap[l_mulRes_157 + 3];
-        int32_t l_mulRes_174 = 3 * t_173;
-        double l_dof_load_175 = p_mesh_5.coordMap[l_mulRes_174];
-        double l_dof_load_176 = p_mesh_5.coordMap[1 + l_mulRes_174];
-        double l_dof_load_177 = p_mesh_5.coordMap[2 + l_mulRes_174];
-        double l_prod_178 = 0.1e1 * 0.1e1;
-        double l_prod_179 = 0.1e1 * l_prod_178;
-        double l_basisEval_180 = -0.1e1 * l_prod_179;
-        double l_basisEval_181 = 0.1e1 * l_prod_179;
-        double l_r_182 = l_dof_load_160 * l_basisEval_180;
-        double l_r_183 = l_dof_load_170 * 0.e0;
-        double l_r_184 = l_dof_load_175 * 0.e0;
-        double l_r_185 = l_r_182 + l_dof_load_165 * l_basisEval_181 + l_r_183 + l_r_184;
-        double l_r_186 = l_r_182 + l_dof_load_165 * 0.e0;
-        double l_r_187 = l_r_186 + l_dof_load_170 * l_basisEval_181 + l_r_184;
-        double l_r_188 = l_r_186 + l_r_183 + l_dof_load_175 * l_basisEval_181;
-        double l_r_189 = l_dof_load_161 * l_basisEval_180;
-        double l_r_190 = l_dof_load_171 * 0.e0;
-        double l_r_191 = l_dof_load_176 * 0.e0;
-        double l_r_192 = l_r_189 + l_dof_load_166 * l_basisEval_181 + l_r_190 + l_r_191;
-        double l_r_193 = l_r_189 + l_dof_load_166 * 0.e0;
-        double l_r_194 = l_r_193 + l_dof_load_171 * l_basisEval_181 + l_r_191;
-        double l_r_195 = l_r_193 + l_r_190 + l_dof_load_176 * l_basisEval_181;
-        double l_r_196 = l_dof_load_162 * l_basisEval_180;
-        double l_r_197 = l_dof_load_172 * 0.e0;
-        double l_r_198 = l_dof_load_177 * 0.e0;
-        double l_r_199 = l_r_196 + l_dof_load_167 * l_basisEval_181 + l_r_197 + l_r_198;
-        double l_r_200 = l_r_196 + l_dof_load_167 * 0.e0;
-        double l_r_201 = l_r_200 + l_dof_load_172 * l_basisEval_181 + l_r_198;
-        double l_r_202 = l_r_200 + l_r_197 + l_dof_load_177 * l_basisEval_181;
-        double l_r_203 = 0.e0 * l_r_185;
-        double l_r_204 = 0.e0 * l_r_192;
-        double l_r_205 = 0.e0 * l_r_199;
-        double l_r_206 = l_r_203 + l_r_204;
-        double l_r_207 = l_r_206 + l_r_205;
-        double l_r_208 = 0.e0 * l_r_187;
-        double l_r_209 = 0.e0 * l_r_194;
-        double l_r_210 = 0.e0 * l_r_201;
-        double l_r_211 = l_r_208 + l_r_209;
-        double l_r_212 = l_r_211 + l_r_210;
-        double l_r_213 = 0.e0 * l_r_188;
-        double l_r_214 = 0.e0 * l_r_195;
-        double l_r_215 = 0.e0 * l_r_202;
-        double l_r_216 = l_r_213 + l_r_214;
-        double l_r_217 = l_r_216 + l_r_215;
-        double l_r_218 = l_r_206 + -0.1e1 * l_r_199;
-        double l_r_219 = l_r_211 + -0.1e1 * l_r_201;
-        double l_r_220 = l_r_216 + -0.1e1 * l_r_202;
-        double l_r_221 = l_r_203 + 0.1e1 * l_r_192 + l_r_205;
-        double l_r_222 = l_r_208 + 0.1e1 * l_r_194 + l_r_210;
-        double l_r_223 = l_r_213 + 0.1e1 * l_r_195 + l_r_215;
-        double l_r_224 = l_r_206 + 0.1e1 * l_r_199;
-        double l_r_225 = l_r_211 + 0.1e1 * l_r_201;
-        double l_r_226 = l_r_216 + 0.1e1 * l_r_202;
-        double l_r_227 = -0.1e1 * l_r_185 + l_r_204 + l_r_205;
-        double l_r_228 = -0.1e1 * l_r_187 + l_r_209 + l_r_210;
-        double l_r_229 = -0.1e1 * l_r_188 + l_r_214 + l_r_215;
-        double l_r_230 = l_r_203 + -0.1e1 * l_r_192 + l_r_205;
-        double l_r_231 = l_r_208 + -0.1e1 * l_r_194 + l_r_210;
-        double l_r_232 = l_r_213 + -0.1e1 * l_r_195 + l_r_215;
-        double l_r_233 = 0.1e1 * l_r_185 + l_r_204 + l_r_205;
-        double l_r_234 = 0.1e1 * l_r_187 + l_r_209 + l_r_210;
-        double l_r_235 = 0.1e1 * l_r_188 + l_r_214 + l_r_215;
-        double l_r_236 = l_r_185 * l_r_212 + l_r_192 * l_r_225 + l_r_199 * l_r_231;
-        double l_r_237 = l_r_185 * l_r_217 + l_r_192 * l_r_226 + l_r_199 * l_r_232;
-        double l_r_238 = l_r_185 * l_r_219 + l_r_192 * l_r_212 + l_r_199 * l_r_234;
-        double l_r_239 = l_r_185 * l_r_220 + l_r_192 * l_r_217 + l_r_199 * l_r_235;
-        double l_r_240 = l_r_185 * l_r_222 + l_r_192 * l_r_228 + l_r_199 * l_r_212;
-        double l_r_241 = l_r_185 * l_r_223 + l_r_192 * l_r_229 + l_r_199 * l_r_217;
-        double l_r_242 = l_r_187 * l_r_207 + l_r_194 * l_r_224 + l_r_201 * l_r_230;
-        double l_r_243 = l_r_187 * l_r_217 + l_r_194 * l_r_226 + l_r_201 * l_r_232;
-        double l_r_244 = l_r_187 * l_r_218 + l_r_194 * l_r_207 + l_r_201 * l_r_233;
-        double l_r_245 = l_r_187 * l_r_220 + l_r_194 * l_r_217 + l_r_201 * l_r_235;
-        double l_r_246 = l_r_187 * l_r_221 + l_r_194 * l_r_227 + l_r_201 * l_r_207;
-        double l_r_247 = l_r_187 * l_r_223 + l_r_194 * l_r_229 + l_r_201 * l_r_217;
-        double l_r_248 = l_r_188 * l_r_207 + l_r_195 * l_r_224 + l_r_202 * l_r_230;
-        double l_r_249 = l_r_188 * l_r_212 + l_r_195 * l_r_225 + l_r_202 * l_r_231;
-        double l_r_250 = l_r_188 * l_r_218 + l_r_195 * l_r_207 + l_r_202 * l_r_233;
-        double l_r_251 = l_r_188 * l_r_219 + l_r_195 * l_r_212 + l_r_202 * l_r_234;
-        double l_r_252 = l_r_188 * l_r_221 + l_r_195 * l_r_227 + l_r_202 * l_r_207;
-        double l_r_253 = l_r_188 * l_r_222 + l_r_195 * l_r_228 + l_r_202 * l_r_212;
-        vec3 v_254 = vcons3(l_r_187, l_r_194, l_r_201);
-        double l_r_255 = 0.e0 * (l_r_185 * l_r_207 + l_r_192 * l_r_224 + l_r_199 * l_r_230);
-        double l_r_256 = 0.e0 * l_r_237;
-        double l_r_257 = 0.e0 * l_r_242;
-        double l_r_258 = 0.e0 * (l_r_187 * l_r_212 + l_r_194 * l_r_225 + l_r_201 * l_r_231);
-        double l_r_259 = 0.e0 * l_r_248;
-        double l_r_260 = 0.e0 * (l_r_188 * l_r_217 + l_r_195 * l_r_226 + l_r_202 * l_r_232);
-        double l_r_261 = l_r_255 + 0.e0 * l_r_236;
-        double l_r_262 = 0.e0 * (l_r_185 * l_r_218 + l_r_192 * l_r_207 + l_r_199 * l_r_233);
-        double l_r_263 = 0.e0 * l_r_239;
-        double l_r_264 = 0.e0 * l_r_244;
-        double l_r_265 = 0.e0 * (l_r_187 * l_r_219 + l_r_194 * l_r_212 + l_r_201 * l_r_234);
-        double l_r_266 = 0.e0 * l_r_250;
-        double l_r_267 = 0.e0 * (l_r_188 * l_r_220 + l_r_195 * l_r_217 + l_r_202 * l_r_235);
-        double l_r_268 = l_r_262 + 0.e0 * l_r_238;
-        double l_r_269 = 0.e0 * (l_r_185 * l_r_221 + l_r_192 * l_r_227 + l_r_199 * l_r_207);
-        double l_r_270 = 0.e0 * l_r_241;
-        double l_r_271 = 0.e0 * l_r_246;
-        double l_r_272 = 0.e0 * (l_r_187 * l_r_222 + l_r_194 * l_r_228 + l_r_201 * l_r_212);
-        double l_r_273 = 0.e0 * l_r_252;
-        double l_r_274 = 0.e0 * (l_r_188 * l_r_223 + l_r_195 * l_r_229 + l_r_202 * l_r_217);
-        double l_r_275 = l_r_269 + 0.e0 * l_r_240;
-        double l_r_276 = 0.e0 * l_r_243;
-        double l_r_277 = 0.e0 * l_r_249;
-        double l_r_278 = 0.e0 * l_r_245;
-        double l_r_279 = 0.e0 * l_r_251;
-        double l_r_280 = 0.e0 * l_r_247;
-        double l_r_281 = 0.e0 * l_r_253;
-        double l_op1_e3_l_21_282 = 0.2e1 * vdot3(vcons3(l_r_185, l_r_192, l_r_199),
-            vcons3(vdot3(v_254, vcons3(l_r_217, l_r_226, l_r_232)), vdot3(v_254, vcons3(l_r_220, l_r_217, l_r_235)),
-                vdot3(v_254, vcons3(l_r_223, l_r_229, l_r_217))));
-        double l_prod_283 = v_155[0] * l_prod_178;
-        double l_prod_284 = 0.1e1 * (v_155[1] * 0.1e1);
-        double l_prod_285 = 0.1e1 * (0.1e1 * v_155[2]);
-        double l_sum_286 = l_basisEval_181 + (-0.1e1 * l_prod_285 + (-0.1e1 * l_prod_284 + -0.1e1 * l_prod_283));
-        double l_basisEval_287 = 0.1e1 * l_prod_283;
-        double l_basisEval_288 = 0.1e1 * l_prod_284;
-        double l_basisEval_289 = 0.1e1 * l_prod_285;
-        vec3 v_290 = vcons3(
-            l_dof_load_160 * l_sum_286 + l_dof_load_165 * l_basisEval_287 + l_dof_load_170 * l_basisEval_288 + l_dof_load_175 * l_basisEval_289,
-            l_dof_load_161 * l_sum_286 + l_dof_load_166 * l_basisEval_287 + l_dof_load_171 * l_basisEval_288 + l_dof_load_176 * l_basisEval_289,
-            l_dof_load_162 * l_sum_286 + l_dof_load_167 * l_basisEval_287 + l_dof_load_172 * l_basisEval_288 + l_dof_load_177 * l_basisEval_289) - vload3(
-            p_pos_6.addr(0));
-        vec3 v_291 = vcons3(
-            vdot3(
-                vcons3(
-                    (l_r_261 + l_r_256 + l_r_257 + l_r_258 + 0.1e1 * l_r_243 + l_r_259 + -0.1e1 * l_r_249 + l_r_260) / l_op1_e3_l_21_282,
-                    (l_r_268 + l_r_263 + l_r_264 + l_r_265 + 0.1e1 * l_r_245 + l_r_266 + -0.1e1 * l_r_251 + l_r_267) / l_op1_e3_l_21_282,
-                    (l_r_275 + l_r_270 + l_r_271 + l_r_272 + 0.1e1 * l_r_247 + l_r_273 + -0.1e1 * l_r_253 + l_r_274) / l_op1_e3_l_21_282),
-                v_290),
-            vdot3(
-                vcons3(
-                    (l_r_261 + -0.1e1 * l_r_237 + l_r_257 + l_r_258 + l_r_276 + 0.1e1 * l_r_248 + l_r_277 + l_r_260) / l_op1_e3_l_21_282,
-                    (l_r_268 + -0.1e1 * l_r_239 + l_r_264 + l_r_265 + l_r_278 + 0.1e1 * l_r_250 + l_r_279 + l_r_267) / l_op1_e3_l_21_282,
-                    (l_r_275 + -0.1e1 * l_r_241 + l_r_271 + l_r_272 + l_r_280 + 0.1e1 * l_r_252 + l_r_281 + l_r_274) / l_op1_e3_l_21_282),
-                v_290),
-            vdot3(
-                vcons3(
-                    (l_r_255 + 0.1e1 * l_r_236 + l_r_256 + -0.1e1 * l_r_242 + l_r_258 + l_r_276 + l_r_259 + l_r_277 + l_r_260) / l_op1_e3_l_21_282,
-                    (l_r_262 + 0.1e1 * l_r_238 + l_r_263 + -0.1e1 * l_r_244 + l_r_265 + l_r_278 + l_r_266 + l_r_279 + l_r_267) / l_op1_e3_l_21_282,
-                    (l_r_269 + 0.1e1 * l_r_240 + l_r_270 + -0.1e1 * l_r_246 + l_r_272 + l_r_280 + l_r_273 + l_r_281 + l_r_274) / l_op1_e3_l_21_282),
-                v_290));
-        vec3 v_292 = v_155 - v_291;
-        vec3 v_293 = v_292;
-        if (0.1e-7 * 0.1e-7 >= vdot3(v_291, v_291)) {
-            vec3 v_294 = vcons3(0.1e-4, 0.1e-4, 0.1e-4) + v_293;
-            if (0.1e1 + 0.1e-4 > vdot3(vcons3(0.1e1, 0.1e1, 0.1e1), v_293) && (v_294[0] > -0.e0 && (v_294[1] > -0.e0 && v_294[2] > -0.e0))) {
-                tensor_3 _arg_295;
-                vpack3(_arg_295, v_293);
-                return allBuild(p_mesh_5, l_cellInt_153, _arg_295, p_pos_6, true, true);
-            }
-        }
-        int32_t l_newtonInt_296 = l_newtonInt_154 + 1;
-        if (l_newtonInt_296 >= 2) {
-            int32_t l_cellInt_297;
-            if (l_cellInt_153 >= l_numCell_7) {
-                return invalidBuild(p_mesh_5);
-            }
-            else {
-                l_cellInt_297 = l_cellInt_153 + 1;
-            }
-            l_cellInt_298 = l_cellInt_297;
-            l_newtonInt_299 = 0;
-        }
-        else {
-            l_cellInt_298 = l_cellInt_153;
-            l_newtonInt_299 = l_newtonInt_296;
-        }
-        l_cellInt_153 = l_cellInt_298;
-        l_newtonInt_154 = l_newtonInt_299;
-        v_155 = v_293;
+        v_7 = v_10;
     }
     wrld->print() << "Bad end 2" << "\n" << std::flush;
     return invalidBuild(p_mesh_5);
 }
 static bool init_globals (world *wrld)
 {
-    diderot::dynseq< mesh_cell_msh > l__t_300;
-    diderot::image1d< double, double, 3 > l_I_304;
+    diderot::dynseq< mesh_cell_msh > l__t_151;
+    diderot::image1d< double, double, 3 > l_I_155;
     globals *glob = wrld->_globals;
-    l__t_300 = {};
-    int32_t hi_2 = glob->gv_a.numCells - 1;
-    for (int32_t i__t_301 = 0; i__t_301 <= hi_2; ++i__t_301) {
-        l__t_300 = diderot::dynseq< mesh_cell_msh >::append(l__t_300, makeFem(glob->gv_a, i__t_301));
+    l__t_151 = {};
+    int32_t hi_1 = glob->gv_a.numCells - 1;
+    for (int32_t i__t_152 = 0; i__t_152 <= hi_1; ++i__t_152) {
+        l__t_151 = diderot::dynseq< mesh_cell_msh >::append(l__t_151, makeFem(glob->gv_a, i__t_152));
     }
-    FUNC l_c_302 = glob->gv_0c043D_intermedateGlobal.loadFem(glob->gv_0b043B_intermedateGlobal.loadFem(glob->gv_a));
-    fns l__t_303 = l_c_302.space;
+    FUNC l_c_153 = glob->gv_0c043D_intermedateGlobal.loadFem(glob->gv_0b043B_intermedateGlobal.loadFem(glob->gv_a));
+    fns l__t_154 = l_c_153.space;
     {
         diderot::nrrd_proxy proxy = diderot::nrrd_proxy(311, 3);
-        if (l_I_304.load(wrld, "cmap.nrrd", &proxy)) {
+        if (l_I_155.load(wrld, "cmap.nrrd", &proxy)) {
             return true;
         }
     }
-    vec3 v_305 = vload3(tensor_ref_3(glob->gv_camAt).addr(0)) - vload3(tensor_ref_3(glob->gv_camEye).addr(0));
-    double l_camDist_306 = std::sqrt(vdot3(v_305, v_305));
-    glob->gv_camDist = l_camDist_306;
-    double l_op1_e3_l_9_307 = 0.1e1 / l_camDist_306;
-    vec3 v_308 = vscale3(l_op1_e3_l_9_307, v_305);
-    vpack3(glob->gv_camN, v_308);
-    double l_r_310 = tensor_ref_3(glob->gv_camUp)[0];
-    double l_r_311 = 0.e0 * l_r_310;
-    double l_r_312 = tensor_ref_3(glob->gv_camUp)[1];
-    double l_r_313 = 0.e0 * l_r_312;
-    double l_r_314 = tensor_ref_3(glob->gv_camUp)[2];
-    double l_r_315 = 0.e0 * l_r_314;
-    double l_r_316 = l_r_311 + l_r_313;
-    double l_r_317 = l_r_316 + l_r_315;
-    vec3 v_318 = vcons3(vdot3(v_305, vcons3(l_r_317, l_r_316 + 0.1e1 * l_r_314, l_r_311 + -0.1e1 * l_r_312 + l_r_315)),
-        vdot3(v_305, vcons3(l_r_316 + -0.1e1 * l_r_314, l_r_317, 0.1e1 * l_r_310 + l_r_313 + l_r_315)),
-        vdot3(v_305, vcons3(l_r_311 + 0.1e1 * l_r_312 + l_r_315, -0.1e1 * l_r_310 + l_r_313 + l_r_315, l_r_317)));
-    double l_op1_e3_l_38_319 = 0.1e1 / std::sqrt(l_op1_e3_l_9_307 * l_op1_e3_l_9_307 * vdot3(v_318, v_318));
-    vec3 v_320 = vscale3(l_op1_e3_l_38_319, vscale3(l_op1_e3_l_9_307, v_318));
-    vpack3(glob->gv_camU, v_320);
-    double l_r_322 = v_305[0];
-    double l_r_323 = 0.e0 * l_r_322;
-    double l_r_324 = v_305[1];
-    double l_r_325 = 0.e0 * l_r_324;
-    double l_r_326 = v_305[2];
-    double l_r_327 = 0.e0 * l_r_326;
-    double l_r_328 = l_r_323 + l_r_325;
-    double l_r_329 = l_r_328 + l_r_327;
-    vec3 v_330 = vscale3(l_op1_e3_l_9_307,
-        vcons3(vdot3(v_318, vcons3(l_r_329, l_r_328 + 0.1e1 * l_r_326, l_r_323 + -0.1e1 * l_r_324 + l_r_327)),
-            vdot3(v_318, vcons3(l_r_328 + -0.1e1 * l_r_326, l_r_329, 0.1e1 * l_r_322 + l_r_325 + l_r_327)),
-            vdot3(v_318, vcons3(l_r_323 + 0.1e1 * l_r_324 + l_r_327, -0.1e1 * l_r_322 + l_r_325 + l_r_327, l_r_329))));
-    double l_r_331 = l_op1_e3_l_38_319 * l_op1_e3_l_9_307;
-    double l_r_332 = l_r_331 * v_330[0];
-    double l_r_333 = l_r_331 * v_330[1];
-    double l_r_334 = l_r_331 * v_330[2];
-    glob->gv_camV[0] = l_r_332;
-    glob->gv_camV[1] = l_r_333;
-    glob->gv_camV[2] = l_r_334;
-    double l_op1_e3_l_10_336 = std::tan(glob->gv_camFOV * 0.314159265358979323846264338327950288e1 / 0.36e3);
-    glob->gv_camVmax = l_op1_e3_l_10_336 * l_camDist_306;
-    glob->gv_camUmax = static_cast<double>(glob->gv_iresU) * l_op1_e3_l_10_336 * l_camDist_306 / static_cast<double>(glob->gv_iresV);
-    double l_r_337 = tensor_ref_3(glob->gv_lightVsp)[0];
-    double l_r_338 = tensor_ref_3(glob->gv_lightVsp)[1];
-    double l_r_339 = tensor_ref_3(glob->gv_lightVsp)[2];
+    vec3 v_156 = vload3(tensor_ref_3(glob->gv_camAt).addr(0)) - vload3(tensor_ref_3(glob->gv_camEye).addr(0));
+    double l_camDist_157 = std::sqrt(vdot3(v_156, v_156));
+    glob->gv_camDist = l_camDist_157;
+    double l_op1_e3_l_9_158 = 0.1e1 / l_camDist_157;
+    vec3 v_159 = vscale3(l_op1_e3_l_9_158, v_156);
+    vpack3(glob->gv_camN, v_159);
+    double l_r_161 = tensor_ref_3(glob->gv_camUp)[0];
+    double l_r_162 = 0.e0 * l_r_161;
+    double l_r_163 = tensor_ref_3(glob->gv_camUp)[1];
+    double l_r_164 = 0.e0 * l_r_163;
+    double l_r_165 = tensor_ref_3(glob->gv_camUp)[2];
+    double l_r_166 = 0.e0 * l_r_165;
+    double l_r_167 = l_r_162 + l_r_164;
+    double l_r_168 = l_r_167 + l_r_166;
+    vec3 v_169 = vcons3(vdot3(v_156, vcons3(l_r_168, l_r_167 + 0.1e1 * l_r_165, l_r_162 + -0.1e1 * l_r_163 + l_r_166)),
+        vdot3(v_156, vcons3(l_r_167 + -0.1e1 * l_r_165, l_r_168, 0.1e1 * l_r_161 + l_r_164 + l_r_166)),
+        vdot3(v_156, vcons3(l_r_162 + 0.1e1 * l_r_163 + l_r_166, -0.1e1 * l_r_161 + l_r_164 + l_r_166, l_r_168)));
+    double l_op1_e3_l_38_170 = 0.1e1 / std::sqrt(l_op1_e3_l_9_158 * l_op1_e3_l_9_158 * vdot3(v_169, v_169));
+    vec3 v_171 = vscale3(l_op1_e3_l_38_170, vscale3(l_op1_e3_l_9_158, v_169));
+    vpack3(glob->gv_camU, v_171);
+    double l_r_173 = v_156[0];
+    double l_r_174 = 0.e0 * l_r_173;
+    double l_r_175 = v_156[1];
+    double l_r_176 = 0.e0 * l_r_175;
+    double l_r_177 = v_156[2];
+    double l_r_178 = 0.e0 * l_r_177;
+    double l_r_179 = l_r_174 + l_r_176;
+    double l_r_180 = l_r_179 + l_r_178;
+    vec3 v_181 = vscale3(l_op1_e3_l_9_158,
+        vcons3(vdot3(v_169, vcons3(l_r_180, l_r_179 + 0.1e1 * l_r_177, l_r_174 + -0.1e1 * l_r_175 + l_r_178)),
+            vdot3(v_169, vcons3(l_r_179 + -0.1e1 * l_r_177, l_r_180, 0.1e1 * l_r_173 + l_r_176 + l_r_178)),
+            vdot3(v_169, vcons3(l_r_174 + 0.1e1 * l_r_175 + l_r_178, -0.1e1 * l_r_173 + l_r_176 + l_r_178, l_r_180))));
+    double l_r_182 = l_op1_e3_l_38_170 * l_op1_e3_l_9_158;
+    double l_r_183 = l_r_182 * v_181[0];
+    double l_r_184 = l_r_182 * v_181[1];
+    double l_r_185 = l_r_182 * v_181[2];
+    glob->gv_camV[0] = l_r_183;
+    glob->gv_camV[1] = l_r_184;
+    glob->gv_camV[2] = l_r_185;
+    double l_op1_e3_l_10_187 = std::tan(glob->gv_camFOV * 0.314159265358979323846264338327950288e1 / 0.36e3);
+    glob->gv_camVmax = l_op1_e3_l_10_187 * l_camDist_157;
+    glob->gv_camUmax = static_cast<double>(glob->gv_iresU) * l_op1_e3_l_10_187 * l_camDist_157 / static_cast<double>(glob->gv_iresV);
+    double l_r_188 = tensor_ref_3(glob->gv_lightVsp)[0];
+    double l_r_189 = tensor_ref_3(glob->gv_lightVsp)[1];
+    double l_r_190 = tensor_ref_3(glob->gv_lightVsp)[2];
     vpack3(glob->gv_light,
         vscale3(
             0.1e1 / std::sqrt(
                 vdot3(vload3(tensor_ref_3(glob->gv_lightVsp).addr(0)), vload3(tensor_ref_3(glob->gv_lightVsp).addr(0)))),
-            vcons3(v_320[0] * l_r_337 + l_r_332 * l_r_338 + v_308[0] * l_r_339,
-                v_320[1] * l_r_337 + l_r_333 * l_r_338 + v_308[1] * l_r_339,
-                v_320[2] * l_r_337 + l_r_334 * l_r_338 + v_308[2] * l_r_339)));
-    glob->gv__t = l__t_303.mesh;
-    glob->gv__tX = l__t_303;
-    glob->gv_c = l_c_302;
-    glob->gv_I = l_I_304;
+            vcons3(v_171[0] * l_r_188 + l_r_183 * l_r_189 + v_159[0] * l_r_190,
+                v_171[1] * l_r_188 + l_r_184 * l_r_189 + v_159[1] * l_r_190,
+                v_171[2] * l_r_188 + l_r_185 * l_r_189 + v_159[2] * l_r_190)));
+    glob->gv__t = l__t_154.mesh;
+    glob->gv__tX = l__t_154;
+    glob->gv_c = l_c_153;
+    glob->gv_I = l_I_155;
     glob->gv_I.register_global();
     return false;
 }
-static void raycast_init (globals *glob, raycast_strand *self, int32_t p_ui_341, int32_t p_vi_342)
+static void raycast_init (globals *glob, raycast_strand *self, int32_t p_ui_192, int32_t p_vi_193)
 {
-    double l_op1_e3_l_9_343 = -glob->gv_camUmax;
-    double l_rayU_344 = l_op1_e3_l_9_343 + (static_cast<double>(p_ui_341) - (-0.5e0)) / (static_cast<double>(glob->gv_iresU) - 0.5e0 - (-0.5e0)) * (glob->gv_camUmax - l_op1_e3_l_9_343);
-    double l_rayV_345 = glob->gv_camVmax + (static_cast<double>(p_vi_342) - (-0.5e0)) / (static_cast<double>(glob->gv_iresV) - 0.5e0 - (-0.5e0)) * (-glob->gv_camVmax - glob->gv_camVmax);
-    vec3 v_346 = vscale3(l_rayU_344, vload3(tensor_ref_3(glob->gv_camU).addr(0))) + vscale3(l_rayV_345,
+    double l_op1_e3_l_9_194 = -glob->gv_camUmax;
+    double l_rayU_195 = l_op1_e3_l_9_194 + (static_cast<double>(p_ui_192) - (-0.5e0)) / (static_cast<double>(glob->gv_iresU) - 0.5e0 - (-0.5e0)) * (glob->gv_camUmax - l_op1_e3_l_9_194);
+    double l_rayV_196 = glob->gv_camVmax + (static_cast<double>(p_vi_193) - (-0.5e0)) / (static_cast<double>(glob->gv_iresV) - 0.5e0 - (-0.5e0)) * (-glob->gv_camVmax - glob->gv_camVmax);
+    vec3 v_197 = vscale3(l_rayU_195, vload3(tensor_ref_3(glob->gv_camU).addr(0))) + vscale3(l_rayV_196,
         vload3(tensor_ref_3(glob->gv_camV).addr(0)));
-    double l_r_347 = 0.1e1 / glob->gv_camDist;
-    self->sv_rayU = l_rayU_344;
-    self->sv_rayV = l_rayV_345;
+    double l_r_198 = 0.1e1 / glob->gv_camDist;
+    self->sv_rayU = l_rayU_195;
+    self->sv_rayV = l_rayV_196;
     self->sv_rayN = glob->gv_camNear;
     vpack3(self->sv_rayVec,
-        vload3(tensor_ref_3(glob->gv_camN).addr(0)) + vcons3(l_r_347 * v_346[0], l_r_347 * v_346[1],
-            l_r_347 * v_346[2]));
+        vload3(tensor_ref_3(glob->gv_camN).addr(0)) + vcons3(l_r_198 * v_197[0], l_r_198 * v_197[1],
+            l_r_198 * v_197[2]));
     self->sv_transp = 0.1e1;
     self->sv_rgb[0] = 0.e0;
     self->sv_rgb[1] = 0.e0;
@@ -1857,420 +1656,419 @@ static void raycast_init (globals *glob, raycast_strand *self, int32_t p_ui_341,
     self->sv_rgba[2] = 0.e0;
     self->sv_rgba[3] = 0.e0;
     self->sv_gray = 0.e0;
-    self->sv_ui = p_ui_341;
-    self->sv_vi = p_vi_342;
+    self->sv_ui = p_ui_192;
+    self->sv_vi = p_vi_193;
 }
 static diderot::strand_status raycast_update (world *wrld, globals *glob, raycast_strand *self)
 {
-    vec3 v_582;
-    double l_transp_583;
-    double l_transp_585;
+    vec3 v_433;
+    double l_transp_434;
+    double l_transp_436;
     if (glob->gv_debug) {
-        bool l__t_351;
+        bool l__t_202;
         if (self->sv_ui != glob->gv_su) {
-            l__t_351 = true;
+            l__t_202 = true;
         }
         else {
-            l__t_351 = self->sv_vi != glob->gv_sv;
+            l__t_202 = self->sv_vi != glob->gv_sv;
         }
-        if (l__t_351) {
+        if (l__t_202) {
             return diderot::kStabilize;
         }
     }
-    vec3 v_352 = vload3(tensor_ref_3(glob->gv_camEye).addr(0)) + vscale3(self->sv_rayN,
+    vec3 v_203 = vload3(tensor_ref_3(glob->gv_camEye).addr(0)) + vscale3(self->sv_rayN,
         vload3(tensor_ref_3(self->sv_rayVec).addr(0)));
-    double l__t_353 = v_352[0];
-    vec3 v_354 = v_352;
-    if (0.e0 < l__t_353) {
-        vec3 v_580;
-        double l_transp_581;
-        if (l__t_353 < 0.1e1) {
-            vec3 v_578;
-            double l_transp_579;
-            double l__t_355 = v_354[1];
-            if (0.e0 < l__t_355) {
-                vec3 v_576;
-                double l_transp_577;
-                if (l__t_355 < 0.1e1) {
-                    vec3 v_574;
-                    double l_transp_575;
-                    double l__t_356 = v_354[2];
-                    if (0.e0 < l__t_356) {
-                        vec3 v_572;
-                        double l_transp_573;
-                        if (l__t_356 < 0.1e1) {
-                            vec3 v_569;
-                            double l_transp_570;
-                            tensor_3 _arg_357;
-                            vpack3(_arg_357, v_354);
-                            mesh_pos_msh l_p_358 = fn_findPos(wrld, glob->gv_a, _arg_357);
-                            if (l_p_358.valid) {
-                                vec3 v_567;
-                                double l_transp_568;
-                                tensor_3 _arg_359;
-                                vpack3(_arg_359, v_354);
-                                mesh_pos_msh l_callFindPos_360 = fn_findPos(wrld, glob->gv__t, _arg_359);
-                                int32_t l_intPos_361 = l_callFindPos_360.cell;
-                                tensor_ref_3 l_refPos_362 = l_callFindPos_360.refPos;
-                                int32_t l_mulRes_363 = l_intPos_361 * 10;
-                                int32_t t_364 = glob->gv__tX.indexMap[l_mulRes_363];
-                                int32_t t_365 = glob->gv__tX.indexMap[l_mulRes_363 + 1];
-                                int32_t t_366 = glob->gv__tX.indexMap[l_mulRes_363 + 2];
-                                int32_t t_367 = glob->gv__tX.indexMap[l_mulRes_363 + 3];
-                                int32_t t_368 = glob->gv__tX.indexMap[l_mulRes_363 + 4];
-                                int32_t t_369 = glob->gv__tX.indexMap[l_mulRes_363 + 5];
-                                int32_t t_370 = glob->gv__tX.indexMap[l_mulRes_363 + 6];
-                                int32_t t_371 = glob->gv__tX.indexMap[l_mulRes_363 + 7];
-                                int32_t t_372 = glob->gv__tX.indexMap[l_mulRes_363 + 8];
-                                int32_t t_373 = glob->gv__tX.indexMap[l_mulRes_363 + 9];
-                                double t_374 = glob->gv_c.coordMap[1 * t_373];
-                                double t_375 = glob->gv_c.coordMap[1 * t_372];
-                                double t_376 = glob->gv_c.coordMap[1 * t_371];
-                                double t_377 = glob->gv_c.coordMap[1 * t_370];
-                                double t_378 = glob->gv_c.coordMap[1 * t_369];
-                                double t_379 = glob->gv_c.coordMap[1 * t_368];
-                                double t_380 = glob->gv_c.coordMap[1 * t_367];
-                                double t_381 = glob->gv_c.coordMap[1 * t_366];
-                                double t_382 = glob->gv_c.coordMap[1 * t_365];
-                                double t_383 = glob->gv_c.coordMap[1 * t_364];
-                                vec4 v_384 = vcons4(t_383, t_382, t_381, t_380);
-                                vec4 v_385 = vcons4(t_379, t_378, t_377, t_376);
-                                vec2 v_386 = vcons2(t_375, t_374);
-                                double l_varAcc_387 = l_refPos_362[0];
-                                double l_varAcc_388 = l_refPos_362[1];
-                                double l_varAcc_389 = l_refPos_362[2];
-                                double l_prod_390 = 0.1e1 * 0.1e1;
-                                double l_prod_391 = l_varAcc_387 * l_varAcc_387 * l_prod_390;
-                                double l_prod_392 = l_varAcc_388 * 0.1e1;
-                                double l_prod_393 = l_varAcc_387 * l_prod_392;
-                                double l_prod_394 = 0.1e1 * l_varAcc_389;
-                                double l_prod_395 = l_varAcc_387 * l_prod_394;
-                                double l_prod_396 = l_varAcc_387 * l_prod_390;
-                                double l_prod_397 = 0.1e1 * (l_varAcc_388 * l_varAcc_388 * 0.1e1);
-                                double l_prod_398 = 0.1e1 * (l_varAcc_388 * l_varAcc_389);
-                                double l_prod_399 = 0.1e1 * l_prod_392;
-                                double l_prod_400 = 0.1e1 * (0.1e1 * (l_varAcc_389 * l_varAcc_389));
-                                double l_prod_401 = 0.1e1 * l_prod_394;
-                                double l_prod_402 = 0.1e1 * l_prod_390;
-                                double l_mult_403 = 0.1e1 * l_prod_402;
-                                double l_mult_404 = 0.2e1 * l_prod_400;
-                                double l_mult_405 = 0.4e1 * l_prod_398;
-                                double l_mult_406 = 0.2e1 * l_prod_397;
-                                double l_mult_407 = 0.4e1 * l_prod_395;
-                                double l_mult_408 = 0.4e1 * l_prod_393;
-                                double l_mult_409 = 0.2e1 * l_prod_391;
-                                double l_mult_410 = 0.4e1 * l_prod_401;
-                                double l_mult_411 = -0.4e1 * l_prod_398;
-                                double l_mult_412 = -0.4e1 * l_prod_395;
-                                double l_mult_413 = 0.4e1 * l_prod_399;
-                                double l_mult_414 = -0.4e1 * l_prod_393;
-                                double l_mult_415 = 0.4e1 * l_prod_396;
-                                double l_compositionl_416 = vdot4(v_385,
-                                    vcons4(l_mult_405, l_mult_407, l_mult_408,
-                                        l_mult_410 + (-0.4e1 * l_prod_400 + (l_mult_411 + l_mult_412)))) + (vdot2(
-                                    v_386,
-                                    vcons2(l_mult_413 + (l_mult_411 + (-0.4e1 * l_prod_397 + l_mult_414)),
-                                        l_mult_415 + (l_mult_412 + (l_mult_414 + -0.4e1 * l_prod_391)))) + vdot4(v_384,
+    double l__t_204 = v_203[0];
+    vec3 v_205 = v_203;
+    if (0.e0 < l__t_204) {
+        vec3 v_431;
+        double l_transp_432;
+        if (l__t_204 < 0.1e1) {
+            vec3 v_429;
+            double l_transp_430;
+            double l__t_206 = v_205[1];
+            if (0.e0 < l__t_206) {
+                vec3 v_427;
+                double l_transp_428;
+                if (l__t_206 < 0.1e1) {
+                    vec3 v_425;
+                    double l_transp_426;
+                    double l__t_207 = v_205[2];
+                    if (0.e0 < l__t_207) {
+                        vec3 v_423;
+                        double l_transp_424;
+                        if (l__t_207 < 0.1e1) {
+                            vec3 v_420;
+                            double l_transp_421;
+                            tensor_3 _arg_208;
+                            vpack3(_arg_208, v_205);
+                            mesh_pos_msh l_p_209 = fn_findPos(wrld, glob->gv_a, _arg_208);
+                            if (l_p_209.valid) {
+                                vec3 v_418;
+                                double l_transp_419;
+                                tensor_3 _arg_210;
+                                vpack3(_arg_210, v_205);
+                                mesh_pos_msh l_callFindPos_211 = fn_findPos(wrld, glob->gv__t, _arg_210);
+                                int32_t l_intPos_212 = l_callFindPos_211.cell;
+                                tensor_ref_3 l_refPos_213 = l_callFindPos_211.refPos;
+                                int32_t l_mulRes_214 = l_intPos_212 * 10;
+                                int32_t t_215 = glob->gv__tX.indexMap[l_mulRes_214];
+                                int32_t t_216 = glob->gv__tX.indexMap[l_mulRes_214 + 1];
+                                int32_t t_217 = glob->gv__tX.indexMap[l_mulRes_214 + 2];
+                                int32_t t_218 = glob->gv__tX.indexMap[l_mulRes_214 + 3];
+                                int32_t t_219 = glob->gv__tX.indexMap[l_mulRes_214 + 4];
+                                int32_t t_220 = glob->gv__tX.indexMap[l_mulRes_214 + 5];
+                                int32_t t_221 = glob->gv__tX.indexMap[l_mulRes_214 + 6];
+                                int32_t t_222 = glob->gv__tX.indexMap[l_mulRes_214 + 7];
+                                int32_t t_223 = glob->gv__tX.indexMap[l_mulRes_214 + 8];
+                                int32_t t_224 = glob->gv__tX.indexMap[l_mulRes_214 + 9];
+                                double t_225 = glob->gv_c.coordMap[1 * t_224];
+                                double t_226 = glob->gv_c.coordMap[1 * t_223];
+                                double t_227 = glob->gv_c.coordMap[1 * t_222];
+                                double t_228 = glob->gv_c.coordMap[1 * t_221];
+                                double t_229 = glob->gv_c.coordMap[1 * t_220];
+                                double t_230 = glob->gv_c.coordMap[1 * t_219];
+                                double t_231 = glob->gv_c.coordMap[1 * t_218];
+                                double t_232 = glob->gv_c.coordMap[1 * t_217];
+                                double t_233 = glob->gv_c.coordMap[1 * t_216];
+                                double t_234 = glob->gv_c.coordMap[1 * t_215];
+                                vec4 v_235 = vcons4(t_234, t_233, t_232, t_231);
+                                vec4 v_236 = vcons4(t_230, t_229, t_228, t_227);
+                                vec2 v_237 = vcons2(t_226, t_225);
+                                double l_varAcc_238 = l_refPos_213[0];
+                                double l_varAcc_239 = l_refPos_213[1];
+                                double l_varAcc_240 = l_refPos_213[2];
+                                double l_prod_241 = 0.1e1 * 0.1e1;
+                                double l_prod_242 = l_varAcc_238 * l_varAcc_238 * l_prod_241;
+                                double l_prod_243 = l_varAcc_239 * 0.1e1;
+                                double l_prod_244 = l_varAcc_238 * l_prod_243;
+                                double l_prod_245 = 0.1e1 * l_varAcc_240;
+                                double l_prod_246 = l_varAcc_238 * l_prod_245;
+                                double l_prod_247 = l_varAcc_238 * l_prod_241;
+                                double l_prod_248 = 0.1e1 * (l_varAcc_239 * l_varAcc_239 * 0.1e1);
+                                double l_prod_249 = 0.1e1 * (l_varAcc_239 * l_varAcc_240);
+                                double l_prod_250 = 0.1e1 * l_prod_243;
+                                double l_prod_251 = 0.1e1 * (0.1e1 * (l_varAcc_240 * l_varAcc_240));
+                                double l_prod_252 = 0.1e1 * l_prod_245;
+                                double l_prod_253 = 0.1e1 * l_prod_241;
+                                double l_mult_254 = 0.1e1 * l_prod_253;
+                                double l_mult_255 = 0.2e1 * l_prod_251;
+                                double l_mult_256 = 0.4e1 * l_prod_249;
+                                double l_mult_257 = 0.2e1 * l_prod_248;
+                                double l_mult_258 = 0.4e1 * l_prod_246;
+                                double l_mult_259 = 0.4e1 * l_prod_244;
+                                double l_mult_260 = 0.2e1 * l_prod_242;
+                                double l_mult_261 = 0.4e1 * l_prod_252;
+                                double l_mult_262 = -0.4e1 * l_prod_249;
+                                double l_mult_263 = -0.4e1 * l_prod_246;
+                                double l_mult_264 = 0.4e1 * l_prod_250;
+                                double l_mult_265 = -0.4e1 * l_prod_244;
+                                double l_mult_266 = 0.4e1 * l_prod_247;
+                                double l_compositionl_267 = vdot4(v_236,
+                                    vcons4(l_mult_256, l_mult_258, l_mult_259,
+                                        l_mult_261 + (-0.4e1 * l_prod_251 + (l_mult_262 + l_mult_263)))) + (vdot2(
+                                    v_237,
+                                    vcons2(l_mult_264 + (l_mult_262 + (-0.4e1 * l_prod_248 + l_mult_265)),
+                                        l_mult_266 + (l_mult_263 + (l_mult_265 + -0.4e1 * l_prod_242)))) + vdot4(v_235,
                                     vcons4(
-                                        l_mult_403 + (-0.3e1 * l_prod_401 + (l_mult_404 + (-0.3e1 * l_prod_399 + (l_mult_405 + (l_mult_406 + (-0.3e1 * l_prod_396 + (l_mult_407 + (l_mult_408 + l_mult_409)))))))),
-                                        -0.1e1 * l_prod_396 + l_mult_409, -0.1e1 * l_prod_399 + l_mult_406,
-                                        -0.1e1 * l_prod_401 + l_mult_404)));
-                                double l_sum_417 = -0.3e1 * l_prod_402 + (l_mult_410 + (l_mult_413 + l_mult_415));
-                                double l_mult_418 = -0.1e1 * l_prod_402;
-                                double l_basisEval_419 = -0.4e1 * l_prod_401;
-                                double l_basisEval_420 = -0.4e1 * l_prod_399;
-                                double l_mult_421 = 0.4e1 * l_prod_402;
-                                double l_mult_422 = -0.4e1 * l_prod_396;
-                                double l_vdot_423 = vdot4(v_385, vcons4(0.e0, l_mult_410, l_mult_413, l_basisEval_419)) + (vdot2(
-                                    v_386,
-                                    vcons2(l_basisEval_420,
-                                        l_mult_421 + (l_basisEval_419 + (l_basisEval_420 + -0.8e1 * l_prod_396)))) + vdot4(
-                                    v_384, vcons4(l_sum_417, l_mult_418 + l_mult_415, 0.e0, 0.e0)));
-                                double l_vdot_424 = vdot4(v_385, vcons4(l_mult_410, 0.e0, l_mult_415, l_basisEval_419)) + (vdot2(
-                                    v_386,
-                                    vcons2(l_mult_421 + (l_basisEval_419 + (-0.8e1 * l_prod_399 + l_mult_422)),
-                                        l_mult_422)) + vdot4(v_384,
-                                    vcons4(l_sum_417, 0.e0, l_mult_418 + l_mult_413, 0.e0)));
-                                double l_vdot_425 = vdot4(v_385,
-                                    vcons4(l_mult_413, l_mult_415, 0.e0,
-                                        l_mult_421 + (-0.8e1 * l_prod_401 + (l_basisEval_420 + l_mult_422)))) + (vdot2(
-                                    v_386, vcons2(l_basisEval_420, l_mult_422)) + vdot4(v_384,
-                                    vcons4(l_sum_417, 0.e0, 0.e0, l_mult_418 + l_mult_410)));
-                                int32_t l_mulRes_426 = l_intPos_361 * 4;
-                                int32_t t_427 = glob->gv__t.indexMap[l_mulRes_426];
-                                int32_t l_mulRes_428 = 3 * t_427;
-                                int32_t t_429 = glob->gv__t.indexMap[l_mulRes_426 + 1];
-                                int32_t l_mulRes_430 = 3 * t_429;
-                                double l_dof_load_431 = glob->gv__t.coordMap[l_mulRes_430];
-                                double l_dof_load_432 = glob->gv__t.coordMap[1 + l_mulRes_430];
-                                double l_dof_load_433 = glob->gv__t.coordMap[2 + l_mulRes_430];
-                                int32_t t_434 = glob->gv__t.indexMap[l_mulRes_426 + 2];
-                                int32_t l_mulRes_435 = 3 * t_434;
-                                double l_dof_load_436 = glob->gv__t.coordMap[l_mulRes_435];
-                                double l_dof_load_437 = glob->gv__t.coordMap[1 + l_mulRes_435];
-                                double l_dof_load_438 = glob->gv__t.coordMap[2 + l_mulRes_435];
-                                int32_t t_439 = glob->gv__t.indexMap[l_mulRes_426 + 3];
-                                int32_t l_mulRes_440 = 3 * t_439;
-                                double l_dof_load_441 = glob->gv__t.coordMap[l_mulRes_440];
-                                double l_dof_load_442 = glob->gv__t.coordMap[1 + l_mulRes_440];
-                                double l_dof_load_443 = glob->gv__t.coordMap[2 + l_mulRes_440];
-                                double t_444 = glob->gv__t.coordMap[l_mulRes_428];
-                                double l_r_445 = t_444 * l_mult_418;
-                                double l_r_446 = l_dof_load_436 * 0.e0;
-                                double l_r_447 = l_dof_load_441 * 0.e0;
-                                double l_r_448 = l_r_445 + l_dof_load_431 * l_mult_403 + l_r_446 + l_r_447;
-                                double l_r_449 = l_r_445 + l_dof_load_431 * 0.e0;
-                                double l_r_450 = l_r_449 + l_dof_load_436 * l_mult_403 + l_r_447;
-                                double l_r_451 = l_r_449 + l_r_446 + l_dof_load_441 * l_mult_403;
-                                double t_452 = glob->gv__t.coordMap[1 + l_mulRes_428];
-                                double l_r_453 = t_452 * l_mult_418;
-                                double l_r_454 = l_dof_load_437 * 0.e0;
-                                double l_r_455 = l_dof_load_442 * 0.e0;
-                                double l_r_456 = l_r_453 + l_dof_load_432 * l_mult_403 + l_r_454 + l_r_455;
-                                double l_r_457 = l_r_453 + l_dof_load_432 * 0.e0;
-                                double l_r_458 = l_r_457 + l_dof_load_437 * l_mult_403 + l_r_455;
-                                double l_r_459 = l_r_457 + l_r_454 + l_dof_load_442 * l_mult_403;
-                                double t_460 = glob->gv__t.coordMap[2 + l_mulRes_428];
-                                double l_r_461 = t_460 * l_mult_418;
-                                double l_r_462 = l_dof_load_438 * 0.e0;
-                                double l_r_463 = l_dof_load_443 * 0.e0;
-                                double l_r_464 = l_r_461 + l_dof_load_433 * l_mult_403 + l_r_462 + l_r_463;
-                                double l_r_465 = l_r_461 + l_dof_load_433 * 0.e0;
-                                double l_r_466 = l_r_465 + l_dof_load_438 * l_mult_403 + l_r_463;
-                                double l_r_467 = l_r_465 + l_r_462 + l_dof_load_443 * l_mult_403;
-                                double l_r_468 = 0.e0 * l_r_448;
-                                double l_r_469 = 0.e0 * l_r_456;
-                                double l_r_470 = 0.e0 * l_r_464;
-                                double l_r_471 = l_r_468 + l_r_469;
-                                double l_r_472 = l_r_471 + l_r_470;
-                                double l_r_473 = 0.e0 * l_r_450;
-                                double l_r_474 = 0.e0 * l_r_458;
-                                double l_r_475 = 0.e0 * l_r_466;
-                                double l_r_476 = l_r_473 + l_r_474;
-                                double l_r_477 = l_r_476 + l_r_475;
-                                double l_r_478 = 0.e0 * l_r_451;
-                                double l_r_479 = 0.e0 * l_r_459;
-                                double l_r_480 = 0.e0 * l_r_467;
-                                double l_r_481 = l_r_478 + l_r_479;
-                                double l_r_482 = l_r_481 + l_r_480;
-                                double l_r_483 = l_r_471 + -0.1e1 * l_r_464;
-                                double l_r_484 = l_r_476 + -0.1e1 * l_r_466;
-                                double l_r_485 = l_r_481 + -0.1e1 * l_r_467;
-                                double l_r_486 = l_r_468 + 0.1e1 * l_r_456 + l_r_470;
-                                double l_r_487 = l_r_473 + 0.1e1 * l_r_458 + l_r_475;
-                                double l_r_488 = l_r_478 + 0.1e1 * l_r_459 + l_r_480;
-                                double l_r_489 = l_r_471 + 0.1e1 * l_r_464;
-                                double l_r_490 = l_r_476 + 0.1e1 * l_r_466;
-                                double l_r_491 = l_r_481 + 0.1e1 * l_r_467;
-                                double l_r_492 = -0.1e1 * l_r_448 + l_r_469 + l_r_470;
-                                double l_r_493 = -0.1e1 * l_r_450 + l_r_474 + l_r_475;
-                                double l_r_494 = -0.1e1 * l_r_451 + l_r_479 + l_r_480;
-                                double l_r_495 = l_r_468 + -0.1e1 * l_r_456 + l_r_470;
-                                double l_r_496 = l_r_473 + -0.1e1 * l_r_458 + l_r_475;
-                                double l_r_497 = l_r_478 + -0.1e1 * l_r_459 + l_r_480;
-                                double l_r_498 = 0.1e1 * l_r_448 + l_r_469 + l_r_470;
-                                double l_r_499 = 0.1e1 * l_r_450 + l_r_474 + l_r_475;
-                                double l_r_500 = 0.1e1 * l_r_451 + l_r_479 + l_r_480;
-                                double l_r_501 = l_r_448 * l_r_477 + l_r_456 * l_r_490 + l_r_464 * l_r_496;
-                                double l_r_502 = l_r_448 * l_r_482 + l_r_456 * l_r_491 + l_r_464 * l_r_497;
-                                double l_r_503 = l_r_448 * l_r_484 + l_r_456 * l_r_477 + l_r_464 * l_r_499;
-                                double l_r_504 = l_r_448 * l_r_485 + l_r_456 * l_r_482 + l_r_464 * l_r_500;
-                                double l_r_505 = l_r_448 * l_r_487 + l_r_456 * l_r_493 + l_r_464 * l_r_477;
-                                double l_r_506 = l_r_448 * l_r_488 + l_r_456 * l_r_494 + l_r_464 * l_r_482;
-                                double l_r_507 = l_r_450 * l_r_472 + l_r_458 * l_r_489 + l_r_466 * l_r_495;
-                                double l_r_508 = l_r_450 * l_r_482 + l_r_458 * l_r_491 + l_r_466 * l_r_497;
-                                double l_r_509 = l_r_450 * l_r_483 + l_r_458 * l_r_472 + l_r_466 * l_r_498;
-                                double l_r_510 = l_r_450 * l_r_485 + l_r_458 * l_r_482 + l_r_466 * l_r_500;
-                                double l_r_511 = l_r_450 * l_r_486 + l_r_458 * l_r_492 + l_r_466 * l_r_472;
-                                double l_r_512 = l_r_450 * l_r_488 + l_r_458 * l_r_494 + l_r_466 * l_r_482;
-                                double l_r_513 = l_r_451 * l_r_472 + l_r_459 * l_r_489 + l_r_467 * l_r_495;
-                                double l_r_514 = l_r_451 * l_r_477 + l_r_459 * l_r_490 + l_r_467 * l_r_496;
-                                double l_r_515 = l_r_451 * l_r_483 + l_r_459 * l_r_472 + l_r_467 * l_r_498;
-                                double l_r_516 = l_r_451 * l_r_484 + l_r_459 * l_r_477 + l_r_467 * l_r_499;
-                                double l_r_517 = l_r_451 * l_r_486 + l_r_459 * l_r_492 + l_r_467 * l_r_472;
-                                double l_r_518 = l_r_451 * l_r_487 + l_r_459 * l_r_493 + l_r_467 * l_r_477;
-                                vec3 v_519 = vcons3(l_r_450, l_r_458, l_r_466);
-                                double l_r_520 = 0.e0 * (l_r_448 * l_r_472 + l_r_456 * l_r_489 + l_r_464 * l_r_495);
-                                double l_r_521 = 0.e0 * l_r_502;
-                                double l_r_522 = 0.e0 * l_r_507;
-                                double l_r_523 = 0.e0 * (l_r_450 * l_r_477 + l_r_458 * l_r_490 + l_r_466 * l_r_496);
-                                double l_r_524 = 0.e0 * l_r_513;
-                                double l_r_525 = 0.e0 * (l_r_451 * l_r_482 + l_r_459 * l_r_491 + l_r_467 * l_r_497);
-                                double l_r_526 = l_r_520 + 0.e0 * l_r_501;
-                                double l_r_527 = 0.e0 * (l_r_448 * l_r_483 + l_r_456 * l_r_472 + l_r_464 * l_r_498);
-                                double l_r_528 = 0.e0 * l_r_504;
-                                double l_r_529 = 0.e0 * l_r_509;
-                                double l_r_530 = 0.e0 * (l_r_450 * l_r_484 + l_r_458 * l_r_477 + l_r_466 * l_r_499);
-                                double l_r_531 = 0.e0 * l_r_515;
-                                double l_r_532 = 0.e0 * (l_r_451 * l_r_485 + l_r_459 * l_r_482 + l_r_467 * l_r_500);
-                                double l_r_533 = l_r_527 + 0.e0 * l_r_503;
-                                double l_r_534 = 0.e0 * (l_r_448 * l_r_486 + l_r_456 * l_r_492 + l_r_464 * l_r_472);
-                                double l_r_535 = 0.e0 * l_r_506;
-                                double l_r_536 = 0.e0 * l_r_511;
-                                double l_r_537 = 0.e0 * (l_r_450 * l_r_487 + l_r_458 * l_r_493 + l_r_466 * l_r_477);
-                                double l_r_538 = 0.e0 * l_r_517;
-                                double l_r_539 = 0.e0 * (l_r_451 * l_r_488 + l_r_459 * l_r_494 + l_r_467 * l_r_482);
-                                double l_r_540 = l_r_534 + 0.e0 * l_r_505;
-                                double l_r_541 = 0.e0 * l_r_508;
-                                double l_r_542 = 0.e0 * l_r_514;
-                                double l_r_543 = 0.e0 * l_r_510;
-                                double l_r_544 = 0.e0 * l_r_516;
-                                double l_r_545 = 0.e0 * l_r_512;
-                                double l_r_546 = 0.e0 * l_r_518;
-                                double l_op1_e3_l_36_547 = 0.2e1 * vdot3(vcons3(l_r_448, l_r_456, l_r_464),
-                                    vcons3(vdot3(v_519, vcons3(l_r_482, l_r_491, l_r_497)),
-                                        vdot3(v_519, vcons3(l_r_485, l_r_482, l_r_500)),
-                                        vdot3(v_519, vcons3(l_r_488, l_r_494, l_r_482))));
-                                vec3 v_548 = -vcons3(
-                                    l_vdot_423 * ((l_r_526 + l_r_521 + l_r_522 + l_r_523 + 0.1e1 * l_r_508 + l_r_524 + -0.1e1 * l_r_514 + l_r_525) / l_op1_e3_l_36_547) + l_vdot_424 * ((l_r_526 + -0.1e1 * l_r_502 + l_r_522 + l_r_523 + l_r_541 + 0.1e1 * l_r_513 + l_r_542 + l_r_525) / l_op1_e3_l_36_547) + l_vdot_425 * ((l_r_520 + 0.1e1 * l_r_501 + l_r_521 + -0.1e1 * l_r_507 + l_r_523 + l_r_541 + l_r_524 + l_r_542 + l_r_525) / l_op1_e3_l_36_547),
-                                    l_vdot_423 * ((l_r_533 + l_r_528 + l_r_529 + l_r_530 + 0.1e1 * l_r_510 + l_r_531 + -0.1e1 * l_r_516 + l_r_532) / l_op1_e3_l_36_547) + l_vdot_424 * ((l_r_533 + -0.1e1 * l_r_504 + l_r_529 + l_r_530 + l_r_543 + 0.1e1 * l_r_515 + l_r_544 + l_r_532) / l_op1_e3_l_36_547) + l_vdot_425 * ((l_r_527 + 0.1e1 * l_r_503 + l_r_528 + -0.1e1 * l_r_509 + l_r_530 + l_r_543 + l_r_531 + l_r_544 + l_r_532) / l_op1_e3_l_36_547),
-                                    l_vdot_423 * ((l_r_540 + l_r_535 + l_r_536 + l_r_537 + 0.1e1 * l_r_512 + l_r_538 + -0.1e1 * l_r_518 + l_r_539) / l_op1_e3_l_36_547) + l_vdot_424 * ((l_r_540 + -0.1e1 * l_r_506 + l_r_536 + l_r_537 + l_r_545 + 0.1e1 * l_r_517 + l_r_546 + l_r_539) / l_op1_e3_l_36_547) + l_vdot_425 * ((l_r_534 + 0.1e1 * l_r_505 + l_r_535 + -0.1e1 * l_r_511 + l_r_537 + l_r_545 + l_r_538 + l_r_546 + l_r_539) / l_op1_e3_l_36_547));
-                                double l_op1_e3_l_57_549 = std::sqrt(vdot3(v_548, v_548));
-                                double l_a_550 = 0.1e1 * clamp(0.e0, 0.1e1,
-                                    0.13e1 * (0.1e1 - std::abs(l_compositionl_416 - glob->gv_isoval) / (glob->gv_thick * l_op1_e3_l_57_549)));
-                                vec3 v_551 = v_548;
-                                if (l_a_550 > 0.e0) {
-                                    tensor_3_2 l_voxels_561;
-                                    double l_imgPos_552 = world2image(glob->gv_I) * l_compositionl_416 + translate(
+                                        l_mult_254 + (-0.3e1 * l_prod_252 + (l_mult_255 + (-0.3e1 * l_prod_250 + (l_mult_256 + (l_mult_257 + (-0.3e1 * l_prod_247 + (l_mult_258 + (l_mult_259 + l_mult_260)))))))),
+                                        -0.1e1 * l_prod_247 + l_mult_260, -0.1e1 * l_prod_250 + l_mult_257,
+                                        -0.1e1 * l_prod_252 + l_mult_255)));
+                                double l_sum_268 = -0.3e1 * l_prod_253 + (l_mult_261 + (l_mult_264 + l_mult_266));
+                                double l_mult_269 = -0.1e1 * l_prod_253;
+                                double l_basisEval_270 = -0.4e1 * l_prod_252;
+                                double l_basisEval_271 = -0.4e1 * l_prod_250;
+                                double l_mult_272 = 0.4e1 * l_prod_253;
+                                double l_mult_273 = -0.4e1 * l_prod_247;
+                                double l_vdot_274 = vdot4(v_236, vcons4(0.e0, l_mult_261, l_mult_264, l_basisEval_270)) + (vdot2(
+                                    v_237,
+                                    vcons2(l_basisEval_271,
+                                        l_mult_272 + (l_basisEval_270 + (l_basisEval_271 + -0.8e1 * l_prod_247)))) + vdot4(
+                                    v_235, vcons4(l_sum_268, l_mult_269 + l_mult_266, 0.e0, 0.e0)));
+                                double l_vdot_275 = vdot4(v_236, vcons4(l_mult_261, 0.e0, l_mult_266, l_basisEval_270)) + (vdot2(
+                                    v_237,
+                                    vcons2(l_mult_272 + (l_basisEval_270 + (-0.8e1 * l_prod_250 + l_mult_273)),
+                                        l_mult_273)) + vdot4(v_235,
+                                    vcons4(l_sum_268, 0.e0, l_mult_269 + l_mult_264, 0.e0)));
+                                double l_vdot_276 = vdot4(v_236,
+                                    vcons4(l_mult_264, l_mult_266, 0.e0,
+                                        l_mult_272 + (-0.8e1 * l_prod_252 + (l_basisEval_271 + l_mult_273)))) + (vdot2(
+                                    v_237, vcons2(l_basisEval_271, l_mult_273)) + vdot4(v_235,
+                                    vcons4(l_sum_268, 0.e0, 0.e0, l_mult_269 + l_mult_261)));
+                                int32_t l_mulRes_277 = l_intPos_212 * 4;
+                                int32_t t_278 = glob->gv__t.indexMap[l_mulRes_277];
+                                int32_t l_mulRes_279 = 3 * t_278;
+                                int32_t t_280 = glob->gv__t.indexMap[l_mulRes_277 + 1];
+                                int32_t l_mulRes_281 = 3 * t_280;
+                                double l_dof_load_282 = glob->gv__t.coordMap[l_mulRes_281];
+                                double l_dof_load_283 = glob->gv__t.coordMap[1 + l_mulRes_281];
+                                double l_dof_load_284 = glob->gv__t.coordMap[2 + l_mulRes_281];
+                                int32_t t_285 = glob->gv__t.indexMap[l_mulRes_277 + 2];
+                                int32_t l_mulRes_286 = 3 * t_285;
+                                double l_dof_load_287 = glob->gv__t.coordMap[l_mulRes_286];
+                                double l_dof_load_288 = glob->gv__t.coordMap[1 + l_mulRes_286];
+                                double l_dof_load_289 = glob->gv__t.coordMap[2 + l_mulRes_286];
+                                int32_t t_290 = glob->gv__t.indexMap[l_mulRes_277 + 3];
+                                int32_t l_mulRes_291 = 3 * t_290;
+                                double l_dof_load_292 = glob->gv__t.coordMap[l_mulRes_291];
+                                double l_dof_load_293 = glob->gv__t.coordMap[1 + l_mulRes_291];
+                                double l_dof_load_294 = glob->gv__t.coordMap[2 + l_mulRes_291];
+                                double t_295 = glob->gv__t.coordMap[l_mulRes_279];
+                                double l_r_296 = t_295 * l_mult_269;
+                                double l_r_297 = l_dof_load_287 * 0.e0;
+                                double l_r_298 = l_dof_load_292 * 0.e0;
+                                double l_r_299 = l_r_296 + l_dof_load_282 * l_mult_254 + l_r_297 + l_r_298;
+                                double l_r_300 = l_r_296 + l_dof_load_282 * 0.e0;
+                                double l_r_301 = l_r_300 + l_dof_load_287 * l_mult_254 + l_r_298;
+                                double l_r_302 = l_r_300 + l_r_297 + l_dof_load_292 * l_mult_254;
+                                double t_303 = glob->gv__t.coordMap[1 + l_mulRes_279];
+                                double l_r_304 = t_303 * l_mult_269;
+                                double l_r_305 = l_dof_load_288 * 0.e0;
+                                double l_r_306 = l_dof_load_293 * 0.e0;
+                                double l_r_307 = l_r_304 + l_dof_load_283 * l_mult_254 + l_r_305 + l_r_306;
+                                double l_r_308 = l_r_304 + l_dof_load_283 * 0.e0;
+                                double l_r_309 = l_r_308 + l_dof_load_288 * l_mult_254 + l_r_306;
+                                double l_r_310 = l_r_308 + l_r_305 + l_dof_load_293 * l_mult_254;
+                                double t_311 = glob->gv__t.coordMap[2 + l_mulRes_279];
+                                double l_r_312 = t_311 * l_mult_269;
+                                double l_r_313 = l_dof_load_289 * 0.e0;
+                                double l_r_314 = l_dof_load_294 * 0.e0;
+                                double l_r_315 = l_r_312 + l_dof_load_284 * l_mult_254 + l_r_313 + l_r_314;
+                                double l_r_316 = l_r_312 + l_dof_load_284 * 0.e0;
+                                double l_r_317 = l_r_316 + l_dof_load_289 * l_mult_254 + l_r_314;
+                                double l_r_318 = l_r_316 + l_r_313 + l_dof_load_294 * l_mult_254;
+                                double l_r_319 = 0.e0 * l_r_299;
+                                double l_r_320 = 0.e0 * l_r_307;
+                                double l_r_321 = 0.e0 * l_r_315;
+                                double l_r_322 = l_r_319 + l_r_320;
+                                double l_r_323 = l_r_322 + l_r_321;
+                                double l_r_324 = 0.e0 * l_r_301;
+                                double l_r_325 = 0.e0 * l_r_309;
+                                double l_r_326 = 0.e0 * l_r_317;
+                                double l_r_327 = l_r_324 + l_r_325;
+                                double l_r_328 = l_r_327 + l_r_326;
+                                double l_r_329 = 0.e0 * l_r_302;
+                                double l_r_330 = 0.e0 * l_r_310;
+                                double l_r_331 = 0.e0 * l_r_318;
+                                double l_r_332 = l_r_329 + l_r_330;
+                                double l_r_333 = l_r_332 + l_r_331;
+                                double l_r_334 = l_r_322 + -0.1e1 * l_r_315;
+                                double l_r_335 = l_r_327 + -0.1e1 * l_r_317;
+                                double l_r_336 = l_r_332 + -0.1e1 * l_r_318;
+                                double l_r_337 = l_r_319 + 0.1e1 * l_r_307 + l_r_321;
+                                double l_r_338 = l_r_324 + 0.1e1 * l_r_309 + l_r_326;
+                                double l_r_339 = l_r_329 + 0.1e1 * l_r_310 + l_r_331;
+                                double l_r_340 = l_r_322 + 0.1e1 * l_r_315;
+                                double l_r_341 = l_r_327 + 0.1e1 * l_r_317;
+                                double l_r_342 = l_r_332 + 0.1e1 * l_r_318;
+                                double l_r_343 = -0.1e1 * l_r_299 + l_r_320 + l_r_321;
+                                double l_r_344 = -0.1e1 * l_r_301 + l_r_325 + l_r_326;
+                                double l_r_345 = -0.1e1 * l_r_302 + l_r_330 + l_r_331;
+                                double l_r_346 = l_r_319 + -0.1e1 * l_r_307 + l_r_321;
+                                double l_r_347 = l_r_324 + -0.1e1 * l_r_309 + l_r_326;
+                                double l_r_348 = l_r_329 + -0.1e1 * l_r_310 + l_r_331;
+                                double l_r_349 = 0.1e1 * l_r_299 + l_r_320 + l_r_321;
+                                double l_r_350 = 0.1e1 * l_r_301 + l_r_325 + l_r_326;
+                                double l_r_351 = 0.1e1 * l_r_302 + l_r_330 + l_r_331;
+                                double l_r_352 = l_r_299 * l_r_328 + l_r_307 * l_r_341 + l_r_315 * l_r_347;
+                                double l_r_353 = l_r_299 * l_r_333 + l_r_307 * l_r_342 + l_r_315 * l_r_348;
+                                double l_r_354 = l_r_299 * l_r_335 + l_r_307 * l_r_328 + l_r_315 * l_r_350;
+                                double l_r_355 = l_r_299 * l_r_336 + l_r_307 * l_r_333 + l_r_315 * l_r_351;
+                                double l_r_356 = l_r_299 * l_r_338 + l_r_307 * l_r_344 + l_r_315 * l_r_328;
+                                double l_r_357 = l_r_299 * l_r_339 + l_r_307 * l_r_345 + l_r_315 * l_r_333;
+                                double l_r_358 = l_r_301 * l_r_323 + l_r_309 * l_r_340 + l_r_317 * l_r_346;
+                                double l_r_359 = l_r_301 * l_r_333 + l_r_309 * l_r_342 + l_r_317 * l_r_348;
+                                double l_r_360 = l_r_301 * l_r_334 + l_r_309 * l_r_323 + l_r_317 * l_r_349;
+                                double l_r_361 = l_r_301 * l_r_336 + l_r_309 * l_r_333 + l_r_317 * l_r_351;
+                                double l_r_362 = l_r_301 * l_r_337 + l_r_309 * l_r_343 + l_r_317 * l_r_323;
+                                double l_r_363 = l_r_301 * l_r_339 + l_r_309 * l_r_345 + l_r_317 * l_r_333;
+                                double l_r_364 = l_r_302 * l_r_323 + l_r_310 * l_r_340 + l_r_318 * l_r_346;
+                                double l_r_365 = l_r_302 * l_r_328 + l_r_310 * l_r_341 + l_r_318 * l_r_347;
+                                double l_r_366 = l_r_302 * l_r_334 + l_r_310 * l_r_323 + l_r_318 * l_r_349;
+                                double l_r_367 = l_r_302 * l_r_335 + l_r_310 * l_r_328 + l_r_318 * l_r_350;
+                                double l_r_368 = l_r_302 * l_r_337 + l_r_310 * l_r_343 + l_r_318 * l_r_323;
+                                double l_r_369 = l_r_302 * l_r_338 + l_r_310 * l_r_344 + l_r_318 * l_r_328;
+                                vec3 v_370 = vcons3(l_r_301, l_r_309, l_r_317);
+                                double l_r_371 = 0.e0 * (l_r_299 * l_r_323 + l_r_307 * l_r_340 + l_r_315 * l_r_346);
+                                double l_r_372 = 0.e0 * l_r_353;
+                                double l_r_373 = 0.e0 * l_r_358;
+                                double l_r_374 = 0.e0 * (l_r_301 * l_r_328 + l_r_309 * l_r_341 + l_r_317 * l_r_347);
+                                double l_r_375 = 0.e0 * l_r_364;
+                                double l_r_376 = 0.e0 * (l_r_302 * l_r_333 + l_r_310 * l_r_342 + l_r_318 * l_r_348);
+                                double l_r_377 = l_r_371 + 0.e0 * l_r_352;
+                                double l_r_378 = 0.e0 * (l_r_299 * l_r_334 + l_r_307 * l_r_323 + l_r_315 * l_r_349);
+                                double l_r_379 = 0.e0 * l_r_355;
+                                double l_r_380 = 0.e0 * l_r_360;
+                                double l_r_381 = 0.e0 * (l_r_301 * l_r_335 + l_r_309 * l_r_328 + l_r_317 * l_r_350);
+                                double l_r_382 = 0.e0 * l_r_366;
+                                double l_r_383 = 0.e0 * (l_r_302 * l_r_336 + l_r_310 * l_r_333 + l_r_318 * l_r_351);
+                                double l_r_384 = l_r_378 + 0.e0 * l_r_354;
+                                double l_r_385 = 0.e0 * (l_r_299 * l_r_337 + l_r_307 * l_r_343 + l_r_315 * l_r_323);
+                                double l_r_386 = 0.e0 * l_r_357;
+                                double l_r_387 = 0.e0 * l_r_362;
+                                double l_r_388 = 0.e0 * (l_r_301 * l_r_338 + l_r_309 * l_r_344 + l_r_317 * l_r_328);
+                                double l_r_389 = 0.e0 * l_r_368;
+                                double l_r_390 = 0.e0 * (l_r_302 * l_r_339 + l_r_310 * l_r_345 + l_r_318 * l_r_333);
+                                double l_r_391 = l_r_385 + 0.e0 * l_r_356;
+                                double l_r_392 = 0.e0 * l_r_359;
+                                double l_r_393 = 0.e0 * l_r_365;
+                                double l_r_394 = 0.e0 * l_r_361;
+                                double l_r_395 = 0.e0 * l_r_367;
+                                double l_r_396 = 0.e0 * l_r_363;
+                                double l_r_397 = 0.e0 * l_r_369;
+                                double l_op1_e3_l_36_398 = 0.2e1 * vdot3(vcons3(l_r_299, l_r_307, l_r_315),
+                                    vcons3(vdot3(v_370, vcons3(l_r_333, l_r_342, l_r_348)),
+                                        vdot3(v_370, vcons3(l_r_336, l_r_333, l_r_351)),
+                                        vdot3(v_370, vcons3(l_r_339, l_r_345, l_r_333))));
+                                vec3 v_399 = -vcons3(
+                                    l_vdot_274 * ((l_r_377 + l_r_372 + l_r_373 + l_r_374 + 0.1e1 * l_r_359 + l_r_375 + -0.1e1 * l_r_365 + l_r_376) / l_op1_e3_l_36_398) + l_vdot_275 * ((l_r_377 + -0.1e1 * l_r_353 + l_r_373 + l_r_374 + l_r_392 + 0.1e1 * l_r_364 + l_r_393 + l_r_376) / l_op1_e3_l_36_398) + l_vdot_276 * ((l_r_371 + 0.1e1 * l_r_352 + l_r_372 + -0.1e1 * l_r_358 + l_r_374 + l_r_392 + l_r_375 + l_r_393 + l_r_376) / l_op1_e3_l_36_398),
+                                    l_vdot_274 * ((l_r_384 + l_r_379 + l_r_380 + l_r_381 + 0.1e1 * l_r_361 + l_r_382 + -0.1e1 * l_r_367 + l_r_383) / l_op1_e3_l_36_398) + l_vdot_275 * ((l_r_384 + -0.1e1 * l_r_355 + l_r_380 + l_r_381 + l_r_394 + 0.1e1 * l_r_366 + l_r_395 + l_r_383) / l_op1_e3_l_36_398) + l_vdot_276 * ((l_r_378 + 0.1e1 * l_r_354 + l_r_379 + -0.1e1 * l_r_360 + l_r_381 + l_r_394 + l_r_382 + l_r_395 + l_r_383) / l_op1_e3_l_36_398),
+                                    l_vdot_274 * ((l_r_391 + l_r_386 + l_r_387 + l_r_388 + 0.1e1 * l_r_363 + l_r_389 + -0.1e1 * l_r_369 + l_r_390) / l_op1_e3_l_36_398) + l_vdot_275 * ((l_r_391 + -0.1e1 * l_r_357 + l_r_387 + l_r_388 + l_r_396 + 0.1e1 * l_r_368 + l_r_397 + l_r_390) / l_op1_e3_l_36_398) + l_vdot_276 * ((l_r_385 + 0.1e1 * l_r_356 + l_r_386 + -0.1e1 * l_r_362 + l_r_388 + l_r_396 + l_r_389 + l_r_397 + l_r_390) / l_op1_e3_l_36_398));
+                                double l_op1_e3_l_57_400 = std::sqrt(vdot3(v_399, v_399));
+                                double l_a_401 = 0.1e1 * clamp(0.e0, 0.1e1,
+                                    0.13e1 * (0.1e1 - std::abs(l_compositionl_267 - glob->gv_isoval) / (glob->gv_thick * l_op1_e3_l_57_400)));
+                                vec3 v_402 = v_399;
+                                if (l_a_401 > 0.e0) {
+                                    tensor_3_2 l_voxels_412;
+                                    double l_imgPos_403 = world2image(glob->gv_I) * l_compositionl_267 + translate(
                                         glob->gv_I);
-                                    double l_nd_553 = std::floor(l_imgPos_552);
-                                    double l_f_554 = l_imgPos_552 - l_nd_553;
-                                    int32_t l_n_555 = std::lround(l_nd_553);
-                                    double l__t_556 = std::pow(0.1e1 - l_a_550,
+                                    double l_nd_404 = std::floor(l_imgPos_403);
+                                    double l_f_405 = l_imgPos_403 - l_nd_404;
+                                    int32_t l_n_406 = std::lround(l_nd_404);
+                                    double l__t_407 = std::pow(0.1e1 - l_a_401,
                                         glob->gv_rayStep * std::sqrt(
                                             vdot3(vload3(tensor_ref_3(self->sv_rayVec).addr(0)),
                                                 vload3(tensor_ref_3(self->sv_rayVec).addr(0)))) / glob->gv_refStep);
-                                    double l_op1_e3_l_19_557 = (self->sv_rayN - glob->gv_camNear) / (glob->gv_camFar - glob->gv_camNear) * (0.7e0 - 0.11e1);
-                                    double l_op1_e3_l_20_558 = glob->gv_phongKd * std::max(0.e0,
-                                        0.1e1 / l_op1_e3_l_57_549 * vdot3(v_551,
+                                    double l_op1_e3_l_19_408 = (self->sv_rayN - glob->gv_camNear) / (glob->gv_camFar - glob->gv_camNear) * (0.7e0 - 0.11e1);
+                                    double l_op1_e3_l_20_409 = glob->gv_phongKd * std::max(0.e0,
+                                        0.1e1 / l_op1_e3_l_57_400 * vdot3(v_402,
                                             vload3(tensor_ref_3(glob->gv_light).addr(0))));
-                                    if (glob->gv_I.inside(l_n_555, 2)) {
-                                        int32_t l_offp_559 = 3 * l_n_555;
-                                        int32_t l_offp_560 = 3 * (l_n_555 + 1);
-                                        l_voxels_561[0] = glob->gv_I[l_offp_559];
-                                        l_voxels_561[1] = glob->gv_I[l_offp_560];
-                                        l_voxels_561[2] = glob->gv_I[l_offp_559 + 1];
-                                        l_voxels_561[3] = glob->gv_I[l_offp_560 + 1];
-                                        l_voxels_561[4] = glob->gv_I[l_offp_559 + 2];
-                                        l_voxels_561[5] = glob->gv_I[l_offp_560 + 2];
+                                    if (glob->gv_I.inside(l_n_406, 2)) {
+                                        int32_t l_offp_410 = 3 * l_n_406;
+                                        int32_t l_offp_411 = 3 * (l_n_406 + 1);
+                                        l_voxels_412[0] = glob->gv_I[l_offp_410];
+                                        l_voxels_412[1] = glob->gv_I[l_offp_411];
+                                        l_voxels_412[2] = glob->gv_I[l_offp_410 + 1];
+                                        l_voxels_412[3] = glob->gv_I[l_offp_411 + 1];
+                                        l_voxels_412[4] = glob->gv_I[l_offp_410 + 2];
+                                        l_voxels_412[5] = glob->gv_I[l_offp_411 + 2];
                                     }
                                     else {
-                                        int32_t l_offp_562 = 3 * glob->gv_I.clamp(0, l_n_555);
-                                        int32_t l_offp_563 = 3 * glob->gv_I.clamp(0, l_n_555 + 1);
-                                        l_voxels_561[0] = glob->gv_I[l_offp_562];
-                                        l_voxels_561[1] = glob->gv_I[l_offp_563];
-                                        l_voxels_561[2] = glob->gv_I[l_offp_562 + 1];
-                                        l_voxels_561[3] = glob->gv_I[l_offp_563 + 1];
-                                        l_voxels_561[4] = glob->gv_I[l_offp_562 + 2];
-                                        l_voxels_561[5] = glob->gv_I[l_offp_563 + 2];
+                                        int32_t l_offp_413 = 3 * glob->gv_I.clamp(0, l_n_406);
+                                        int32_t l_offp_414 = 3 * glob->gv_I.clamp(0, l_n_406 + 1);
+                                        l_voxels_412[0] = glob->gv_I[l_offp_413];
+                                        l_voxels_412[1] = glob->gv_I[l_offp_414];
+                                        l_voxels_412[2] = glob->gv_I[l_offp_413 + 1];
+                                        l_voxels_412[3] = glob->gv_I[l_offp_414 + 1];
+                                        l_voxels_412[4] = glob->gv_I[l_offp_413 + 2];
+                                        l_voxels_412[5] = glob->gv_I[l_offp_414 + 2];
                                     }
-                                    vec2 v_564 = vcons2(0.1e1, 0.1e1) + vcons2(l_f_554, l_f_554 - 0.1e1) * vcons2(
+                                    vec2 v_415 = vcons2(0.1e1, 0.1e1) + vcons2(l_f_405, l_f_405 - 0.1e1) * vcons2(
                                         -0.1e1, 0.1e1);
-                                    double l_op1_e3_l_22_565 = 0.1e1 - l__t_556;
-                                    double l_r_566 = self->sv_transp * l_op1_e3_l_22_565 * (0.11e1 + l_op1_e3_l_19_557) * (glob->gv_phongKa + l_op1_e3_l_20_558);
-                                    v_567 = vload3(tensor_ref_3(self->sv_rgb).addr(0)) + vcons3(
-                                        l_r_566 * vdot2(vload2(l_voxels_561.last(0).addr(0)), v_564),
-                                        l_r_566 * vdot2(vload2(l_voxels_561.last(2).addr(0)), v_564),
-                                        l_r_566 * vdot2(vload2(l_voxels_561.last(4).addr(0)), v_564));
-                                    l_transp_568 = self->sv_transp * (0.1e1 - l_op1_e3_l_22_565);
+                                    double l_op1_e3_l_22_416 = 0.1e1 - l__t_407;
+                                    double l_r_417 = self->sv_transp * l_op1_e3_l_22_416 * (0.11e1 + l_op1_e3_l_19_408) * (glob->gv_phongKa + l_op1_e3_l_20_409);
+                                    v_418 = vload3(tensor_ref_3(self->sv_rgb).addr(0)) + vcons3(
+                                        l_r_417 * vdot2(vload2(l_voxels_412.last(0).addr(0)), v_415),
+                                        l_r_417 * vdot2(vload2(l_voxels_412.last(2).addr(0)), v_415),
+                                        l_r_417 * vdot2(vload2(l_voxels_412.last(4).addr(0)), v_415));
+                                    l_transp_419 = self->sv_transp * (0.1e1 - l_op1_e3_l_22_416);
                                 }
                                 else {
-                                    v_567 = vload3(tensor_ref_3(self->sv_rgb).addr(0));
-                                    l_transp_568 = self->sv_transp;
+                                    v_418 = vload3(tensor_ref_3(self->sv_rgb).addr(0));
+                                    l_transp_419 = self->sv_transp;
                                 }
-                                wrld->print() << "yay!\n" << std::flush;
-                                v_569 = v_567;
-                                l_transp_570 = l_transp_568;
+                                v_420 = v_418;
+                                l_transp_421 = l_transp_419;
                             }
                             else {
-                                tensor_3 _arg_571;
-                                vpack3(_arg_571, v_354);
-                                wrld->print() << tensor_ref_3(_arg_571) << "\n" << std::flush;
+                                tensor_3 _arg_422;
+                                vpack3(_arg_422, v_205);
+                                wrld->print() << tensor_ref_3(_arg_422) << "\n" << std::flush;
                                 wrld->print() << "wait what\?\n" << std::flush;
-                                v_569 = vload3(tensor_ref_3(self->sv_rgb).addr(0));
-                                l_transp_570 = self->sv_transp;
+                                v_420 = vload3(tensor_ref_3(self->sv_rgb).addr(0));
+                                l_transp_421 = self->sv_transp;
                             }
-                            v_572 = v_569;
-                            l_transp_573 = l_transp_570;
+                            v_423 = v_420;
+                            l_transp_424 = l_transp_421;
                         }
                         else {
-                            v_572 = vload3(tensor_ref_3(self->sv_rgb).addr(0));
-                            l_transp_573 = self->sv_transp;
+                            v_423 = vload3(tensor_ref_3(self->sv_rgb).addr(0));
+                            l_transp_424 = self->sv_transp;
                         }
-                        v_574 = v_572;
-                        l_transp_575 = l_transp_573;
+                        v_425 = v_423;
+                        l_transp_426 = l_transp_424;
                     }
                     else {
-                        v_574 = vload3(tensor_ref_3(self->sv_rgb).addr(0));
-                        l_transp_575 = self->sv_transp;
+                        v_425 = vload3(tensor_ref_3(self->sv_rgb).addr(0));
+                        l_transp_426 = self->sv_transp;
                     }
-                    v_576 = v_574;
-                    l_transp_577 = l_transp_575;
+                    v_427 = v_425;
+                    l_transp_428 = l_transp_426;
                 }
                 else {
-                    v_576 = vload3(tensor_ref_3(self->sv_rgb).addr(0));
-                    l_transp_577 = self->sv_transp;
+                    v_427 = vload3(tensor_ref_3(self->sv_rgb).addr(0));
+                    l_transp_428 = self->sv_transp;
                 }
-                v_578 = v_576;
-                l_transp_579 = l_transp_577;
+                v_429 = v_427;
+                l_transp_430 = l_transp_428;
             }
             else {
-                v_578 = vload3(tensor_ref_3(self->sv_rgb).addr(0));
-                l_transp_579 = self->sv_transp;
+                v_429 = vload3(tensor_ref_3(self->sv_rgb).addr(0));
+                l_transp_430 = self->sv_transp;
             }
-            v_580 = v_578;
-            l_transp_581 = l_transp_579;
+            v_431 = v_429;
+            l_transp_432 = l_transp_430;
         }
         else {
-            v_580 = vload3(tensor_ref_3(self->sv_rgb).addr(0));
-            l_transp_581 = self->sv_transp;
+            v_431 = vload3(tensor_ref_3(self->sv_rgb).addr(0));
+            l_transp_432 = self->sv_transp;
         }
-        v_582 = v_580;
-        l_transp_583 = l_transp_581;
+        v_433 = v_431;
+        l_transp_434 = l_transp_432;
     }
     else {
-        v_582 = vload3(tensor_ref_3(self->sv_rgb).addr(0));
-        l_transp_583 = self->sv_transp;
+        v_433 = vload3(tensor_ref_3(self->sv_rgb).addr(0));
+        l_transp_434 = self->sv_transp;
     }
-    if (l_transp_583 < 0.1e-1) {
+    if (l_transp_434 < 0.1e-1) {
         self->sv_transp = 0.e0;
-        vpack3(self->sv_rgb, v_582);
+        vpack3(self->sv_rgb, v_433);
         return diderot::kStabilize;
     }
     else {
-        l_transp_585 = l_transp_583;
+        l_transp_436 = l_transp_434;
     }
     if (self->sv_rayN > glob->gv_camFar) {
-        self->sv_transp = l_transp_585;
-        vpack3(self->sv_rgb, v_582);
+        self->sv_transp = l_transp_436;
+        vpack3(self->sv_rgb, v_433);
         return diderot::kStabilize;
     }
     self->sv_rayN = self->sv_rayN + glob->gv_rayStep;
-    self->sv_transp = l_transp_585;
-    vpack3(self->sv_rgb, v_582);
+    self->sv_transp = l_transp_436;
+    vpack3(self->sv_rgb, v_433);
     return diderot::kActive;
 }
 static void raycast_stabilize (world *wrld, globals *glob, raycast_strand *self)
 {
-    vec4 v_589;
-    double l_a_588 = 0.1e1 - self->sv_transp;
-    if (l_a_588 > 0.e0) {
-        v_589 = vcons4(tensor_ref_3(self->sv_rgb)[0] / l_a_588, tensor_ref_3(self->sv_rgb)[1] / l_a_588,
-            tensor_ref_3(self->sv_rgb)[2] / l_a_588, l_a_588);
+    vec4 v_440;
+    double l_a_439 = 0.1e1 - self->sv_transp;
+    if (l_a_439 > 0.e0) {
+        v_440 = vcons4(tensor_ref_3(self->sv_rgb)[0] / l_a_439, tensor_ref_3(self->sv_rgb)[1] / l_a_439,
+            tensor_ref_3(self->sv_rgb)[2] / l_a_439, l_a_439);
     }
     else {
-        v_589 = vload4(tensor_ref_4(self->sv_rgba).addr(0));
+        v_440 = vload4(tensor_ref_4(self->sv_rgba).addr(0));
     }
     if (self->sv_ui == glob->gv_su) {
         if (self->sv_vi == glob->gv_sv) {
             if (glob->gv_debug) {
-                tensor_4 _arg_590;
-                vpack4(_arg_590, v_589);
-                wrld->print() << l_a_588 << tensor_ref_4(_arg_590) << std::flush;
+                tensor_4 _arg_441;
+                vpack4(_arg_441, v_440);
+                wrld->print() << l_a_439 << tensor_ref_4(_arg_441) << std::flush;
             }
         }
     }
-    vpack4(self->sv_rgba, v_589);
+    vpack4(self->sv_rgba, v_440);
 }
 extern "C" bool justTypes_output_get_rgba (justTypes_world_t *cWrld, Nrrd *nData)
 {
@@ -2474,19 +2272,19 @@ bool world::create_strands ()
         return true;
     }
     globals *glob = this->_globals;
-    int lo_3 = 0;
-    int hi_4 = glob->gv_iresV - 1;
-    int lo_5 = 0;
-    int hi_6 = glob->gv_iresU - 1;
-    int32_t base[2] = {lo_3,lo_5,};
-    uint32_t size[2] = {static_cast<uint32_t>(hi_4 - lo_3 + 1),static_cast<uint32_t>(hi_6 - lo_5 + 1),};
+    int lo_2 = 0;
+    int hi_3 = glob->gv_iresV - 1;
+    int lo_4 = 0;
+    int hi_5 = glob->gv_iresU - 1;
+    int32_t base[2] = {lo_2,lo_4,};
+    uint32_t size[2] = {static_cast<uint32_t>(hi_3 - lo_2 + 1),static_cast<uint32_t>(hi_5 - lo_4 + 1),};
     if (this->alloc(base, size)) {
         return true;
     }
     uint32_t ix = 0;
-    for (int i_vi_592 = lo_3; i_vi_592 <= hi_4; i_vi_592++) {
-        for (int i_ui_593 = lo_5; i_ui_593 <= hi_6; i_ui_593++) {
-            raycast_init(this->_globals, this->_strands.strand(ix), i_ui_593, i_vi_592);
+    for (int i_vi_443 = lo_2; i_vi_443 <= hi_3; i_vi_443++) {
+        for (int i_ui_444 = lo_4; i_ui_444 <= hi_5; i_ui_444++) {
+            raycast_init(this->_globals, this->_strands.strand(ix), i_ui_444, i_vi_443);
             ++ix;
         }
     }
