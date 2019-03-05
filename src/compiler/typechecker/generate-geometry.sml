@@ -336,8 +336,8 @@ fun newtonLoopBlock(normal, dScalar, refPosExp, dPosExp, maxN, eps, t) =
       fun buildIf(test1, test2, insideTestVal, refine, dist, sgnDist, intExpr) =
 	  let
 	   (*compute special test, int*)
-	   val preRefinedTest1 = test1 (* refine(preRefine, test1) *)
-	   val posRefineTest2 = test1 (* refine(postRefine, preRefinedTest1) *)
+	   val preRefinedTest1 = refine(preRefine, test1)
+	   val posRefineTest2 = refine(postRefine, preRefinedTest1)
 	   val positiveTest = makePrim'(BV.gt_rr, [preRefinedTest1, zero], [Ty.realTy, Ty.realTy], Ty.T_Bool)
 	   val newUpdateTest = makePrim'(BV.gt_rr, [tempExp, test1], [Ty.realTy, Ty.realTy], Ty.T_Bool)
 	   val antiNanInfTest = makePrim'(BV.gte_rr, [test2, eps], [Ty.realTy, Ty.realTy], Ty.T_Bool)
@@ -407,7 +407,7 @@ fun newtonLoopBlock(normal, dScalar, refPosExp, dPosExp, maxN, eps, t) =
   val tests = buildIntersectionTestInfo(dim, geometry, refPosExp, dPosExp)
 
 
-  val body = AST.S_Block(intersectionTesting(tests, false, 10, false, 0, 0, false, SOME(intPosExp)))
+  val body = AST.S_Block(intersectionTesting(tests, false, 10, false, 4, 0, false, SOME(intPosExp)))
   val result = ((funAtom, funVar), AST.D_Func(funVar, [refPosParam, dposParam, intPosParam], body))
 
 		 
