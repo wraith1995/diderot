@@ -64,8 +64,10 @@ structure Main : sig
         (***** SIMPLIFY *****)
           val _ = verbosePrint["simplifying AST ... "]
           val simple = SimpleOpt.checkAfter ("simplify", Simplify.transform (errStrm, ast, gEnv))
+		       handle exn => raise exn
           val _ = checkForErrors errStrm
           val simple = SimpleOpt.transform simple
+		       handle exn => raise exn
           val _ = verbosePrint["done\n"]
           in
             simple

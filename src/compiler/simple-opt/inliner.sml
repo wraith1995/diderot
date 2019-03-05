@@ -211,9 +211,10 @@ structure Inliner : sig
 		  | S.E_ExtractFemItemN(vars, tys, outTy, opt, funcOpt) => S.E_ExtractFemItemN(List.map (rename env) vars, tys, outTy, opt, Option.map SimpleFunc.use funcOpt)
                 (* end case *))
         (* build the initial environment by mapping parameters to arguments *)
-          val env = ListPair.foldlEq
+          val env = ListPair.foldlEq 
                 (fn (x, x', env) => V.Map.insert(env, x, x'))
-                  V.Map.empty (params, args)
+                V.Map.empty (params, args)
+		    handle exn => (print(String.concatWith "," (List.map SimpleVar.nameOf params)); raise exn)
           val blk as S.Block{code, ...} = doBlock (env, body)
           in
             preCode @ code @ postCode

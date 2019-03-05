@@ -1282,7 +1282,8 @@ structure CheckGlobals : sig
 		    val test = test3 andalso test2 andalso test1
 		   in
 		    if test
-		    then FemGeometry.makeGeometryFuncs(env, cxt, span, meshData, geometry, inverseInfo, forwardInfo, makeRefCellInsideFunc) handle exn => raise exn
+		    then FemGeometry.makeGeometryFuncs(env, cxt, span, meshData, geometry, inverseInfo, forwardInfo, makeRefCellInsideFunc)
+			 handle exn => raise exn
 		    else {ref = ([],[],[]), pos = ([],[],[]), cell = ([],[],[])}
 		   end
 
@@ -1720,12 +1721,14 @@ structure CheckGlobals : sig
 	      in
 	       if isFemType
 	       then (case file
-		      of SOME(file') => makeFemType tyDef file'
+		      of SOME(file') => (makeFemType tyDef file' handle exn => raise exn)
 		       | _ => (err (cxt, [S "FemType declared without file"]); (ERROR, env)))
 	       else makeBasicNamedType tyDef file
 
-					  
+
 	      end
+
+									    
 	      
 	
 	
