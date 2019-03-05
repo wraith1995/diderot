@@ -20,6 +20,7 @@ val invTransform = "inverseTransform"
 val meshPos = "findPos"
 val hiddenNewtonInverse = "newtonInverse"
 val cellEnter = "enter"
+val cellEnterPos = "enterPos"
 val invalidPos = "invalidPos"
 val invalidCell = "invalidCell"
 (*ref cell:*)

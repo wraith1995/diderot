@@ -5,7 +5,7 @@ import numpy as np
 
 def makeArrayType(array, ty):
     # array.flatten()
-    arrayp = array
+    arrayp = array  # array.flatten()
     if ty == c_float or ty == c_double:
         arrayp = np.asfarray(arrayp, dtype=ty)
     dataType = arrayp.ctypes.data_as(POINTER(ty))
@@ -82,7 +82,7 @@ def makeAllTypes(ctylesInt, ctylesFloat):
                  spaceDim,
                  funcCoordMap):
         (meshVal, meshValPtr) = buildMesh(meshIndexMap, meshCoordMap, dim, meshMapDim,
-                            numCell, sIndex, con)
+                                          numCell, sIndex, con)
         (spaceVal, spaceValPtr) = buildSpace(spaceIndexMap, spaceDim, meshVal)
         (funcVal, funcValPtr) = buildFunc(funcCoordMap, spaceVal)
         return((meshValPtr, spaceValPtr, funcValPtr))

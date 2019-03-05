@@ -337,6 +337,12 @@ structure TreeToCxx : sig
 		    in
 		     CL.mkApply("allBuild", args')
 		    end
+		  | ((FemOpt.AllBuild, FT.MeshPos(m)), [mesh, cellInt,worldPos, refPos, facet]) =>
+		    let
+		     val args' = [mesh, cellInt, worldPos, refPos, CL.E_Bool(true), CL.E_Bool(true), facet]
+		    in
+		     CL.mkApply("allBuild", args')
+		    end
 		  | ((FemOpt.InvalidBuild, FT.MeshPos(m)), [mesh]) =>
 		    let
 		    in
@@ -355,6 +361,7 @@ structure TreeToCxx : sig
 		    end
 		  | ((FemOpt.InvalidBuildBoundary, FT.MeshPos(m)), [mesh, tensor]) => CL.mkApply("invalidBuild", [mesh, tensor])
 		  | ((FemOpt.RefBuild, FT.Mesh(m)), [mesh, cell, refTensor]) => CL.mkApply("refBuild", [mesh, cell, refTensor])
+		  | ((FemOpt.RefBuild, FT.Mesh(m)), [mesh, cell, refTensor, facet]) => CL.mkApply("refBuild", [mesh, cell, refTensor, facet])
 		  | _ => raise Fail(concat[
 				      "unknown or incorrect operator ", Op.toString rator
 				   ])

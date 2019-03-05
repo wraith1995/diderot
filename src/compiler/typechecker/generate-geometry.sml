@@ -11,6 +11,23 @@ structure FN = FemName
 structure N = BasisNames
 structure CF = CheckTypeFile
 structure BV = BasisVars
+
+structure FemGeometry : sig
+	   val makeGeometryFuncs : Env.t * (Error.err_stream * Error.span) * Error.span * FemData.femType * 
+				   CheckTypeFile.dimensionalObjects list * 
+				   (Atom.atom * (AST.expr list -> AST.expr) * Types.ty) *
+				   (Atom.atom * (AST.expr list -> AST.expr) * Types.ty) *
+				   (AST.expr list -> AST.expr)
+				   -> {cell:(Atom.atom * Var.t) list * AST.global_dcl list * 
+					    (Atom.atom * (AST.expr list -> AST.expr) * Types.ty) list,
+				       pos:(Atom.atom * Var.t) list * AST.global_dcl list * 
+					   (Atom.atom * (AST.expr list -> AST.expr) * Types.ty) list,
+				       ref:(Atom.atom * Var.t) list * AST.global_dcl list * 
+					   (Atom.atom * (AST.expr list -> AST.expr) * Types.ty) list}
+	  end = struct
+
+
+
 fun makePrim(prim, argTys) =
     let
      val AST.E_Prim(var, metargs, exprs, result) = prim
@@ -45,19 +62,7 @@ fun makeAnd v1 v2 = makePrim'(BV.and_b, [v1,v2], [Ty.T_Bool, Ty.T_Bool], Ty.T_Bo
 fun makeAnds([v1,v2]) = makeAnd v1 v2
   | makeAnds (v::vs) = makeAnd v (makeAnds vs)
 
-structure FemGeometry : sig
-	   val makeGeometryFuncs : Env.t * (Error.err_stream * Error.span) * Error.span * FemData.femType * 
-				   CheckTypeFile.dimensionalObjects list * 
-				   (Atom.atom * (AST.expr list -> AST.expr) * Types.ty) *
-				   (Atom.atom * (AST.expr list -> AST.expr) * Types.ty) *
-				   (AST.expr list -> AST.expr)
-				   -> {cell:(Atom.atom * Var.t) list * AST.global_dcl list * 
-					    (Atom.atom * (AST.expr list -> AST.expr) * Types.ty) list,
-				       pos:(Atom.atom * Var.t) list * AST.global_dcl list * 
-					   (Atom.atom * (AST.expr list -> AST.expr) * Types.ty) list,
-				       ref:(Atom.atom * Var.t) list * AST.global_dcl list * 
-					   (Atom.atom * (AST.expr list -> AST.expr) * Types.ty) list}
-	  end = struct
+
 fun makeGeometryFuncs(env, cxt, span, meshData, geometry, inverse, forwardInfo, makeRefCellInsideFunc) = let
  (*Make types and associated data*)
  val FT.Mesh(mesh) = meshData
@@ -102,7 +107,9 @@ fun makeGeometryFuncs(env, cxt, span, meshData, geometry, inverse, forwardInfo, 
 		      else if dim = 3
 		      then BV.fn_inv3_t
 		      else raise Fail "impossible"
-
+				 
+ fun makeRealExpr x = AST.E_Lit(Literal.Real(CF.realToRealLit x))
+			       
  fun makeInvTransformFunc([cellExp], eval) =
      let
       val transform = makeTransformFunc([cellExp])
@@ -121,15 +128,106 @@ fun makeGeometryFuncs(env, cxt, span, meshData, geometry, inverse, forwardInfo, 
      end
    | makeInvTransformFunc (_) = raise Fail "impossible"			      
  (*if dim=2, line-line intersection; if dim=3 - line-plane intersection*)
- fun lineLineIntersect( targetBasis, targetD, refBasis, refD) =
+ fun rayAtT(refPosExp, dPosExp, t) =
+     let
+      val scale = makePrim'(BV.mul_tr, [dPosExp, t], [vecTy, Ty.realTy], vecTy)
+      val result = makePrim'(BV.add_tt, [refPosExp, scale], [vecTy, vecTy], vecTy)
+     in
+      result
+     end
+
+  fun buildInsideBool(test1, refPosExp, dPosExp) =
+      let
+       (*comptue new pos *)
+       val adjustedTest = test1
+       val scale = makePrim'(BV.mul_tr, [dPosExp, test1], [vecTy, Ty.realTy], vecTy)
+       val newPos = rayAtT(refPosExp, dPosExp, adjustedTest)
+       val insideTest = makeRefCellInsideFunc([newPos, newPos]);
+       (*avoid the need to pass refPos because under our scheme we current forget it...*)
+      in
+       insideTest
+      end
+	
+ fun kernAtT(normal, dScalar, refPosExp, dPosExp, t) =
+     let
+      val ray = rayAtT(refPosExp, dPosExp, t)
+      val norDot = makePrim'(BV.op_inner_tt, [normal, ray], [vecTy, vecTy], Ty.realTy)
+      val result = makePrim'(BV.sub_tt, [norDot, dScalar], [Ty.realTy, Ty.realTy], Ty.realTy)
+     in
+      result
+     end
+
+ fun gradKernAtT(normal, dScalar, refPosExp, dPosExp, t) =
+     let
+      val data = makePrim'(BV.op_inner_tt, [normal, dPosExp], [vecTy, vecTy], Ty.realTy)
+     in
+      data
+     end
+
+ fun newtonUpdate(normal, dScalar, refPosExp, dPosExp, t) =
+     let
+      val derv = gradKernAtT(normal, dScalar, refPosExp, dPosExp, t)
+      val kern = kernAtT(normal, dScalar, refPosExp, dPosExp, t)
+      val update = makePrim'(BV.div_rr, [kern, derv], [Ty.realTy, Ty.realTy], Ty.realTy)
+      val updated = makePrim'(BV.sub_tt, [t, update], [Ty.realTy, Ty.realTy], Ty.realTy)
+     in
+      updated
+     end
+fun newtonUpdate'(normal, dScalar, refPosExp, dPosExp, t) =
+     let
+      val derv = gradKernAtT(normal, dScalar, refPosExp, dPosExp, t)
+      val kern = kernAtT(normal, dScalar, refPosExp, dPosExp, t)
+      val update = makePrim'(BV.div_rr, [kern, derv], [Ty.realTy, Ty.realTy], Ty.realTy)
+      val updated = makePrim'(BV.sub_tt, [t, update], [Ty.realTy, Ty.realTy], Ty.realTy)
+     in
+      (updated, update)
+     end
+
+fun newtonLoopBlock(normal, dScalar, refPosExp, dPosExp, maxN, eps, t) =
+    let
+     val timeVar = Var.new(Atom.atom "t", span, Var.LocalVar, Ty.realTy)
+     val timeExp = AST.E_Var(timeVar, span)
+     val start = AST.S_Assign((timeVar, span), t)
+			     
+     val itterVar = Var.new(Atom.atom "i", span, Var.IterVar, Ty.T_Int)
+     val itterExp = makePrim'(BV.range, [AST.E_Lit(Literal.intLit 0), maxN], [Ty.T_Int, Ty.T_Int],
+			      Ty.T_Sequence(Ty.T_Int, NONE))
+     val iter = (itterVar, itterExp)
+     val (updated, update) = newtonUpdate'(normal, dScalar, refPosExp, dPosExp, timeExp)
+     val absUpdate = makePrim'(BV.op_norm_t, [update], [Ty.realTy], Ty.realTy)
+     val smallUpdate = makePrim'(BV.gte_rr, [eps, absUpdate], [Ty.realTy, Ty.realTy], Ty.T_Bool)
+				
+     val ifStatement = AST.S_IfThenElse(smallUpdate, AST.S_Return(timeExp), AST.S_Block([]))
+     val forLoop = AST.S_Block([AST.S_Foreach(iter, AST.S_Block([
+						   AST.S_Assign((timeVar,span), updated),
+						   ifStatement])),
+				AST.S_Return(AST.E_Lit(Literal.Real(RealLit.m_one)))])
+    in
+     forLoop
+    end
+
+ fun newtonUpdates(normal, dScalar, refPosExp, dPosExp, t, n) =
+     let
+      fun nUpdate(t0) = newtonUpdate(normal, dScalar, refPosExp, dPosExp, t0)
+      fun nUp(t0, 0) = t0
+	| nUp (t0, n0) = let val up = newtonUpdate(normal, dScalar, refPosExp, dPosExp, t0)
+			 in nUp(up, n0 - 1)
+			 end
+     in
+      nUp(t, n)
+     end
+				      
+ fun lineLineIntersect(targetBasis, targetD, refBasis, refD, normal, d) =
      let
       val sub1 = makePrim'(BV.sub_tt, [refBasis, targetBasis], [vecTy, vecTy], vecTy)
       val cross1 = makePrim'(BV.op_cross2_tt, [targetD, refD], [vecTy, vecTy], Ty.realTy)
       val div1 = makePrim'(BV.div_tr, [refD, cross1], [vecTy, Ty.realTy], vecTy)
       val cross2 = makePrim'(BV.op_cross2_tt, [sub1, div1], [vecTy, vecTy], Ty.realTy)
+
+      fun refine(n,t) = newtonUpdates(normal, d, refBasis, refD, t, n)
 			    
      in
-      (cross2, cross1) (*the first is the time and the second is in case we need to check for nan problems*)
+      (cross2, cross1, buildInsideBool(refBasis, refD, cross2), refine) (*the first is the time and the second is in case we need to check for nan problems*)
      end
 
  fun linePlaneIntersect(refBasis, refD, normal, dScalar) =
@@ -139,76 +237,123 @@ fun makeGeometryFuncs(env, cxt, span, meshData, geometry, inverse, forwardInfo, 
       val dot2 = makePrim'(BV.op_inner_tt, [normal, refD], [vecTy, vecTy], Ty.realTy)
       val result = makePrim'(BV.div_rr, [num, dot2], [Ty.realTy, Ty.realTy], Ty.realTy)
 			    
+      fun refine(n, t) = newtonUpdates(normal, dScalar, refBasis, refD, t, n)
      in
-      (result, dot2)
+      (result, dot2, buildInsideBool(refBasis, refD, result), refine)
      end
 
- fun makeRealExpr x = AST.E_Lit(Literal.Real(CF.realToRealLit x))
- fun twoDimTests(refPosExp, dPosExp, geometry) =
+
+
+ fun planePointDistSgn(normal, dScalar, refPosExp) =
      let
-      fun lineIntersect(bma, a) = lineLineIntersect(refPosExp, dPosExp, a, bma)
-      val lineParams = Option.valOf (List.find (fn CF.LineParam(xs) => true | _ => false) geometry) handle exn => raise exn
+      val norDot = makePrim'(BV.op_inner_tt, [normal, refPosExp], [vecTy, vecTy], Ty.realTy)
+      val result = makePrim'(BV.sub_tt, [norDot, dScalar], [Ty.realTy, Ty.realTy], Ty.realTy)
+			    
+     in
+      result
+     end
+ fun planePointDist(normal, dScalar, refPosExp) =
+     let
+      val result = planePointDistSgn(normal, dScalar, refPosExp)
+      val abs = makePrim'(BV.op_norm_t, [result], [Ty.realTy], Ty.realTy)
+     in
+      (abs, result)
+     end
+
+       
+ fun buildIntersectionTestInfo(2, geometry, refPosExp, dRefPosExp) =
+     let
+      fun lineIntersect(bma, a, n, d) = lineLineIntersect(refPosExp, dRefPosExp, a, bma, n, d)
+      val lineParams = Option.valOf (List.find (fn CF.LineParam(xs) => true | _ => false) geometry)
+		       handle exn => raise exn
       val CF.LineParam(lineData) = lineParams
       (*convert to realLits - thankfully only vectors*)
 
-      val vecExprs = List.map (fn (x,y,z) => (AST.E_Tensor(List.map makeRealExpr x, vecTy),
-					      AST.E_Tensor(List.map makeRealExpr y, vecTy))) lineData
-      val intersectionExprs = List.map lineIntersect vecExprs
+      val vecExprs = List.map (fn (x,y,(z1,z2)) => (AST.E_Tensor(List.map makeRealExpr x, vecTy),
+						    AST.E_Tensor(List.map makeRealExpr y, vecTy))) lineData;
+      val normalDVecs = List.map (fn (_, _, (z1, z2)) => (AST.E_Tensor(List.map makeRealExpr z1, vecTy), makeRealExpr z2)) lineData
+      val combinedExprs = ListPair.map (fn ((x,y), (a,b)) => (x,y,a,b)) (vecExprs, normalDVecs)
+				 (*time, parallel param*)
+      val intersectionExprs = List.map lineIntersect combinedExprs
+      fun dist(n, d) = planePointDist(n, d, refPosExp)
+				     
+      (*dist from refPos to facet, distance signed*)
+      val intersectionExprs' = List.map dist normalDVecs
+      val resultingTests = ListPair.map (fn ((x,y,j, r), (w,z)) => (x,y,j,r,w,z)) (intersectionExprs, intersectionExprs')
+					
+				       
      in
-      intersectionExprs
+      resultingTests
      end
-
- fun threeDimTests(refPosExp, dPosExp, geometry) =
+   | buildIntersectionTestInfo(3, geometry, refPosExp, dRefPosExp ) =
      let
-      fun planeIntersect(d, normal) = linePlaneIntersect(refPosExp, dPosExp, normal, d)
-
+      fun planeIntersect(d, normal) = linePlaneIntersect(refPosExp, dRefPosExp, normal, d)
+      fun dist(d, n) = planePointDist(n, d, refPosExp)
       val planeParams = Option.valOf (List.find (fn CF.PlaneParam(_) => true | _ => false) geometry) handle exn => raise exn
       val CF.PlaneParam(xs, _) = planeParams
       val planeParamExprs = List.map (fn (x, ys) => (makeRealExpr x, AST.E_Tensor(List.map makeRealExpr ys, vecTy))) xs
       val intersectionExprs = List.map planeIntersect planeParamExprs
+      val distTestExprs = List.map dist planeParamExprs
+      val resultingTests = ListPair.map (fn ((x,y,j,r), (w,z)) => (x,y,j,r,w,z)) (intersectionExprs, distTestExprs)
+				       
      in
-      intersectionExprs handle exn => raise exn
+      resultingTests
      end
-     handle exn => raise exn
+										      
 
+										      
  (*create local vars with +Inf, -1; Store compute in local var, if >=eps=0.000000000001 and <= current, update  *)
  (*create an additional tester option -> given refPos, dPos, test1 -> do inside*)
- fun intersectionTesting intersectionExprs insideOption=
+ (**)
+ fun intersectionTesting(intersectionExprs, parallelTest, parallelTestNeps,
+			 insideTest, preRefine, postRefine, printFlag, facetIntTest) =
      let
       val tempVar = Var.new (Atom.atom "time", span, AST.LocalVar, Ty.realTy)
       val tempVar' = Var.new (Atom.atom "face", span, AST.LocalVar, Ty.T_Int)
       val tempExp = AST.E_Var(tempVar, span)
       val tempExp' = AST.E_Var(tempVar', span)
       val tempStart = AST.S_Decl(tempVar, SOME(AST.E_Lit(Literal.Real(RealLit.posInf))))
+
       val neg1 = AST.E_Lit(Literal.Int(IntLit.fromInt (~1)))
       val tempStart' = AST.S_Decl(tempVar', SOME(neg1))
+				 
       val zero = AST.E_Lit(Literal.Real(RealLit.zero true))
-      val eps = AST.E_Lit(Literal.Real(RealLit.fromDigits{isNeg = false, digits = [1], exp = IntInf.fromInt (~16)}))
-      fun buildIf(test1, test2, intExpr) =
+      val eps = AST.E_Lit(Literal.Real(RealLit.fromDigits{isNeg = false, digits = [1], exp = IntInf.fromInt (~parallelTestNeps)}))
+			 
+      fun buildIf(test1, test2, insideTestVal, refine, dist, sgnDist, intExpr) =
 	  let
 	   (*compute special test, int*)
-	   val positiveTest = makePrim'(BV.gt_rr, [test1, zero], [Ty.realTy, Ty.realTy], Ty.T_Bool)
+	   val preRefinedTest1 = refine(preRefine, test1)
+	   val posRefineTest2 = refine(postRefine, preRefinedTest1)
+	   val positiveTest = makePrim'(BV.gt_rr, [preRefinedTest1, zero], [Ty.realTy, Ty.realTy], Ty.T_Bool)
 	   val newUpdateTest = makePrim'(BV.gt_rr, [tempExp, test1], [Ty.realTy, Ty.realTy], Ty.T_Bool)
 	   val antiNanInfTest = makePrim'(BV.gte_rr, [test2, eps], [Ty.realTy, Ty.realTy], Ty.T_Bool)
-	   val preTests = [positiveTest, newUpdateTest]
-	   val combined = makeAnds(preTests)(* makePrim'(BV.and_b, [positiveTest, newUpdateTest], [Ty.T_Bool, Ty.T_Bool], Ty.T_Bool) *)
-	   val proc = if Option.isSome(insideOption)
-		      then let val SOME(f) = insideOption in (fn b => f(test1, b)) end
+	   (*Checks if a stored entry facet is equal to this facet; prevents failure if the pos is slightly outside the ref*)
+	   val optionalIntTest = (case facetIntTest
+				   of SOME(oldFacetInt) => [makePrim'(BV.neq_ii, [oldFacetInt, intExpr], [Ty.T_Int, Ty.T_Int], Ty.T_Bool)]
+				   |  NONE => [])
+	   val preTests = if parallelTest
+			  then List.@(optionalIntTest, [positiveTest, newUpdateTest, antiNanInfTest])
+			  else List.@(optionalIntTest,[positiveTest, newUpdateTest])
+	   val test = makeAnds(preTests)
+	   val proc = if insideTest
+		      then (fn b => AST.S_IfThenElse(insideTestVal, b, AST.S_Block([])))
 		      else (fn b => b)
-			     (* makePrinStatement("Suc with:", [test1,AST.E_Lit(Literal.String(", ")), test2], "\n"), *)
-	   val fin = AST.S_IfThenElse(combined, proc (AST.S_Block([
-								  
-							    AST.S_Assign((tempVar, span), test1),
-							    AST.S_Assign((tempVar', span), intExpr)
-							   ])),
+
+
+	   (* makePrinStatement("Suc with:", [test1,AST.E_Lit(Literal.String(", ")), test2], "\n"), *)
+	   val fin = AST.S_IfThenElse(test, proc (AST.S_Block([
+							      
+							      AST.S_Assign((tempVar, span), posRefineTest2),
+							      AST.S_Assign((tempVar', span), intExpr)
+						 ])),
 				      AST.S_Block([]))
 	  in
 	   fin
 	  end
-	    
       val tests = List.length intersectionExprs
       val intLits = List.tabulate(tests, fn x => AST.E_Lit(Literal.intLit x))
-      val zip = ListPair.map (fn ((x,y), z) => (x,y,z)) (intersectionExprs, intLits)
+      val zip = ListPair.map (fn ((x,y,a,b,c,d), z) => (x,y,a,b,c,d, z)) (intersectionExprs, intLits)
 			     
       val ifs = List.map buildIf zip
 
@@ -226,48 +371,35 @@ fun makeGeometryFuncs(env, cxt, span, meshData, geometry, inverse, forwardInfo, 
       val stms = [tempStart, tempStart']@ifs@[ifReturn]
 
      in
-      stms  handle exn => raise exn
+      stms  
      end
-     handle exn => raise exn
+
 			 
 			 
  local
   (*_exit and exit; _enter and enter*)
   val refPosParam = Var.new(Atom.atom "refPos", span, AST.FunParam, vecTy)
   val dposParam = Var.new(Atom.atom "dPos", span, AST.FunParam, vecTy)
+  val intPosParam = Var.new(Atom.atom "i", span, AST.FunParam, Ty.T_Int)
   val refPosExp = AST.E_Var(refPosParam, span)
   val dPosExp = AST.E_Var(dposParam, span)
-  val funType = Ty.T_Fun([vecTy, vecTy], vec2Ty)
+  val intPosExp = AST.E_Var(intPosParam, span)
+  val funType = Ty.T_Fun([vecTy, vecTy, Ty.T_Int], vec2Ty)
   val funAtom = Atom.atom "_exit"
   val funVar = Var.new (funAtom, span, Var.FunVar, funType)
-  val tests = if dim = 2
-	      then twoDimTests(refPosExp, dPosExp, geometry)
-	      else if dim = 3
-	      then threeDimTests(refPosExp, dPosExp, geometry) handle exn => raise exn
-	      else
-	       raise Fail "Dim ought to be 2 or 3 in check-global.sml; this should not have been called at this point."
+		       
+  val tests = buildIntersectionTestInfo(dim, geometry, refPosExp, dPosExp)
 
 
-  val body = AST.S_Block(intersectionTesting tests NONE)
+  val body = AST.S_Block(intersectionTesting(tests, false, 10, false, 0, 0, false, SOME(intPosExp)))
   val result = ((funAtom, funVar), AST.D_Func(funVar, [refPosParam, dposParam], body))
 
 		 
   val funAtom' = Atom.atom "_enter"
-  val funVar' = Var.new (funAtom', span, Var.FunVar, funType)
-  fun buildInsideOption(test1, b) =
-      let
-       (*comptue new pos *)
-       val adjustedTest = test1
-       val scale = makePrim'(BV.mul_tr, [dPosExp, test1], [vecTy, Ty.realTy], vecTy)
-       val newPos = makePrim'(BV.add_tt, [scale, refPosExp], [vecTy, vecTy], vecTy)
-       val insideTest = makeRefCellInsideFunc([newPos, newPos]) (*avoid the need to pass refPos because under our scheme we current forget it...*)
-       val printInsidePos = makePrinStatement("pos in ref", [dPosExp, refPosExp, newPos], "\n");
-					     
-       (*see if inside*)
-      in
-       AST.S_IfThenElse(insideTest, b, AST.S_Block([]))
-      end
-  val body' = AST.S_Block(intersectionTesting tests (SOME(buildInsideOption)))
+  val funType' = Ty.T_Fun([vecTy, vecTy], vec2Ty)
+  val funVar' = Var.new (funAtom', span, Var.FunVar, funType')
+	
+  val body' = AST.S_Block(intersectionTesting(tests, true, 10, true, 4, 0, false, NONE))
   val result' = ((funAtom', funVar'), AST.D_Func(funVar', [refPosParam, dposParam], body'))
 
 
@@ -276,15 +408,15 @@ fun makeGeometryFuncs(env, cxt, span, meshData, geometry, inverse, forwardInfo, 
   fun replaceExit ([re, pos, vec]) =
       let
        (*get refPos, call the function, etc*)
-       val refPos = AST.E_ExtractFemItem(pos, vecTy, (FemOpt.RefPos, meshData))
-       val res = AST.E_Apply((funVar, span), [refPos, vec], vec2Ty)
+       val refPos = AST.E_ExtractFemItem(pos, vecTy, (FemOpt.RefPos, posData))
+       val posEntryFacet = AST.E_ExtractFemItem(pos, Ty.T_Int, (FemOpt.PosEntryFacet, posData))
+       val res = AST.E_Apply((funVar, span), [refPos, vec, posEntryFacet], vec2Ty)
        val ret = AST.E_Slice(res, [SOME(AST.E_Lit(Literal.intLit 0))], Ty.realTy )
       in
        ret
 
       end
   val funcResult = (exitFuncName, replaceExit, exitFuncTy)
-
 
   val enterFuncName = Atom.atom (FemName.refEnter)
   val enterFuncTy = Ty.T_Fun([refTy, vecTy, vecTy], Ty.realTy)
@@ -305,158 +437,6 @@ fun makeGeometryFuncs(env, cxt, span, meshData, geometry, inverse, forwardInfo, 
  val enterFuncResult = enterFuncResult
  val exitFuncResult = funcResult
  end
-
- fun buildIndexAnalysis(dim, geometry) =
-     let
-      val SOME(CF.Points(_,SOME(buildIndex))) = (List.find (fn CF.Points(_) => true | _ => false) geometry) handle exn => raise exn
-      val SOME(CF.Higher(_, xs)) = (List.find (fn CF.Higher(dim', _) => dim'=dim -1 | _ => false) geometry) handle exn => raise exn
-      fun buildNodeIndex(idx) = List.nth(buildIndex, idx)
-      val planeIndecies : int list list = List.map (fn (x,y,z) => List.map (buildNodeIndex o IntInf.toInt) z) xs;
-
-
-      (*first, build sizing *)
-      (*second build giant array*)
-      (*build expression index and Known index*)
-      val sizes = List.map List.length planeIndecies
-      val size = List.foldr (op+) 0 sizes
-      val planeCount = List.length sizes
-      val sizes' = List.map (fn x => List.take(sizes,x)) (List.tabulate(planeCount, fn x => x));
-      val offsets = List.map (List.foldr Int.* 1) sizes'
-      val offsetAndSize = ListPair.zip (offsets, sizes)
-      fun buildIntLit x = AST.E_Lit(Literal.intLit x)
-      val int2vecTy = Ty.T_Sequence(Ty.T_Int, SOME(Ty.DimConst 2))
-      val offsetAndSizeExprTy = Ty.T_Sequence(int2vecTy, SOME(Ty.DimConst planeCount))
-      val offsetAndSizeExpr = AST.E_Seq(List.map (fn (x,y) => AST.E_Seq([buildIntLit x, buildIntLit y], int2vecTy)) offsetAndSize, offsetAndSizeExprTy)
-
-      fun flat xs = List.foldr op@ [] xs
-      val planeIndeciesTy =  Ty.T_Sequence(Ty.T_Int, SOME(Ty.DimConst size))
-      val planeIndeciesExpr = AST.E_Seq(List.map buildIntLit (flat planeIndecies), planeIndeciesTy)
-      (*We need to partion planeSizes to things of the same size*)
-      val planeIndeciesAndIndex : (int list * int) list = ListPair.zip (planeIndecies, List.tabulate(planeCount, fn x => x));
-      val maxSize = List.foldr (Int.max) 0 sizes
-      val planeIndeciesBySize = List.filter (fn (y,x) => not (List.null x)) (List.tabulate(maxSize+1, fn i => (i, List.filter (fn (x,y) => List.length x = i) planeIndeciesAndIndex)) : (int * (int list * int) list) list)
-      (*for each size, we have a lits of facets with their indecies into an array of nodes and there integer id*)
-      (*{nodes[allIndecies[offset[face][0]+i]] : i in (0, offset[face][1]}*)
-					    
-      fun getUnknownNodeAccesses faceExpr (nodesExpr, nodesTy) =
-	  let
-	   val offsetInto = makePrim'(BV.subscript, [offsetAndSizeExpr, faceExpr], [offsetAndSizeExprTy, Ty.T_Int], int2vecTy)
-	   val offset = makePrim'(BV.subscript, [offsetInto, AST.E_Lit(Literal.intLit 0)], [int2vecTy, Ty.T_Int], Ty.T_Int)
-	   val size = makePrim'(BV.subscript, [offsetInto, AST.E_Lit(Literal.intLit 1)], [int2vecTy, Ty.T_Int], Ty.T_Int)
-			       
-	   val itterVar = Var.new (Atom.atom "i", span, Var.IterVar, Ty.T_Int)
-	   val itterVarRange = makePrim'(BV.range, [AST.E_Lit(Literal.intLit 0), size], [Ty.T_Int, Ty.T_Int], Ty.T_Int)
-	   val access1 = makePrim'(BV.add_ii, [offset, AST.E_Var(itterVar, span)],
-				   [Ty.T_Int, Ty.T_Int], Ty.T_Int)
-	   val access2 = makePrim'(BV.subscript, [planeIndeciesExpr, access1], [planeIndeciesTy, Ty.T_Int], Ty.T_Int)
-	   (*todo: can this be sub?*)
-	   val fin = makePrim'(BV.dynSubscript, [nodesExpr, access2], [nodesTy, Ty.T_Int], Ty.T_Int)
-	   val comprehension = AST.E_Comprehension(access2, (itterVar, itterVarRange), Ty.T_Sequence(Ty.T_Int, NONE))
-	  in
-	   comprehension
-	  end
-
-
-      fun getKnownNodeAccess faceInt (nodesExpr, nodesTy) =
-	  let
-	   (*since we know the face in advance, we just grab the nodes from known indecies*)
-	   val faceIdxes = List.nth(planeIndecies, faceInt)
-	   val faceIdxesCount = List.nth(sizes, faceInt)
-	   val faceIntLits = List.map buildIntLit faceIdxes
-	   val nodeAcceses = List.map (fn x => makePrim'(BV.subscript, [nodesExpr, x], [nodesTy, Ty.T_Int], Ty.T_Int)) faceIntLits
-	   val ty = Ty.T_Sequence(Ty.T_Int, SOME(Ty.DimConst faceIdxesCount))
-	   val result = AST.E_Seq(nodeAcceses, ty)
-				 
-	  in
-	   (result, ty)
-	  end
-
-      fun comparisionStm count cellIntExp faceInt unknownFaceNodesExp (knownFaceNodesExp, ty) =
-	  let
-
-	   (*compare nodes from the first cell to the current cell; we've already loaded both at this point *)
-	   
-	   fun makeIntEquality(i) = makePrim'(BV.equ_ii,
-					      [
-						makePrim'(BV.subscript, [knownFaceNodesExp, AST.E_Lit(Literal.intLit i)],
-							  [ty, Ty.T_Int], Ty.T_Int),
-						makePrim'(BV.dynSubscript, [unknownFaceNodesExp, AST.E_Lit(Literal.intLit i)],
-							  [Ty.T_Sequence(Ty.T_Int, NONE), Ty.T_Int], Ty.T_Int)
-							 
-					      ], [Ty.T_Int, Ty.T_Int], Ty.T_Bool)
-	   val tests = List.map makeIntEquality (List.tabulate(count, fn x => x))
-	   val test = makeAnds(tests);
-	   val ifStm = AST.S_IfThenElse(test,
-					AST.S_Return(AST.E_Seq([cellIntExp, AST.E_Lit(Literal.intLit faceInt)], Ty.T_Sequence(Ty.T_Int, SOME(Ty.DimConst 2)))),
-					AST.S_Block([]))
-				       (*return new cell and new facet*)
-				       
-
-	  in
-	   ifStm
-	  end
-
-      fun perSizeComparisionLoop(meshExp, meshData, faceSize, cellSeq, faceInts : int list, unknownFaceNodesExp) =
-	  (*for each cell in c: nodes <- loadNodes(c) ifstm1, ifstm2,*)
-	  let
-	   val FT.Mesh(mesh) = meshData
-	   val spaceDim = FT.meshMapDim mesh
-	   val itterVar = Var.new (Atom.atom "cellInt", span, Var.IterVar, Ty.T_Int)
-	   val itterVarExp = AST.E_Var(itterVar, span)
-	   val loadMeshIndecies = (AST.E_ExtractFemItem2(meshExp, itterVarExp, Ty.T_Int, Ty.T_Sequence(Ty.T_Int, SOME(Ty.DimConst spaceDim)), (FemOpt.ExtractIndices, meshData)), Ty.T_Sequence(Ty.T_Int, SOME(Ty.DimConst spaceDim)))
-	   fun buildFaceNodes(i : int)= (getKnownNodeAccess i loadMeshIndecies, i)
-	   val knownNodeAcc = List.map buildFaceNodes faceInts
-	   fun buildComps (exp, i) = comparisionStm faceSize itterVarExp i unknownFaceNodesExp exp
-	   val comps = AST.S_Block(List.map buildComps knownNodeAcc)
-	   val loop = AST.S_Foreach((itterVar, cellSeq), comps)
-				   
-	  in
-	   loop
-	  end
-
-
-
-      fun buildFunction(meshExp, meshData, cellIntExp, faceIntExp) =
-	  let
-	   (*todo: lift some defs here up?*)
-	   (*todo: check if cell and facet are valid.*)
-	   val FT.Mesh(mesh) = meshData
-	   val spaceDim = FT.meshMapDim mesh
-	   (*get nearby cells*)
-	   val nearbyCellVar = Var.new (Atom.atom "nearbyCells", span, Var.LocalVar, Ty.T_Sequence(Ty.T_Int, NONE))
-	   val nearbyCellVarExp = AST.E_Var(nearbyCellVar, span)
-	   val nearbyCellVarAssign = AST.S_Assign((nearbyCellVar,span), AST.E_ExtractFemItem2(meshExp, cellIntExp, Ty.T_Int, Ty.T_Sequence(Ty.T_Int, NONE), (FemOpt.CellConnectivity, meshData)));
-	   
-	   (*get the relevant nodes*)
-	   val nodesTy = Ty.T_Sequence(Ty.T_Int, SOME(Ty.DimConst spaceDim))
-	   val generalNodesVar = Var.new (Atom.atom "cellNodes", span, Var.LocalVar, nodesTy)
-	   val generalNodesExp = AST.E_Var(generalNodesVar,span)
-	   val generalNodesAssign = AST.S_Assign((generalNodesVar,span), AST.E_ExtractFemItem2(meshExp, cellIntExp, Ty.T_Int, nodesTy, (FemOpt.ExtractIndices, meshData)));
-	   (*get the face-node sequence*)
-	   val faceNodes = getUnknownNodeAccesses faceIntExp (generalNodesExp, nodesTy);
-	   val numUnknownKnownsVar = Var.new (Atom.atom "numFacetNodes", span, Var.LocalVar, Ty.T_Int)
-	   val numUknownKnownsAssign = AST.S_Assign((numUnknownKnownsVar, span), makePrim'(BV.fn_length, [faceNodes], [Ty.T_Sequence(Ty.T_Int, NONE)], Ty.T_Int))
-	   fun makeSizeTest i = makePrim'(BV.equ_ii, [AST.E_Lit(Literal.intLit i), AST.E_Var(numUnknownKnownsVar, span)], [Ty.T_Int, Ty.T_Int], Ty.T_Bool)
-
-	   (*for each size, partition and build comparision loop*)
-
-	   fun buildLoopsByFaceSize(size, faceIntsIntPair) =
-	       let
-		val ret = perSizeComparisionLoop(meshExp, meshData, size, nearbyCellVarExp, (List.map (fn (x,y) => y) faceIntsIntPair) , faceNodes)
-	       in
-		AST.S_IfThenElse(makeSizeTest size,
-				 ret,
-				 AST.S_Block([]))
-	       end
-	   val loops = List.map buildLoopsByFaceSize planeIndeciesBySize
-	   val failRet = AST.S_Return(AST.E_Seq([AST.E_Lit(Literal.intLit (~1)), AST.E_Lit(Literal.intLit (~1))], int2vecTy))				 
-				     (*build return at the end.*)
-	  in
-	   nearbyCellVarAssign::numUknownKnownsAssign::loops@[failRet]
-	  end
-     in
-      buildFunction
-     end
  (*Several versions of cell connectivity:
 		 1. Raw
 		 2. Nearby cells only -> search through them
@@ -500,23 +480,23 @@ fun makeGeometryFuncs(env, cxt, span, meshData, geometry, inverse, forwardInfo, 
   val facetIntExp = AST.E_Var(facetIntParam, span)
   val cellExp = AST.E_Var(cellParam, span);
   val meshExp = AST.E_Var(meshParam, span);
-  val buildNextCellFunction = buildIndexAnalysis(dim, geometry)
-  val functionBody = buildNextCellFunction(meshExp, meshData, cellExp, facetIntExp)
-  val nextCellAtom = Atom.atom "$nextCell2"
-  val nextCellTy = Ty.T_Fun([Ty.T_Int, Ty.T_Int, meshTy], Ty.T_Sequence(Ty.T_Int, SOME(Ty.DimConst 2)))
-  val nextCellFuncVar = Var.new (nextCellAtom, span, AST.FunVar, nextCellTy)
-  val nextCellFunc = AST.D_Func(nextCellFuncVar, params, AST.S_Block(functionBody))
+  (* val buildNextCellFunction = buildIndexAnalysis(dim, geometry) *)
+  (* val functionBody = buildNextCellFunction(meshExp, meshData, cellExp, facetIntExp) *)
+  (* val nextCellAtom = Atom.atom "$nextCell2" *)
+  (* val nextCellTy = Ty.T_Fun([Ty.T_Int, Ty.T_Int, meshTy], Ty.T_Sequence(Ty.T_Int, SOME(Ty.DimConst 2))) *)
+  (* val nextCellFuncVar = Var.new (nextCellAtom, span, AST.FunVar, nextCellTy) *)
+  (* val nextCellFunc = AST.D_Func(nextCellFuncVar, params, AST.S_Block(functionBody)) *)
 
 
-  fun internalCellFuncReplace([seqExp, meshPosExp]) =
-      let
-       (*extract meshPos*)
-       val meshExp = AST.E_ExtractFem(meshPosExp, meshData)
-       val cellExpr = AST.E_ExtractFemItem(meshPosExp,Ty.T_Int, (FemOpt.CellIndex, meshData))
-       val facetIdExpr = makePrim'(BV.floor, [AST.E_Slice(seqExp, [SOME(AST.E_Lit(Literal.intLit 1))], Ty.realTy)], [Ty.realTy], Ty.T_Int)
-      in
-       AST.E_Apply((nextCellFuncVar, span), [facetIdExpr, cellExpr, meshExp], Ty.T_Sequence(Ty.T_Int, SOME(Ty.DimConst 2)))
-      end
+  (* fun internalCellFuncReplace([seqExp, meshPosExp]) = *)
+  (*     let *)
+  (*      (*extract meshPos*) *)
+  (*      val meshExp = AST.E_ExtractFem(meshPosExp, meshData) *)
+  (*      val cellExpr = AST.E_ExtractFemItem(meshPosExp,Ty.T_Int, (FemOpt.CellIndex, meshData)) *)
+  (*      val facetIdExpr = makePrim'(BV.floor, [AST.E_Slice(seqExp, [SOME(AST.E_Lit(Literal.intLit 1))], Ty.realTy)], [Ty.realTy], Ty.T_Int) *)
+  (*     in *)
+  (*      AST.E_Apply((nextCellFuncVar, span), [facetIdExpr, cellExpr, meshExp], Ty.T_Sequence(Ty.T_Int, SOME(Ty.DimConst 2))) *)
+  (*     end *)
 
   val nextCellAtom4 = Atom.atom "nextCell4"
   val nextCellTy4 = Ty.T_Fun([Ty.T_Int, Ty.T_Int, meshTy], Ty.T_Sequence(Ty.T_Int, SOME(Ty.DimConst 2)))
@@ -524,15 +504,10 @@ fun makeGeometryFuncs(env, cxt, span, meshData, geometry, inverse, forwardInfo, 
   val functionBody4 =faceConnectivityToCellFact(meshExp, cellExp, facetIntExp)
   val nextCellFunc4 = AST.D_Func(nextCellFuncVar4, params, AST.S_Block([functionBody4]))
 
-
-				
-
-
-
  in
- val cellFunc = ((nextCellAtom,nextCellFuncVar), nextCellFunc)
+ (* val cellFunc = ((nextCellAtom,nextCellFuncVar), nextCellFunc) *)
  val cellFunc4 = ((nextCellAtom4, nextCellFuncVar4), nextCellFunc4)
- val internalCellFuncReplace = internalCellFuncReplace
+ (* val internalCellFuncReplace = internalCellFuncReplace *)
  end
 
  (*let's think about validity here and what not 
@@ -598,7 +573,7 @@ fun makeGeometryFuncs(env, cxt, span, meshData, geometry, inverse, forwardInfo, 
 				     [vecTy, vecTy], vecTy)
 	  in
 	   (*meshExp,cellExpr, posExpr*)
-	   AST.E_ExtractFemItemN([meshExp, newCellExp, newRefPos], [meshTy, Ty.T_Int, vecTy], posTy, (FemOpt.RefBuild, meshData), NONE)
+	   AST.E_ExtractFemItemN([meshExp, newCellExp, newRefPos, dstFacetExpr], [meshTy, Ty.T_Int, vecTy, Ty.T_Int], posTy, (FemOpt.RefBuild, meshData), NONE)
 	  end
 	| buildSolveOperation(CF.PlaneParam(_, xs)) =
 	  let
@@ -622,7 +597,7 @@ fun makeGeometryFuncs(env, cxt, span, meshData, geometry, inverse, forwardInfo, 
 					
 	   val resultVec4 = makePrim'(BV.op_inner_tt, [selectedTensor, vec4refPos], [mat4, vec4], vec4) handle exn => raise exn
 	   val newRefPos = AST.E_Tensor(List.tabulate(3, fn x => AST.E_Slice(resultVec4, [SOME(AST.E_Lit(Literal.intLit x))], Ty.realTy)), vecTy)
-	   val result =  AST.E_ExtractFemItemN([meshExp, newCellExp, newRefPos], [meshTy, Ty.T_Int, vecTy], posTy, (FemOpt.RefBuild, meshData), NONE)
+	   val result =  AST.E_ExtractFemItemN([meshExp, newCellExp, newRefPos, dstFacetExpr], [meshTy, Ty.T_Int, vecTy, Ty.T_Int], posTy, (FemOpt.RefBuild, meshData), NONE)
 
 	  in
 	   result handle exn => raise exn
@@ -640,7 +615,7 @@ fun makeGeometryFuncs(env, cxt, span, meshData, geometry, inverse, forwardInfo, 
       solveCall
       handle exn => raise exn
      end
-
+ (*note exposing this...for the world based ones we should be doing something else.... also, we could take the time argument!*)
  fun makeRefExitPosBody(meshExp, cellExp, refPosExp, dPosExp, timeAndFaceExp, dim, geometry, debug) =
      let
       (*first, build new expression*)
@@ -691,9 +666,9 @@ fun makeGeometryFuncs(env, cxt, span, meshData, geometry, inverse, forwardInfo, 
   val hiddeExitPosFunc = AST.D_Func(hiddenExitPosVar, [meshParam, cellParam, refPosParam, dPosParam, timeAndFace], bodyStm)
   val hiddenExitFuncPosResult = ((hiddenExitPosAtom, hiddenExitPosVar), hiddeExitPosFunc)
 
-  val exitPos = Atom.atom "exitPos"
+  val exitPos = Atom.atom (FemName.refExitPos)
   val exitPosTy = Ty.T_Fun([refTy, posTy, vecTy], posTy)
-  fun exitPosReplace([re, pos, vec]) =
+  fun exitPosReplace'([re, pos, vec]) =
       let
        val mesh = AST.E_ExtractFem(pos, meshData)
        val cell = AST.E_ExtractFemItem(pos, Ty.T_Int, (FemOpt.CellIndex, meshData))
@@ -702,15 +677,16 @@ fun makeGeometryFuncs(env, cxt, span, meshData, geometry, inverse, forwardInfo, 
        (*apply func*)
        val result = AST.E_Apply((hiddenExitPosVar,span), [mesh, cell, refPos, vec, seq], posTy)
       in
-       result
+       (result, seq)
       end
-    | exitPosReplace(_) = raise Fail "impossible got past type checking."
-
+    | exitPosReplace'(_) = raise Fail "impossible got past type checking."
+  fun exitPosReplace(vs) = (fn (x,y) => x) (exitPosReplace'(vs))
   val refExitPosReplace = (exitPos, exitPosReplace, exitPosTy)
 
 			    
 			    
  in
+ val seqRefPosExitFunc = exitPosReplace'
  val refPosExitFunc = hiddenExitFuncPosResult
  val refExitPosReplace = refExitPosReplace
  end
@@ -738,7 +714,7 @@ fun makeGeometryFuncs(env, cxt, span, meshData, geometry, inverse, forwardInfo, 
       val trans1 =  if Option.isSome(refVec1Exp)
  		    then vec1Exp
  		    else inverted
-				  
+			   
       val derv = dInvAtZero 
       val trans2 = makePrim'(BV.op_inner_tt, [derv, vec2Exp], [matTy, vecTy], vecTy) handle exn => raise exn
       val appFunc  = if exitEnter
@@ -746,19 +722,19 @@ fun makeGeometryFuncs(env, cxt, span, meshData, geometry, inverse, forwardInfo, 
 			  in enterFuncVar end
 		     else let val ((_, exitFuncVar), _) = hiddenExitFuncResult
 			  in exitFuncVar end
-      
+			    
       val seqResult = AST.E_Apply((appFunc, span), [trans1, trans2], vec2SeqTy)
       val ret = AST.E_Slice(seqResult, [SOME(AST.E_Lit(Literal.intLit 0))], Ty.realTy)
-				 (*other exit call...*)
-				 
+			   (*other exit call...*)
+			   
      in
-      ret
+      (ret, (seqResult, trans1, trans2))
      end
    | buildWorldIntersectsExp (false, exitEnter, meshExp, cellExp, cellIntExp, refVec1Exp, vec1Exp, vec2Exp) = raise Fail "later"
 
 
 
-													 
+														    
  local
   (*build _exit, build exit func, enter func*)
   val FT.Mesh(mesh) = meshData
@@ -767,7 +743,7 @@ fun makeGeometryFuncs(env, cxt, span, meshData, geometry, inverse, forwardInfo, 
   fun cellHiddenExitFun(b,v1, v2, v3, v4, v5, v6) = buildWorldIntersectsExp(FemData.isAffine mesh,b, v1, v2, v3, v4, v5, v6)
 
 
-									 
+									   
 
   val posExit = Atom.atom (FemName.posExit)
   val posExitTy = Ty.T_Fun([posTy, vecTy], Ty.realTy)
@@ -779,7 +755,7 @@ fun makeGeometryFuncs(env, cxt, span, meshData, geometry, inverse, forwardInfo, 
        val refPos = AST.E_ExtractFemItem(v1, vecTy, (FemOpt.RefPos, meshData))
        val transformField = makeTransformFunc([cellExp])
        val worldPos =  makePrim'(BV.op_probe, [transformField, refPos], [transformFieldTy, vecTy], vecTy) handle exn => raise exn (*TODO: fix worldPos*)
-       val result = cellHiddenExitFun(false, mesh, cellExp, cellInt, SOME(refPos), worldPos, v2)
+       val (result, _) = cellHiddenExitFun(false, mesh, cellExp, cellInt, SOME(refPos), worldPos, v2)
 
       in
        result
@@ -794,9 +770,28 @@ fun makeGeometryFuncs(env, cxt, span, meshData, geometry, inverse, forwardInfo, 
        val cellExp = v1
        val cellInt = AST.E_ExtractFemItem(v1, Ty.T_Int, (FO.CellIndex, cellData))
        val refVecExp = NONE (*transform from v2*)
-       val result = cellHiddenExitFun(true, mesh, cellExp, cellInt, NONE, v2, v3)
+       val (result, _) = cellHiddenExitFun(true, mesh, cellExp, cellInt, NONE, v2, v3)
       in
        result
+      end
+
+
+
+  val cellEnterPos = Atom.atom (FemName.cellEnterPos)
+  val cellEnterPosTy = Ty.T_Fun([cellTy, vecTy, vecTy], posTy)
+  fun cellEnterPosFun([v1, v2, v3]) =
+      let
+       val mesh = AST.E_ExtractFem(v1, meshData)
+       val cellExp = v1
+       val cellInt = AST.E_ExtractFemItem(v1, Ty.T_Int, (FO.CellIndex, cellData))
+       val refVecExp = NONE (*transform from v2*)
+       val (timeResult, (seq, refBPos, refDPos)) = cellHiddenExitFun(true, mesh, cellExp, cellInt, NONE, v2, v3)
+       val refPos = rayAtT(refBPos, refDPos, timeResult)
+       val worldPos = rayAtT(v2, v3, timeResult)
+       val facetIdExpr = makePrim'(BV.floor, [AST.E_Slice(seq, [SOME(AST.E_Lit(Literal.intLit 1))], Ty.realTy)], [Ty.realTy], Ty.T_Int)
+       val posResult = AST.E_ExtractFemItemN([mesh, v1, refPos, worldPos, facetIdExpr], [meshTy, Ty.T_Int, vecTy, vecTy, Ty.T_Int], posTy, (FemOpt.AllBuild, posData), NONE)
+      in
+       posResult
       end
 	
 
@@ -805,34 +800,26 @@ fun makeGeometryFuncs(env, cxt, span, meshData, geometry, inverse, forwardInfo, 
  val cellHiddenResult = (cellHiddenExit,cellHiddenExitFun, cellHiddenExitTy)
  val posExitResult = (posExit, posExitFun, posExitTy)
  val cellEnterResult = (cellEnter, cellEnterFun, cellEnterTy)
+ val cellEnterPosResult = (cellEnterPos, cellEnterPosFun, cellEnterPosTy)
  end
 
  fun buildWorld(true, posExp, vecExp) =
      let
       (*get the int, ref*)
-      val (_, refExitPosFunc, _) = refExitPosReplace
+      val refExitPosFunc = seqRefPosExitFunc
       val mesh = AST.E_ExtractFem(posExp, meshData)
       val cellInt = AST.E_ExtractFemItem(posExp, Ty.T_Int, (FO.CellIndex, posData))
       val cellExp =  AST.E_LoadFem(cellData, SOME(mesh), SOME(cellInt))
       val zeroExp = AST.E_Tensor(List.tabulate(dim, fn x => AST.E_Lit(Literal.Real(RealLit.zero true))), vecTy)
-				  
-      val transformField = makeTransformFunc([cellExp])
-      val invertVar = if dim = 2
- 		      then BV.fn_inv2_f
- 		      else if dim = 3
- 		      then BV.fn_inv3_f
- 		      else raise Fail "dim <> 2 and dim <> 3"
-      val dTransformVal = makePrim'(BV.op_Dotimes, [transformField], [invTransformFieldTy], dTransformFieldTy)
-      val invertedField = makePrim'(invertVar, [dTransformVal], [dTransformFieldTy], dTransformFieldTy)
-      (* val refPos = AST.E_ExtractFemItem(posExp, vecTy, (FemOpt.RefPos, meshData)) *)
-      val probe = makePrim'(BV.op_probe, [invertedField, zeroExp], [dTransformFieldTy, vecTy], matTy)
-      val newDpos = makePrim'(BV.op_inner_tt, [probe, vecExp], [matTy, vecTy], vecTy)
+				
+      val (invA, _) = makeInvTransformFunc([cellExp], zeroExp)
+      val newDpos = makePrim'(BV.op_inner_tt, [invA, vecExp], [matTy, vecTy], vecTy)
 
-				   
+			     
       val mesh = AST.E_ExtractFem(cellExp, meshData)
-      val result = refExitPosFunc([mesh, posExp, newDpos])
+      val (posResult, seqResult) = refExitPosFunc([mesh, posExp, newDpos]) (*TODO: Compute worldPos here too and percolate to simple.*)
      in
-      result
+      posResult
      end
    | buildWorld (false, posExp, vecExp) =  raise Fail "not implemented"
 
@@ -842,7 +829,7 @@ fun makeGeometryFuncs(env, cxt, span, meshData, geometry, inverse, forwardInfo, 
   val posExitTy = Ty.T_Fun([posTy, vecTy], posTy)
   fun posExitFun([v1,v2]) = buildWorld(FemData.isAffine mesh, v1,v2)
     | posExitFun (_) = raise Fail "typechecker error"
-			  
+			     
  in
  val posExitPosResult = (posExitName, posExitFun, posExitTy)
  end
@@ -851,8 +838,8 @@ fun makeGeometryFuncs(env, cxt, span, meshData, geometry, inverse, forwardInfo, 
  (* 0.00001 -> get a new pos out via previous method...*)
  (*My schedule: deal with maps later if we need them - we probably don't for the moment.*)
 
-							  
- val refActualFuncs = [hiddenExitFuncResult, hiddenEnterFuncResult, cellFunc, cellFunc4, refPosExitFunc]
+ 
+ val refActualFuncs = [hiddenExitFuncResult, hiddenEnterFuncResult, cellFunc4, refPosExitFunc]
  val (refActualFuncsInfo, refActualFuncDcls) = ListPair.unzip refActualFuncs
  val refReplaceFuncs = [exitFuncResult, refExitPosReplace, enterFuncResult]
 
@@ -861,7 +848,7 @@ fun makeGeometryFuncs(env, cxt, span, meshData, geometry, inverse, forwardInfo, 
  val (posActualFuncInfo, posActualFuncDcls) = ListPair.unzip posActualFuncs
  val results = {ref = (refActualFuncsInfo, refActualFuncDcls, refReplaceFuncs),
 		pos = (posActualFuncInfo,posActualFuncDcls,posReplaceFuncs),
-		cell = ([],[],[cellEnterResult])}
+		cell = ([],[],[cellEnterResult, cellEnterPosResult])}
 
 
 in

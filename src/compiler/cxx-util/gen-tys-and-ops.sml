@@ -75,7 +75,7 @@ structure GenTysAndOps : sig
 		       val results = [con]
 		       val results = if (Option.isSome (FemData.meshAccInsert(m)))
 				     then indexPtr::results
-				     else results
+				     else indexPtr::results
 		      in
 		       results
 		      end
@@ -247,6 +247,7 @@ structure GenTysAndOps : sig
 		  val worldPosParam = CL.D_Var([], tensorDataTy, [], "worldPos", NONE)
 		  val worldPosCompute = CL.D_Var([], CL.boolTy, [], "wpc", NONE)
 		  val valid = CL.D_Var([], CL.boolTy, [], "valid", NONE)
+		  val faceParam = CL.D_Var([], intTy, [], "face", NONE)
 
 		  val osty = CL.T_Named("std::ostream &")
 
@@ -314,6 +315,25 @@ structure GenTysAndOps : sig
 							 CL.S_Return(SOME(CL.E_Var("pos")))
 							])
 					     )
+		  val allBuild' = CL.mkFuncDcl(meshPosTy, "allBuild", [CL.PARAM([], meshTy, "mesh"),
+								      CL.PARAM([], intTy, "cell"),
+								      CL.PARAM([], tensorTy, "refPos"),
+								      CL.PARAM([], tensorTy, "worldPos"),
+								      CL.PARAM([], CL.boolTy, "wpc"),
+								      CL.PARAM([], CL.boolTy, "valid"),
+								      CL.PARAM([], intTy, "face")],
+					      CL.S_Block([
+							 CL.S_Decl([], meshPosTy, "pos",NONE),
+							 assgn "pos" "mesh",
+							 assgn "pos" "cell",
+							 assgn "pos" "face",
+							 assgnTensor "pos" "refPos",
+							 assgnTensor "pos" "worldPos",
+							 assgn "pos" "wpc",
+							 assgn "pos" "valid",
+							 CL.S_Return(SOME(CL.E_Var("pos")))
+							])
+					     )
 		  val refBuild = CL.mkFuncDcl(meshPosTy, "refBuild", [CL.PARAM([], meshTy, "mesh"),
 								      CL.PARAM([], intTy, "cell"),
 								      CL.PARAM([], tensorTy, "refPos")],
@@ -326,7 +346,20 @@ structure GenTysAndOps : sig
 							 assgnTrue "valid",
 							 CL.S_Return(SOME(CL.E_Var("pos")))
 							]))
-
+		  val refBuild' = CL.mkFuncDcl(meshPosTy, "refBuild", [CL.PARAM([], meshTy, "mesh"),
+								      CL.PARAM([], intTy, "cell"),
+								      CL.PARAM([], tensorTy, "refPos"),
+								      CL.PARAM([], intTy, "face")],
+					      CL.S_Block([
+							 CL.S_Decl([], meshPosTy, "pos",NONE),
+							 assgn "pos" "mesh",
+							 assgn "pos" "cell",
+							 assgn "pos" "refPos",
+							 assgnFalse "wpc",
+							 assgnTrue "valid",
+							 assgn "pos" "face",
+							 CL.S_Return(SOME(CL.E_Var("pos")))
+							]))
 		  val invalidBuild = CL.mkFuncDcl(meshPosTy, "invalidBuild", [CL.PARAM([], meshTy, "mesh")],
 					      CL.S_Block([
 							 CL.S_Decl([], meshPosTy, "pos",NONE),
@@ -353,33 +386,40 @@ structure GenTysAndOps : sig
 					       CL.PARAM([], tensorTy, "refPos"),
 					       CL.PARAM([], tensorTy, "worldPos"),
 					       CL.PARAM([], CL.boolTy, "wpc"),
-					       CL.PARAM([], CL.boolTy, "valid")],
+					       CL.PARAM([], CL.boolTy, "valid"),
+					       CL.PARAM([], intTy, "face")],
 					      SOME([varStart "mesh",
 						    varStart "cell",						    
 						    varStart "wpc",
-						    varStart "valid"],(CL.S_Block([
-										  noAssgn "mesh",
-					       noAssgn "cell",
-					       noAssgn "refPos",
-					       noAssgn "worldPos",
-					       noAssgn "wpc",
-					       noAssgn "valid"])))
+						    varStart "valid",
+						    varStart "face"],
+						   (CL.S_Block([
+							       noAssgn "mesh",
+							       noAssgn "cell",
+							       noAssgn "refPos",
+							       noAssgn "worldPos",
+							       noAssgn "wpc",
+							       noAssgn "valid",
+							       noAssgn "face"])))
 					      
 					    )
 
 		  val defaultBuild =  CL.D_Constr (
                        [], [], name, [], SOME([
-					       expStart "cell" (CL.E_Int(IntLit.fromInt (~1), intTy)),
-					       expStart "wpc" (CL.E_Bool(false)),
-					       expStart "valid" (CL.E_Bool(false))], CL.S_Block([])))
+					      expStart "cell" (CL.E_Int(IntLit.fromInt (~1), intTy)),
+					      expStart "face" (CL.E_Int(IntLit.fromInt (~1), intTy)),
+					      expStart "wpc" (CL.E_Bool(false)),
+					      expStart "valid" (CL.E_Bool(false))], CL.S_Block([])))
 
 		  val defaultBuild' =  CL.D_Constr (
-                       [], [], name,  [CL.PARAM([], meshTy, "mesh")], SOME([
-					       expStart "cell" (CL.E_Int(IntLit.fromInt (~1), intTy)),
-					       expStart "wpc" (CL.E_Bool(false)),
-					       expStart "valid" (CL.E_Bool(false)),
-					       varStart "mesh"], CL.S_Block([])))
-					    
+                       [], [], name,  [CL.PARAM([], meshTy, "mesh")],
+		       SOME([
+			    expStart "cell" (CL.E_Int(IntLit.fromInt (~1), intTy)),
+			    expStart "face" (CL.E_Int(IntLit.fromInt (~1), intTy)),
+			    expStart "wpc" (CL.E_Bool(false)),
+			    expStart "valid" (CL.E_Bool(false)),
+			    varStart "mesh"], CL.S_Block([])))
+						   
 		  (* val invalidBuild = CL.D_Constr([],[], name, *)
 		  (* 				  [CL.PARAM([], meshTy, "mesh")], *)
 		  (* 				  [simpleInit "mesh", *)
@@ -443,11 +483,11 @@ structure GenTysAndOps : sig
 						
 							CL.S_Return(SOME(CL.E_Var("cp")))
 					    ]))
-		  val fields = [meshParam, intParam, refPosParam, worldPosParam, worldPosCompute, valid, genBuild, defaultBuild,defaultBuild']
+		  val fields = [meshParam, intParam, refPosParam, worldPosParam, worldPosCompute, valid, genBuild, defaultBuild,defaultBuild', faceParam]
 		  val class = CL.D_ClassDef{name=name, args=NONE, from=NONE,public = fields , protected = [], private = []}
 		  
 		 in
-		  (class, [printer,allBuild, invalidBuild,invalidBuild', refBuild, copy_to, makeFem])
+		  (class, [printer, allBuild, allBuild', invalidBuild, invalidBuild', refBuild, refBuild', copy_to, makeFem])
 		 end
 		)
 		
