@@ -10,7 +10,7 @@ structure CheckTypeFile  : sig
 	   datatype dimensionalObjects = Points of (int * real list) list * int list option
 				       | Higher of int * ((int * IntInf.int list * IntInf.int list) list)
 				       | Mapping of int * string
-				       | LineParam of (real list * real list * real) list
+				       | LineParam of (real list * real list * (real list * real)) list
 				       (*b-a, a, |b-a|*)
 				       | PlaneParam of (real * real list) list * real list list list list (*d, normal, matrix of matrices*)
 	   
@@ -34,7 +34,7 @@ type constant = (Types.ty * ConstExpr.t * string)
 datatype dimensionalObjects = Points of (int * real list) list * int list option
 			    | Higher of int * ((int * IntInf.int list * IntInf.int list) list)
 			    | Mapping of int * string
-			    | LineParam of (real list * real list * real) list
+			    | LineParam of (real list * real list * (real list * real)) list
 			    (*b-a, a*)
 			    | PlaneParam of (real * real list) list * real list list list list (*d, normal, matrix of matrices*)
 
@@ -481,7 +481,14 @@ fun ugg(f, [], _)= []
     end
 fun subtractSeg([x,y]) = (ListPair.map (Real.-) (y,x), x)
   | subtractSeg _ = raise Fail "invalid usbtract"
-fun norm xs = Math.sqrt(List.foldr (fn (x,y) => x*x + y) 0.0 xs)			  
+fun norm xs = Math.sqrt(List.foldr (fn (x,y) => x*x + y) 0.0 xs)
+fun lineKernInfo([a1,a2], [b1, b2]) =
+    let
+     val normal = [Real.~ b2, b1]
+     val d = Real.*(a1,(Real.~ b2)) + Real.*(b1, a2)
+    in
+     (normal, d)
+    end
 fun analyzeGeometry1(cxt, points, higher1) =
     let
      val Points(xs, _) = points
@@ -492,12 +499,13 @@ fun analyzeGeometry1(cxt, points, higher1) =
      val segs' = List.map (List.map IntInf.toInt) segs
      val pairSegs' = List.map (subtractSeg o (List.map getVector)) segs'
      val pairSegs'' = List.map (fn (x,y)=> (x, y, norm x)) pairSegs'
+     val pairSegs''' = List.map (fn (x,y)=> (x, y, lineKernInfo(y, x))) pairSegs'
      val testNorms = (List.exists (fn (x,y,z) => Real.<=(z, 0.00001)) pairSegs'')
      val _ = if testNorms
 	     then TypeError.warning(cxt, [S"A line defined in a json file is probably degenerate!"])
 	     else ()
     in
-     (LineParam(pairSegs''), List.length pairSegs')
+     (LineParam(pairSegs'''), List.length pairSegs')
     end
 fun subtract(a,b) = (ListPair.map (Real.-)(a,b))
 fun crossProduct ([a1,a2,a3] : real list, [b1, b2, b3]) =

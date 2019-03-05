@@ -22,7 +22,8 @@ structure FemOpt : sig
 			      | NewWorld
 			      | InvalidBuild | WorldTest | NearbyCellQuery of Atom.atom
 			      | InvalidBuildBoundary | CellConnectivity | CellFaceCell
-			      | InsideInsert of Atom.atom
+			      | InsideInsert of Atom.atom | PosEntryFacet
+
 
 
 	   type femOption = femOpts * FemData.femType
@@ -55,7 +56,7 @@ datatype femOpts = Cells | RefCell
 		 | InvalidBuild | InvalidBuildBoundary | WorldTest (*internal use only*)
 		 | NearbyCellQuery of Atom.atom
 		 | CellConnectivity | CellFaceCell
-		 | InsideInsert of Atom.atom
+		 | InsideInsert of Atom.atom | PosEntryFacet
 
 		     
 datatype femField =  Transform | RefField | InvTransform 
@@ -102,6 +103,7 @@ fun toStringOpt v =
        | CellFaceCell => "CellFaceCell"
        | InsideInsert(a) => "InsideInsert(File="^(Atom.toString a) ^")"
        | StartCell => "StartCell"
+       | PosEntryFacet => "PosEntryFacet"
     (* end case*))
 
 fun toString (v, d) = toStringOpt(v) ^ "(" ^ (FT.toString d) ^ ")"
@@ -133,6 +135,7 @@ fun arity (NumCell) = 1
   | arity (CellConnectivity) = 2
   | arity (CellFaceCell) = 3
   | arity (InsideInsert(_)) = 2
+  | arity (PosEntryFacet) = 1
 
 
 fun hash (NumCell, d) = 0w1 + FT.hash d
@@ -161,6 +164,7 @@ fun hash (NumCell, d) = 0w1 + FT.hash d
   | hash (CellFaceCell, d) = 0w101 + FT.hash d
   | hash (InsideInsert(a),d) = 0w103 + (Atom.hash a) * 0w107 +  FT.hash d
   | hash (StartCell, d) = 0w107 + FT.hash d
+  | hash (PosEntryFacet, d) = 0w109 + FT.hash d
 fun sameR ((a1,s1), (a2,s2)) = (case (a1, a2)
 				 of (SOME(a1'), SOME(a2')) => Atom.same(a1', a2')
 				  | (SOME(_), NONE) => false
@@ -199,6 +203,7 @@ fun same ((v1, d1),(v2, d2)) = FT.same(d1,d2) andalso
        | (CellFaceCell, CellFaceCell) => true
        | (InsideInsert(a1), InsideInsert(a2)) => Atom.same(a1,a2)
        | (StartCell, StartCell) => true
+       | (PosEntryFacet, PosEntryFacet) => true
        | _ => false
     (*end case*))
 

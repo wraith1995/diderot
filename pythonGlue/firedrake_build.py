@@ -101,6 +101,7 @@ def buildCellConnections(mesh, ty):
         result[c1][l1][1] = l2
         result[c2][l2][0] = c1
         result[c2][l2][1] = l1
+    print(result.shape)
     return(result) # all exterior facets are (-1, -1)
 
 #accelerate function:
@@ -213,7 +214,7 @@ def spaceToJson(V, jsonFile, refCellDefault="other"):
         dumped = json.dumps(dictJson, indent=4)
         f.write(dumped)
 
-def passMeshHelper(mesh, intTy, floatTy, geometric = True):
+def passMeshHelper(mesh, intTy, floatTy, geometric=True):
     intPtr = ct.POINTER(intTy)
     floatPtr = ct.POINTER(floatTy)
     meshCoords = mesh.coordinates
@@ -229,7 +230,7 @@ def passMeshHelper(mesh, intTy, floatTy, geometric = True):
     else:
         sIndex = 0
     conBuild = buildCellConnections(mesh, intTy)
-
+    print(conBuild)
     con = conBuild
     return((meshIndexMap, meshCoordsMap, dim, meshMapDim, numCell, sIndex, con))
 
