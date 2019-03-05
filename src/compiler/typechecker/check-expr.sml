@@ -607,10 +607,10 @@ structure CheckExpr : sig
                             then let
                               fun doExp eTy = valOf(Util.coerceType (ty, eTy))
                               val resTy = Ty.T_Sequence(ty, SOME(Ty.DimConst(List.length args)))
-                              val args = ListPair.map doExp (args, tys)
+                              val args = ListPair.map doExp (args, tys) handle exn => raise exn
                               in
-                                (AST.E_Seq(args, resTy), resTy)
-                              end
+                                (AST.E_Seq(args, resTy), resTy) handle exn => raise exn
+				     end
                             else err(cxt, [S "sequence expression of non-value argument type"])
                         | NONE => err(cxt, [S "arguments of sequence expression must have same type"])
                       (* end case *))

@@ -145,7 +145,7 @@ structure Apply : sig
                       then (
                         changed := true;
                         rewriteSubst (body2, substId, mx, paramShift, x, newArgs, done))
-                      else raise Fail "argument/parameter mismatch"
+                      else raise Fail ("argument/parameter mismatch:"^(Int.toString (length mx))^","^(Int.toString (length shape))^(EinPP.toString e1)^"...."^(EinPP.toString e2))
                     else (case e
                        of E.Tensor(id, mx) => E.Tensor(mapId(id, origId, 0), mx)
                         | E.Field(id, mx) => E.Field(mapId(id, origId, 0), mx)

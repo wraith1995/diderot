@@ -190,7 +190,8 @@ structure Unify : sig
             | match (Ty.T_Field{diff=k1, dim=d1, shape=s1}, Ty.T_Field{diff=k2, dim=d2, shape=s2}) =
                 equalDiff (pl, k1, k2) andalso equalDim (pl, d1, d2) andalso equalShape(pl, s1, s2)
             | match (Ty.T_Fun(tys11, ty12), Ty.T_Fun(tys21, ty22)) =
-              ListPair.allEq match (tys11, tys21) andalso match (ty12, ty22)
+              (ListPair.allEq match (tys11, tys21) 	      handle exn => raise exn) andalso match (ty12, ty22)
+
 	    | match (Ty.T_Fem(data, SOME(name)), Ty.T_Fem(data', SOME(name'))) =
 	      let
 	       val test = FemData.same(data, data')
@@ -245,7 +246,8 @@ val unifyTypeWithCoercion = fn (pl, ty1, ty2) => let
     fun equalTypes (tys1, tys2) = let
           val pl = ref[]
           in
-            ListPair.allEq (fn (ty1, ty2) => unifyType(pl, ty1, ty2)) (tys1, tys2)
+           ListPair.allEq (fn (ty1, ty2) => unifyType(pl, ty1, ty2)) (tys1, tys2)
+	   handle exn => raise exn
           end
 
     fun equalType (ty1, ty2) = unifyType (ref[], ty1, ty2)
@@ -261,8 +263,9 @@ val unifyTypeWithCoercion = fn (pl, ty1, ty2) => let
     fun tryEqualTypes (tys1, tys2) = let
           val pl = ref[]
           in
-            ListPair.allEq (fn (ty1, ty2) => unifyType(pl, ty1, ty2)) (tys1, tys2)
+           (ListPair.allEq (fn (ty1, ty2) => unifyType(pl, ty1, ty2)) (tys1, tys2) handle exn => raise exn)
             orelse (undo pl; false)
+	    
           end
 
     fun matchType (ty1, ty2) = unifyTypeWithCoercion (ref[], ty1, ty2)
