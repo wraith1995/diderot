@@ -509,7 +509,7 @@ fun analyzeGeometry1(cxt, points, higher1) =
     end
 fun subtract(a,b) = (ListPair.map (Real.-)(a,b))
 fun crossProduct ([a1,a2,a3] : real list, [b1, b2, b3]) =
-    [a2*b3 - a3*b2, a1*b3 - a3*b1, a1*b2 - a2*b1]
+    [a2*b3 - a3*b2, a3*b1 - a1*b3, a1*b2 - a2*b1]
 fun planeNormal([p1,p2,p3]) =
     let
      val n =  crossProduct(subtract(p2,p1), subtract(p3,p1))
