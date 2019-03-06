@@ -483,7 +483,7 @@ structure GenTysAndOps : sig
 						
 							CL.S_Return(SOME(CL.E_Var("cp")))
 					    ]))
-		  val fields = [meshParam, intParam, refPosParam, worldPosParam, worldPosCompute, valid, genBuild, defaultBuild,defaultBuild', faceParam]
+		  val fields = [meshParam, intParam, refPosParam, worldPosParam, worldPosCompute, valid, faceParam, genBuild, defaultBuild,defaultBuild']
 		  val class = CL.D_ClassDef{name=name, args=NONE, from=NONE,public = fields , protected = [], private = []}
 		  
 		 in
