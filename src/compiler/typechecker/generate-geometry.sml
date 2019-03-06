@@ -216,39 +216,12 @@ fun newtonLoopBlock(normal, dScalar, refPosExp, dPosExp, maxN, eps, t) =
      let
       fun nUpdate(t0) = newtonUpdate(normal, dScalar, refPosExp, dPosExp, t0)
       fun nUp(t0, 0) = t0
-	| nUp (t0, n0) = let val up = newtonUpdate(normal, dScalar, refPosExp, dPosExp, t0)
+	| nUp (t0, n0) = let val up = nUpdate(t0)
 			 in nUp(up, n0 - 1)
 			 end
      in
       nUp(t, n)
      end
-				      
- fun lineLineIntersect(targetBasis, targetD, refBasis, refD, normal, d) =
-     let
-      val sub1 = makePrim'(BV.sub_tt, [refBasis, targetBasis], [vecTy, vecTy], vecTy)
-      val cross1 = makePrim'(BV.op_cross2_tt, [targetD, refD], [vecTy, vecTy], Ty.realTy)
-      val div1 = makePrim'(BV.div_tr, [refD, cross1], [vecTy, Ty.realTy], vecTy)
-      val cross2 = makePrim'(BV.op_cross2_tt, [sub1, div1], [vecTy, vecTy], Ty.realTy)
-
-      fun refine(n,t) = newtonUpdates(normal, d, refBasis, refD, t, n)
-			    
-     in
-      (cross2, cross1, buildInsideBool(refBasis, refD, cross2), refine) (*the first is the time and the second is in case we need to check for nan problems*)
-     end
-
- fun linePlaneIntersect(refBasis, refD, normal, dScalar) =
-     let
-      val dot1 = makePrim'(BV.op_inner_tt, [normal, refBasis], [vecTy, vecTy], Ty.realTy)
-      val num = makePrim'(BV.sub_tt, [dScalar, dot1], [Ty.realTy, Ty.realTy], Ty.realTy)
-      val dot2 = makePrim'(BV.op_inner_tt, [normal, refD], [vecTy, vecTy], Ty.realTy)
-      val result = makePrim'(BV.div_rr, [num, dot2], [Ty.realTy, Ty.realTy], Ty.realTy)
-			    
-      fun refine(n, t) = newtonUpdates(normal, dScalar, refBasis, refD, t, n)
-     in
-      (result, dot2, buildInsideBool(refBasis, refD, result), refine)
-     end
-
-
 
  fun planePointDistSgn(normal, dScalar, refPosExp) =
      let
@@ -264,7 +237,36 @@ fun newtonLoopBlock(normal, dScalar, refPosExp, dPosExp, maxN, eps, t) =
       val abs = makePrim'(BV.op_norm_t, [result], [Ty.realTy], Ty.realTy)
      in
       (abs, result)
+     end				      
+ fun lineLineIntersect(targetBasis, targetD, refBasis, refD, normal, d) =
+     let
+      val sub1 = makePrim'(BV.sub_tt, [refBasis, targetBasis], [vecTy, vecTy], vecTy)
+      val cross1 = makePrim'(BV.op_cross2_tt, [targetD, refD], [vecTy, vecTy], Ty.realTy)
+      val div1 = makePrim'(BV.div_tr, [refD, cross1], [vecTy, Ty.realTy], vecTy)
+      val cross2 = makePrim'(BV.op_cross2_tt, [sub1, div1], [vecTy, vecTy], Ty.realTy)
+      fun errorFunc t = planePointDistSgn(normal, d, rayAtT(refBasis, refD, t))
+      fun refine(n,t) = newtonUpdates(normal, d, refBasis, refD, t, n)
+			    
+     in
+      (cross2, cross1, buildInsideBool(refBasis, refD, cross2), refine, errorFunc) (*the first is the time and the second is in case we need to check for nan problems*)
      end
+
+ fun linePlaneIntersect(refBasis, refD, normal, dScalar) =
+     let
+      val dot1 = makePrim'(BV.op_inner_tt, [normal, refBasis], [vecTy, vecTy], Ty.realTy)
+      val num = makePrim'(BV.sub_tt, [dScalar, dot1], [Ty.realTy, Ty.realTy], Ty.realTy)
+      val dot2 = makePrim'(BV.op_inner_tt, [normal, refD], [vecTy, vecTy], Ty.realTy)
+      val result = makePrim'(BV.div_rr, [num, dot2], [Ty.realTy, Ty.realTy], Ty.realTy)
+      fun errorFunc t = planePointDistSgn(normal, dScalar, rayAtT(refBasis, refD, t))
+			    
+      fun refine(n, t) = newtonUpdates(normal, dScalar, refBasis, refD, t, n)
+
+     in
+      (result, dot2, buildInsideBool(refBasis, refD, result), refine, errorFunc)
+     end
+
+
+
 
  fun listPairCheck(v1, v2) = if List.length v1 = List.length v2
 			     then ()
@@ -290,7 +292,7 @@ fun newtonLoopBlock(normal, dScalar, refPosExp, dPosExp, maxN, eps, t) =
       (*dist from refPos to facet, distance signed*)
       val intersectionExprs' = List.map dist normalDVecs
       val _ = listPairCheck(intersectionExprs, intersectionExprs')
-      val resultingTests = ListPair.map (fn ((x,y,j, r), (w,z)) => (x,y,j,r,w,z)) (intersectionExprs, intersectionExprs') handle exn => raise exn
+      val resultingTests = ListPair.map (fn ((x, y, j, r, f), (w, z)) => (x, y, j, r, f, w, z)) (intersectionExprs, intersectionExprs') handle exn => raise exn
 					
 				       
      in
@@ -306,7 +308,7 @@ fun newtonLoopBlock(normal, dScalar, refPosExp, dPosExp, maxN, eps, t) =
       val intersectionExprs = List.map planeIntersect planeParamExprs
       val distTestExprs = List.map dist planeParamExprs
       val _ = listPairCheck(intersectionExprs, distTestExprs)
-      val resultingTests = ListPair.map (fn ((x,y,j,r), (w,z)) => (x,y,j,r,w,z)) (intersectionExprs, distTestExprs)
+      val resultingTests = ListPair.map (fn ((x, y, j, r, f), (w, z)) => (x, y, j, r, f, w, z)) (intersectionExprs, distTestExprs)
 			   handle exn => raise exn
 				       
      in
@@ -314,33 +316,47 @@ fun newtonLoopBlock(normal, dScalar, refPosExp, dPosExp, maxN, eps, t) =
      end
 										      
 
-										      
- (*create local vars with +Inf, -1; Store compute in local var, if >=eps=0.000000000001 and <= current, update  *)
- (*create an additional tester option -> given refPos, dPos, test1 -> do inside*)
- (**)
+
+ fun facetPrint(test1, test2, insideTestval, dist, intExp, (r,d), error) =
+     let
+      val place = rayAtT(r, d, test1)
+      fun mkStr x = AST.E_Lit(Literal.String(x))
+     in
+      AST.S_Print([mkStr "test :", test1, mkStr " test2: ", test2, mkStr " insideTest: ", insideTestval,
+		   mkStr " dist: ", dist, mkStr " face: ", intExp, mkStr " place: ", place,
+		   mkStr " error: ", error,
+		   mkStr "\n" ])
+     end
+
  fun intersectionTesting(intersectionExprs, parallelTest, parallelTestNeps,
-			 insideTest, preRefine, postRefine, printFlag, facetIntTest) =
+			 insideTest, preRefine, postRefine, printFlag, facetIntTest, max, (r, d)) =
      let
       val tempVar = Var.new (Atom.atom "time", span, AST.LocalVar, Ty.realTy)
       val tempVar' = Var.new (Atom.atom "face", span, AST.LocalVar, Ty.T_Int)
       val tempExp = AST.E_Var(tempVar, span)
       val tempExp' = AST.E_Var(tempVar', span)
-      val tempStart = AST.S_Decl(tempVar, SOME(AST.E_Lit(Literal.Real(RealLit.posInf))))
+      val tempStart = AST.S_Decl(tempVar, SOME(AST.E_Lit(Literal.Real(max))))
 
       val neg1 = AST.E_Lit(Literal.Int(IntLit.fromInt (~1)))
       val tempStart' = AST.S_Decl(tempVar', SOME(neg1))
 				 
-      val zero = AST.E_Lit(Literal.Real(RealLit.zero true))
+      val zero = AST.E_Lit(Literal.Real(RealLit.zero false))
       val eps = AST.E_Lit(Literal.Real(RealLit.fromDigits{isNeg = false, digits = [1], exp = IntInf.fromInt (~parallelTestNeps)}))
 			 
-      fun buildIf(test1, test2, insideTestVal, refine, dist, sgnDist, intExpr) =
+      fun buildIf(test1, test2, insideTestVal, refine, errorAtT, dist, sgnDist, intExpr) =
 	  let
 	   (*compute special test, int*)
+	   val testError = errorAtT test1
+	   val absTestError = makePrim'(BV.op_norm_t, [testError], [Ty.realTy], Ty.realTy)
+				       
 	   val preRefinedTest1 = refine(preRefine, test1)
-	   val posRefineTest2 = refine(postRefine, preRefinedTest1)
-	   val positiveTest = makePrim'(BV.gt_rr, [preRefinedTest1, zero], [Ty.realTy, Ty.realTy], Ty.T_Bool)
-	   val newUpdateTest = makePrim'(BV.gt_rr, [tempExp, test1], [Ty.realTy, Ty.realTy], Ty.T_Bool)
-	   val antiNanInfTest = makePrim'(BV.gte_rr, [test2, eps], [Ty.realTy, Ty.realTy], Ty.T_Bool)
+	   val print1 = facetPrint(preRefinedTest1, test2, insideTestVal, dist, intExpr, (r, d), absTestError)
+	   val posRefineTest2 = preRefinedTest1 (*refine(postRefine, preRefinedTest1)*)
+	   val absTest2 = makePrim'(BV.op_norm_t, [test2], [Ty.realTy], Ty.realTy)
+				   
+	   val positiveTest = makePrim'(BV.gte_rr, [preRefinedTest1, zero], [Ty.realTy, Ty.realTy], Ty.T_Bool)
+	   val newUpdateTest = makePrim'(BV.gt_rr, [tempExp, preRefinedTest1], [Ty.realTy, Ty.realTy], Ty.T_Bool)
+	   val antiNanInfTest = makePrim'(BV.gte_rr, [absTest2, eps], [Ty.realTy, Ty.realTy], Ty.T_Bool)
 	   (*Checks if a stored entry facet is equal to this facet; prevents failure if the pos is slightly outside the ref*)
 	   val optionalIntTest = (case facetIntTest
 				   of SOME(oldFacetInt) => [makePrim'(BV.neq_ii, [oldFacetInt, intExpr], [Ty.T_Int, Ty.T_Int], Ty.T_Bool)]
@@ -362,12 +378,14 @@ fun newtonLoopBlock(normal, dScalar, refPosExp, dPosExp, maxN, eps, t) =
 						 ])),
 				      AST.S_Block([]))
 	  in
-	   fin
+	   if printFlag
+	   then	AST.S_Block([print1, fin])
+	   else fin
 	  end
       val tests = List.length intersectionExprs
       val intLits = List.tabulate(tests, fn x => AST.E_Lit(Literal.intLit x))
       val _ = listPairCheck(intersectionExprs, intLits)
-      val zip = ListPair.map (fn ((x,y,a,b,c,d), z) => (x,y,a,b,c,d, z)) (intersectionExprs, intLits)
+      val zip = ListPair.map (fn ((x,y,a,b,c,d,e), z) => (x,y,a,b,c,d,e, z)) (intersectionExprs, intLits)
 		handle exn => raise exn
 
 			     
@@ -407,7 +425,7 @@ fun newtonLoopBlock(normal, dScalar, refPosExp, dPosExp, maxN, eps, t) =
   val tests = buildIntersectionTestInfo(dim, geometry, refPosExp, dPosExp)
 
 
-  val body = AST.S_Block(intersectionTesting(tests, false, 10, false, 4, 0, false, SOME(intPosExp)))
+  val body = AST.S_Block(intersectionTesting(tests, false, 10, false, 0, 0, false, SOME(intPosExp), RealLit.posInf, (refPosExp, dPosExp)))
   val result = ((funAtom, funVar), AST.D_Func(funVar, [refPosParam, dposParam, intPosParam], body))
 
 		 
@@ -415,7 +433,7 @@ fun newtonLoopBlock(normal, dScalar, refPosExp, dPosExp, maxN, eps, t) =
   val funType' = Ty.T_Fun([vecTy, vecTy], vec2Ty)
   val funVar' = Var.new (funAtom', span, Var.FunVar, funType')
 	
-  val body' = AST.S_Block(intersectionTesting(tests, true, 10, true, 0, 0, false, NONE))
+  val body' = AST.S_Block(intersectionTesting(tests, true, 20, true, 0, 0, true, NONE, RealLit.posInf, (refPosExp, dPosExp)))
   val result' = ((funAtom', funVar'), AST.D_Func(funVar', [refPosParam, dposParam], body'))
 
 
@@ -810,7 +828,7 @@ fun newtonLoopBlock(normal, dScalar, refPosExp, dPosExp, maxN, eps, t) =
        val refPos = rayAtT(refBPos, refDPos, timeResult)
        val worldPos = rayAtT(v2, v3, timeResult)
        val facetIdExpr = makePrim'(BV.floor, [AST.E_Slice(seq, [SOME(AST.E_Lit(Literal.intLit 1))], Ty.realTy)], [Ty.realTy], Ty.T_Int)
-       val posResult = AST.E_ExtractFemItemN([mesh, v1, refPos, worldPos, facetIdExpr], [meshTy, Ty.T_Int, vecTy, vecTy, Ty.T_Int], posTy, (FemOpt.AllBuild, posData), NONE)
+       val posResult = AST.E_ExtractFemItemN([mesh, cellInt, refPos, worldPos, facetIdExpr], [meshTy, Ty.T_Int, vecTy, vecTy, Ty.T_Int], posTy, (FemOpt.AllBuild, posData), NONE)
       in
        posResult
       end
