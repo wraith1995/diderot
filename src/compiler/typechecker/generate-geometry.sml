@@ -317,7 +317,7 @@ fun newtonLoopBlock(normal, dScalar, refPosExp, dPosExp, maxN, eps, t) =
 										      
 
 
- fun facetPrint(test1, test2, insideTestval, dist, intExp, (r,d), error) =
+ fun facetPrint(test1, test2, insideTestval, dist, intExp, (r,d), error, off, dp) =
      let
       val place = rayAtT(r, d, test1)
       fun mkStr x = AST.E_Lit(Literal.String(x))
@@ -325,6 +325,8 @@ fun newtonLoopBlock(normal, dScalar, refPosExp, dPosExp, maxN, eps, t) =
       AST.S_Print([mkStr "test :", test1, mkStr " test2: ", test2, mkStr " insideTest: ", insideTestval,
 		   mkStr " dist: ", dist, mkStr " face: ", intExp, mkStr " place: ", place,
 		   mkStr " error: ", error,
+		   mkStr " offset :", off,
+		   mkStr " dp: ", dp,
 		   mkStr "\n" ])
      end
 
@@ -332,16 +334,18 @@ fun newtonLoopBlock(normal, dScalar, refPosExp, dPosExp, maxN, eps, t) =
 			 insideTest, preRefine, postRefine, printFlag, facetIntTest, max, (r, d)) =
      let
       val tempVar = Var.new (Atom.atom "time", span, AST.LocalVar, Ty.realTy)
+      val faceReserveVar = Var.new (Atom.atom "faceTime", span, AST.LocalVar, Ty.realTy)
       val tempVar' = Var.new (Atom.atom "face", span, AST.LocalVar, Ty.T_Int)
       val tempExp = AST.E_Var(tempVar, span)
       val tempExp' = AST.E_Var(tempVar', span)
+      val faceExp = AST.E_Var(faceReserveVar, span)
       val tempStart = AST.S_Decl(tempVar, SOME(AST.E_Lit(Literal.Real(max))))
-
       val neg1 = AST.E_Lit(Literal.Int(IntLit.fromInt (~1)))
       val tempStart' = AST.S_Decl(tempVar', SOME(neg1))
 				 
       val zero = AST.E_Lit(Literal.Real(RealLit.zero false))
       val eps = AST.E_Lit(Literal.Real(RealLit.fromDigits{isNeg = false, digits = [1], exp = IntInf.fromInt (~parallelTestNeps)}))
+      val zeroEps = AST.E_Lit(Literal.Real(RealLit.fromDigits{isNeg = true, digits = [1], exp = IntInf.fromInt (~15)}))
 			 
       fun buildIf(test1, test2, insideTestVal, refine, errorAtT, dist, sgnDist, intExpr) =
 	  let
@@ -350,11 +354,11 @@ fun newtonLoopBlock(normal, dScalar, refPosExp, dPosExp, maxN, eps, t) =
 	   val absTestError = makePrim'(BV.op_norm_t, [testError], [Ty.realTy], Ty.realTy)
 				       
 	   val preRefinedTest1 = refine(preRefine, test1)
-	   val print1 = facetPrint(preRefinedTest1, test2, insideTestVal, dist, intExpr, (r, d), absTestError)
+	   val print1 = facetPrint(preRefinedTest1, test2, insideTestVal, dist, intExpr, (r, d), absTestError, r, d)
 	   val posRefineTest2 = preRefinedTest1 (*refine(postRefine, preRefinedTest1)*)
 	   val absTest2 = makePrim'(BV.op_norm_t, [test2], [Ty.realTy], Ty.realTy)
 				   
-	   val positiveTest = makePrim'(BV.gte_rr, [preRefinedTest1, zero], [Ty.realTy, Ty.realTy], Ty.T_Bool)
+	   val positiveTest = makePrim'(BV.gte_rr, [preRefinedTest1, zeroEps], [Ty.realTy, Ty.realTy], Ty.T_Bool)
 	   val newUpdateTest = makePrim'(BV.gt_rr, [tempExp, preRefinedTest1], [Ty.realTy, Ty.realTy], Ty.T_Bool)
 	   val antiNanInfTest = makePrim'(BV.gte_rr, [absTest2, eps], [Ty.realTy, Ty.realTy], Ty.T_Bool)
 	   (*Checks if a stored entry facet is equal to this facet; prevents failure if the pos is slightly outside the ref*)
@@ -393,10 +397,11 @@ fun newtonLoopBlock(normal, dScalar, refPosExp, dPosExp, maxN, eps, t) =
 
       val workedTest = makePrim'(BV.neq_ii, [tempExp', neg1], [Ty.T_Int, Ty.T_Int], Ty.T_Bool)
       fun coerce e = AST.E_Coerce({srcTy=Ty.T_Int, dstTy=Ty.realTy, e= e})
+      val timeReturn = makePrim'(BV.fn_max_r, [tempExp, zero], [Ty.realTy, Ty.realTy], Ty.realTy)
 
       val ifReturn = AST.S_IfThenElse(workedTest,
 				      AST.S_Block([
-						  AST.S_Return(AST.E_Tensor([tempExp, coerce tempExp'], vec2Ty))
+						  AST.S_Return(AST.E_Tensor([timeReturn, coerce tempExp'], vec2Ty))
 						 ]),
 				      AST.S_Block([ (*TODO: should this be ~1? What is the exact standard for this function?*)
 						  AST.S_Return(AST.E_Tensor([coerce neg1, coerce neg1], vec2Ty))
@@ -425,7 +430,7 @@ fun newtonLoopBlock(normal, dScalar, refPosExp, dPosExp, maxN, eps, t) =
   val tests = buildIntersectionTestInfo(dim, geometry, refPosExp, dPosExp)
 
 
-  val body = AST.S_Block(intersectionTesting(tests, false, 10, false, 0, 0, false, SOME(intPosExp), RealLit.posInf, (refPosExp, dPosExp)))
+  val body = AST.S_Block(intersectionTesting(tests, false, 20, false, 0, 0, true, SOME(intPosExp), RealLit.posInf, (refPosExp, dPosExp)))
   val result = ((funAtom, funVar), AST.D_Func(funVar, [refPosParam, dposParam, intPosParam], body))
 
 		 
