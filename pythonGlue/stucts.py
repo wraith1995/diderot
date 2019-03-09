@@ -3,6 +3,9 @@ from ctypes import POINTER, c_int, c_double, c_void_p, c_float, c_int32, c_uint
 import numpy as np
 
 
+def makeFiniteArray(array, ty):
+    return ((ty * len(array))(*array))
+
 def makeArrayType(array, ty):
     # array.flatten()
     arrayp = array  # array.flatten()
