@@ -16,6 +16,10 @@ structure FemData : sig
 					      insideInsert : string option,
 					      newtonControl :
 					      {contraction : bool, itters: int, newtonTol : RealLit.t, killAfterTol : bool, start : RealLit.t list option}, numFaces : int}
+
+	   datatype cellDataType = String | Bool | Int | Real | Tensor of int list | Array of cellDataType * int
+	   val cellTypeString : cellDataType -> Atom.atom
+						  
 					     
 	   type mesh
 	   val meshDim : mesh -> int
@@ -23,6 +27,7 @@ structure FemData : sig
 	   val refCell : mesh -> refCell
 	   val meshAccInsert : mesh -> (Atom.atom * bool) option
 	   val isAffine : mesh -> bool
+	   val getCellDataTypes : mesh -> (Atom.atom * cellDataType) list
 		  
 	   type space
 	   val spaceShape : space -> int list
@@ -75,7 +80,7 @@ structure FemData : sig
 
 	   (* placeholders for creating fem data *)
 
-	   val mkMesh : int * int * int  * BasisDataArray.t * Atom.atom * refCell * (Atom.atom * bool) option -> femType
+	   val mkMesh : int * int * int  * BasisDataArray.t * Atom.atom * refCell * (Atom.atom * bool) option * (Atom.atom * cellDataType) list -> femType
 	   val mkSpace : int * int list * mesh * BasisDataArray.t * Atom.atom -> femType
 	   val mkFunc : space * int list * Atom.atom -> femType
 
@@ -114,6 +119,18 @@ fun hashRefCell(a) = 0w3 * RealLit.hash(getCellEps(a)) +
 			   (*end case*))
 (*refcells are `simplex, gen triangle, quad, *)
 
+
+datatype cellDataType = String | Bool | Int | Real | Tensor of int list | Array of cellDataType * int
+
+fun cellTypeString'(String) = "String"
+  | cellTypeString' (Bool) = "Bool"
+  | cellTypeString' (Int) = "Int"
+  | cellTypeString'(Real) = "Real"
+  | cellTypeString' (Tensor(idx)) = "Tensor(" ^ (String.concatWith "," (List.map Int.toString idx)) ^ ")"
+  | cellTypeString' (Array(ty, i)) = "Array("^ (Int.toString i) ^ ", " ^ (cellTypeString'(ty)) ^")"
+												  
+fun cellTypeString(s) = Atom.atom (cellTypeString'(s))
+			     
 datatype mesh = Mesh' of {
 	  dim : int,
 	  mappingDim : int,
@@ -121,12 +138,14 @@ datatype mesh = Mesh' of {
 	  basis : BasisDataArray.t,
 	  refCell : refCell,
 	  name : Atom.atom,
-	  insert : (Atom.atom * bool) option
+	  insert : (Atom.atom * bool) option,
+	  cellData : (Atom.atom * cellDataType) list
 	 }
 
 fun meshDim (Mesh'({dim, mappingDim, basis, name, ...})) = dim
 fun meshMapDim (Mesh'{dim, mappingDim, basis, name,...}) = mappingDim
 fun meshBasis (Mesh'{dim, mappingDim, basis, name, ...}) = basis
+fun getCellDataTypes(Mesh'{cellData, ...}) = cellData
 fun isAffine m = let val b = meshBasis m in BasisDataArray.isAffine b end
 fun meshAccInsert(Mesh'({insert,...})) = insert
 fun refCell(Mesh'{refCell,...}) = refCell
@@ -253,6 +272,16 @@ fun sameMesh(m1, m2)
 		|  (NONE, NONE) => true
 		| _ => false
 	      (*end case*))
+      andalso
+      let
+       val tys1 = getCellDataTypes m1
+       val tys2 = getCellDataTypes m2
+       val ats1 = List.map (fn (x,y) => (x, cellTypeString y)) tys1
+       val ats2 = List.map (fn (x,y) => (x, cellTypeString y)) tys2
+       val combined = ListPair.zip(ats1, ats2)
+      in
+       List.all (fn ((x1,y1), (x2,y2)) => Atom.same(x1,x2) andalso Atom.same(y1, y2)) combined
+      end
 
 fun sameSpace(s1, s2)
     = (spaceDim(s1) = spaceDim(s2)) andalso (BasisDataArray.same (spaceBasis s1, spaceBasis s2)) andalso sameMesh((spaceMesh s1), spaceMesh(s2))
@@ -273,9 +302,16 @@ fun same(t1, t2) =
        | _ => false
     )
 
+fun hashcellDataTypes(tys)  =
+    let
+     fun doit(a1, ty) = 0w3 * (Atom.hash a1) + 0w5 * (Atom.hash (cellTypeString ty))
+    in
+     List.foldr (fn (x,y) => 0w7 * doit(x) + y) 0w11 tys
+    end
+
 fun hash ty =
     (case ty
-      of Mesh((Mesh'{dim, degree, mappingDim, basis, name,refCell, insert}))
+      of Mesh((Mesh'{dim, degree, mappingDim, basis, name,refCell, insert, cellData}))
 	 => 0w1 + 0w3 * (Word.fromInt dim) + 0w5 * (Word.fromInt mappingDim) + BasisDataArray.hash basis + 0w7 * hashRefCell(refCell) +
 	    (case insert
 	      of SOME(a1,b1) => 0w47 * Atom.hash a1 * (if b1
@@ -283,7 +319,7 @@ fun hash ty =
 						       else 0w3)
 	       | _ => 0w0
 	    (*end case*)
-	    )
+	    ) + (hashcellDataTypes cellData)  * 0w47
        | Space(Space'({dim, shape, basis, mesh, name}))
        	 => 0w13 + 0w17 * (Word.fromInt dim) + BasisDataArray.hash basis + (hash (Mesh(mesh)))
        | Func(Func'{space, name, shape}) => 0w29 + hash (Space(space)) + 0w31 * (List.foldr (fn (x,y) => y  + 0w41 * (Word.fromInt x)) 0w37 (shape)) (*foldr consistnecy of hashing*)
@@ -356,7 +392,7 @@ fun isInputFemType ty =
        | MeshPos(_) => false
        | _ => true)
       
-fun mkMesh(dim, mDim, maxDegree, basis, name, refCell, insert) = Mesh (Mesh' {dim = dim, mappingDim = mDim, degree = maxDegree, basis = basis, name = name, refCell=refCell, insert=insert})
+fun mkMesh(dim, mDim, maxDegree, basis, name, refCell, insert, tys) = Mesh (Mesh' {dim = dim, mappingDim = mDim, degree = maxDegree, basis = basis, name = name, refCell=refCell, insert=insert, cellData = tys})
 
 fun mkSpace(dim, shape, mesh, basis, name) = Space(Space' {dim = dim, shape = shape, basis= basis, mesh = mesh, name = name})
 

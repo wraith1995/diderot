@@ -327,6 +327,28 @@ structure TreeToCxx : sig
 	      in
 	       CL.E_Apply(CL.mkVar funcName, params)
 	      end
+	    | (Op.ExtractFemItem2(ty, ty', (FemOpt.CellData(aname), FemData.Mesh(meshData))), [mesh, index]) =>
+	      let
+	       fun getSize(FT.Tensor(shape)) = List.foldr Int.* 1 shape
+		 | getSize(FT.Array(ty, d)) = d * getSize(ty)
+		 | getSize _ = 1
+	       fun getAcc(FT.Tensor(_)) = false
+		 | getAcc (FT.Array(_)) = false
+		 | getAcc _ = true
+
+	       val options = FT.getCellDataTypes meshData
+	       val SOME((a,dataTy)) = List.find (fn (a,_) => Atom.same(a, aname)) options
+	       val size = getSize dataTy
+
+	       val ptrStart = CL.E_Select(mesh, Atom.toString aname)
+	       val sizeIndex = CL.mkBinOp(index, CL.#*, CL.E_Int(IntLit.fromInt size, CL.intTy))
+	       val resultPtr = CL.mkBinOp(ptrStart, CL.#+, sizeIndex)
+	       val result = if getAcc dataTy
+			    then CL.mkUnOp(CL.%*, resultPtr)
+			    else resultPtr
+	      in
+	       result
+	      end
 
 	    | (Op.ExtractFemItemN(tys, outTy, opt,name, qfname, fTys, fTy), args) =>
 	      let

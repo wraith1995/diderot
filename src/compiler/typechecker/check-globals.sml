@@ -351,9 +351,9 @@ structure CheckGlobals : sig
 		    (case (femTyDef, parsedJson)
 		      of (PT.T_Mesh, SOME(parsed)) =>
 			 let
-			  val (tempMesh, consts, geometry) = CF.parseMesh(env, cxt, tyName, parsed)
+			  val (tempMesh, consts, geometry, meshOpts) = CF.parseMesh(env, cxt, tyName, parsed)
 			 in
-			   (Option.mapPartial (fn x => SOME(x, NONE)) tempMesh, consts, geometry)
+			   (Option.mapPartial (fn x => SOME(x, NONE)) tempMesh, consts, geometry, meshOpts)
 			 end
 		       | (PT.T_Space(mesh, shape), SOME(parsed)) =>
 			 let
@@ -384,14 +384,14 @@ structure CheckGlobals : sig
 							   
 			 in
 			  (case (spaceType, meshType)
-			    of (SOME(SOME(space''), consts), SOME(meshType')) => (SOME(space'', SOME(mesh)), consts, [])
+			    of (SOME(SOME(space''), consts), SOME(meshType')) => (SOME(space'', SOME(mesh)), consts, [], [])
 			     (*NOTE: these errors could be improved.*)
 			     | (_, SOME(_)) => ((err (cxt, [
 				S "Declared a function space type ",
-				A(tyName), S" with an invalid space "])); (NONE, [],[]))
+				A(tyName), S" with an invalid space "])); (NONE, [],[], []))
 			    | (_, NONE) => ((err (cxt, [
 				S "Declared a function space type ",
-				A(tyName), S" with an underlying type that is not a mesh or not defined", A(mesh)])); (NONE, [], []))
+				A(tyName), S" with an underlying type that is not a mesh or not defined", A(mesh)])); (NONE, [], [], []))
 			  (*end case*))
 			 end
 
@@ -404,17 +404,17 @@ structure CheckGlobals : sig
 			  val funcType = Option.map (fn s => CF.parseFunc(env, cxt, tyName, NONE, s, parsed)) spaceType
 			 in
 			  (case (funcType,spaceType)
-			    of (SOME(SOME(func), consts),SOME(space')) => (SOME(func, SOME(space)), consts, [])
+			    of (SOME(SOME(func), consts),SOME(space')) => (SOME(func, SOME(space)), consts, [], [])
 			     | (SOME(NONE,_), SOME(_)) => ((err (cxt, [
 				S "Declared a femFunction type ",
-				A(tyName), S" with an invalid definition in the file or incompatability with the space.", A(space)])); (NONE, [],[]))
+				A(tyName), S" with an invalid definition in the file or incompatability with the space.", A(space)])); (NONE, [],[], []))
 			    |  (_, NONE) =>  ((err (cxt, [
 				S "Declared a femFunction type ",
-				A(tyName), S" with an underlying type that is not a space or not defined", A(space)])); (NONE, [],[]))
+				A(tyName), S" with an underlying type that is not a space or not defined", A(space)])); (NONE, [],[], []))
 			  (* end case *)
 			    | _ => raise Fail "cast not analyzed")
 			 end
-		       | (_, NONE) => (err (cxt, [S "Unable to parse file for declared fem type:", A(tyName) ]); (NONE, [],[]))
+		       | (_, NONE) => (err (cxt, [S "Unable to parse file for declared fem type:", A(tyName) ]); (NONE, [],[], []))
 		       | _ => raise Fail ("Non fem type passed to validateFemType: " ^ Atom.toString(tyName))
 		    (* end case *))
 		   end
@@ -988,7 +988,7 @@ structure CheckGlobals : sig
 		(atomName, funcCall, functionTy)
 	       end
 
-	       fun makeFemMethods femTyDef file femInfo =
+	       fun makeFemMethods femTyDef file cellAccData femInfo =
 		   (case (femInfo, femTyDef)
 		     of ((func as FT.Func(f), n), PT.T_Func(space)) =>
 			let
@@ -1237,6 +1237,24 @@ structure CheckGlobals : sig
 			 val eqFuncPair = (atom1, funVar1)
 			 val nEqFuncPair = (atom2, funVar2)
 			 end
+			 (*data data: cellData*)
+			 local
+			  fun cellInt x = AST.E_ExtractFemItem(x, Ty.T_Int, (FemOpt.CellIndex, FT.Mesh(m)))
+			  fun meshVal x=  AST.E_ExtractFem(x, FT.Mesh(m))
+			  fun makeOne(name, ty, discard) =
+			      let
+			       val funTy = Ty.T_Fun([meshCellTy], ty)
+			       fun doit([v1, v2]) = AST.E_ExtractFemItem2(meshVal v1, cellInt v2, Ty.T_Int, ty, (FemOpt.CellData name, FT.Mesh(m)))
+				 | doit _ = raise Fail "typechecker error"
+
+
+			      in
+			       (name, doit, ty)
+			      end
+			  val funs = List.map makeOne cellAccData
+			 in
+			 val dataAccReplaceFuns = funs
+			 end
 
 
 
@@ -1257,7 +1275,7 @@ structure CheckGlobals : sig
 			in
 			 ([(numCell, numCellFuncVar), (cells', cellFuncVar'), (refCellName, refCellFuncVar), (meshPosFuncAtom, meshPosFuncVar), eqFuncPair, nEqFuncPair],
 			  [numCellFun, cellsFun', cellsFun, refCellFunc, meshPosFunc, eqFunc, nEqFunc],
-			  [(cells, makeCells, cellTypeFuncTy), (meshInsideAtom, meshInsideFunc, meshInsideType), invalidReplace],
+			  [(cells, makeCells, cellTypeFuncTy), (meshInsideAtom, meshInsideFunc, meshInsideType), invalidReplace]@dataAccReplaceFuns,
 			  [eqFuncPair, nEqFuncPair])
 			end
 
@@ -1654,8 +1672,8 @@ structure CheckGlobals : sig
 
 	       fun makeFemType femTyDef file =
 		   let
-		    val (femType, constants, geometry) = validateFemType femTyDef file
-		    val (methodRefs, methods, newVars, overloads) = Option.getOpt (Option.map (makeFemMethods femTyDef file) femType, ([],[],[],[]))
+		    val (femType, constants, geometry, cellData) = validateFemType femTyDef file
+		    val (methodRefs, methods, newVars, overloads) = Option.getOpt (Option.map (makeFemMethods femTyDef file cellData) femType, ([],[],[],[]))
 		    val constants' = reformatConstants constants
 		    val envI =  Option.map (fn x => Env.insertNamedType(env, cxt, tyName, Ty.T_Fem(x), constants', methodRefs, newVars)) femType
 
