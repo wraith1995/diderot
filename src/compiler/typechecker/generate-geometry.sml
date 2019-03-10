@@ -433,7 +433,7 @@ fun newtonLoopBlock(normal, dScalar, refPosExp, dPosExp, maxN, eps, t) =
   val tests = buildIntersectionTestInfo(dim, geometry, refPosExp, dPosExp)
 
 
-  val body = AST.S_Block(intersectionTesting(tests, true, 20, false, 0, 0, true, SOME(intPosExp), RealLit.posInf, (refPosExp, dPosExp)))
+  val body = AST.S_Block(intersectionTesting(tests, true, 20, false, 0, 0, false, SOME(intPosExp), RealLit.posInf, (refPosExp, dPosExp)))
   val result = ((funAtom, funVar), AST.D_Func(funVar, [refPosParam, dposParam, intPosParam], body))
 
 		 
@@ -441,7 +441,7 @@ fun newtonLoopBlock(normal, dScalar, refPosExp, dPosExp, maxN, eps, t) =
   val funType' = Ty.T_Fun([vecTy, vecTy], vec2Ty)
   val funVar' = Var.new (funAtom', span, Var.FunVar, funType')
 	
-  val body' = AST.S_Block(intersectionTesting(tests, true, 20, true, 0, 0, true, NONE, RealLit.posInf, (refPosExp, dPosExp)))
+  val body' = AST.S_Block(intersectionTesting(tests, true, 20, true, 0, 0, false, NONE, RealLit.posInf, (refPosExp, dPosExp)))
   val result' = ((funAtom', funVar'), AST.D_Func(funVar', [refPosParam, dposParam], body'))
 
 
