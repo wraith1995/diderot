@@ -336,14 +336,17 @@ fun newtonLoopBlock(normal, dScalar, refPosExp, dPosExp, maxN, eps, t) =
  fun intersectionTesting(intersectionExprs, parallelTest, parallelTestNeps,
 			 insideTest, preRefine, postRefine, printFlag, facetIntTest, max, (r, d)) =
      let
+      fun coerce e = AST.E_Coerce({srcTy=Ty.T_Int, dstTy=Ty.realTy, e= e})
       val tempVar = Var.new (Atom.atom "time", span, AST.LocalVar, Ty.realTy)
       val faceReserveVar = Var.new (Atom.atom "faceTime", span, AST.LocalVar, Ty.realTy)
       val tempVar' = Var.new (Atom.atom "face", span, AST.LocalVar, Ty.T_Int)
       val tempExp = AST.E_Var(tempVar, span)
       val tempExp' = AST.E_Var(tempVar', span)
       val faceExp = AST.E_Var(faceReserveVar, span)
-      val tempStart = AST.S_Decl(tempVar, SOME(AST.E_Lit(Literal.Real(max))))
       val neg1 = AST.E_Lit(Literal.Int(IntLit.fromInt (~1)))
+      val faceStart = AST.S_Decl(faceReserveVar, SOME(AST.E_Lit(Literal.Real(RealLit.negInf))))
+      val tempStart = AST.S_Decl(tempVar, SOME(AST.E_Lit(Literal.Real(max))))
+
       val tempStart' = AST.S_Decl(tempVar', SOME(neg1))
 				 
       val zero = AST.E_Lit(Literal.Real(RealLit.zero false))
@@ -366,11 +369,16 @@ fun newtonLoopBlock(normal, dScalar, refPosExp, dPosExp, maxN, eps, t) =
 	   val antiNanInfTest = makePrim'(BV.gte_rr, [absTest2, eps], [Ty.realTy, Ty.realTy], Ty.T_Bool)
 	   (*Checks if a stored entry facet is equal to this facet; prevents failure if the pos is slightly outside the ref*)
 	   val optionalIntTest = (case facetIntTest
-				   of SOME(oldFacetInt) => [makePrim'(BV.neq_ii, [oldFacetInt, intExpr], [Ty.T_Int, Ty.T_Int], Ty.T_Bool)]
-				   |  NONE => [])
+				   of SOME(oldFacetInt) => (fn b =>
+							       let
+								val test = makePrim'(BV.neq_ii, [oldFacetInt, intExpr], [Ty.T_Int, Ty.T_Int], Ty.T_Bool)
+							       in
+								AST.S_IfThenElse(test, b, AST.S_Block([AST.S_Assign((faceReserveVar, span), test1)]))
+							       end)
+				   |  NONE => (fn b => b))
 	   val preTests = if parallelTest
-			  then List.@(optionalIntTest, [positiveTest, newUpdateTest, antiNanInfTest])
-			  else List.@(optionalIntTest, [positiveTest, newUpdateTest])
+			  then [positiveTest, newUpdateTest, antiNanInfTest]
+			  else [positiveTest, newUpdateTest]
 	   val test = makeAnds(preTests)
 	   val proc = if insideTest
 		      then (fn b => AST.S_IfThenElse(insideTestVal, b, AST.S_Block([])))
@@ -378,11 +386,11 @@ fun newtonLoopBlock(normal, dScalar, refPosExp, dPosExp, maxN, eps, t) =
 
 
 	   (* makePrinStatement("Suc with:", [test1,AST.E_Lit(Literal.String(", ")), test2], "\n"), *)
-	   val fin = AST.S_IfThenElse(test, proc (AST.S_Block([
-							      
-							      AST.S_Assign((tempVar, span), posRefineTest2),
-							      AST.S_Assign((tempVar', span), intExpr)
-						 ])),
+	   val fin = AST.S_IfThenElse(test, (optionalIntTest o proc)
+					      (AST.S_Block([
+							   AST.S_Assign((tempVar, span), posRefineTest2),
+							   AST.S_Assign((tempVar', span), intExpr)
+					      ])),
 				      AST.S_Block([]))
 	  in
 	   if printFlag
@@ -399,18 +407,30 @@ fun newtonLoopBlock(normal, dScalar, refPosExp, dPosExp, maxN, eps, t) =
       val ifs = List.map buildIf zip
 
       val workedTest = makePrim'(BV.neq_ii, [tempExp', neg1], [Ty.T_Int, Ty.T_Int], Ty.T_Bool)
-      fun coerce e = AST.E_Coerce({srcTy=Ty.T_Int, dstTy=Ty.realTy, e= e})
+
       val timeReturn = makePrim'(BV.fn_max_r, [tempExp, zero], [Ty.realTy, Ty.realTy], Ty.realTy)
+
+      val failBlock = AST.S_Block([ (*TODO: should this be ~1? What is the exact standard for this function?*)
+						  AST.S_Return(AST.E_Tensor([coerce neg1, coerce neg1], vec2Ty))
+				 ])
+      val failBlock' = (case facetIntTest
+			 of NONE => failBlock
+			  | SOME(faceInt) =>
+			    let
+			     val facetTest = makePrim'(BV.equ_rr, [AST.E_Lit(Literal.Real(RealLit.negInf)), faceExp], [Ty.realTy, Ty.realTy], Ty.T_Bool)
+			     val otherReturn = AST.S_Return(AST.E_Tensor([faceExp, coerce faceInt], vec2Ty))
+			    in
+			     AST.S_IfThenElse(facetTest, failBlock, otherReturn)
+			    end) (*TODO: This conditional is not needed... if facet is never tested I think...*)
 
       val ifReturn = AST.S_IfThenElse(workedTest,
 				      AST.S_Block([
 						  AST.S_Return(AST.E_Tensor([timeReturn, coerce tempExp'], vec2Ty))
 						 ]),
-				      AST.S_Block([ (*TODO: should this be ~1? What is the exact standard for this function?*)
-						  AST.S_Return(AST.E_Tensor([coerce neg1, coerce neg1], vec2Ty))
-				     ]))
+				      failBlock'
+				      )
 
-      val stms = [tempStart, tempStart']@ifs@[ifReturn]
+      val stms = [tempStart, tempStart',faceStart]@ifs@[ifReturn]
 
      in
       stms handle exn => raise exn
