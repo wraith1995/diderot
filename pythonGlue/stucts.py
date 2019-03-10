@@ -17,7 +17,10 @@ def makeArrayType(array, ty):
 def makeVoidPointerTuple(val):
     return(val,ct.cast(ct.pointer(val), ct.c_void_p))
 
-def makeMeshType(ctylesInt, ctylesFloat):
+def makeMeshType(ctylesInt, ctylesFloat, extraNamesAndTypes=[]):
+    #  make extra fields
+    sortedExtraFields = sorted(extraNamesAndTypes, key=lambda x: x[0])
+    names = [x[0] for x in sortedExtraFields]
     class _CFunction(ct.Structure):
         """C struct that represents a base mesh"""
         _fields_ = [
@@ -28,8 +31,12 @@ def makeMeshType(ctylesInt, ctylesFloat):
             ("numCells", ctylesInt),
             ("index", c_void_p),
             ("con", POINTER(c_int))
-        ]
-    def build(indexMap, coordMap, dim, mapDim, numCells, index, con):
+        ] + sortedExtraFields
+    def build(indexMap, coordMap, dim, mapDim, numCells, index, con,
+              extraValues=[]):
+        if len(extraValues) != len(names):
+            raise Exception("mesh is mixing extra arguments")
+        
         ty = _CFunction()
         ty.indexMap = makeArrayType(indexMap, ctylesInt)
         ty.coordMap = makeArrayType(coordMap, ctylesFloat)
@@ -38,6 +45,8 @@ def makeMeshType(ctylesInt, ctylesFloat):
         ty.numCells = numCells
         ty.index = ct.cast(index, ct.c_void_p)
         ty.con = makeArrayType(con, ctylesInt)
+        for (name, val) in zip(names, extraValues):
+            setattr(ty, name, val)
         return(makeVoidPointerTuple(ty))
 
     return(_CFunction, build)
@@ -73,8 +82,10 @@ def makeFuncType(spaceTy, ctylesFloat):
     return(_CFunction, build)
 
 
-def makeAllTypes(ctylesInt, ctylesFloat):
-    (meshTy, buildMesh) = makeMeshType(ctylesInt, ctylesFloat)
+def makeAllTypes(ctylesInt, ctylesFloat,
+                 extraTys=[]):
+    (meshTy, buildMesh) = makeMeshType(ctylesInt, ctylesFloat,
+                                       extraNamesAndTypes=extraTys)
     (spaceTy, buildSpace) = makeSpaceType(meshTy, ctylesInt)
     (funcTy, buildFunc) = makeFuncType(spaceTy, ctylesFloat)
     
@@ -83,11 +94,13 @@ def makeAllTypes(ctylesInt, ctylesFloat):
                  sIndex, con,
                  spaceIndexMap,
                  spaceDim,
-                 funcCoordMap):
-        (meshVal, meshValPtr) = buildMesh(meshIndexMap, meshCoordMap, dim, meshMapDim,
-                                          numCell, sIndex, con)
+                 funcCoordMap, extraVals=[]):
+        (meshVal, meshValPtr) = buildMesh(meshIndexMap, meshCoordMap, dim,
+                                          meshMapDim,
+                                          numCell, sIndex, con,
+                                          extraValues=extraVals)
         (spaceVal, spaceValPtr) = buildSpace(spaceIndexMap, spaceDim, meshVal)
-        (funcVal, funcValPtr) = buildFunc(funcCoordMap, spaceVal)
+        (_, funcValPtr) = buildFunc(funcCoordMap, spaceVal)
         return((meshValPtr, spaceValPtr, funcValPtr))
     return(buildMesh, buildSpace, buildFunc, buildAll)
 

@@ -80,6 +80,21 @@ structure GenTysAndOps : sig
 		       results
 		      end
 
+		  local
+		   val extraData = FT.getCellDataTypes m
+		   fun sortData ss = ListMergeSort.sort (fn ((a1, s1), (a2, s2)) => (Atom.toString a1) > (Atom.toString a2)) ss;
+		   val extraData' = sortData extraData
+		   fun convertTy(FT.String) = CL.charPtr
+		     | convertTy(FT.Bool) = CL.boolTy
+		     | convertTy (FT.Int) = intTy
+		     | convertTy (FT.Real) = realTy
+		     | convertTy (FT.Tensor(_)) = realTy
+		     | convertTy (FT.Array(ty, _)) = convertTy ty
+		   fun makeParam (a, ty) = CL.D_Var([], CL.T_Ptr(convertTy ty), [], Atom.toString a, NONE)
+		  in
+		  val extrasParams = List.map makeParam extraData'
+		  end
+
 
 		  (* We need to add a load function via string*)
 		  (*val load = CL.D_Func([],) *)
@@ -87,7 +102,7 @@ structure GenTysAndOps : sig
 		  val load = CL.mkFuncDcl(CL.T_Named(name),"operator=", [CL.PARAM([],CL.T_Named("std::string"), "file")], block)
 
 
-		  val fields = [indexMap, coordinatesMap, dimConst, mapDimConst, numCells]@extra@[load]
+		  val fields = [indexMap, coordinatesMap, dimConst, mapDimConst, numCells]@extra@extrasParams@[load]
 
 		  val class = CL.D_ClassDef{name=name, args=NONE, from=NONE,public = fields , protected = [], private = []} (*add public declerations*)
 		 in

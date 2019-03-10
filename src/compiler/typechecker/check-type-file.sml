@@ -19,7 +19,7 @@ structure CheckTypeFile  : sig
 	   val parseConstant : Env.t * Env.context * Atom.atom * Types.ty option *  JSON.value  -> constant
 	   val parseConstants : Env.t * Env.context * Atom.atom * JSON.value -> constant list
 												      
-	   val parseMesh : Env.t * Env.context * Atom.atom * JSON.value -> (FemData.femType option * constant list * dimensionalObjects list)
+	   val parseMesh : Env.t * Env.context * Atom.atom * JSON.value -> (FemData.femType option * constant list * dimensionalObjects list * (Atom.atom * Types.ty *  FemData.cellDataType ) list)
 												
            val parseSpace : Env.t * Env.context * Atom.atom * int list * int list * FemData.mesh * JSON.value -> FemData.femType option * constant list
 																	  (* basis function shape, range shape*)
@@ -1136,6 +1136,35 @@ fun parseAccelerate(env, cxt, json, meshName) =
 			 (TypeError.warning(cxt, [S"File ", S(file), S" does not exist."]);
 			  NONE))
     end
+
+
+fun parseMeshTys(json) =
+    let
+     val tys = findField "types" json
+     fun astTyToDumb(Ty.T_Bool) = FT.Bool
+       | astTyToDumb (Ty.T_String) = FT.String
+       | astTyToDumb (Ty.T_Int) = FT.Int
+       | astTyToDumb (Ty.T_Tensor(Ty.Shape([]))) = FT.Real
+       | astTyToDumb (Ty.T_Tensor(Ty.Shape(dims))) = FT.Tensor(List.map (fn (Ty.DimConst(c)) => c) dims)
+       | astTyToDumb (Ty.T_Sequence(ty, SOME(Ty.DimConst(i)))) = FT.Array(astTyToDumb ty, i)
+       | astTyToDumb _ = raise Fail "impossible"
+     fun paresPair(j) =
+	 let
+	  val tyName = Option.mapPartial optionString (findField "name" j)
+	  val tyType = Option.mapPartial optionString (findField "ty" j)
+	  val tyParsed = Option.map (fn (x,_,_) => x) (Option.mapPartial matchType tyType)
+	 in
+	  (case (tyName, tyParsed)
+	    of (SOME(tyName'), SOME(tyParsed')) => SOME(Atom.atom tyName', tyParsed', astTyToDumb tyParsed')
+	     | _ => NONE)
+	 end
+	   
+     val data = Option.map (JU.arrayMap (paresPair)) tys
+     val data' = Option.map (List.filter (Option.isSome)) data
+     val data'' : (Atom.atom * Types.ty * FemData.cellDataType) list option = Option.map (List.map (Option.valOf)) data'
+    in
+     data''
+    end
       
 fun parseMesh(env, cxt, tyName, json) =
     let
@@ -1178,16 +1207,20 @@ fun parseMesh(env, cxt, tyName, json) =
      val dimMethods = Option.getOpt(Option.map (fn (x,y) => y) refCellData, [])
 
      val optionalAcceleration = Option.mapPartial (fn x => parseAccelerate(env, cxt, x, tyName)) mesh
+
+     val tys = (Option.mapPartial parseMeshTys mesh)
+     val tys' = Option.getOpt(tys, [])
+     val tys'' = List.map (fn (x,y,z) => (x,z)) tys'
      val meshVal = Option.map (fn (x,y,z,basis, cell) => FT.mkMesh(x,y,z,
 							     basis,
-							     tyName, cell, optionalAcceleration))
+							     tyName, cell, optionalAcceleration, tys''))
 			      (case (dim, spaceDim, degree, parsedBasis, refCellData)
 				of (SOME(a), SOME(b), SOME(c), SOME(d), SOME(e, _)) => SOME((a,b,c,d,e))
 				 | _ => NONE (* end case*))
      val newConstants' = Option.getOpt(newConstants, [])
 
     in
-     (meshVal, newConstants', dimMethods)
+     (meshVal, newConstants', dimMethods, tys')
     end
 
 
