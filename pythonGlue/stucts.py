@@ -21,6 +21,7 @@ def makeMeshType(ctylesInt, ctylesFloat, extraNamesAndTypes=[]):
     #  make extra fields
     sortedExtraFields = sorted(extraNamesAndTypes, key=lambda x: x[0])
     names = [x[0] for x in sortedExtraFields]
+    print(sortedExtraFields)
     class _CFunction(ct.Structure):
         """C struct that represents a base mesh"""
         _fields_ = [

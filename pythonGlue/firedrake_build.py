@@ -247,12 +247,14 @@ def passFuncHelper(func, floatTy):
 
     return((funcCoordMap,))
 
-def passAll(func, intTy, floatTy, geometric=True):
+def passAll(func, intTy, floatTy, geometric=True, extraData=[]):
     space = func.function_space()
     mesh = space.mesh()
     meshTuple = passMeshHelper(mesh, intTy, floatTy, geometric=geometric)
     spaceTuple = passSpaceHelper(space, intTy)
     funcTuple = passFuncHelper(func, floatTy)
     combined = meshTuple + spaceTuple + funcTuple
-    (_, _, _, buildAll) = st.makeAllTypes(intTy, floatTy)
-    return((combined, buildAll(*combined)))
+    (_, _, _, buildAll) = st.makeAllTypes(intTy, floatTy, extraTys=list(map(lambda x: (x[0], x[2]), extraData)))
+    return((combined, buildAll(*combined,
+                               extraVals=list(map(lambda x: x[1], extraData)))))
+            

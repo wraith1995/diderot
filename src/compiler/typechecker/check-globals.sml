@@ -1238,23 +1238,6 @@ structure CheckGlobals : sig
 			 val nEqFuncPair = (atom2, funVar2)
 			 end
 			 (*data data: cellData*)
-			 local
-			  fun cellInt x = AST.E_ExtractFemItem(x, Ty.T_Int, (FemOpt.CellIndex, FT.Mesh(m)))
-			  fun meshVal x=  AST.E_ExtractFem(x, FT.Mesh(m))
-			  fun makeOne(name, ty, discard) =
-			      let
-			       val funTy = Ty.T_Fun([meshCellTy], ty)
-			       fun doit([v1, v2]) = AST.E_ExtractFemItem2(meshVal v1, cellInt v2, Ty.T_Int, ty, (FemOpt.CellData name, FT.Mesh(m)))
-				 | doit _ = raise Fail "typechecker error"
-
-
-			      in
-			       (name, doit, ty)
-			      end
-			  val funs = List.map makeOne cellAccData
-			 in
-			 val dataAccReplaceFuns = funs
-			 end
 
 
 
@@ -1275,7 +1258,7 @@ structure CheckGlobals : sig
 			in
 			 ([(numCell, numCellFuncVar), (cells', cellFuncVar'), (refCellName, refCellFuncVar), (meshPosFuncAtom, meshPosFuncVar), eqFuncPair, nEqFuncPair],
 			  [numCellFun, cellsFun', cellsFun, refCellFunc, meshPosFunc, eqFunc, nEqFunc],
-			  [(cells, makeCells, cellTypeFuncTy), (meshInsideAtom, meshInsideFunc, meshInsideType), invalidReplace]@dataAccReplaceFuns,
+			  [(cells, makeCells, cellTypeFuncTy), (meshInsideAtom, meshInsideFunc, meshInsideType), invalidReplace],
 			  [eqFuncPair, nEqFuncPair])
 			end
 
@@ -1357,7 +1340,7 @@ structure CheckGlobals : sig
 		Env.insertNamedType(env, cxt, meshPosName, meshPosTy, constants, extraFuns@methods, extraReplace@hiddenFuns)
 	       end
 
-	       fun makeDescendentFemTypes geometry (env, femType) =
+	       fun makeDescendentFemTypes geometry cellAccData (env, femType) =
 		   let
 		    val constants = []
 		    val methods = []
@@ -1548,8 +1531,28 @@ structure CheckGlobals : sig
 
 			  val (extraCellFuncInfo, extraCellFuncDcls, extraCellReplaceFuncs) = #cell geometryInfo
 
+			  local
+			   fun cellInt x = AST.E_ExtractFemItem(x, Ty.T_Int, (FemOpt.CellIndex, FT.Mesh(m)))
+			   fun meshVal x=  AST.E_ExtractFem(x, FT.Mesh(m))
+			   fun makeOne(name, ty, discard) =
+			       let
+				val _ = print("Name:"^(Atom.toString name)^"\n")
+				val funTy = Ty.T_Fun([cellTy], ty)
+				fun doit([v1]) = AST.E_ExtractFemItem2(meshVal v1, cellInt v1, Ty.T_Int, ty, (FemOpt.CellData name, FT.Mesh(m)))
+				  | doit _ = raise Fail "typechecker error"
 
-			  val env' = Env.insertNamedType(env, cxt, cellName, cellTy, constants, extraCellFuncInfo@cellMethods, extraCellReplaceFuncs@transformFuncs)
+
+			       in
+				(name, doit, funTy)
+			       end
+			   val funs = List.map makeOne cellAccData
+			  in
+			  val dataAccReplaceFuns = funs
+			  end
+
+
+
+			  val env' = Env.insertNamedType(env, cxt, cellName, cellTy, constants, extraCellFuncInfo@cellMethods, extraCellReplaceFuncs@transformFuncs@dataAccReplaceFuns)
 
 
 			  val (refActualFuncI, refActualFuncDcls, refReplaceFunc) = #ref geometryInfo
@@ -1680,7 +1683,7 @@ structure CheckGlobals : sig
 		    val argsOption = (case (envI, femType)
 				       of (SOME(envI'), SOME((femTy', _))) => SOME((envI', femTy'))
 					| _ => NONE)
-		    val env' = Option.map (makeDescendentFemTypes geometry) argsOption
+		    val env' = Option.map (makeDescendentFemTypes geometry cellData) argsOption
 		    val env'' = Option.map (fn x => addOverloads(cxt, x, overloads)) env'
 
 		   in
