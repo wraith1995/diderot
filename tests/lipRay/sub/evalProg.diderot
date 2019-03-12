@@ -1,0 +1,108 @@
+#version 3.0
+type mesh msh = file("evalProg.json");
+type functionSpace{msh}[] fns = file("evalProg.json");
+type femFunction{fns} func = file("evalProg.json");
+
+
+
+const int dim = msh.dim;
+
+input msh a;
+input fns b = fns(a);
+input func c = func(b);
+
+
+
+input real isoval = 0.2;  input real thick = 0.07;
+input vec3 camEye = [-0.5,0.5,0.5];  input vec3 camAt = [0.5,0.5,0.5];   input vec3 camUp = [0,0,1];
+input real camFOV = 13.7;  input int iresU = 10;    input int iresV = 10;
+input real camNear = -2; input real camFar = 5; // NOTE: missing from paper: sloppy code condensing
+input real refStep = 1.0; input real rayStep =0.01;
+input vec3 lightVsp = [0.0, 0.0, 1.0]; // light direction in view-space
+input real phongKa = 0.1; input real phongKd = 0.9;
+
+input bool debug = false;
+input int debugU = 8;
+input int debugV = 2;
+input real eps = 0.000000001;
+
+input int[] indecies;//[2][10][10]
+input vec2[] times;
+input int[] cells;
+
+real camDist = |camAt - camEye|;
+real camNearVsp = camNear + camDist; 
+real camFarVsp = camFar + camDist;   
+vec3 camN = normalize(camAt - camEye); // away
+vec3 camU = normalize(camN × camUp);    // right
+vec3 camV = camU × camN;                // up
+real camVmax = tan(camFOV*π/360)*camDist;
+real camUmax = camVmax*iresU/iresV;
+vec3 light = transpose([camU,camV,camN])•normalize(lightVsp);
+vec3 rayVec = camN;
+function int sign(real x){
+  if (x > 0.0) {return(1);}
+  else if (x < 0.0){return(-1);}
+  else {return(0);}
+}
+strand ray(int ui, int vi) {
+  real rayU = lerp(-camUmax, camUmax, -0.5, ui, iresU-0.5);       
+  real rayV = lerp(-camVmax, camVmax, -0.5, vi, iresV-0.5);
+  vec3 UV = rayU*camU + rayV*camV;
+  vec3 rayOrig = camEye + UV;
+  int offset = indecies[ui * iresV + vi];//indecies[0][ui][vi];
+  int len = indecies[iresU*iresV + ui * iresV + vi ];//indecies[1][ui][vi];
+  int itter = 0;
+  int idx = offset + itter;
+  vec2 interval = times[idx];
+  real s = interval[0];
+  real e = interval[1];
+  cell{msh} cc = a.cells[0];
+  cell{func} fc = (c.funcCell)(cc);
+
+
+  output vec2[] intervals = {};
+  output cell{msh}[] newCells = {};
+  start{
+    if(len == 0){stabilize;}
+    cc = a.cells[cells[idx]];
+    fc = c.funcCell(cc);
+  }  
+  update {
+
+    if(len  < 1){stabilize;}
+    vec3 rayStart = rayOrig + rayVec * s;
+    vec2 project = [rayStart[0], rayStart[1]];
+    real f0 = (fc.refField ∘ cc.inverseTransform)(project) - rayStart[2];
+    real gradEps = min((|[rayVec[0], rayVec[1]] • ∇(fc.refField ∘ cc.inverseTransform)(project) - rayVec[2]|)/(cc.G), e - s);
+    real f1 = (fc.refField ∘ cc.inverseTransform)(project + gradEps * [rayVec[0], rayVec[1]]) - rayStart[2] - gradEps*rayVec[2];
+    print("vals:", [f0,f1], "\n");
+    if (!(sign(f0) * sign(f1) >0) ){
+
+      if (sign(f0) * sign(f1) ==0){
+	print("Warn: 0 update\n");
+      }
+      print("update with interval:", gradEps, "\n");
+      print("Vals I:", [f0, f1],"\n");
+      print("New interval:", [s, s + gradEps],"\n");
+      intervals=intervals@[s, s + gradEps];
+      newCells=newCells@cc;
+      s+=gradEps;
+    } else {
+      real epsUpdate = max(gradEps,|f0|/(2*cc.L));
+      print("update L:", epsUpdate, "\n");
+      print("update G:", gradEps, "\n");
+      s+=epsUpdate;
+    }
+    
+    if (s >= e){
+      itter+=1;
+      if(itter >= len){ stabilize;} else {
+	interval = times[offset+itter]; cc = a.cells[cells[offset + itter]];
+	s = interval[0]; e = interval[1];
+	fc = c.funcCell(cc);
+      }
+    }
+  }
+  
+} create_array {ray(ui,vi) | vi in 0..iresU-1, ui in 0..iresV-1};
