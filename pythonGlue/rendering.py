@@ -7,19 +7,24 @@ import functools
 # polyline-tube
 # 2d option
 # Particle/cube/whatever
-def readLines(controlFile, seqFile, dim=3):
+# The code here has an embar... amount of duplication
+def readLines(controlFile, seqFile, dim=3, debugU=None, debugV=None):
     seqData, seqHeader = nrrd.read(seqFile)
     size = functools.reduce(lambda x,y: x*y, seqData.shape, 1)
     seqData = seqData.T
     controlData, controlHeader = nrrd.read(controlFile)
-    
     result = np.empty(controlData.shape[1:], dtype=object)
     for j in range(controlData.shape[1]):
         for k in range(controlData.shape[2]):
             offset = controlData[0][j][k]
             limit = controlData[1][j][k]
             result[j][k] = []
+            if debugU is not None and j not in debugU:
+                continue
+            if debugV is not None and k not in debugV:
+                continue
             for idx in range(0, limit):
+
                 result[j][k].append([seqData[offset + idx][i]
                                      for i in range(dim)])
 
@@ -28,7 +33,7 @@ def readLines(controlFile, seqFile, dim=3):
     res = result.reshape(controlData.shape[1] * controlData.shape[2])
     return(res)
 
-def read2dLines(controlFile, seqFile, z):
+def read2dLines(controlFile, seqFile, z, debugU=None, debugV=None):
     seqData, seqHeader = nrrd.read(seqFile)
     size = functools.reduce(lambda x,y: x*y, seqData.shape, 1)
     seqData = seqData.T
@@ -40,6 +45,10 @@ def read2dLines(controlFile, seqFile, z):
             offset = controlData[0][j][k]
             limit = controlData[1][j][k]
             result[j][k] = []
+            if debugU is not None and j not in debugU:
+                continue
+            if debugV is not None and k not in debugV:
+                continue
             for idx in range(0, limit):
                 extra = [seqData[offset + idx][i]
                          for i in range(2)] + [z]
@@ -48,7 +57,7 @@ def read2dLines(controlFile, seqFile, z):
     return(res)
 
 
-def readSegs(controlFile, seqFile, z=None):
+def readSegs(controlFile, seqFile, z=None, debugU=None, debugV=None):
     seqData, seqHeader = nrrd.read(seqFile)
     size = functools.reduce(lambda x,y: x*y, seqData.shape, 1)
     seqData = seqData.T
@@ -60,10 +69,14 @@ def readSegs(controlFile, seqFile, z=None):
             offset = controlData[0][j][k]
             limit = controlData[1][j][k]
             result[j][k] = []
+            if debugU is not None and j not in debugU:
+                continue
+            if debugV is not None and k not in debugV:
+                continue
             for idx in range(0, limit):
                 extra1 = [seqData[offset + idx][i]
                           for i in range(3)]
-                extra2 = [seqData[offset + idx + 3][i]
+                extra2 = [seqData[offset + idx][i + 3]
                           for i in range(3)]
                 if z is not None:
                     extra1[2] = z
@@ -73,10 +86,9 @@ def readSegs(controlFile, seqFile, z=None):
     resultp = []
     for r in res:
         resultp.extend(r)
-        print(resultp)
     return(resultp)
 
-def readPoints(controlFile, seqFile, z=None):
+def readPoints(controlFile, seqFile, z=None, debugU=None, debugV=None):
     seqData, seqHeader = nrrd.read(seqFile)
     size = functools.reduce(lambda x,y: x*y, seqData.shape, 1)
     seqData = seqData.T
@@ -88,6 +100,10 @@ def readPoints(controlFile, seqFile, z=None):
             offset = controlData[0][j][k]
             limit = controlData[1][j][k]
             result[j][k] = []
+            if debugU is not None and j not in debugU:
+                continue
+            if debugV is not None and k not in debugV:
+                continue
             for idx in range(0, limit):
                 extra1 = [seqData[offset + idx][i]
                           for i in range(3)]
@@ -97,7 +113,7 @@ def readPoints(controlFile, seqFile, z=None):
     res = result.reshape(controlData.shape[1] * controlData.shape[2])
     resultp = []
     for r in res:
-        resultp.append(r)
+        resultp.extend(r)
     return(resultp)
 
 def renderLines(data, resultFile):
@@ -135,8 +151,8 @@ def renderPoints(data, resultFile):
     vtkPoints = vtk.vtkPoints()
     vertices = vtk.vtkCellArray()
     for (idxp, p) in enumerate(data):
-        idx = vtkPoints.InsertNextPoint(p)
-        vertices.InsertNextCell(idxp)
+        idx = vtkPoints.InsertNextPoint(p[0], p[1], p[2])
+        vertices.InsertNextCell(1)
         vertices.InsertCellPoint(idx)
     result = vtk.vtkPolyData()
     result.SetPoints(vtkPoints)
@@ -156,42 +172,42 @@ def renderPoints(data, resultFile):
 #The above all need renders
 #Ask gordon about particles to do circles
 
-
-def lines(name):
+###ADD DEBUG MODE...
+def lines(name, debugU=None, debugV=None):
     controlFile = name + "_0.nrrd"
     seqFile = name + "_1.nrrd"
-    result = readLines(controlFile, seqFile)
+    result = readLines(controlFile, seqFile, debugU=debugU, debugV=debugV)
     renderLines(result, name + "_lines.vtk")
     return(result)
 
 
-def lines2d(name):
+def lines2d(name, debugU=None, debugV=None):
     controlFile = name + "_0.nrrd"
     seqFile = name + "_1.nrrd"
-    result = read2dLines(controlFile, seqFile)
+    result = read2dLines(controlFile, seqFile, 0.0, debugU=debugU, debugV=debugV)
     renderLines(result, name + "_2d_lines.vtk")
     return(result)
 
 
-def segs(name):
+def segs(name, debugU=None, debugV=None):
     controlFile = name + "_0.nrrd"
     seqFile = name + "_1.nrrd"
-    result = readSegs(controlFile, seqFile)
+    result = readSegs(controlFile, seqFile, debugU=debugU, debugV=debugV)
     renderLines(result, name + "_segs.vtk")
     return(result)
 
 
-def segs2d(name, z):
+def segs2d(name, z, debugU=None, debugV=None):
     controlFile = name + "_0.nrrd"
     seqFile = name + "_1.nrrd"
-    result = readSegs(controlFile, seqFile, z=z)
+    result = readSegs(controlFile, seqFile, z=z, debugU=debugU, debugV=debugV)
     renderLines(result, name + "_2d_segs.vtk")
     return(result)
 
 
-def points(name, z=None):
+def points(name, z=None, debugU=None, debugV=None):
     controlFile = name + "_0.nrrd"
     seqFile = name + "_1.nrrd"
-    result = readPoints(controlFile, seqFile, z=z)
+    result = readPoints(controlFile, seqFile, z=z, debugU=debugU, debugV=debugV)
     renderPoints(result, name + "_points.vtk")
     return(result)
