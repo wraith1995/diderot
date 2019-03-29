@@ -73,6 +73,35 @@ fun sumVars(avail, [v]) = AvailRHS.addAssign(avail, "sum", Ty.realTy, IR.VAR(v))
     end
 
 
+fun multFuncStupid(avail, (v1, v2)) =
+    let
+     fun acc(d, a) = List.tabulate(d, fn x => AvailRHS.addAssign(avail, "tmp", Ty.realTy, IR.OP(Op.VIndex(d,x), [a])))
+     fun mult(a, b) = AvailRHS.addAssign(avail, "tmp", Ty.realTy, IR.OP(Op.RMul, [a,b]))
+     fun doit(d, a, b) = sumVars(avail, List.map mult (ListPair.zip (acc(d,a), acc(d,b))))
+     
+    in
+     (case (IR.Var.ty(v1), IR.Var.ty(v1))
+       of (Ty.TensorTy[], Ty.TensorTy[]) =>  IR.OP(Op.RMul, [v1,v2])
+	| (Ty.TensorTy[d1], Ty.TensorTy[d2]) =>
+	  if d1=d2 andalso (d1<>1) andalso (d2 <> 1)
+	  then IR.OP(Op.VDot(d1), [v1,v2])
+	  else raise Fail "impossible"
+
+	| _ => raise Fail "impossible"
+     )
+    end
+      
+fun multFunc(v1, v2) = (case (IR.Var.ty(v1), IR.Var.ty(v1))
+			 of (Ty.TensorTy[], Ty.TensorTy[]) =>  IR.OP(Op.RMul, [v1,v2])
+			  | (Ty.TensorTy[d1], Ty.TensorTy[d2]) =>
+			    if d1=d2 andalso (d1<>1) andalso (d2 <> 1)
+			    then IR.OP(Op.VDot(d1), [v1,v2])
+			    else raise Fail "impossible"
+
+			  | _ => raise Fail "impossible"
+		       )
+
+
 fun power(avail, var, 0) =
     let
      val one = IR.LIT(Literal.Real(RealLit.one))
@@ -125,6 +154,9 @@ fun multList(avail, xs) =
     in
      multList'(avail, true, xs)
     end
+
+
+
 fun extractVars(avail, var, idxes) =
     let
      val d = List.length idxes
@@ -292,7 +324,7 @@ fun evalFunctionDumb(avail, basisFunc, vars) =
 	   let
 	    val (coeffs, pows) = List.foldr foldrFunc ([],[]) nonZeroTerms
 	    val combined = ListPair.zip (coeffs, pows)
-	    val ops = List.map multFunc combined
+	    val ops = List.map (fn x => multFuncStupid(avail, x)) combined
 	    val mults = List.map (fn x => AvailRHS.addAssign(avail, "mult", Ty.realTy, x)) ops
 	    val sum = sumVars(avail, mults)
 	    val next = IR.Var.new("intermediate", Ty.realTy)
@@ -305,7 +337,7 @@ fun evalFunctionDumb(avail, basisFunc, vars) =
 					   
 	   val coeffVar = AvailRHS.addAssign(avail, "coeffs", Ty.vecTy(count), consFunc(coeffs, Ty.vecTy(count)))
 	   val powVar = AvailRHS.addAssign(avail, "powers", Ty.vecTy(count), consFunc(pows, Ty.vecTy(count)))
-	   val resultOP = multFunc(coeffVar, powVar) (*vectorization*)
+	   val resultOP = multFuncStupid(avail, (coeffVar, powVar)) (*vectorization*)
 	   val next = AvailRHS.addAssign(avail, "basisEval", Ty.realTy, resultOP)
 	   val next' = IR.Var.new("intermediate", Ty.realTy)
 	  in
@@ -325,6 +357,8 @@ fun evalFunctionLazyHorner(avail, basisFunc, vars) =
 fun evalBasisDumb(avail, basisArray, pos) =
     let
      val affineTest = BDA.isAffine basisArray
+     (* val _ = print("The basis is:\n") *)
+     (* val _ = print(BDA.toString basisArray, "\n"); *)
      val (basisArrayData, meta) = BDA.explode basisArray
      val varAcc = BDA.vars(meta)
      val vars = extractVars(avail, pos, varAcc)

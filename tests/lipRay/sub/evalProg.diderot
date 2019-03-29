@@ -62,20 +62,31 @@ strand ray(int ui, int vi) {
 
 
   output vec2[] intervals = {};
+  output tensor[2,3][] sints = {};
   output cell{msh}[] newCells = {};
+  int count = 0;
+  int totalCount = 0;
   start{
+    if (debug && ((ui != debugU) || (vi != debugV))){stabilize;}
     if(len == 0){stabilize;}
     cc = a.cells[cells[idx]];
     fc = c.funcCell(cc);
   }  
   update {
-
+    
     if(len  < 1){stabilize;}
     vec3 rayStart = rayOrig + rayVec * s;
     vec2 project = [rayStart[0], rayStart[1]];
     real f0 = (fc.refField ∘ cc.inverseTransform)(project) - rayStart[2];
     real gradEps = min((|[rayVec[0], rayVec[1]] • ∇(fc.refField ∘ cc.inverseTransform)(project) - rayVec[2]|)/(cc.G), e - s);
+    print("hmmmm:",(∇(fc.refField ∘ cc.inverseTransform))(project), "\n");
+    print("fc dofs:", fc.dofs, "\n");
     real f1 = (fc.refField ∘ cc.inverseTransform)(project + gradEps * [rayVec[0], rayVec[1]]) - rayStart[2] - gradEps*rayVec[2];
+    print("=========================\n");
+    print("Ui/Vi:", ui, "/", vi, "\n");
+    print("Cell:",cc,"\n");
+    print("hess:",∇⊗∇(fc.refField ∘ cc.inverseTransform)(project),"\n", "norm:", |∇⊗∇(fc.refField ∘ cc.inverseTransform)(project)|, "\n");
+    print("Grad:", ∇(fc.refField ∘ cc.inverseTransform)(project), "\n");
     print("vals:", [f0,f1], "\n");
     if (!(sign(f0) * sign(f1) >0) ){
 
@@ -83,9 +94,14 @@ strand ray(int ui, int vi) {
 	print("Warn: 0 update\n");
       }
       print("update with interval:", gradEps, "\n");
+      print("Pixel Ui/Vi:", ui, "/", vi, "\n");
+      print("Count:", count, "\n");
+      count+=1;
+      totalCount+=1;
       print("Vals I:", [f0, f1],"\n");
       print("New interval:", [s, s + gradEps],"\n");
       intervals=intervals@[s, s + gradEps];
+      sints = sints@[rayOrig + rayVec *s, rayOrig + rayVec * (s +gradEps)];
       newCells=newCells@cc;
       s+=gradEps;
     } else {
@@ -97,7 +113,10 @@ strand ray(int ui, int vi) {
     
     if (s >= e){
       itter+=1;
-      if(itter >= len){ stabilize;} else {
+
+      if(itter >= len){	print("TotalCount:",totalCount, "\n");print("Intervals:",intervals,"\n");print("Cells:", newCells,"\n"); print(ui,";",vi,"++++++++++++++End Pixel++++++++++++++++++\n"); stabilize;} else {
+	print("++++++++++++++New Cell++++++++++++++++++\n");
+	count=0;
 	interval = times[offset+itter]; cc = a.cells[cells[offset + itter]];
 	s = interval[0]; e = interval[1];
 	fc = c.funcCell(cc);

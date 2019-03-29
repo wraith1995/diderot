@@ -12,3 +12,5 @@ python control.py
 python render.py
 unu quantize -b 16 -i out_0.nrrd -o out.png
 xdg-open out.png
+unu quantize -b 16 -i rgba_0.nrrd -o rgba.png
+xdg-open rgba.png

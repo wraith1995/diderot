@@ -44,7 +44,7 @@ def monos(degree, var):
         return(result)
     return([makeVar(idx) for idx in idxes])
 def processSympyPoly(poly, var):
-    maxDegree = poly.degree()
+    maxDegree = poly.total_degree()
     polyVars = var  # [sp.Symbol("x{0}".format(i)) for i in range(dim)]
     monoPolys = monos(maxDegree, polyVars)
     def getCoeff(x,p):
@@ -230,7 +230,6 @@ def passMeshHelper(mesh, intTy, floatTy, geometric=True):
     else:
         sIndex = 0
     conBuild = buildCellConnections(mesh, intTy)
-    print(conBuild)
     con = conBuild
     return((meshIndexMap, meshCoordsMap, dim, meshMapDim, numCell, sIndex, con))
 
@@ -244,7 +243,6 @@ def passSpaceHelper(space, intTy):
 def passFuncHelper(func, floatTy):
     floatPtr = ct.POINTER(floatTy)
     funcCoordMap = func.dat.data
-
     return((funcCoordMap,))
 
 def passAll(func, intTy, floatTy, geometric=True, extraData=[]):

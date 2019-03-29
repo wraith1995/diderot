@@ -14,7 +14,8 @@ type femFunction{fns} func = file("evalProg.json");
 input msh a;
 input fns b = fns(a);
 input func c = func(b);
-input real eps = 0.000001;
+input real zeroEps = 0.00000000001;
+input real intervalEps = 0.00000000001;
 
 
 
@@ -40,15 +41,18 @@ input real cmin ("value mapped to min end of colormap") = 0.0;
 input real cmax ("value mapped to max end of colormap. By default cmin==cmax==0, which disables this colormapping") = 1.0;
 field#0(1)[3] CM = tent ⊛ clamp(cmap);
 //light:
-input bool light = true;
+input bool light = false;
 input real phongKa ("Blinn-Phong ambient component") = 0.5;
 input real phongKd ("Blinn-Phong diffuse component") = 0.5;
 input real phongKs ("Blinn-Phong specular component") = 0.0;
 input real phongSp ("Blinn-Phong specularity exponent") = 60;
 input real maxAlpha ("maximum opacity on rendered surface") = 1;
-input vec3 lightVsp = [0.0, 0.0, 1.0]; // light direction in view-space
+input vec3 lightVsp = [0,3.69,1.53];//[0.0, 0.0, 1.0]; // light direction in view-space
 vec3 L = transpose([camU,camV,camN])•normalize(lightVsp);
 
+input bool debug = false;
+input int debugU = 8;
+input int debugV = 2;
 
 
 function int sign(real x){
@@ -80,14 +84,17 @@ strand ray(int ui, int vi){
   bool newton = true;
   output real out = 0;
   output vec4 rgba = [0,0,0,0];
+  output vec3[] locs = {};
 
   start{
-    if(len == 0){stabilize;}
+    if (debug && (ui != debugU) && (vi != debugV)){stabilize;}
+    if(len == 0){ print("(find:)No intersection found:", ui, "/", vi, "\n");stabilize;}
     cc = a.cells[cells[idx]];
     fc = c.funcCell(cc);
   } 
   
   update {
+    print("Ui/Vi::", ui, "/", vi, "\n");
     print("Interval:", [s,e],"\n");
     print("inner itter:",intersectionItter,"\n");
     print("Outer itter:",itter,"\n");
@@ -100,8 +107,9 @@ strand ray(int ui, int vi){
     real fa = faVal - rayVec[2]*s - rayOrig[2];
     real fb = fc.refField(invertB) - rayVec[2]*e - rayOrig[2];
     print("Vals:",[fa,fb],"\n");
-    if (|fa - fb| < eps && |fa| > eps){
-      s+=eps;
+    if (|fa - fb| < intervalEps && |fa| > intervalEps && |fb| > intervalEps){
+      print("warn\n");
+      s+=intervalEps;
       continue;
     }
     real cup = (s* fb - e*fa)/(fb -fa);
@@ -122,54 +130,49 @@ strand ray(int ui, int vi){
       }
     print("new interval:", [s,e],"\n");
     //I think |fa| < eps and |fb| < eps are impossible... but double check
-    if (|fa| < eps || |fm| < eps || intersectionItter > 32){
-      intersectionItter = 0;
-      if (|fm| > eps && |fa| > eps) {
-	itter+=1;
-	if(itter >= len){print("Fin pixel=============================\n");stabilize;}
-	interval = times[offset+itter]; cc = a.cells[cells[offset + itter]];
-	s = interval[0]; e = interval[1];
-	fc = c.funcCell(cc);
-	print("Next interval!\n");
-	continue;}
-      else{
-	vec2 grad = [0,0];
-	vec3 loc = rayOrig;
-	if (|fm| < eps){
-	  grad = ∇ ( fc.refField ∘ cc.inverseTransform)(midRay);
-	  out = fmVal;
-	}
-	if (|fa| < eps){
-	  cup = s;//book keeping
-	  grad = ∇ ( fc.refField ∘ cc.inverseTransform)(startRay);
-	  out = faVal;
-	}
-	print("Out val:",out,"\n");
-	print("Grad val:",grad,"\n");
-	vec3 mcol = [1,1,1];
-	if (cmin != cmax){
-	    mcol = CM(lerp(-1, 1, cmin, out, cmax));
-	}
-	if(light){
-	  vec3 N = [grad[0], grad[1], -1];
-	  vec3 H = normalize(-normalize(rayVec)+L);
-	  vec3 lightColor = lerp(mcnear, mcfar, camNearVsp, cup, camFarVsp);
-	  
-	  vec3 ambientTerm = phongKa * mcol;
-	  vec3 diffuse = phongKd * modulate(mcol,lightColor)*max(0,N•L);
-	  vec3 specular = phongKs*lightColor*((max(0,N•H))^phongSp);
-	  vec3 fin = ambientTerm + diffuse + specular;
-	  rgba = [fin[0],fin[1],fin[2],1];
-	} else {
-	  rgba = [mcol[0],mcol[1],mcol[2],1];
-	}
-	stabilize;
+    if (|fm| < zeroEps ){
+      vec2 grad = [0,0];
+      vec3 loc = rayOrig;
+      if (|fm| < zeroEps){
+	grad = ∇ ( fc.refField ∘ cc.inverseTransform)(midRay);
+	out = fmVal;
       }
+      print("Out val:",out,"\n");
+      print("Grad val:",grad,"\n");
+      vec3 mcol = [1,1,1];
+      if (cmin != cmax){
+	mcol = CM(lerp(-1, 1, cmin, out, cmax));
+      }
+      if(light){
+	vec3 N = normalize([grad[0], grad[1], -1]);
+	vec3 H = normalize(-normalize(rayVec)+L);
+	vec3 lightColor = lerp(mcnear, mcfar, camNearVsp, cup, camFarVsp);
+	  
+	vec3 ambientTerm = phongKa * mcol;
+	vec3 diffuse = phongKd * modulate(mcol,lightColor)*max(0,N•L);
+	vec3 specular = phongKs*lightColor*((max(0,N•H))^phongSp);
+	vec3 fin = ambientTerm + diffuse + specular;
+	rgba = [fin[0],fin[1],fin[2],1];
+      } else {
+	rgba = [mcol[0],mcol[1],mcol[2],1];
+      }
+      locs = {rayVec * cup + rayOrig};
+      stabilize;
+    }
+    if (intersectionItter > 32){
+      intersectionItter = 0;
+      itter+=1;
+      if(itter >= len){print("No intersection found\n");print("Fin pixel=============================\n");stabilize;}
+      interval = times[offset+itter]; cc = a.cells[cells[offset + itter]];
+      s = interval[0]; e = interval[1];
+      fc = c.funcCell(cc);
+      print("++++++++++++++++Next interval!+++++++++++++++++++\n");
+      continue;
     }
     else
-      {print("=========\n");}
+      {print("---------------\n");}
     
-    //
+    
 
     
   }

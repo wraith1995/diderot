@@ -21,6 +21,7 @@ structure BasisDataArray : sig
 	   val same : t * t -> bool
 	   val hash : t -> word
 	   val toString : t -> string
+	   val toString' : t -> string
 	   val isAffine : t -> bool
 	   val explode : t -> BasisData.t ArrayNd.ArrayNd * meta
 	   val makeUniform : BasisData.t ArrayNd.ArrayNd * int -> t
@@ -55,8 +56,9 @@ fun same(Array(a1, m1),Array(a2,m2)) = sameMeta(m1,m2) andalso ArrayNd.all (Basi
 fun hash(Array(a1, m1)) = (ArrayNd.foldr (fn (d, s) => 0w5 * BasisData.hash d + s) 0w3 a1)
 			  + 0w7 * hashMeta(m1)
 fun intStrings(xs) = String.concatWith "," (List.map (Int.toString) xs)
+				       
 fun toString(Array(a1,_)) = "BasisArray(" ^ intStrings(ArrayNd.shape a1) ^")"
-
+fun toString'(Array(a1, _)) = "BasisArray";
 fun isAffine(Array(a1, m1)) = (maxDegree m1 <= 1) orelse (ArrayNd.all BasisData.isAffine a1)
 						   
 

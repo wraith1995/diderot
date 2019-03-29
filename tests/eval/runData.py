@@ -17,9 +17,11 @@ parser.add_argument("-s", action='store_true', default=False)
 parser.add_argument("--bot", default=-10.0, type=float)
 parser.add_argument("--top", default=10.0, type=float)
 parser.add_argument("--n", default=5, type=int)
-parser.add_argument("--d", default=4, type=int)
+parser.add_argument("--d", default=2, type=int)
+parser.add_argument("--dim", default=3, type=int)
 parser.add_argument("--num", default=100, type=int)
 args = parser.parse_args()
+dim = args.dim
 
 # select the types
 intTy = ct.c_int32
@@ -29,16 +31,21 @@ floatTy = ct.c_double
 
 #Firedrake stuff would go here.
 n = args.n
-mesh = UnitCubeMesh(n, n, n)
+if dim == 3:
+    mesh = UnitCubeMesh(n, n, n)
+if dim == 2:
+    mesh = Mesh("test.msh")#UnitSquareMesh(n, n)
+    
 space = FunctionSpace(mesh, "Lagrange", args.d)
-spacep = VectorFunctionSpace(mesh, "DG", args.d - 1, dim=3)
+spacep = VectorFunctionSpace(mesh, "DG", args.d - 1, dim=dim)
 spacep0 = FunctionSpace(mesh, "Lagrange", args.d)
 f = Function(space)
+#f = interpolate(Expression("0.1"),f)
 numberOfDofs = len(f.dat.data)
 # type to get the same
-newDofs = np.array(np.random.uniform(low=args.bot, high=args.top, size=numberOfDofs), dtype=floatTy)
-g = Function(space, val=newDofs)
-f = interpolate(g, space)
+newDofs = np.array(np.random.uniform(low=args.bot, high=args.bot, size=numberOfDofs), dtype=floatTy)
+#g = Function(space, val=newDofs)
+#f = interpolate(g, space)
 
 #f = interpolate(Expression("x[0] + x[1] + x[2] + x[0]*x[1]*x[2] + x[0]*x[1]*x[2]*x[0]*x[1]*x[2] + x[0]*x[1]*x[2]*x[0]*x[1]*x[2]"), space)
 
@@ -61,21 +68,21 @@ gradF = project(grad(f), spacep)
 # Tests: send grad(0) - since values are the same... it should be the same...
 # Test: 
 #generate points:
-newXc = np.random.uniform(size=args.num)
-newYc = np.random.uniform(size=args.num)
+newXc = np.random.uniform(low= -1, high = 1, size=args.num)
+newYc = np.random.uniform(low = -1, high = 1, size=args.num)
 newZc = np.random.uniform(size=args.num)
-points = map(list, zip(newXc, newYc, newZc))
+points = map(list, zip(*(newXc, newYc, newZc)[0:dim]))
 pointsNrrd = "points.nrrd"
 dataPoints = np.array(list(points))
-kindString = "3-vector"
+kindString = "{0}-vector".format(dim)
+#print(dataPoints)
 nu.writeSequence(dataPoints, pointsNrrd, dataKind=kindString)
-
 def makeResult(point):
     cell = mesh.locate_cell(point)
     if cell is None:
         cell = -1
         world = float("nan")
-        vec = [world, world, world]
+        vec = [world, world, world][0:dim]
     else:
         world = f.at(point)
         #print(gradF0.at(point))
@@ -94,8 +101,9 @@ fResults = list(map(makeResult, dataPoints))
 # build json
 jsonFile = "evalProg.json"
 dataFile = "evalProg.dill"
-#fb.spaceToJson(space, jsonFile, refCellDefault="simplex")
-#exit(0)
+fb.spaceToJson(space, jsonFile, refCellDefault="simplex")
+
+
 # build data
 (preFemArgs, femArgs) = fb.passAll(f, intTy, floatTy, geometric=not(args.s))
 programNameArg = "evalProg"
@@ -124,6 +132,9 @@ gradsT = 0
 for (idx, test) in enumerate(tests):
     print(idx)
     print(dataPoints[idx])
+    if (test[0][0] is None or test[0][0] == -1) and test[1][0] == 0:
+        print("No cell inside;passing")
+        continue
     if test[0][0] != test[1][0]:
         print("Cells are different at {0}".format(idx))
         print("Got fcell {0} and cell {1}".format(test[0][0], test[1][0]))

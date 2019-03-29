@@ -60,6 +60,9 @@ strand ray(int ui, int vi) {
   vec2 interval = times[offset + itter];
   real start = interval[0];
   real end = interval[1];
+  start {
+    if (debug && ((ui != debugU) || (vi != debugV))){stabilize;}
+  }
 
   
   update {
