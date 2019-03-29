@@ -21,6 +21,7 @@ strand gg(tensor[d] i){
   output real result = nan;
   output tensor[d] gradResult = nan[d];
   output tensor[d] gradResultp = nan[d];
+
   update {
     print("Running on ", target, "\n");
     position{mesh_t} p = cube.findPos(target);
@@ -30,6 +31,14 @@ strand gg(tensor[d] i){
       translated = p.refPos;
       result = F(target);
       gradResult = ∇F(target);
+      cell{func_t} fc  = data.funcCell(c);
+      gradResultp = ∇(fc.refField ∘ c.inverseTransform)(target);
+      if (|gradResult - gradResultp| > 0.000000001){
+	print("ops\n");
+
+      }
+      print("res:", gradResultp, "\n");
+      gradResult = gradResultp;
       
       /* gradResultp = (inv(∇⊗(c.transform)(p.refPos))) • ∇((data.funcCell(c).refField))(p.refPos); */
       /* if (|gradResultp - gradResult| > 0.0001){ */

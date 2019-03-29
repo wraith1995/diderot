@@ -67,9 +67,9 @@ strand ray(int ui, int vi) {
     }
     foreach (cell{msh} c in a.cells())
       {
-	print("Cell:",c,"\n");
+	//print("Cell:",c,"\n");
 	if (c.isInside(rayStartProj)){
-	  print("pos starts inside\n");
+	  //print("pos starts inside\n");
 	  position{msh} p = c.meshPos(c.inverseTransform(rayStartProj));
 	  poses = poses@p;
 	  normalizedTimes = normalizedTimes@camNearVsp;
@@ -81,7 +81,7 @@ strand ray(int ui, int vi) {
 	else {
 	  real newTime = c.enter(rayStartProj, dposProj);
 
-	  //print(rayStart, dpos, newRayStart, newDpos, newTime,"\n");
+	  ////print(rayStart, dpos, newRayStart, newDpos, newTime,"\n");
 	  if (newTime >= 0.0){
 	    position{msh} p = c.enterPos(rayStartProj, dposProj);
 	    real newRayTime = lerp(camNearVsp,camFarVsp, newTime);
@@ -94,7 +94,7 @@ strand ray(int ui, int vi) {
 	}
 	
       }
-    //print("Cells:",cells,"\n");
+    ////print("Cells:",cells,"\n");
 
 
     if (cellIntersects != 0){
@@ -104,12 +104,12 @@ strand ray(int ui, int vi) {
       refSpaceInter = {pos.refPos};
       currentCell = pos.mc;
       cellInter = {currentCell};
-      print("In the interval:", [camNearVsp, camFarVsp], "\n");
-      print("Possible times:", normalizedTimes, "\n");
-      print("cells:", {p.mc | p in poses}, "\n");
+      //print("In the interval:", [camNearVsp, camFarVsp], "\n");
+      //print("Possible times:", normalizedTimes, "\n");
+      //print("cells:", {p.mc | p in poses}, "\n");
     } else {
-      print("No intersection!\n");
-      print("Ui: ", ui, " Vi:", vi,"\n");
+      //print("Seg: No intersection!\n");
+      //print("Ui: ", ui, " Vi:", vi,"\n");
       stabilize;}
 
 
@@ -117,46 +117,46 @@ strand ray(int ui, int vi) {
 
 
   update {
-    print("Ui: ", ui, " vi: ", vi, "\n");
-    print("The current ref pos is:", pos.refPos, "\n");
-    print("Current cell:", pos.mc, "\n");
-    print("The current time is:", rayN, "\n");
-    print("The current world pos is:", pos.worldPos(), "\n");
+    //print("Ui: ", ui, " vi: ", vi, "\n");
+    //print("The current ref pos is:", pos.refPos, "\n");
+    //print("Current cell:", pos.mc, "\n");
+    //print("The current time is:", rayN, "\n");
+    //print("The current world pos is:", pos.worldPos(), "\n");
     vec3 stupid = rayOrig + rayN * rayVec;
-    print("The current world pos should be:",[stupid[0], stupid[1]] , "\n");
+    //print("The current world pos should be:",[stupid[0], stupid[1]] , "\n");
 
     if (!(R.isInside(pos.refPos))){
-      print("nerror: invalid pos created\n");
-          if(!startsInside){
-	    print("Not because of an inside\n");
-	  }
+      //print("nerror: invalid pos created\n");
+      if(!startsInside){
+	//print("Not because of an inside\n");
+      }
     }
-    print("The current world pos is:", pos.worldPos(), "\n");
+    //print("The current world pos is:", pos.worldPos(), "\n");
 
     vec3 cpos = rayOrig + rayN * rayVec;
-    print("The current world pos should be:", [cpos[0], cpos[1]] , "\n");
+    //print("The current world pos should be:", [cpos[0], cpos[1]] , "\n");
     real err = |pos.worldPos() - [cpos[0], cpos[1]]|;
     if ( err > 0.00001){
-      print("nerror:Warning! Moved off ray:", err, "\n");
+      //print("nerror:Warning! Moved off ray:", err, "\n");
     }
     else{
-      print("Did not move off ray!\n");
+      //print("Did not move off ray!\n");
     }
     steps+=1;
 
-    print("Orig:", rayOrig, " dir:", rayVec, "\n");
+    //print("Orig:", rayOrig, " dir:", rayVec, "\n");
     vec3 startPos = rayOrig + rayN * rayVec;
     vec3 newDpos = (camFarVsp - rayN) * rayVec;
     real nextTime = pos.exit([newDpos[0], newDpos[1]]);
     real rayN' = max(rayN, min(camFarVsp, lerp(rayN, camFarVsp, nextTime)));
 
-    print("Next time:", nextTime, "\n");
+    //print("Next time:", nextTime, "\n");
     if (nextTime >= 0){
       rayCellInter = rayCellInter@[rayN,rayN'];
       rayN = rayN';
       position{msh} pos' = pos.exitPos([newDpos[0], newDpos[1]]);
       if (rayN >= camFarVsp){
-	print("cells: ",cellInter,"\n");
+	//print("cells: ",cellInter,"\n");
 	spaceInter = spaceInter@(rayOrig + camFarVsp * rayVec);
 	stabilize;}
 
@@ -166,51 +166,52 @@ strand ray(int ui, int vi) {
       if (pos'.isValid()){
 
 	pos = pos';
-	print("Next cell:", pos.mc, "\n");
+	//print("Next cell:", pos.mc, "\n");
 	currentCell = pos.mc();
 	cellInter = cellInter@currentCell;
 	continue;
       }
-      else {
-	print ("Invalid\n");}
-    }
-    int newIdx = -1;
-    real estimate = camFarVsp;
-    foreach (int i in 0..(cellIntersects-1)){
-      real t = normalizedTimes[i];
-      position{msh} pos' = poses[i];
-      if (t >= rayN && estimate >= t && pos'.mc != pos.mc){
-	estimate = t;
-	newIdx = i;
+      else {}
+	//print ("Invalid\n");
       }
-    }
-    if (newIdx > -1){
-      print("nerror:Impossible happened\n");
-      if(startsInside){
-	print("because of an inside\n");
+      int newIdx = -1;
+      real estimate = camFarVsp;
+      foreach (int i in 0..(cellIntersects-1)){
+	real t = normalizedTimes[i];
+	position{msh} pos' = poses[i];
+	if (t >= rayN && estimate >= t && pos'.mc != pos.mc){
+	  estimate = t;
+	  newIdx = i;
+	}
       }
-      print("Direction:", rayVec, "\n");
-      print("world pos was:", pos.worldPos(), "\n");
-      print("Interior pos was:", pos.refPos, "\n");
-      print(normalizedTimes, " at ", newIdx, "\n");
-      print("Original time was:", rayN, "\n");
-      pos = poses[newIdx];
-      currentCell = pos.mc();
-      cellInter = cellInter@currentCell;
-      //print("Idx:",newIdx,"\n");
-      //print("Cells:",cells,"\n");
-      //print(currentCell,"\n");
-      rayN = normalizedTimes[newIdx];
-      continue;
-    } else { //print(cellInter, "\n"); print(rayCellInter, "\n");print(spaceInter,"\n");
-      print("Enter times:", normalizedTimes, "\n");
-      print("Ray enter times:", rayCellInter, "\n");
-      print("cells:", cellInter,"\n");
-      print("End\n");
-      //      print(rayOrig);
+      if (newIdx > -1){
+	//print("nerror:Impossible happened\n");
+	if(startsInside){
+	  //print("because of an inside\n");
+	}
+	//print("Direction:", rayVec, "\n");
+	//print("world pos was:", pos.worldPos(), "\n");
+	//print("Interior pos was:", pos.refPos, "\n");
+	//print(normalizedTimes, " at ", newIdx, "\n");
+	//print("Original time was:", rayN, "\n");
+	pos = poses[newIdx];
+	currentCell = pos.mc();
+	cellInter = cellInter@currentCell;
+	////print("Idx:",newIdx,"\n");
+	////print("Cells:",cells,"\n");
+	////print(currentCell,"\n");
+	rayN = normalizedTimes[newIdx];
+	continue;
+      } else { ////print(cellInter, "\n"); //print(rayCellInter, "\n");//print(spaceInter,"\n");
+	//print("Enter times:", normalizedTimes, "\n");
+	//print("Ray enter times:", rayCellInter, "\n");
+	//print("cells:", cellInter,"\n");
+	//print("End\n");
+	//      //print(rayOrig);
       
-      stabilize;}
+	stabilize;}
       
 
+    
   }
 } create_array {ray(ui,vi) | vi in 0..iresU-1, ui in 0..iresV-1};

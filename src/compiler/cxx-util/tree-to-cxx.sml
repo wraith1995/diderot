@@ -188,8 +188,12 @@ structure TreeToCxx : sig
             | (Op.VMul d, [a, b]) => CL.mkBinOp(a, CL.#*, b)
             | (Op.VNeg d, [a]) => CL.mkUnOp(CL.%-, a)
             | (Op.VSum(w, _), [a]) => CL.mkApply(RN.vsum w, [a])
-            | (Op.VDot(w, _), [a, b]) => CL.mkApply(RN.vdot w, [a, b])
-            | (Op.VIndex(w, p, i), [a]) => CL.mkSubscript(a, mkInt i)
+            | (Op.VDot(w, _), [a, b]) => if w = 1
+					 then CL.mkBinOp(a, CL.#*, b)
+					 else CL.mkApply(RN.vdot w, [a, b])
+            | (Op.VIndex(w, p, i), [a]) => if w = 1
+					   then a
+					   else CL.mkSubscript(a, mkInt i)
             | (Op.VCeiling(w, _), [a]) => CL.mkApply(RN.vceiling w, [a])
             | (Op.VFloor(w, _), [a]) => CL.mkApply(RN.vfloor w, [a])
             | (Op.VRound(w, _), [a]) => CL.mkApply(RN.vround w, [a])
@@ -413,7 +417,9 @@ structure TreeToCxx : sig
             | IR.E_Lit lit => trLit (env, lit)
             | IR.E_Op(rator, args) => trOp (env, rator, trExps(env, args))
             | IR.E_Apply(f, args) => trApply (env, f, args)
-            | IR.E_Vec(w, pw, args) => CL.mkApply(RN.vcons w, trExps (env, args))
+            | IR.E_Vec(w, pw, args) => if w = 1
+				       then List.nth(trExps (env, args), 0)
+				       else CL.mkApply(RN.vcons w, trExps (env, args))
             | IR.E_Cons(args, Ty.TensorTy shape) => raise Fail "unexpected E_Cons"
             | IR.E_Seq(args, ty) => raise Fail "unexpected E_Seq"
             | IR.E_Pack(layout, args) => raise Fail "unexpected E_Pack"

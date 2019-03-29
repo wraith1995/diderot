@@ -3,7 +3,6 @@ import vtk
 import numpy as np
 import functools
 #from paraview.simple import *
-DIM = 2
 
 def readScalarArary(fileName):
     readData, header = nrrd.read(fileName)
