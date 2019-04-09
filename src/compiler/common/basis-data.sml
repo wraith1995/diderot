@@ -207,6 +207,8 @@ fun zero dim = BasisFunc({dim = dim, degree = 0,mapDim = 1, coeffs = Array(A.fro
       
 fun dx(t as BasisFunc({dim, degree, coeffs=Array(coeffs'), strForm, mapDim,...}), varIndex) =
     let
+     val _ = print("DX!\n");
+     val _ = print("Check (d/dx"^(Int.toString varIndex)^" ("^(Atom.toString strForm)^"))\n");
      val degree' = Int.max(degree - 1, 0)
      val newShape = dimDegreeShape(dim, degree')
      val start = List.tabulate(dim, fn _ => 0)
@@ -227,7 +229,9 @@ fun dx(t as BasisFunc({dim, degree, coeffs=Array(coeffs'), strForm, mapDim,...})
 	 in
 	   realPower * (ArrayNd.foldri' foldrFunc 0.0 coeffs')
 	 end
-     val _ = ArrayNd.modifyi' modNew newArray
+     val _ = if  Atom.same(strForm, Atom.atom "0.0")
+	     then  ()
+	     else ArrayNd.modifyi' modNew newArray
      val strForm' = Atom.atom (makeMonoTerms(newArray, dim, degree'))
      val mapDim' = numNonZero(Array(newArray))
      val _ = print("Check (d/dx"^(Int.toString varIndex)^" ("^(Atom.toString strForm)^")) - ("^(Atom.toString strForm')^")\n")
@@ -237,7 +241,7 @@ fun dx(t as BasisFunc({dim, degree, coeffs=Array(coeffs'), strForm, mapDim,...})
      (* val _ = print("It has degree:"^(Int.toString degree')^"\n") *)
 
     in
-     if degree = 0
+     if degree = 0  (*fix bad checking of this.*)
      then zero dim
      else
       let

@@ -390,6 +390,14 @@ structure TreeToCxx : sig
 		  | ((FemOpt.InvalidBuildBoundary, FT.MeshPos(m)), [mesh, tensor]) => CL.mkApply("invalidBuild", [mesh, tensor])
 		  | ((FemOpt.RefBuild, FT.Mesh(m)), [mesh, cell, refTensor]) => CL.mkApply("refBuild", [mesh, cell, refTensor])
 		  | ((FemOpt.RefBuild, FT.Mesh(m)), [mesh, cell, refTensor, facet]) => CL.mkApply("refBuild", [mesh, cell, refTensor, facet])
+		  | ((FemOpt.InsideInsert(_), fem as FT.Mesh(m)), [mesh, x, r]) =>
+		    let
+		     val name = FemData.nameOf(fem)
+		     val insideCall = Atom.toString(name)^"_inside"
+							    
+		    in
+		     CL.mkApply(insideCall, [CL.mkSelect(x,"_data"), r])
+		    end
 		  | _ => raise Fail(concat[
 				      "unknown or incorrect operator ", Op.toString rator
 				   ])

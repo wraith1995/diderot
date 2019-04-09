@@ -104,19 +104,36 @@ datatype refCell = RefCellData of {ty : refCellType,
 
 fun getCellType(RefCellData{ty,...}) = ty
 fun getCellEps(RefCellData{eps,...}) = eps
+fun getInsideInsert(RefCellData{insideInsert, ...}) = insideInsert
+
+fun sameRefCellInfo(a,b) = (*fix me:acccount for newton control*)
+    let
+     val RefCellData({insideInsert=insideInsert1, ...}) = a
+     val RefCellData({insideInsert=insideInsert2, ...}) = b
+    in
+     insideInsert1 =insideInsert2
+    end
+fun hashRefCellInfo(a) = (case a
+			  of SOME(a) => 0w5*(Atom.hash (Atom.atom a))
+			   | _ => 0w3)
+
+
 				     
 fun sameRefCell(a,b) = RealLit.same(getCellEps(a), getCellEps(b)) andalso
 		       (case (getCellType a, getCellType b)
 			 of (KSimplex(d1), KSimplex(d2)) => d1=d2
 			  | (KCube(d1), KCube(d2)) => d1=d2
+			  | (Other(d1), Other(d2)) => d1=d2
 			  | _ => false
 		       (*end case*))
+		       andalso getInsideInsert(a)=getInsideInsert(b)
 fun hashRefCell(a) = 0w3 * RealLit.hash(getCellEps(a)) + 
 		     0w5 * (case (getCellType a)
 			     of KSimplex(d1) => 0w3*(Word.fromInt d1)
 			      | KCube(d2) => 0w5*(Word.fromInt d2)
 			      | Other(d2) => 0w7*(Word.fromInt d2)
-			   (*end case*))
+			   (*end case*)) +
+		     0w7 * hashRefCellInfo(getInsideInsert(a))
 (*refcells are `simplex, gen triangle, quad, *)
 
 

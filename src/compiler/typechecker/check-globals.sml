@@ -498,10 +498,15 @@ structure CheckGlobals : sig
 			 end
 		       | FemData.Other(_) =>
 			 (case insert
-			   of SOME(file) => AST.E_ExtractFemItemN([meshVar, posVar, epsExpr],
-								  [meshTy, insideVec, Ty.realTy],
-								  Ty.T_Bool,
-								  (FemOpt.InsideInsert(Atom.atom file), meshData), NONE)
+			   of SOME(file) =>
+			      let
+			       val _ = ()
+			      in
+			       AST.E_ExtractFemItemN([meshVar, posVar, epsExpr],
+						     [meshTy, insideVec, Ty.realTy],
+						     Ty.T_Bool,
+						     (FemOpt.InsideInsert(Atom.atom file), meshData), NONE)
+			      end
 			    | NONE => raise Fail "insert error"))
 		   end
 	       (*make parameterized newton inverse*)
