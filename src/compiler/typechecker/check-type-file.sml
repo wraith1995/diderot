@@ -1091,6 +1091,7 @@ fun paresRefCell(env, cxt, refCellJson, dim, machinePres, meshName) =
      (*end case*))
     end
 
+      
 
     
       
@@ -1134,6 +1135,8 @@ fun parseAccelerate(env, cxt, json, meshName) =
 			     else NONE
 			else
 			 (TypeError.warning(cxt, [S"File ", S(file), S" does not exist."]);
+			  NONE)
+	| NONE =>  (TypeError.warning(cxt, [S"Insert not found!"]);
 			  NONE))
     end
 

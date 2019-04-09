@@ -61,6 +61,8 @@ structure GenTysAndOps : sig
 	      (case ty
 		of FT.Mesh(m) => (
 		 let
+		  val FemData.RefCellData({insideInsert=insideTest, ...}) =  (FemData.refCell m)
+		  
 		  val indexMap = CL.D_Var([],CL.T_Ptr(intTy),[], "indexMap", NONE)
 		  val coordinatesMap = CL.D_Var([],CL.T_Ptr(realTy),[], "coordMap", NONE)
 		  val dimConst = CL.D_Var([], intTy,[], "dim", NONE)
@@ -97,16 +99,37 @@ structure GenTysAndOps : sig
 
 
 		  (* We need to add a load function via string*)
+		  (*load the file*)
+		  (*ugg*)
 		  (*val load = CL.D_Func([],) *)
 		  val block = CL.S_Block([CL.S_Comment(["No something with the nrrd"])])
 		  val load = CL.mkFuncDcl(CL.T_Named(name),"operator=", [CL.PARAM([],CL.T_Named("std::string"), "file")], block)
 
+		  val insideTests = (case insideTest
+				      of SOME(file) =>
+					 let
+					  val ins = TextIO.openIn file
+					  (*this should be centrealized somewhere:*)
+					  fun loop ins = 
+					      case TextIO.inputLine ins of 
+						  SOME line => line :: loop ins 
+						| NONE      => []
+					  val lines = loop ins before TextIO.closeIn ins
+					  val insert = String.concatWith "\n" lines
+					 in
+					  [CL.D_Verbatim(["bool ", name, "_inside(", realTyName, " * x, ", realTyName, " eps", "){\n", insert, "\n}"])]
+					 end
+				       | NONE => [])
+
 
 		  val fields = [indexMap, coordinatesMap, dimConst, mapDimConst, numCells]@extra@extrasParams@[load]
 
+
+														(*extrac*)
+
 		  val class = CL.D_ClassDef{name=name, args=NONE, from=NONE,public = fields , protected = [], private = []} (*add public declerations*)
 		 in
-		  (class, [])
+		  (class, insideTests)
 		 end)
 		| FT.Space(s) => (
 		 let

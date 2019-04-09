@@ -243,7 +243,7 @@ structure CollectInfo : sig
 			| Ty.FemData(FemData.MeshPos(mesh)) =>
 			  let val dim = FemData.meshDim mesh
 			  in (add (Ty.TensorTy([dim*2 + 1])) ; insert ty) end
-                        | _ => insert ty
+                        | _ =>  insert ty
                       (* end case *))
                 in
                   add ty
