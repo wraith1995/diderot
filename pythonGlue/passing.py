@@ -37,6 +37,9 @@ class Library:
         self.world = ct.c_void_p(world)
         self.errorCheck(name="create_world")
         return(world)
+    def setVerobse(self, bl):
+        verboseFunc = self.get_func(name="set_verbose")
+        verboseFunc(self.world, ct.c_bool(bl))
 
     def init_world(self):
         initFunc = self.get_func("init_world")
@@ -92,11 +95,13 @@ class Library:
             self.errorCheck(name="Saving to nrrd: {0}".format(fileName),
                             returnCheck=saveRet)
 
-    def go(self, inputs, outputs, namedInputs=[]):
+    def go(self, inputs, outputs, namedInputs=[], verbose=False):
         self.create_world()
         self.init_world()
         print("Running")
+        self.setVerobse(verbose)
         for name in inputs:
+            print("Set input:{0}".format(name))
             self.set_input(name, inputs[name])
         print("Set inputs")
         for name in namedInputs:
