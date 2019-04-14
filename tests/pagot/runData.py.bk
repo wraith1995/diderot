@@ -1,0 +1,59 @@
+import sys
+sys.path
+sys.path.append('/home/teocollin/gitcode/diderot/pythonGlue')
+import ctypes as ct
+import os
+import passing
+import pickle
+import sys
+import argparse
+import stucts as st
+import numpy as np
+parser = argparse.ArgumentParser(description='Run a diderot program')
+
+
+# select the types
+intTy = ct.c_int32
+floatTy = ct.c_double
+
+pklfile = "scarray.pkl"
+data = pickle.load(open(pklfile, "rb"))
+
+builder = st.makeAllTypes(intTy, floatTy)
+args = builder[-1](*data[0])
+
+
+inputs = {"block": [args[0]],
+          "space": [args[1]],
+          "U": [args[2]]}
+outputs = [("rgba", 1, "rgba")]
+
+# evalPoints = data[1] #100 by 3
+# eval1 = data[2]
+# eval2 = data[3]
+# print(evalPoints.shape, eval1.shape)
+# #(preFemArgs, femArgs) = fb.passAll(f, intTy, floatTy, geometric=not(args.s))
+
+# programNameArg = "evalProg"
+# nameSpaceArg = "evalProg"
+# library = ct.CDLL("./" + programNameArg + ".so")
+# program = passing.Library(library, nameSpace=nameSpaceArg)
+# for (idx, p) in enumerate(evalPoints):
+#     for c in range(119):
+#         print(idx, c)
+#         r = eval1[c][idx]
+#         rv = eval2[c][idx]
+#         inputs = {"block": [args[0]],
+#                   "space": [args[1]],
+#                   "U": [args[2]],
+#                   "x1": [floatTy(p[0])],
+#                   "x2": [floatTy(p[1])],
+#                   "x3": [floatTy(p[2])],
+#                   "c": [intTy(c)],
+#                   "result": [floatTy(r)],
+#                   "y1": [floatTy(rv[0])],
+#                   "y2": [floatTy(rv[1])],
+#                   "y3": [floatTy(rv[2])]}
+#         outputs = []
+#         program.go(inputs, outputs)
+
