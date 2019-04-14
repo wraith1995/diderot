@@ -1,0 +1,155 @@
+#version 3.0
+
+//fields via
+type mesh mesh_t = file("pagotFile.json");
+type functionSpace{mesh_t}[] fns_t = file("pagotFile.json");
+type femFunction{fns_t} func_t = file("pagotFile.json");
+input mesh_t block;
+input fns_t space = fns_t(block);
+input func_t U = func_t(space);
+input int cellChoice;
+
+//later add cell and so forth
+/* input vec3[100] points; */
+/* input real[119][100] results; */
+/* input vec3[119][100] resultsv; */
+cell{mesh_t} c1 = block.cells[cellChoice];
+field(3)[] F = U.funcCell(c1).refField;
+
+//color map
+input image(1)[3] cmap = load_image("cmap.nrrd");
+field#0(1)[3] CM = tent ⊛ clamp(cmap);
+field(3)[] C = F;
+
+
+//camera
+input vec3 camEye = [0,-2,0];
+input vec3 camAt  = [0,0,0];
+input vec3 camUp = [0,0,1];
+input real camNear = -4.0;
+input real camFar = 4.0;
+input real camFOV = 10;
+input bool camOrtho = false;
+input int iresU = 100;
+input int iresV = 100;
+
+// Computing ray parameters and view-space basis
+vec3 camN = normalize(camAt - camEye);// N: away from eye
+vec3 camU = normalize(camN × camUp); // U: right
+vec3 camV = camN × camU;
+real camDist = |camAt - camEye|;
+real camVmax = tan(camFOV* π/360)*camDist;
+real camUmax = camVmax*iresU/iresV;
+real camNearVsp = camNear + camDist; // near clip, view space
+real camFarVsp = camFar + camDist;
+
+
+//integration control
+input real rayStep = 0.0001;
+input real refStep = 0.0001;
+
+//feature control
+input real transp0 = 0.005;
+input real thick = 0.01;
+input real fStrTh = 0.0;
+input real fMaskTh = 0.0;
+input real fBias = 0.01;
+input real maxAlpha = 1.0;
+
+//light and color
+input bool light = false;
+input vec4 phong = [0.1, 0.7, 0.2, 100];
+input vec3 mcNear = [1,1,1];
+input vec3 mcFar = [1,1,1];
+input vec3 litdir = [0,-1,0];
+input vec2 cminmax = [0,0];
+// Convert light direction from view-space to world-space
+vec3 litwsp = transpose([camU,camV,camN]) • normalize(litdir);
+
+// Core opacity function is a capped tent function
+function real atent(real a0, real d) = a0*clamp(0, 1, 1.5*(1 - |d|/thick));
+
+function vec3 fStep(vec3 x) {
+  vec3[3] E = evecs( ∇⊗∇F(x));
+  real[3] L = evals( ∇⊗∇F(x));
+  return -(E[2] ⊗ E[2]/L[2] +
+	   E[1] ⊗ E[1]/L[1]) •∇ F(x);
+}
+function real fStrength(vec3 x) =
+  -evals( ∇⊗∇F(x))[1]/(fBias + | ∇ F(x)|);
+
+function bool fTest(vec3 x) = true; //TBC
+
+function real fMask(vec3 x) = 1.0; //TBC
+
+function bool posTest(vec3 x) = block.refcell.isInside(x) && fStrength(x) > fStrTh && fMask(x) >= fMaskTh && fTest(x);
+
+
+
+strand ray(int ui, int vi){
+  //ray setup
+  real rayU = lerp(-camUmax, camUmax, -0.5, ui, iresU-0.5);
+  real rayV = lerp(-camVmax, camVmax, -0.5, vi, iresV-0.5);
+  real rayN = camNearVsp;
+  vec3 UV = rayU*camU + rayV*camV;
+  vec3 rayOrig = camEye + (UV if camOrtho else [0,0,0]);
+  vec3 rayVec = camN + ([0,0,0] if camOrtho else UV/camDist);
+  //stupid alpha fixing
+  real alphaFix = |rayVec|*rayStep/refStep;
+  vec3 eyeDir = -normalize(rayVec);
+
+  //stupid phong fixing
+  real phKa = phong[0]; real phKd = phong[1];
+  real phKs = phong[2]; real phSp = phong[3];
+  output vec4 rgba = [0,0,0,0];
+  output real raw = 0;
+  vec3 rgb = [0,0,0]; //current color
+  real transp = 1; //current transp
+
+  update {
+    rayN += rayStep;
+    if(rayN > camFarVsp){ stabilize; }
+    vec3 pos = rayOrig + rayN * rayVec;
+    if (!posTest(pos)){continue;}
+    vec3 step = fStep(pos);
+    real aa = atent(maxAlpha, |step|);
+    //print("A result:",aa,"\n");
+    if(aa ==0){ continue;}
+    aa = 1 - (1-aa)^alphaFix;//I'm annoyed whenever I think about this
+
+    vec3 snorm = -normalize(step);
+    real dcomp = (snorm • litwsp)^2;
+    real scomp = 0.0;
+    if (phKs != 0){
+      scomp = |snorm •(normalize(eyeDir + litwsp))|^phSp;
+    }
+
+    //real scomp = |snorm •(normalize(eyeDir + litwsp))|^phSp if phKs ! = 0 else 0.0;
+
+    vec3 dcol = lerp(mcNear, mcFar, camNearVsp, rayN, camFarVsp);
+    real cmin = cminmax[0];
+    real cmax = cminmax[1];
+    vec3 mcol = [1,1,1];
+    if (cmin != cmax){
+      mcol = CM(lerp(0, 1, cmin, C(pos+step), cmax)); //check me
+    }
+    rgb += transp*aa*((phKa + phKd*dcomp)*modulate(dcol,mcol)
+		      + phKs*scomp*[1,1,1]);
+    //print("Rbga up:", rgb, "\n");
+    transp *= 1 - aa;
+    if(transp < transp0){
+      transp = 0;
+      stabilize;
+    }
+
+  }
+  stabilize {
+    if (transp < 1) {
+      real aa = 1 - transp;
+      print("End:",aa, rgb, "\n");
+      rgba = [rgb[0]/aa, rgb[1]/aa, rgb[2]/aa, aa];//also here.
+    }
+  }
+  
+} create_array {ray(ui, vi)
+      | vi in 0..iresV-1, ui in 0..iresU-1};
