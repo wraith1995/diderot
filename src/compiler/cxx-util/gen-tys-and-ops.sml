@@ -528,6 +528,7 @@ structure GenTysAndOps : sig
 		  (class, [printer, allBuild, allBuild', invalidBuild, invalidBuild', refBuild, refBuild', copy_to, makeFem])
 		 end
 		)
+		| _ => raise Fail "Illegal femtype"
 		
 		
 		  
