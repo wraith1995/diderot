@@ -56,7 +56,7 @@ for cellChoice in range(119):
     inputs = {"block": [args[0]],
               "space": [args[1]],
               "U": [args[2]],
-              "rayStep": [floatTy(0.001)],
+              "rayStep": [floatTy(0.01)],
               "cellChoice": [intTy(cellChoice)],
               **initDict, **featureDict}
     outputs = [("rgba", 1, "rgba{0}".format(cellChoice))]
