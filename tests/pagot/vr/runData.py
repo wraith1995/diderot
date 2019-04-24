@@ -1,6 +1,4 @@
 import sys
-sys.path
-sys.path.append('/home/teocollin/gitcode/diderot/pythonGlue')
 import ctypes as ct
 import os
 import passing

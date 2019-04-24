@@ -1,0 +1,4 @@
+PYTHONPATH=$PYTHONPATH:/home/teocollin/diderot/pythonGlue
+LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/teocollin/teem/build/bin
+export LD_LIBRARY_PATH
+export PYTHONPATH
