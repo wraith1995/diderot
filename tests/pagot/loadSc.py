@@ -61,6 +61,31 @@ mono_idxes = mono_index(3, 6)
 mono_len = len(mono_idxes)
 monos = gen_monos([[x, y, z]], mono_idxes)
 
+# mono_idxes11 = mono_index(3, 14)
+# mono_len11 = len(mono_idxes11)
+# monos11 = gen_monos([[x, y, z]], mono_idxes11)
+# def pow_to_mul(expr):
+#     """
+#     Convert integer powers in an expression to Muls, like a**2 => a*a.
+#     """
+#     pows = list(expr.atoms(sp.Pow))
+#     print("pows:", pows)
+#     if any(not e.is_Integer for b, e in (i.as_base_exp() for i in pows)):
+
+#         raise ValueError("A power contains a non-integer exponent")
+#     repl = list(zip(pows, (sp.Mul(*[b]*e,evaluate=False) for b,e in (i.as_base_exp() for i in pows))))
+#     print("reps:", repl)
+#     return(sp.Mul(*[t[1] for t in repl], evaluate=False))
+
+
+
+# coeffs = np.array([sp.Symbol("c[{0}]".format(x)) for x in range(mono_len11)])
+# r = coeffs.dot(monos11)
+# cstrs = " + ".join([ "c[{0}] * ".format(idx) + str(pow_to_mul(m)) for (idx, m) in enumerate(monos11)])
+# with open("uggp2.txt", "w+") as f:
+#     f.write(cstrs)
+# exit(0)
+
 verts = [[-0.5, -0.5, -0.5], [0.5, -0.5, -0.5], [0.5, 0.5, -0.5], [-0.5, 0.5, -0.5],
          [-0.5, -0.5, 0.5], [0.5, -0.5, 0.5], [0.5, 0.5, 0.5], [-0.5, 0.5, 0.5]]
 topology = dict()
@@ -91,6 +116,36 @@ evalVecResults = []
 
 pklfile = "sc.pkl"
 data = pickle.load(open(pklfile, "rb"))
+
+
+
+def buildPVOData(fileName):
+    arrays = []
+    for (idx, datam) in enumerate(data):
+        print("Idx:", idx)
+        polyText = datam["poly"]
+        poly = eval(polyText)
+        gradPoly = [sp.diff(poly, x), sp.diff(poly, y), sp.diff(poly, z)]
+
+        gradPolyArray = np.array(gradPoly)
+        hessianPoly = [[sp.diff(g, x), sp.diff(g, y), sp.diff(g, z)]
+                   for g in gradPoly]
+        doted = np.array(hessianPoly).dot(gradPolyArray)
+        wfield = np.cross(gradPolyArray, doted)
+        p1 = sp.Poly(wfield[0])
+        p2 = sp.Poly(wfield[1])
+        p3 = sp.Poly(wfield[2])
+        coeffs1 = mono_coeffs(p1, monos11)
+        coeffs2 = mono_coeffs(p2, monos11)
+        coeffs3 = mono_coeffs(p3, monos11)
+        print(p1.total_degree())
+        print(p2.total_degree())
+        print(p3.total_degree())
+        arrays.append([coeffs1, coeffs2, coeffs3])
+    text = pickle.dumps(arrays)
+    with open(fileName, "wb+") as f:
+        f.write(text)
+        
 
 def buildData():
     meshIndexMap = []
@@ -147,8 +202,9 @@ def buildData():
     print(eval2)
     return((ret, hexPoints, eval1, eval2))
 
-result = buildData()
-pklfilePrime = "scarray.pkl"
-txt = pickle.dumps(result)
-with open(pklfilePrime, "wb+") as f:
-    f.write(txt)
+buildPVOData("pvo.pkl")
+# result = buildData()
+# pklfilePrime = "scarray.pkl"
+# txt = pickle.dumps(result)
+# with open(pklfilePrime, "wb+") as f:
+#     f.write(txt)

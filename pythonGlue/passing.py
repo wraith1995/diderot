@@ -1,3 +1,4 @@
+import signal
 import numpy as np
 import numpy.ctypeslib as npct
 import ctypes as c
@@ -7,6 +8,8 @@ import ctypes as ct
 # These sorts of things should be arguments to the library, which can also supply help converting arugments to the proper form
 # automation of mesh and other types of inputs will require more trickery - maybe modifying generated header file to have those types.
 
+# def endShutdown(signum, frame):
+#     raise Exception("Shutdown timed out")
 
 
 class Library:
@@ -95,8 +98,9 @@ class Library:
             self.errorCheck(name="Saving to nrrd: {0}".format(fileName),
                             returnCheck=saveRet)
 
-    def go(self, inputs, outputs, namedInputs=[], verbose=False):
+    def go(self, inputs, outputs, namedInputs=[], verbose=False, shutdown=True):
         self.create_world()
+        print("Created World")
         self.init_world()
         print("Running")
         self.setVerobse(verbose)
@@ -114,7 +118,14 @@ class Library:
         for output in outputs:
             fileName = output[2]
             self.saveOutput(fileName, output[0], num=output[1])
-        self.shutDown()
+        # if shutdown:
+        #     signal.signal(signal.SIGALRM, endShutdown)
+        #     signal.alarm(10)
+        try:
+            self.shutDown()
+        except Exception:
+            print("Time out in shutdown")
+                        
 
 
 #make sequence arg
