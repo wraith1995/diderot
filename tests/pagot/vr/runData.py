@@ -46,20 +46,20 @@ initDict = {"camEye": [(floatTy*3)(*camEyePy)],
 
 #python feature control
 fStrThPy = 0.0
+thickPy = 0.01
+featureDict = {"fStrTh" : [floatTy(fStrThPy)], "thick" : [floatTy(thickPy)]}
 
-featureDict = {"fStrTh" : [floatTy(fStrThPy)]}
-
-for cellChoice in range(119):
-    print("Cell {0}".format(cellChoice))
-    inputs = {"block": [args[0]],
-              "space": [args[1]],
-              "U": [args[2]],
-              "rayStep": [floatTy(0.01)],
-              "cellChoice": [intTy(cellChoice)],
-              **initDict, **featureDict}
-    outputs = [("rgba", 1, "rgba{0}".format(cellChoice))]
-    programNameArg = "evalProg"
-    nameSpaceArg = "evalProg"
-    library = ct.CDLL("./" + programNameArg + ".so")
-    program = passing.Library(library, nameSpace=nameSpaceArg)
-    program.go(inputs, outputs, verbose=True)
+cellChoice = int(sys.argv[1])
+print("Cell {0}".format(cellChoice))
+inputs = {"block": [args[0]],
+          "space": [args[1]],
+          "U": [args[2]],
+          "rayStep": [floatTy(0.005)],
+          "cellChoice": [intTy(cellChoice)],
+          **initDict, **featureDict}
+outputs = [("rgba", 1, "rgba{0}".format(cellChoice))]
+programNameArg = "evalProg"
+nameSpaceArg = "evalProg"
+library = ct.CDLL("./" + programNameArg + ".so")
+program = passing.Library(library, nameSpace=nameSpaceArg)
+program.go(inputs, outputs, verbose=True)
