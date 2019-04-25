@@ -38385,33 +38385,5 @@ strand ray (int p_ui_49,int p_vi_50) {
     }
   }
 #### end program ####
-/usr/bin/clang++ -fPIC -m64 -c -Wreturn-type -Wuninitialized -g -O0 -mavx2 -msse4.2 -I/home/teocollin/gitcode/diderot/include -I/usr/local/include evalProg.cxx
-/usr/bin/clang++ -shared -o evalProg.so evalProg.o /home/teocollin/gitcode/diderot/lib/diderot-rt-seq-debug.o -Wl,-rpath=/usr/local/lib -L/usr/local/lib -lteem
-                                       Phase                                         Exclusive    Total  
-  compiler ..........................................................................   0.064    29.611
-    front end .......................................................................   0.557     0.778
-      parser ........................................................................   0.037     0.037
-      typechecker ...................................................................   0.184     0.184
-      simplify ......................................................................   0.000     0.000
-    translate .......................................................................   0.007     0.007
-    High IR optimization ............................................................   0.015    26.830
-      High IR value numbering .......................................................   0.007     0.007
-      High IR normalization .........................................................  26.807    26.807
-      High IR checking ..............................................................   0.000     0.000
-    High to Mid translation .........................................................   0.026     0.026
-    Mid IR optimization .............................................................   0.017     0.033
-      Mid IR contraction ............................................................   0.003     0.003
-      Mid IR value numbering ........................................................   0.012     0.012
-      Mid IR border control .........................................................   0.001     0.001
-      Mid IR checking ...............................................................   0.000     0.000
-    Mid to Low translation ..........................................................   0.197     0.197
-    Low IR optimization .............................................................   0.086     0.211
-      Low IR contraction ............................................................   0.050     0.050
-      Low IR value numbering ........................................................   0.075     0.075
-      Low IR checking ...............................................................   0.000     0.000
-    Low to Tree translation .........................................................   0.074     0.074
-    Tree IR optimization ............................................................   0.012     0.013
-      Tree IR contraction ...........................................................   0.001     0.001
-      Tree IR checking ..............................................................   0.000     0.000
-    code generation .................................................................   0.054     1.378
-      C compiler ....................................................................   1.324     1.324
+/usr/bin/g++ -fPIC -m64 -std=gnu++11 -c -Wreturn-type -Wuninitialized -g -O0 -pthread -mavx512f -mavx512cd -mavx512vl -mavx512bw -mavx512dq -mavx2 -msse4.2 -I/home/teocollin/diderot/include -I/home/teocollin/teem/build/include evalProg.cxx
+/usr/bin/g++ -std=gnu++11 -shared -o evalProg.so evalProg.o /home/teocollin/diderot/lib/diderot-rt-par-debug.o -rpath=/home/teocollin/teem/build/lib -L/home/teocollin/teem/build/lib -lteem

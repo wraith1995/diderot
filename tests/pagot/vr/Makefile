@@ -2,8 +2,8 @@
 SHELL = /bin/sh
 PYTHON = python3
 PYTHONINCLUDE = -I/usr/include/python3.6m -I/usr/include/python3.6m
-DIDEROTFEMPATH = /home/teocollin/gitcode/diderot
-TEEMPATH = /home/teocollin/installs/teem/teem-build
+DIDEROTFEMPATH = /home/teocollin/diderot
+TEEMPATH = /home/teocollin/teem/build
 TARGET = evalProg
 NAMESPACE = $(TARGET)
 CC = clang
@@ -16,7 +16,7 @@ DIDEROTINCLUDE = $(DIDEROTFEMPATH)/include
 DIDEROTLIB = $(DIDEROTFEMPATH)/lib
 TEEMLIB = $(TEEMPATH)/include
 
-DIDEROTFLAGS = --debug --log --dump-pt --dump-ast --dump-simple --dump-high --dump-mid --dump-low --dump-tree --double --namespace=$(NAMESPACE) #--target=parallel
+DIDEROTFLAGS = --debug --log --dump-pt --dump-ast --dump-simple --dump-high --dump-mid --dump-low --dump-tree --double --namespace=$(NAMESPACE) --target=parallel
 INCLUDES = -I$(DIDEROTINCLUDE) -I/usr/local/include -I$(TEEMLIB) -I$(PYTHONINCLUDE)
 LDFLAGS = -L$(DIDEROTLIB) -L/usr/local/lib -L/opt/local/lib -L/usr/lib
 LIBS = -lteem -lpng -lz -lbz2
