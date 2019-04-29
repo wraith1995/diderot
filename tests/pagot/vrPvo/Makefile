@@ -2,8 +2,8 @@
 SHELL = /bin/sh
 PYTHON = python3
 PYTHONINCLUDE = -I/usr/include/python3.6m -I/usr/include/python3.6m
-DIDEROTFEMPATH = /home/teocollin/diderot
-TEEMPATH = /home/teocollin/teem/build
+DIDEROTFEMPATH = /home/teocollin/gitcode/diderot
+TEEMPATH = /home/teocollin/installs/teem/teem-build
 TARGET = evalProg
 NAMESPACE = $(TARGET)
 CC = clang
