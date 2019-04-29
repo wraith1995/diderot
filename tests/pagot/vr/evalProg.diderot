@@ -66,14 +66,31 @@ input vec2 cminmax = [0,0];
 // Convert light direction from view-space to world-space
 vec3 litwsp = transpose([camU,camV,camN]) • normalize(litdir);
 
+//true image?
+input bool analytical = true;
+input image(3)[] umm = load_image("data.nrrd");
+field#2(3)[] G = umm ⊛ bspln3;//clamp? eh
+
 // Core opacity function is a capped tent function
 function real atent(real a0, real d) = a0*clamp(0, 1, 1.5*(1 - |d|/thick));
 
 function vec3 fStep(vec3 x) {
+  //  print("Hmm:",x,", ",  ∇⊗∇F(x), "\n");
+  //print("Umm:",x,"\n");
+  //  print("ugg:",U.funcCell(c1).dofs, "\n");
+  if(!analytical){
   vec3[3] E = evecs( ∇⊗∇F(x));
   real[3] L = evals( ∇⊗∇F(x));
   return -(E[2] ⊗ E[2]/L[2] +
 	   E[1] ⊗ E[1]/L[1]) •∇ F(x);
+  }
+  else{
+    vec3[3] E = evecs( ∇⊗∇G(x));
+    real[3] L = evals( ∇⊗∇G(x));
+  return -(E[2] ⊗ E[2]/L[2] +
+	   E[1] ⊗ E[1]/L[1]) • ∇G(x);
+    
+  }
 }
 function real fStrength(vec3 x) =
   -evals( ∇⊗∇F(x))[1]/(fBias + | ∇ F(x)|);
@@ -107,6 +124,7 @@ strand ray(int ui, int vi){
   real transp = 1; //current transp
 
   update {
+
     rayN += rayStep;
     if(rayN > camFarVsp){ stabilize; }
     vec3 pos = rayOrig + rayN * rayVec;
@@ -148,7 +166,9 @@ strand ray(int ui, int vi){
       real aa = 1 - transp;
       //print("End:",aa, rgb, "\n");
       rgba = [rgb[0]/aa, rgb[1]/aa, rgb[2]/aa, aa];//also here.
+      //print("Uhh:",rgba,"\n");
     }
+    //else {print("Fuck\n!");}
   }
   
 } create_array {ray(ui, vi)
