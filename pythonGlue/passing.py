@@ -8,8 +8,6 @@ import ctypes as ct
 # These sorts of things should be arguments to the library, which can also supply help converting arugments to the proper form
 # automation of mesh and other types of inputs will require more trickery - maybe modifying generated header file to have those types.
 
-# def endShutdown(signum, frame):
-#     raise Exception("Shutdown timed out")
 
 
 class Library:
@@ -109,6 +107,7 @@ class Library:
             self.set_input(name, inputs[name])
         print("Set inputs")
         for name in namedInputs:
+            print("Setting input: {0}".format(name))
             self.set_input_by_name(name, namedInputs[name])
         print("Set named inputs")
         self.create_strands()
@@ -118,13 +117,11 @@ class Library:
         for output in outputs:
             fileName = output[2]
             self.saveOutput(fileName, output[0], num=output[1])
-        # if shutdown:
-        #     signal.signal(signal.SIGALRM, endShutdown)
-        #     signal.alarm(10)
-        try:
-            self.shutDown()
-        except Exception:
-            print("Time out in shutdown")
+        if shutdown:
+            try:
+                self.shutDown()
+            except Exception:
+                print("Time out in shutdown")
                         
 
 

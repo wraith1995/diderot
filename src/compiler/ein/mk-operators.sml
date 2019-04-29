@@ -446,9 +446,9 @@ structure MkOperators : sig
   (* Field Cross Product *)
     val cross3FF = E.EIN{
             params = [E.FLD(3), E.FLD(3)], index= [3],
-            body = E.Sum([(1, 0, 2), (2, 0, 2)],
-                E.Opn(E.Prod, [
-                    E.Epsilon(E.V 0, E.V 1, E.V 2),
+            body = E.Sum([(1, 0, 2), (2, 0, 2), (3, 0, 3)],
+                E.Opn(E.Prod, [ E.Delta(E.V 0, E.V 3),
+                    E.Epsilon(E.V 3, E.V 1, E.V 2),
                     E.Field(0, [E.V 1]),
                     E.Field(1, [E.V 2])
                   ]))
