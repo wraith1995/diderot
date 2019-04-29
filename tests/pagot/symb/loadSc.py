@@ -64,25 +64,25 @@ monos = gen_monos([[x, y, z]], mono_idxes)
 # mono_idxes11 = mono_index(3, 14)
 # mono_len11 = len(mono_idxes11)
 # monos11 = gen_monos([[x, y, z]], mono_idxes11)
-# def pow_to_mul(expr):
-#     """
-#     Convert integer powers in an expression to Muls, like a**2 => a*a.
-#     """
-#     pows = list(expr.atoms(sp.Pow))
-#     print("pows:", pows)
-#     if any(not e.is_Integer for b, e in (i.as_base_exp() for i in pows)):
+def pow_to_mul(expr):
+    """
+    Convert integer powers in an expression to Muls, like a**2 => a*a.
+    """
+    pows = list(expr.atoms(sp.Pow))
+    print("pows:", pows)
+    if any(not e.is_Integer for b, e in (i.as_base_exp() for i in pows)):
 
-#         raise ValueError("A power contains a non-integer exponent")
-#     repl = list(zip(pows, (sp.Mul(*[b]*e,evaluate=False) for b,e in (i.as_base_exp() for i in pows))))
-#     print("reps:", repl)
-#     return(sp.Mul(*[t[1] for t in repl], evaluate=False))
+        raise ValueError("A power contains a non-integer exponent")
+    repl = list(zip(pows, (sp.Mul(*[b]*e,evaluate=False) for b,e in (i.as_base_exp() for i in pows))))
+    print("reps:", repl)
+    return(sp.Mul(*[t[1] for t in repl], evaluate=False))
 
 
 
-# coeffs = np.array([sp.Symbol("c[{0}]".format(x)) for x in range(mono_len11)])
-# r = coeffs.dot(monos11)
-# cstrs = " + ".join([ "c[{0}] * ".format(idx) + str(pow_to_mul(m)) for (idx, m) in enumerate(monos11)])
-# with open("uggp2.txt", "w+") as f:
+# coeffs = np.array([sp.Symbol("c[{0}]".format(x)) for x in range(mono_len)])
+# r = coeffs.dot(monos)
+# cstrs = " + ".join([ "c[{0}] * ".format(idx) + str(pow_to_mul(m)) for (idx, m) in enumerate(monos)])
+# with open("ugg.txt", "w+") as f:
 #     f.write(cstrs)
 # exit(0)
 
@@ -117,6 +117,29 @@ evalVecResults = []
 pklfile = "sc.pkl"
 data = pickle.load(open(pklfile, "rb"))
 
+
+def buildGradAndHess(fileName):
+    arrays = []
+    for (idx, datam) in enumerate(data):
+        print("Idx:", idx)
+        polyText = datam["poly"]
+        poly = eval(polyText)
+        gradPoly = [sp.diff(poly, x), sp.diff(poly, y), sp.diff(poly, z)]
+
+        gradPolyArray = np.array(gradPoly)
+        hessianPoly = [[sp.diff(g, x), sp.diff(g, y), sp.diff(g, z)]
+                       for g in gradPoly]
+        grads = []
+        hess = []
+        for g in gradPolyArray:
+            grads.append(mono_coeffs(sp.Poly(g), monos))
+        for grad in hessianPoly:
+            for g in grad:
+                hess.append(mono_coeffs(sp.Poly(g), monos))
+        arrays.append({"grad": grads, "hess": hess})
+    text = pickle.dumps(arrays)
+    with open(fileName, "wb+") as f:
+        f.write(text)
 
 
 def buildPVOData(fileName):
@@ -202,7 +225,7 @@ def buildData():
     print(eval2)
     return((ret, hexPoints, eval1, eval2))
 
-buildPVOData("pvo.pkl")
+#buildPVOData("pvo.pkl")
 # result = buildData()
 # pklfilePrime = "scarray.pkl"
 # txt = pickle.dumps(result)
