@@ -251,6 +251,10 @@ def writeToVtk(fileName, pointQuads):
     points = [tuple(point) for quad in pointQuads for point in quad]
     uniqPoints = list(set(points))
     quadInts = []
+<<<<<<< HEAD
+=======
+    print(len(pointQuads))
+>>>>>>> 3b62777ac36b781b70d4cdf090b32d975878b315
     for quad in pointQuads:
         tempIdxes = []
         for p in quad:
@@ -294,7 +298,11 @@ def buildW(i):
     doted = np.array(hessianPoly).dot(gradPolyArray)
     wfield = np.cross(gradPolyArray, doted)
     lf = sp.lambdify([x, y, z], wfield, "sympy")
+<<<<<<< HEAD
     print(wfield[0].expand())
+=======
+    #print(wfield[0].expand())
+>>>>>>> 3b62777ac36b781b70d4cdf090b32d975878b315
     #print(wfield[1].expand())
     #print(wfield[2].expand())
     pklfilePvo = "pvo.pkl"
@@ -330,9 +338,17 @@ def subdivideOct(i, epsilon):
         for hexa in hexes:
             (mins, maxes) = pointTo3Interval(hexa, currentRadius)
             intervals = [mpi((a, b)) for (a, b) in zip(mins, maxes)]
+<<<<<<< HEAD
             image = f(*intervals)
             test0 = polyTestFunction(mins, maxes, pvoCoeffs[0])
             test1 = polyTestFunction(mins, maxes, pvoCoeffs[1])
+=======
+            #image = f(*intervals)
+            #print(image)
+            test0 = polyTestFunction(mins, maxes, pvoCoeffs[0])
+            
+            #test1 = polyTestFunction(mins, maxes, pvoCoeffs[1])
+>>>>>>> 3b62777ac36b781b70d4cdf090b32d975878b315
             test2 = polyTestFunction(mins, maxes, pvoCoeffs[2])
             # tests = [test0, test1, test2]
             if polyTestFunctionExp(mins, maxes, grad, hess):

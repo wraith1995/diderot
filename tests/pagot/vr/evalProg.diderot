@@ -69,8 +69,12 @@ vec3 litwsp = transpose([camU,camV,camN]) • normalize(litdir);
 //true image?
 input bool analytical = true;
 input image(3)[] umm = load_image("data.nrrd");
+<<<<<<< HEAD
 field#2(3)[] G = umm ⊛ bspln5;//clamp? eh
 input mat3 rot = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]];
+=======
+field#2(3)[] G = umm ⊛ bspln3;//clamp? eh
+>>>>>>> 3b62777ac36b781b70d4cdf090b32d975878b315
 
 // Core opacity function is a capped tent function
 function real atent(real a0, real d) = a0*clamp(0, 1, 1.5*(1 - |d|/thick));
@@ -86,6 +90,7 @@ function vec3 fStep(vec3 x) {
 	   E[1] ⊗ E[1]/L[1]) •∇ F(x);
   }
   else{
+<<<<<<< HEAD
     vec3 Gv = transpose(rot) • modulate([-1, -2, -3], (rot • x));
     mat3 H = transpose(rot) • [[-1.0, 0.0, 0.0], [0.0, -2.0, 0.0], [0.0, 0.0, -3.0]] • (rot);
 
@@ -105,6 +110,12 @@ function vec3 fStep(vec3 x) {
   /*   real[3] L = evals( ∇⊗∇G(x)); */
   /*   return -(E[2] ⊗ E[2]/L[2] + */
   /* 	     E[1] ⊗ E[1]/L[1]) • ∇G(x); */
+=======
+    vec3[3] E = evecs( ∇⊗∇G(x));
+    real[3] L = evals( ∇⊗∇G(x));
+  return -(E[2] ⊗ E[2]/L[2] +
+	   E[1] ⊗ E[1]/L[1]) • ∇G(x);
+>>>>>>> 3b62777ac36b781b70d4cdf090b32d975878b315
     
   }
 }
