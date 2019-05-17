@@ -47,7 +47,7 @@ def processSympyPoly(poly, var):
     maxDegree = poly.total_degree()
     polyVars = var  # [sp.Symbol("x{0}".format(i)) for i in range(dim)]
     monoPolys = monos(maxDegree, polyVars)
-    def getCoeff(x,p):
+    def getCoeff(x, p):
         try:
             return(x.coeff_monomial(p))
         except:

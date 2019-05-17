@@ -20,6 +20,15 @@ class Axes(Enum):
 affineLib = ct.CDLL("/home/teocollin/gitcode/intervals/affinePoly/ap.so")
 testPolyBool = affineLib.__getattr__("testPolyBool")
 testPolyBoolExp = affineLib.__getattr__("testPvoExplt")
+testPolyEval = affineLib.__getattr__("testPolyEval")
+
+def testPolyEvalFunction(mins, coords):
+    xmin = ct.c_double(mins[0])
+    ymin = ct.c_double(mins[1])
+    zmin = ct.c_double(mins[2])
+    array = np.asfarray(coords, dtype="float64")
+    arrayptr = array.ctypes.data_as(ct.POINTER(ct.c_double))
+    return((testPolyEval(xmin, ymin, zmin, arrayptr)))
 
 def polyTestFunction(mins, maxes, coords):
     xmin = ct.c_double(mins[0])
@@ -47,9 +56,10 @@ def polyTestFunctionExp(mins, maxes, grad, hess):
     grads = [np.asfarray(g, dtype="float64") for g in grad]
     gradPtrs = [array.ctypes.data_as(ct.POINTER(ct.c_double)) for array in grads]
     hesses = [np.asfarray(g, dtype="float64") for g in hess]
+
     hessPtrs = [array.ctypes.data_as(ct.POINTER(ct.c_double)) for array in hesses]
 
-    return(bool(testPolyBoolExp(xmin, ymin, zmin, xmax, ymax, zmax,
+    return(bool(testPolyBoolExp(xmin, xmax, ymin, ymax, zmin, zmax,
                              gradPtrs[0], gradPtrs[1], gradPtrs[2],
                              hessPtrs[0], hessPtrs[1], hessPtrs[2],
                              hessPtrs[4], hessPtrs[5], hessPtrs[8])))
@@ -251,10 +261,6 @@ def writeToVtk(fileName, pointQuads):
     points = [tuple(point) for quad in pointQuads for point in quad]
     uniqPoints = list(set(points))
     quadInts = []
-<<<<<<< HEAD
-=======
-    print(len(pointQuads))
->>>>>>> 3b62777ac36b781b70d4cdf090b32d975878b315
     for quad in pointQuads:
         tempIdxes = []
         for p in quad:
@@ -298,11 +304,7 @@ def buildW(i):
     doted = np.array(hessianPoly).dot(gradPolyArray)
     wfield = np.cross(gradPolyArray, doted)
     lf = sp.lambdify([x, y, z], wfield, "sympy")
-<<<<<<< HEAD
-    print(wfield[0].expand())
-=======
     #print(wfield[0].expand())
->>>>>>> 3b62777ac36b781b70d4cdf090b32d975878b315
     #print(wfield[1].expand())
     #print(wfield[2].expand())
     pklfilePvo = "pvo.pkl"
@@ -313,6 +315,9 @@ def buildW(i):
     
     
     return(wfield, lf, datamPvo)
+
+
+
 
 
 #(p, f) = buildW(10)
@@ -338,19 +343,10 @@ def subdivideOct(i, epsilon):
         for hexa in hexes:
             (mins, maxes) = pointTo3Interval(hexa, currentRadius)
             intervals = [mpi((a, b)) for (a, b) in zip(mins, maxes)]
-<<<<<<< HEAD
-            image = f(*intervals)
-            test0 = polyTestFunction(mins, maxes, pvoCoeffs[0])
-            test1 = polyTestFunction(mins, maxes, pvoCoeffs[1])
-=======
-            #image = f(*intervals)
-            #print(image)
-            test0 = polyTestFunction(mins, maxes, pvoCoeffs[0])
-            
+            #print(mins, maxes)
+            #test0 = polyTestFunction(mins, maxes, pvoCoeffs[0])
             #test1 = polyTestFunction(mins, maxes, pvoCoeffs[1])
->>>>>>> 3b62777ac36b781b70d4cdf090b32d975878b315
-            test2 = polyTestFunction(mins, maxes, pvoCoeffs[2])
-            # tests = [test0, test1, test2]
+            #test2 = polyTestFunction(mins, maxes, pvoCoeffs[2])o
             if polyTestFunctionExp(mins, maxes, grad, hess):
                 #print("Eliniated something")
                 continue
@@ -367,8 +363,6 @@ def subdivideOct(i, epsilon):
 
 #newton
 for i in range(119):
-    if i != 18:
-        continue
     start = time.time()
     l = len(subdivideOct(i, 0.1))
     print("Cell:", i)

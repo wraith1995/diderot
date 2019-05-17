@@ -69,12 +69,8 @@ vec3 litwsp = transpose([camU,camV,camN]) • normalize(litdir);
 //true image?
 input bool analytical = true;
 input image(3)[] umm = load_image("data.nrrd");
-<<<<<<< HEAD
 field#2(3)[] G = umm ⊛ bspln5;//clamp? eh
 input mat3 rot = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]];
-=======
-field#2(3)[] G = umm ⊛ bspln3;//clamp? eh
->>>>>>> 3b62777ac36b781b70d4cdf090b32d975878b315
 
 // Core opacity function is a capped tent function
 function real atent(real a0, real d) = a0*clamp(0, 1, 1.5*(1 - |d|/thick));
@@ -82,42 +78,49 @@ function real atent(real a0, real d) = a0*clamp(0, 1, 1.5*(1 - |d|/thick));
 function vec3 fStep(vec3 x) {
   //  print("Hmm:",x,", ",  ∇⊗∇F(x), "\n");
   //print("Umm:",x,"\n");
-  //  print("ugg:",U.funcCell(c1).dofs, "\n");
+  //print("ugg:",U.funcCell(c1).dofs, "\n");
   if(!analytical){
+    ///print("Some random sample,", x, ", getting us,", F(x), "\n");
   vec3[3] E = evecs( ∇⊗∇F(x));
   real[3] L = evals( ∇⊗∇F(x));
+  //print("Evals are:", L, "\n");
   return -(E[2] ⊗ E[2]/L[2] +
 	   E[1] ⊗ E[1]/L[1]) •∇ F(x);
   }
   else{
-<<<<<<< HEAD
-    vec3 Gv = transpose(rot) • modulate([-1, -2, -3], (rot • x));
-    mat3 H = transpose(rot) • [[-1.0, 0.0, 0.0], [0.0, -2.0, 0.0], [0.0, 0.0, -3.0]] • (rot);
-
-    vec3[3] E = evecs(H);
-    real[3] L = evals(H);
+    vec3 y = rot • x;
+    vec3 gradG = [-6.0 * y[0]*y[0] - 2.0 * y[2],
+		  -15.0 * y[1]*y[1],
+		  -2.0 * y[0] - 6.0 * y[2]*y[2]];
+    mat3 HG = [[-12.0 * y[0], 0.0, -2.0], [0.0, -30.0 * y[1], 0.0], [-2.0, 0.0, -12.0 * y[2]]];
+    vec3 Gv = transpose(rot) • gradG;
+    mat3 Hv = transpose(rot) • HG • rot;
+    vec3[3] E = evecs(Hv);
+    real[3] L = evals(Hv);
     return -(E[2] ⊗ E[2]/L[2] +
-	     E[1] ⊗ E[1]/L[1]) • Gv;
-    //-0.5*x**2 - 1.0*y**2 - 1.5*z**2
-  /*   real aV = G(x); */
-  /*   real rV = -0.5 * x[0]*x[0] - 1.0 * x[1]*x[1] - 1.5 * x[2]*x[2]; */
-  /*   if(|aV- rV| > 0.0000001){ */
-  /*     print("At ", x, "the real value is ", rV, " and we get ", aV, "\n"); */
-  /*   } */
-
-
-  /*   vec3[3] E = evecs( ∇⊗∇G(x)); */
-  /*   real[3] L = evals( ∇⊗∇G(x)); */
-  /*   return -(E[2] ⊗ E[2]/L[2] + */
-  /* 	     E[1] ⊗ E[1]/L[1]) • ∇G(x); */
-=======
-    vec3[3] E = evecs( ∇⊗∇G(x));
-    real[3] L = evals( ∇⊗∇G(x));
-  return -(E[2] ⊗ E[2]/L[2] +
-	   E[1] ⊗ E[1]/L[1]) • ∇G(x);
->>>>>>> 3b62777ac36b781b70d4cdf090b32d975878b315
-    
+  	     E[1] ⊗ E[1]/L[1]) • Gv;
   }
+  /*   /\* vec3 Gv = transpose(rot) • modulate([-1, -2, -3], (rot • x)); *\/ */
+  /*   /\* mat3 H = transpose(rot) • [[-1.0, 0.0, 0.0], [0.0, -2.0, 0.0], [0.0, 0.0, -3.0]] • (rot); *\/ */
+
+  /*   /\* vec3[3] E = evecs(H); *\/ */
+  /*   /\* real[3] L = evals(H); *\/ */
+  /*   //return -(E[2] ⊗ E[2]/L[2] + */
+  /* 	     E[1] ⊗ E[1]/L[1]) • Gv; */
+  /*   //-0.5*x**2 - 1.0*y**2 - 1.5*z**2 */
+  /* /\*   real aV = G(x); *\/ */
+  /* /\*   real rV = -0.5 * x[0]*x[0] - 1.0 * x[1]*x[1] - 1.5 * x[2]*x[2]; *\/ */
+  /* /\*   if(|aV- rV| > 0.0000001){ *\/ */
+  /* /\*     print("At ", x, "the real value is ", rV, " and we get ", aV, "\n"); *\/ */
+  /* /\*   } *\/ */
+
+
+  /* /\*   vec3[3] E = evecs( ∇⊗∇G(x)); *\/ */
+  /* /\*   real[3] L = evals( ∇⊗∇G(x)); *\/ */
+  /* /\*   return -(E[2] ⊗ E[2]/L[2] + *\/ */
+  /* /\* 	     E[1] ⊗ E[1]/L[1]) • ∇G(x); *\/ */
+    
+  /* } */
 }
 function real fStrength(vec3 x) =
   -evals( ∇⊗∇F(x))[1]/(fBias + | ∇ F(x)|);

@@ -254,8 +254,8 @@ fun extractIntConst cxt (ty, cexpr, name) =
 fun extractShapeConst cxt (ty, cexpr, name) =
     (case cexpr
       of ConstExpr.Seq(seq, Ty.T_Sequence(Ty.T_Int,_)) =>
-	 SOME(List.map (Option.valOf o (fn x => extractIntConst cxt (Ty.T_Int, x, ""))) seq)
-       | _ => NONE)
+	 (print("Good shape!");(SOME(List.map (Option.valOf o (fn x => extractIntConst cxt (Ty.T_Int, x, ""))) seq)))
+       | _ => (print("Bad shape!");NONE))
 		   
 
 fun loadJson(fileName, cxt) = SOME(JP.parseFile fileName)
@@ -341,6 +341,7 @@ fun constantExists(name, ty) =
 	 
     in
      List.find finder
+
     end
 (*an object with coeffs and optional var list  or just an array
 if no object, do array
@@ -1240,12 +1241,19 @@ fun parseSpace(env, cxt, tyName, basisFunctionShape : int list, rangeShape : int
      val constantsField = Option.mapPartial (findField "constants") space
      val constant = Option.map (fn x => parseConstants(env, cxt, tyName, x)) (space) 
      val rangeShapeLength = List.length rangeShape
+     val _ = print("Size of range:"^(Int.toString rangeShapeLength)^"\n");
      val rangeTy = Ty.T_Sequence(Ty.T_Int, SOME(Ty.DimConst rangeShapeLength))
 
      val dimConstCheck = Option.valOf (Option.map (constantExists(FN.dim, SOME(Ty.T_Int))) constant) handle exn => raise exn
      val spaceMapDim = Option.valOf (Option.map (constantExists(FN.spaceMapDim, SOME(Ty.T_Int))) constant) handle exn => raise exn
      val degreeConstCheck = Option.valOf (Option.map (constantExists(FN.maxDegree, SOME(Ty.T_Int))) constant) handle exn => raise exn
-     val rangeConstCheck =  Option.join (Option.map (constantExists(FN.rangeShape, SOME(rangeTy))) constant) handle exn => raise exn
+     val temp = (Option.map (constantExists(FN.rangeShape, SOME(rangeTy))) constant)
+     val _ = (case temp
+	       of SOME(SOME(_)) => print("Okay shape\n")
+		| SOME(NONE) => print("NOT FUCK OKAY SHAPE\n")
+		| NONE => print("NOT OKAY SHAPE\n")
+	     );
+     val rangeConstCheck =  Option.join temp handle exn => raise exn
      
 					 
 
@@ -1255,7 +1263,7 @@ fun parseSpace(env, cxt, tyName, basisFunctionShape : int list, rangeShape : int
      val rangeShape : int list option = Option.mapPartial (extractShapeConst cxt) rangeConstCheck
      val rangeShape = (case rangeShape
 			of SOME([1]) => SOME([])
-			 | NONE => SOME([]) (*maybe register a warning?*)
+			 | NONE => (SOME([])) (*maybe register a warning?*)
 			 | _ => rangeShape)
      val combined = optionList [spaceMapDim, rangeConstCheck]
      val spaceDofShapeConst = Option.map (fn ([(ty, expr, name), (ty', expr', name')])
