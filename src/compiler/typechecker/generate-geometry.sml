@@ -146,7 +146,7 @@ fun makeGeometryFuncs(env, cxt, span, meshData, geometry, inverse, forwardInfo, 
       let
        (*comptue new pos *)
        val adjustedTest = test1
-       val scale = makePrim'(BV.mul_tr, [dPosExp, test1], [vecTy, Ty.realTy], vecTy)
+       (* val scale = makePrim'(BV.mul_tr, [dPosExp, test1], [vecTy, Ty.realTy], vecTy) *)
        val newPos = rayAtT(refPosExp, dPosExp, adjustedTest)
        val insideTest = makeRefCellInsideFunc([newPos, newPos]);
        (*avoid the need to pass refPos because under our scheme we current forget it...*)
@@ -406,9 +406,14 @@ fun newtonLoopBlock(normal, dScalar, refPosExp, dPosExp, maxN, eps, t) =
 			     
       val ifs = List.map buildIf zip
 
-      val workedTest = makePrim'(BV.neq_ii, [tempExp', neg1], [Ty.T_Int, Ty.T_Int], Ty.T_Bool)
-
       val timeReturn = makePrim'(BV.fn_max_r, [tempExp, zero], [Ty.realTy, Ty.realTy], Ty.realTy)
+      (*build base + time*dpos       val end = rayAtT(r, d, timeReturn)
+*)
+      val workedTestFacet = makePrim'(BV.neq_ii, [tempExp', neg1], [Ty.T_Int, Ty.T_Int], Ty.T_Bool)
+      val workedTestInside = buildInsideBool(r, d, timeReturn) (*use intersection time*)
+      val workedTest = makeAnds([workedTestFacet, workedTestInside])
+
+
 
       val failBlock = AST.S_Block([ (*TODO: should this be ~1? What is the exact standard for this function?*)
 						  AST.S_Return(AST.E_Tensor([coerce neg1, coerce neg1], vec2Ty))

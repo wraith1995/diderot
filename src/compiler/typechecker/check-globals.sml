@@ -199,6 +199,7 @@ structure CheckGlobals : sig
 	      (* end case *) )
 	    | PT.GD_Overload(ty, ({span, tree=ff}, isOp), params, body) =>
 	      let
+	       (*translate ff name -> add operator to name function*)
 	       (* Setup this as if we have a function at first. *)
 	       val ty' = CheckType.check(env, cxt, ty)
                val env' = E.functionScope (env, ty', ff)
@@ -230,10 +231,11 @@ structure CheckGlobals : sig
 			   else if isUnaryOp then if Atom.same(ff, N.op_sub)
 						  then N.op_neg
 						  else ff
-			   else ff
+		       else ff
+	       val ffName = Atom.atom ("fn_"^(Word.toString (Atom.hash f)))
 
 	       val fnTy = Ty.T_Fun(paramTys, ty')
-               val f' = Var.new (ff, span, AST.FunVar, fnTy)
+               val f' = Var.new (ffName, span, AST.FunVar, fnTy)
 	       (* Now, we setup utilities to handle checks specific to an overload *)
 	       (* If we can't find an overload, we will call this error.*)
 	       fun noOverLoadErr r = (err (cxt, [
