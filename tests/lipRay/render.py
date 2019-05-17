@@ -30,7 +30,7 @@ def readLines(controlFile, seqFile, dim=3):
 
 
 
-    res = result.reshape(controlData.shape[1] * controlData.shape[2])
+    res = result.reshape(functools.reduce(lambda x, y: controlData.shape[1:]))
     return(res)
 
 #  steps = readScalarArary("steps_0.nrrd")
