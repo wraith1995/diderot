@@ -1,0 +1,118 @@
+#version 3.0
+
+
+type mesh mesh_t = file("evalProg.json");
+const int dim = mesh_t.dim;
+type functionSpace{mesh_t}[dim] fns_t = file("evalProg.json");
+type femFunction{fns_t} func_t = file("evalProg.json");
+
+input mesh_t meshData;
+input fns_t space = fns_t(meshData);
+input func_t data = func_t(space);
+
+field(dim)[dim] F = data.F;
+
+refCell{mesh_t} simplex = meshData.refcell();
+input int timeSteps=32;
+input real timeEps = 0.0000001;
+//input tensor[dim, dim] flowMat = identity(dim);
+
+function position{mesh_t} posMove (position{mesh_t} x, tensor[dim] dPos)
+{
+  if (!x.isValid()){
+    //identity on invalid pos.
+    //this way if something becomes invalid
+    //the program keeps chuging along without failing
+    //until the strand checks the validity and dies cleanly.
+    return(x);
+  }
+  real time = 1; //time keeping
+  position{mesh_t} cmp = x; //current mesh pos
+  // NOTE: This could be replaced by a while loop over time,
+  // but I don't want to add while loops
+  foreach (int i in 0..timeSteps ){ //for loop
+    tensor[dim] deltaP = time * inv(∇⊗(cmp.mc.transform)(cmp.refPos)) • dPos; //project velocity
+    //time * (DT(x))^{-1} •( dpos )
+    tensor[dim] newPos = cmp.refPos + deltaP;
+    if (simplex.isInside(newPos)) { //we did not leave the refrence so we are done
+      position{mesh_t} nmp = cmp.mc.meshPos(newPos); //newMeshPos
+      return(nmp);
+    }
+    else {
+      real eTime = simplex.exit(cmp, deltaP); //expended time.
+      time-=time*eTime; //remove expended time
+      position{mesh_t} nmp = simplex.exitPos(cmp, deltaP);//get next cell and position in it.
+      if ( !nmp.isValid || eTime < 0 || eTime > 1 ||  time < timeEps){
+	//we moved off the mesh some how or some error condition happened
+	//or maybe we are done
+	//might want to compare time left to local velocity
+	return(nmp);
+      } 
+      cmp = nmp;
+    }
+  }
+  //we took more than our alloted time steps.
+  //Time to give up and do things the old fashion way
+  //coud add check to see how much is left compared to current local velocity?
+  print("Took stupid way out!\n");
+  cmp = meshData.findPos(x.worldPos() + dPos);
+  return(cmp);
+}
+
+
+input tensor[dim][] startPoints;
+input real stepSize = 0.01;
+input int stepMax = 100;
+
+function tensor[dim] nV(position{mesh_t} x){
+  if(x.isValid()){
+    cell{mesh_t} c = x.mc;
+    tensor[dim] ref = x.refPos();
+    tensor[dim] val = data.funcCell(c).refField(ref);
+    return(val/|val|);
+  }
+  else
+    {
+      return(zeros[dim]);
+    }
+    
+}
+
+strand gg(tensor[dim] startPos){
+  output tensor[dim][] stream = {startPos};
+  output tensor[dim][] newStream = {startPos};
+  int step = 0;
+  position{mesh_t} cPos = meshData.findPos(startPos);
+  tensor[dim] altCPos = startPos;
+  update {//if not valid, get out
+    if (!cPos.isValid() || !meshData.findPos(altCPos).isValid()|| step == stepMax){
+    stabilize;      
+    }
+    if(|cPos.worldPos() - altCPos| > 0.000001){
+      print("Error in tracing: At step:", step, " with particle:", startPos, "\n");
+    }
+    else {print("fine in cell:", cPos.mc(),"\n");}
+    
+    tensor[dim] altUp1 = 0.5*stepSize*F(altCPos)/|F(altCPos)|;
+    tensor[dim] up1 = 0.5 * stepSize * nV(cPos);
+    position{mesh_t} intermed = posMove(cPos, up1);
+    tensor[dim] altIntermed = altCPos + altUp1;
+    if(!intermed.isValid() || !meshData.findPos(altIntermed).isValid()){
+      stabilize;
+    }
+    tensor[dim] altUp2 = stepSize*F(altIntermed)/|F(altIntermed)|;
+    tensor[dim] up2 = stepSize * nV(intermed);
+    cPos = posMove(cPos, up2);
+    altCPos = altCPos + altUp2;
+    if (!cPos.isValid()){
+      print(stream);
+      
+	
+      stabilize; 
+    }
+    stream = stream@{cPos.worldPos()};
+    newStream = newStream@{altCPos};
+
+    step+=1;
+  }
+} create_collection {gg(x) | x in startPoints};

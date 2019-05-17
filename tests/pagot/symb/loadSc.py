@@ -7,12 +7,18 @@ import sympy as sp
 from itertools import repeat, product
 from jsonbuilder import buildPythonic
 from json import dumps
+from sympy.printing.ccode import ccode
+from sympy.codegen.rewriting import create_expand_pow_optimization
 x,y,z = sp.Symbol("x"),sp.Symbol("y"), sp.Symbol("z")
 def prod(s):
     z = [q[0] for q in s]
     ret =  np.product(z)
     return(ret)
 
+def prodPrime(s):
+    z = [q[0] for q in s]
+    ret =  sp.Mul(z, evaluate=False)
+    return(ret)
 
 def mono_index_(var_dim, degree):
     length = var_dim
@@ -48,6 +54,30 @@ def gen_monos(syms, idxes):
         idx.append(mono)
     return(idx)
 
+def npow(a, b):
+    print("a,b:",a,b)
+    if b == 0:
+        return(1)
+    fuck = [a for j in range(b)]
+    temp = sp.Mul(*fuck, evaluate=False)
+    return(temp)
+def gen_monos_power(syms, idxes):
+    "Creates a monomial basis for polynomials in [[vars]] of degree degree"
+    syms_prime = syms[0]
+    len_test = len(idxes[0])
+    var_dim = len(syms_prime)
+    if len_test != var_dim:
+        raise Exception("Dimensions of idxes and syms incompatible")
+    idx = []
+    for opt in idxes:
+        termps = [npow(a, b) for (a, b) in zip(syms_prime, opt)]
+        temp = sp.Mul(*termps, evaluate=False)
+        print(opt, " to ", temp)
+        idx.append(temp)
+    return(idx)
+
+
+
 def mono_coeffs(p, monos):
     "Transform a basis p to a monomial basis"
     coeffs = []
@@ -59,32 +89,71 @@ def mono_coeffs(p, monos):
 
 mono_idxes = mono_index(3, 6)
 mono_len = len(mono_idxes)
-monos = gen_monos([[x, y, z]], mono_idxes)
+monos =  gen_monos_power([[x, y, z]], mono_idxes)
 
-# mono_idxes11 = mono_index(3, 14)
-# mono_len11 = len(mono_idxes11)
-# monos11 = gen_monos([[x, y, z]], mono_idxes11)
+mono_idxes14 = mono_index(3, 14)
+mono_len14 = len(mono_idxes14)
+monos14 = gen_monos_power([[x, y, z]], mono_idxes14)
+
 def pow_to_mul(expr):
     """
     Convert integer powers in an expression to Muls, like a**2 => a*a.
     """
     pows = list(expr.atoms(sp.Pow))
-    print("pows:", pows)
+    syms = list(expr.atoms(sp.Symbol))
     if any(not e.is_Integer for b, e in (i.as_base_exp() for i in pows)):
 
         raise ValueError("A power contains a non-integer exponent")
     repl = list(zip(pows, (sp.Mul(*[b]*e,evaluate=False) for b,e in (i.as_base_exp() for i in pows))))
-    print("reps:", repl)
     return(sp.Mul(*[t[1] for t in repl], evaluate=False))
 
+# def multiTermToPoly(expr):
+#     args = list(expr.args)
+#     multed = []
+#     for exp in args:
+#         if len(exp) == 1:
+#             multed.append()
+#         if type(exp[1]) == int:
+#             multed.append(sp.Pow(exp[0], exp[1]))
+#             if len(exp) != 2:
+#                 raise Exception("Big ops")
+#         else:
+#             multed.append(exp)
+#     multedPrime = [pow_to_mul(exp) for exp in multed]
+#     fin = sp.Mul(*multed, evaluate=False)
+#     print("From {0} to {1} with {2}".format(expr, fin, args))
+#     return(fin)
 
+def multiTermToPoly(expr):
+    exprp = expr.replace(lambda x: x.is_Pow and x.exp > 0, lambda x: sp.Mul(*[x.base]*x.exp, evaluate=False))
+    print(expr, " to ", exprp)
+    return(exprp)
+def fMul(x): return(sp.Mul(*x, evaluate=False))
 
-# coeffs = np.array([sp.Symbol("c[{0}]".format(x)) for x in range(mono_len)])
-# r = coeffs.dot(monos)
-# cstrs = " + ".join([ "c[{0}] * ".format(idx) + str(pow_to_mul(m)) for (idx, m) in enumerate(monos)])
-# with open("ugg.txt", "w+") as f:
-#     f.write(cstrs)
-# exit(0)
+def findLowestPower(var, npow, cseDict):
+    for i in reversed(range(1, npow+1)):
+        
+    
+
+def writeCseEvaluation(monos, type="AAF"):
+    extraVarCounter = 0
+    cseDict = dict()
+    
+    for (idx, mono) in enumerate(monos):
+        subMuls = mono.expr(sp.Mul)
+        if len(subMuls) == 0:
+            subMuls = [mono]
+        
+    #ugg
+
+coeffs = np.array([sp.Symbol("c[{0}]".format(x)) for x in range(mono_len)])
+r = coeffs.dot(monos)
+#print(r.simplify())
+#print(sp.polys.polyfuncs.horner(sp.Poly(r), wrt=x))
+cstrs = " + ".join([ "c[{0}] * ".format(idx) + str((m)) for (idx, m) in enumerate(monos)])
+with open("ugg.txt", "w+") as f:
+    f.write(cstrs)
+exit(0)
 
 verts = [[-0.5, -0.5, -0.5], [0.5, -0.5, -0.5], [0.5, 0.5, -0.5], [-0.5, 0.5, -0.5],
          [-0.5, -0.5, 0.5], [0.5, -0.5, 0.5], [0.5, 0.5, 0.5], [-0.5, 0.5, 0.5]]

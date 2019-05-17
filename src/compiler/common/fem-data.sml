@@ -187,7 +187,7 @@ datatype func = Func' of {
 	  name : Atom.atom
 	 }
 fun funcSpace (Func'{space, name, ...}) = space
-fun funcShape (Func'{shape, name, ...}) = shape
+fun funcShape (Func'{shape, name, space, ...}) =  spaceShape space
 val rangeShape = funcShape
 
 
