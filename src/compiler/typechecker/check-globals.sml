@@ -839,7 +839,7 @@ structure CheckGlobals : sig
 			      (*TODO: rewrite as above maybe - interesting to compare these two*)
 			      val loop = AST.S_Foreach(
 				   itter1,
-				   AST.S_Block((tempAssignment::setupVars)@[
+				   AST.S_Block((newPosInit::tempAssignment::setupVars)@[
 						AST.S_Foreach(itter2,
 							      AST.S_Block([
 									  updateDeltaStm,
@@ -1057,6 +1057,7 @@ structure CheckGlobals : sig
 
 			  val dim = FT.meshDim meshData
 			  val rangeShape = FT.rangeShape f
+			  val _ = print("The shape is [" ^ (String.concatWith "," (List.map (Int.toString) rangeShape)) ^"]" )
 			  val diff = Ty.DiffConst(NONE)
 			  val dimConst = Ty.DimConst(dim)
 			  val rangeShape = Ty.Shape(List.map Ty.DimConst rangeShape)

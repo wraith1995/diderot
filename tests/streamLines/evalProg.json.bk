@@ -1,0 +1,249 @@
+{
+    "constants": [],
+    "mesh": {
+        "basis": {
+            "polys": [
+                {
+                    "coeffs": [
+                        1.0,
+                        -1.0,
+                        -1.0,
+                        0.0
+                    ],
+                    "degree": 1
+                },
+                {
+                    "coeffs": [
+                        0.0,
+                        0.0,
+                        1.0,
+                        0.0
+                    ],
+                    "degree": 1
+                },
+                {
+                    "coeffs": [
+                        0.0,
+                        1.0,
+                        0.0,
+                        0.0
+                    ],
+                    "degree": 1
+                }
+            ]
+        },
+        "constants": [
+            {
+                "name": "dim",
+                "type": "int",
+                "value": 2
+            },
+            {
+                "name": "meshMapDim",
+                "type": "int",
+                "value": 3
+            },
+            {
+                "name": "degree",
+                "type": "int",
+                "value": 1
+            }
+        ],
+        "refCell": {
+            "type": "simplex",
+            "epsilon": 1e-09,
+            "newtonParams": {
+                "contraction": true,
+                "itters": 16,
+                "killAfterTol": false,
+                "newtonTol": 1e-08,
+                "start": [
+                    0.3333333333333333,
+                    0.3333333333333333
+                ]
+            },
+            "geometry": {
+                "object1": [
+                    {
+                        "entity": [
+                            1,
+                            2
+                        ],
+                        "plane": [
+                            1,
+                            2
+                        ]
+                    },
+                    {
+                        "entity": [
+                            0,
+                            2
+                        ],
+                        "plane": [
+                            0,
+                            2
+                        ]
+                    },
+                    {
+                        "entity": [
+                            0,
+                            1
+                        ],
+                        "plane": [
+                            0,
+                            1
+                        ]
+                    }
+                ],
+                "vertices": [
+                    [
+                        0.0,
+                        0.0
+                    ],
+                    [
+                        1.0,
+                        0.0
+                    ],
+                    [
+                        0.0,
+                        1.0
+                    ]
+                ],
+                "toNode": [
+                    0,
+                    1,
+                    2
+                ]
+            }
+        },
+        "accelerate": {
+            "insert": "spat.in",
+            "conservative": true,
+            "includes": [
+                "<spatialindex/capi/sidx_api.h>",
+                "<spatialindex/capi/sidx_impl.h>"
+            ],
+            "linkDirs": [],
+            "includeDirs": [],
+            "libs": [
+                "lspatialindex_c",
+                "lspatialindex"
+            ]
+        }
+    },
+    "space": {
+        "basis": {
+            "polys": [
+                {
+                    "coeffs": [
+                        1.0,
+                        -3.0,
+                        2.0,
+                        -2.9999999999999996,
+                        4.0,
+                        0.0,
+                        2.0,
+                        0.0,
+                        0.0
+                    ],
+                    "degree": 2
+                },
+                {
+                    "coeffs": [
+                        0.0,
+                        0.0,
+                        0.0,
+                        -0.9999999999999999,
+                        0.0,
+                        0.0,
+                        2.0,
+                        0.0,
+                        0.0
+                    ],
+                    "degree": 2
+                },
+                {
+                    "coeffs": [
+                        0.0,
+                        -0.9999999999999998,
+                        1.9999999999999998,
+                        0.0,
+                        0.0,
+                        0.0,
+                        0.0,
+                        0.0,
+                        0.0
+                    ],
+                    "degree": 2
+                },
+                {
+                    "coeffs": [
+                        0.0,
+                        0.0,
+                        0.0,
+                        0.0,
+                        3.999999999999999,
+                        0.0,
+                        0.0,
+                        0.0,
+                        0.0
+                    ],
+                    "degree": 2
+                },
+                {
+                    "coeffs": [
+                        0.0,
+                        3.999999999999999,
+                        -3.999999999999999,
+                        0.0,
+                        -3.999999999999999,
+                        0.0,
+                        0.0,
+                        0.0,
+                        0.0
+                    ],
+                    "degree": 2
+                },
+                {
+                    "coeffs": [
+                        0.0,
+                        0.0,
+                        0.0,
+                        4.0,
+                        -4.0,
+                        0.0,
+                        -4.0,
+                        0.0,
+                        0.0
+                    ],
+                    "degree": 2
+                }
+            ]
+        },
+        "constants": [
+            {
+                "name": "dim",
+                "type": "int",
+                "value": 2
+            },
+            {
+                "name": "spaceMapDim",
+                "type": "int",
+                "value": 6
+            },
+            {
+                "name": "shape",
+                "type": "int[1]",
+                "value": [2]
+            },
+            {
+                "name": "degree",
+                "type": "int",
+                "value": 2
+            }
+        ]
+    },
+    "function": {
+        "constants": []
+    }
+}
