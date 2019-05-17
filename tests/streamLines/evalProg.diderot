@@ -17,7 +17,7 @@ input int timeSteps=32;
 input real timeEps = 0.0000001;
 //input tensor[dim, dim] flowMat = identity(dim);
 
-function position{mesh_t} posMove (position{mesh_t} x, tensor[dim] dPos)
+overload position{mesh_t} + (position{mesh_t} x, tensor[dim] dPos)
 {
   if (!x.isValid()){
     //identity on invalid pos.
@@ -34,6 +34,8 @@ function position{mesh_t} posMove (position{mesh_t} x, tensor[dim] dPos)
     tensor[dim] deltaP = time * inv(∇⊗(cmp.mc.transform)(cmp.refPos)) • dPos; //project velocity
     //time * (DT(x))^{-1} •( dpos )
     tensor[dim] newPos = cmp.refPos + deltaP;
+    //print("At s:", newPos, "\n");
+    //print("Via s:", cmp.refPos, "->", deltaP, "\n");
     if (simplex.isInside(newPos)) { //we did not leave the refrence so we are done
       position{mesh_t} nmp = cmp.mc.meshPos(newPos); //newMeshPos
       return(nmp);
@@ -41,7 +43,13 @@ function position{mesh_t} posMove (position{mesh_t} x, tensor[dim] dPos)
     else {
       real eTime = simplex.exit(cmp, deltaP); //expended time.
       time-=time*eTime; //remove expended time
+      /* print("Leaving cell:", cmp.mc, "\n"); */
+      /* print("The time is:", eTime, "\n"); */
+      /* print("The direction is:", cmp.refPos, "->", deltaP, "\n"); */
+      /* print("New ref Pos:", deltaP * eTime + cmp.refPos, "\n"); */
+      /* print("Current world pos:", cmp.worldPos(), "\n"); */
       position{mesh_t} nmp = simplex.exitPos(cmp, deltaP);//get next cell and position in it.
+      //print("At new:", nmp.refPos, "\n");
       if ( !nmp.isValid || eTime < 0 || eTime > 1 ||  time < timeEps){
 	//we moved off the mesh some how or some error condition happened
 	//or maybe we are done
@@ -77,42 +85,60 @@ function tensor[dim] nV(position{mesh_t} x){
     }
     
 }
+input tensor[dim, dim] M;
+
+function tensor[dim] altF(tensor[dim] x) = M • x;
 
 strand gg(tensor[dim] startPos){
-  output tensor[dim][] stream = {startPos};
-  output tensor[dim][] newStream = {startPos};
+  output tensor[dim][] stream = {};
+  output tensor[dim][] newStream = {};
   int step = 0;
   position{mesh_t} cPos = meshData.findPos(startPos);
   tensor[dim] altCPos = startPos;
   update {//if not valid, get out
+    if(cPos.isValid() != meshData.findPos(altCPos).isValid())
+      {
+	print("ERG:Warning of validity startPos:", startPos, "\n");
+      }
     if (!cPos.isValid() || !meshData.findPos(altCPos).isValid()|| step == stepMax){
-    stabilize;      
-    }
-    if(|cPos.worldPos() - altCPos| > 0.000001){
-      print("Error in tracing: At step:", step, " with particle:", startPos, "\n");
-    }
-    else {print("fine in cell:", cPos.mc(),"\n");}
-    
-    tensor[dim] altUp1 = 0.5*stepSize*F(altCPos)/|F(altCPos)|;
-    tensor[dim] up1 = 0.5 * stepSize * nV(cPos);
-    position{mesh_t} intermed = posMove(cPos, up1);
-    tensor[dim] altIntermed = altCPos + altUp1;
-    if(!intermed.isValid() || !meshData.findPos(altIntermed).isValid()){
-      stabilize;
-    }
-    tensor[dim] altUp2 = stepSize*F(altIntermed)/|F(altIntermed)|;
-    tensor[dim] up2 = stepSize * nV(intermed);
-    cPos = posMove(cPos, up2);
-    altCPos = altCPos + altUp2;
-    if (!cPos.isValid()){
-      print(stream);
-      
-	
-      stabilize; 
+
+      stabilize;      
     }
     stream = stream@{cPos.worldPos()};
     newStream = newStream@{altCPos};
-
+    if(|cPos.worldPos() - altCPos| > 0.000001){
+      print("ERG:Error in tracing 1: At step:", step, " with particle:", startPos, "\n");
+    }
+    else {print("fine in cell 1:", cPos.mc(),"\n");}
+    
+    tensor[dim] altUp1 = 0.5*stepSize*F(altCPos)/|F(altCPos)|;
+    tensor[dim] up1 = 0.5 * stepSize * nV(cPos);
+    tensor[dim] upCorrect1 = 0.5 * stepSize * altF(altCPos)/|altF(altCPos)|;
+    if (|up1 - upCorrect1| > 0.0000001 || |up1 - altUp1| > 0.000001){
+      print("ERG:Error in evaluation on pos 1:", startPos, "\n");
+    }
+    position{mesh_t} intermed = cPos + up1;
+    tensor[dim] altIntermed = altCPos + altUp1;
+    if(intermed.isValid() != meshData.findPos(altIntermed).isValid())
+      {
+	print("ERG:Warning of validity intermed", startPos, "\n");
+      }
+    if(!intermed.isValid() || !meshData.findPos(altIntermed).isValid()){
+      stabilize;
+    }
+    if(|intermed.worldPos() - altIntermed| > 0.000001){
+      print("ERG:Error in tracing 2: At step:", step, " with particle:", startPos, "\n");
+      stabilize;
+    }
+    else {print("fine in cell 2:", cPos.mc(),"\n");}
+    tensor[dim] altUp2 = stepSize*F(altIntermed)/|F(altIntermed)|;
+    tensor[dim] up2 = stepSize * nV(intermed);
+    tensor[dim] upCorrect2 = stepSize  * altF(altIntermed)/|altF(altIntermed)|;
+    cPos = cPos + up2;
+    altCPos = altCPos + altUp2;
     step+=1;
+    if (|up2 - upCorrect2| > 0.0000001 || |up2 - altUp2| > 0.000001){
+      print("ERG:Error in evaluation on pos 2:", startPos, "\n");
+    }
   }
 } create_collection {gg(x) | x in startPoints};
