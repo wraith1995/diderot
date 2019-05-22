@@ -76,7 +76,7 @@
         ],
         "refCell": {
             "type": "simplex",
-            "epsilon": 1e-09,
+            "epsilon": 1e-08,
             "newtonParams": {
                 "contraction": true,
                 "itters": 16,

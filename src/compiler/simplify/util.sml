@@ -267,6 +267,13 @@ structure Util : sig
                         (env, S.E_InsideImage(pos', img', s))
                       end
                   | S.E_FieldFn _ => (env, exp)
+		  | S.E_ExtractFemItem(v, ty, opt) =>
+		    let
+		     val (env, v') = cvtVar(env, v)
+		    in
+		     (env, S.E_ExtractFemItem(v', ty, opt))
+		    end
+		  | _ => raise Fail ("While simplifying \"" ^ name ^ "\" ran into an error in cvtStm while processing something?\n")
                 (* end case *))
         (* the initial environment always includes the strand variable *)
           val (env, _) = cvtVar (VMap.empty, strand)

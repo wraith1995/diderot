@@ -81,21 +81,31 @@ structure CheckExpr : sig
   (* check the well-formedness of a spatial query `e`, which has already been typechecked *)
     fun checkSpatialQuery (env, cxt, e, tyArgs, rngTy) = (case Env.strandTy env
            of SOME(strandTy, sEnv) => (case StrandEnv.findPosVar sEnv
-                 of SOME p => let
-                      val [Ty.TYPE tv] = tyArgs
+					of SOME p => let
+		      val (posTyVar, Ty.TYPE tv) = (case tyArgs
+						    of [a] => (NONE, a)
+						     | [a,b] => (SOME(a), b)
+						     | _ => raise Fail "impossible")
+						    
+		      (*FIXME: add proper type errors here.*)
                       fun result dim = (
                             StrandEnv.recordSpaceDim (sEnv, dim);
                             (e, rngTy))
+		      val posType = TU.prune (Var.monoTypeOf p)
                       in
                       (* instantiate the query's type to the strand type *)
-                        ignore (Unify.matchType (Ty.T_Var tv, strandTy));
+                       ignore (Unify.matchType (Ty.T_Var tv, strandTy));
+
+		       (case posTyVar
+			 of NONE => ()
+			  | SOME(Ty.TYPE tv') => ignore (Unify.matchType (Ty.T_Var tv', posType)));
                       (* check that the strand supports spatial queries *)
                         case StrandEnv.getSpaceDim sEnv
                          of SOME _ => (e, rngTy)  (* we have already processed a spatial query *)
                           | NONE => (
                               Env.recordProp (env, Properties.StrandCommunication);
                             (* check the type of the position; should be 1D, 2D, or 3D *)
-                              case TU.prune (Var.monoTypeOf p)
+                              case posType
                                of Ty.T_Tensor(Ty.Shape[]) => result 1
                                 | Ty.T_Tensor(Ty.Shape[Ty.DimConst 2]) => result 2
                                 | Ty.T_Tensor(Ty.Shape[Ty.DimConst 3]) => result 3
@@ -391,7 +401,9 @@ structure CheckExpr : sig
                                             then checkSpatialQuery (env, cxt, e', tyArgs, rngTy)
                                           else (e', rngTy)
 				      | (e' as AST.E_Apply(_,_,_), rngTy) => (e', rngTy)
-                                      | badResult => badResult
+                                      | badResult => if Atom.same(Atom.atom "sphere", f)
+						     then (print("SPHERE!\n");badResult)
+						     else badResult
                                 (* end case *))
                                 | Env.UserFun f' => checkFunApp((#1 cxt, span), f') args tys
 				| Env.OverloadUserFun(ovldList) => resolveOverload ((#1 cxt, span), f, tys, args, ovldList)

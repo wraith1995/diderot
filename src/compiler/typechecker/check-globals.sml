@@ -859,8 +859,8 @@ structure CheckGlobals : sig
 			(*end case*))
 		   
 
-		    (*makePrinStatement("leaving\n",[],"\n"),*)
-		    val bodyStms = loopStms@[makePrinStatement("Bad end 2",[], "\n"), failReturn]
+		    (*makePrinStatement("leaving\n",[],"\n"), makePrinStatement("Bad end 2",[], "\n"),*)
+		    val bodyStms = loopStms@[failReturn]
 			 
 		    val bodyStms' = initStms@bodyStms
 		    val body = AST.S_Block(bodyStms')

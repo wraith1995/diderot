@@ -153,7 +153,7 @@ structure Basis : sig
           (N.fn_modulate, [BV.fn_modulate_tt, BV.fn_modulate_ff, BV.fn_modulate_tf, BV.fn_modulate_ft]),
           (N.fn_product, [BV.red_product_i, BV.red_product_r]),
           (N.fn_sin, [BV.fn_sin_r, BV.fn_sin_s]),
-          (N.fn_sphere, [BV.fn_sphere_im, BV.fn_sphere1_r, BV.fn_sphere2_t, BV.fn_sphere3_t]),
+          (N.fn_sphere, [BV.fn_sphere_im, BV.fn_sphere1_r, BV.fn_sphere2_t, BV.fn_sphere3_t, BV.fn_sphereMesh_t]),
           (N.fn_sqrt, [BV.fn_sqrt_r, BV.fn_sqrt_s]),
           (N.fn_sum, [BV.red_sum_i, BV.red_sum_r]),
           (N.fn_tan, [BV.fn_tan_r, BV.fn_tan_s]),
@@ -251,7 +251,8 @@ structure Basis : sig
               BV.fn_sphere_im,
               BV.fn_sphere1_r,
               BV.fn_sphere2_t,
-              BV.fn_sphere3_t
+              BV.fn_sphere3_t,
+	      BV.fn_sphereMesh_t
             ]
     in
     fun isSpatialQueryOp x = Var.Set.member (qOps, x)

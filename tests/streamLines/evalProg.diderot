@@ -31,26 +31,39 @@ overload position{mesh_t} + (position{mesh_t} x, tensor[dim] dPos)
   // NOTE: This could be replaced by a while loop over time,
   // but I don't want to add while loops
   foreach (int i in 0..timeSteps ){ //for loop
-    tensor[dim] deltaP = time * inv(∇⊗(cmp.mc.transform)(cmp.refPos)) • dPos; //project velocity
+    tensor[dim] deltaP =  inv(∇⊗(cmp.mc.transform)(cmp.refPos)) • dPos; //project velocity
+    tensor[dim] normDetaP = deltaP/|deltaP|;
     //time * (DT(x))^{-1} •( dpos )
-    tensor[dim] newPos = cmp.refPos + deltaP;
+    tensor[dim] newPos = cmp.refPos + time * deltaP;
     //print("At s:", newPos, "\n");
-    //print("Via s:", cmp.refPos, "->", deltaP, "\n");
     if (simplex.isInside(newPos)) { //we did not leave the refrence so we are done
       position{mesh_t} nmp = cmp.mc.meshPos(newPos); //newMeshPos
       return(nmp);
     }
     else {
-      real eTime = simplex.exit(cmp, deltaP); //expended time.
-      time-=time*eTime; //remove expended time
+      real eTime = simplex.exit(cmp, normDetaP); //expended time where 1 means we went to the full thing... - we want time for time * deltaP - 1 is time * delta
+      print("The time result is:", eTime / |deltaP|, " out of ", time, "\n");
+      print("Via ref:", cmp.refPos, "->", deltaP, " or ", normDetaP, "\n");
+      print("Via world:", cmp.worldPos(), "->", dPos * time, "\n");
+      print("Current cell:", cmp.mc, "\n");
+      time-=eTime / |deltaP|; //remove expended time
+      print("New time is:", time, "\n");
+      if(eTime == -1){
+	print("Failing so we take the stupid way out\n");
+	cmp = meshData.findPos(x.worldPos() + dPos);
+	return(cmp);
+      }
       /* print("Leaving cell:", cmp.mc, "\n"); */
       /* print("The time is:", eTime, "\n"); */
       /* print("The direction is:", cmp.refPos, "->", deltaP, "\n"); */
       /* print("New ref Pos:", deltaP * eTime + cmp.refPos, "\n"); */
       /* print("Current world pos:", cmp.worldPos(), "\n"); */
-      position{mesh_t} nmp = simplex.exitPos(cmp, deltaP);//get next cell and position in it.
+      position{mesh_t} nmp = simplex.exitPos(cmp, normDetaP);//get next cell and position in it.
       //print("At new:", nmp.refPos, "\n");
-      if ( !nmp.isValid || eTime < 0 || eTime > 1 ||  time < timeEps){
+      //the positive time
+      //eTime/|deltaP|
+      if ( !nmp.isValid || eTime < 0 ||  time < timeEps){
+	print("done:", !nmp.isValid, "\n");
 	//we moved off the mesh some how or some error condition happened
 	//or maybe we are done
 	//might want to compare time left to local velocity
@@ -70,7 +83,7 @@ overload position{mesh_t} + (position{mesh_t} x, tensor[dim] dPos)
 
 input tensor[dim][] startPoints;
 input real stepSize = 0.01;
-input int stepMax = 100;
+input int stepMax = 300;
 
 function tensor[dim] nV(position{mesh_t} x){
   if(x.isValid()){
@@ -81,13 +94,15 @@ function tensor[dim] nV(position{mesh_t} x){
   }
   else
     {
+      print("QWE:Eval at 0\n");
       return(zeros[dim]);
     }
     
 }
 input tensor[dim, dim] M;
+input tensor[dim] center;
 
-function tensor[dim] altF(tensor[dim] x) = M • x;
+function tensor[dim] altF(tensor[dim] x) = M • (x - center);
 
 strand gg(tensor[dim] startPos){
   output tensor[dim][] stream = {};
@@ -96,25 +111,49 @@ strand gg(tensor[dim] startPos){
   position{mesh_t} cPos = meshData.findPos(startPos);
   tensor[dim] altCPos = startPos;
   update {//if not valid, get out
+    if(step == 0 && cPos.isValid){
+      tensor[dim] rp = cPos.refPos;
+      if (rp[0]<=0.000001){
+	stabilize;
+      }
+      if (rp[1]<=0.000001){
+	stabilize;
+      }
+      if (rp[2]<=0.000001){
+	stabilize;
+      }
+      real r = [1,1,1] • rp;
+      if (0.9999999 <= r){
+	stabilize;
+      }
+      
+    }
     if(cPos.isValid() != meshData.findPos(altCPos).isValid())
       {
 	print("ERG:Warning of validity startPos:", startPos, "\n");
+
       }
     if (!cPos.isValid() || !meshData.findPos(altCPos).isValid()|| step == stepMax){
-
+      print("Went off the mesh?", !cPos.isValid(), " and ", altCPos, " and ", !meshData.findPos(altCPos).isValid(), "\n");
+      print("Pos is:", cPos.refPos(),"\n");
+      print(stream, "\n", newStream, "\n");
       stabilize;      
     }
     stream = stream@{cPos.worldPos()};
     newStream = newStream@{altCPos};
     if(|cPos.worldPos() - altCPos| > 0.000001){
       print("ERG:Error in tracing 1: At step:", step, " with particle:", startPos, "\n");
+      print("Poses are:", cPos.worldPos(), altCPos, "\n");
+      print("Cells are:", cPos.mc," and ", meshData.findPos(altCPos).mc, "\n");
+      print("Ref poses are:", cPos.refPos," and ", meshData.findPos(altCPos).refPos, "\n");
+      stabilize;
     }
     else {print("fine in cell 1:", cPos.mc(),"\n");}
     
     tensor[dim] altUp1 = 0.5*stepSize*F(altCPos)/|F(altCPos)|;
     tensor[dim] up1 = 0.5 * stepSize * nV(cPos);
     tensor[dim] upCorrect1 = 0.5 * stepSize * altF(altCPos)/|altF(altCPos)|;
-    if (|up1 - upCorrect1| > 0.0000001 || |up1 - altUp1| > 0.000001){
+    if (|up1 - upCorrect1| > 0.000001 || |up1 - altUp1| > 0.000001){
       print("ERG:Error in evaluation on pos 1:", startPos, "\n");
     }
     position{mesh_t} intermed = cPos + up1;
@@ -122,12 +161,16 @@ strand gg(tensor[dim] startPos){
     if(intermed.isValid() != meshData.findPos(altIntermed).isValid())
       {
 	print("ERG:Warning of validity intermed", startPos, "\n");
+	print("Real location:",altIntermed,"\n");
+	print("Cell change: ",  meshData.findPos(altCPos).mc, " to ", meshData.findPos(altIntermed).mc, "\n");
       }
     if(!intermed.isValid() || !meshData.findPos(altIntermed).isValid()){
+      print("Went off the mesh?", !intermed.isValid(), " and ", altIntermed, " and ", !meshData.findPos(altIntermed).isValid(), "\n");
       stabilize;
     }
     if(|intermed.worldPos() - altIntermed| > 0.000001){
       print("ERG:Error in tracing 2: At step:", step, " with particle:", startPos, "\n");
+      print("Poses are:", intermed.worldPos(), altIntermed, "\n");
       stabilize;
     }
     else {print("fine in cell 2:", cPos.mc(),"\n");}
@@ -137,8 +180,10 @@ strand gg(tensor[dim] startPos){
     cPos = cPos + up2;
     altCPos = altCPos + altUp2;
     step+=1;
-    if (|up2 - upCorrect2| > 0.0000001 || |up2 - altUp2| > 0.000001){
+    if (|up2 - upCorrect2| > 0.000001 || |up2 - altUp2| > 0.00001){
       print("ERG:Error in evaluation on pos 2:", startPos, "\n");
+      print("The errors are:", |up2 - upCorrect2|, " and ", |up2 - altUp2|, "\n");
+      print("The cells are:", intermed.mc, " vs ", meshData.findPos(altIntermed).mc  ,"\n");
     }
   }
 } create_collection {gg(x) | x in startPoints};
