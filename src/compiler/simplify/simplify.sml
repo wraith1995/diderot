@@ -194,6 +194,9 @@ structure Simplify : sig
 				 val refPosTemp = newTemp newTensor;
 				 val meshTemp = newTemp meshTy;
 				 val cellTemp = newTemp STy.T_Int
+				 val boolTemp = newTemp STy.T_Bool
+				 val assignTemp = newTemp newTensor
+				 val startAssign = S.S_Var(assignTemp, NONE)
 
 				 val fieldTy = STy.T_Field({diff=NONE, dim=dim, shape=[dim]});
 				 val fieldTemp = newTemp fieldTy;
@@ -202,14 +205,34 @@ structure Simplify : sig
 				 val getMesh = S.S_Assign(meshTemp, S.E_ExtractFem(x', meshHolder))
 				 val fieldAssign = S.S_Assign(fieldTemp, S.E_FemField(meshTemp, meshTemp, SOME(cellTemp), fieldTy, FemOpt.Transform, NONE))
 				 val getRefCell = S.S_Assign(refPosTemp, S.E_ExtractFemItem(x', newTensor, (FemOpt.RefPos, ms)))
-
-				 (*need to build metavars: DK, SK, NK!*)
-				 (**)
+				 val getValid = S.S_Assign(boolTemp, S.E_ExtractFemItem(x', STy.T_Bool, (FemOpt.Valid, ms)))
+							  
+				 val inf = S.E_Lit(Literal.Real(RealLit.posInf))
+				 val infinityInits = List.tabulate(dim, fn x =>
+									   let val v = newTemp STy.realTy
+									   in (v, S.S_Assign(v, inf)) end)
+				 val inits = List.map (fn (x,y) => y) infinityInits
+						      
+				 val infity = S.E_Tensor(List.map (fn (x, y) => x) infinityInits, newTensor)
+				 val badAssign = S.S_Assign(assignTemp, infity)
 				 val metaArgs = [STy.DIFF(NONE), STy.DIM(dim), STy.SHAPE([dim])]
-				 val fin = S.S_Assign(x'', S.E_Prim(BasisVars.op_probe, metaArgs, [fieldTemp, refPosTemp], newTensor))
+				 val worldPos = S.S_Assign(assignTemp, S.E_Prim(BasisVars.op_probe, metaArgs, [fieldTemp, refPosTemp], newTensor))
+
+
+				 val ifStm = S.S_IfThenElse(boolTemp,
+							    S.Block{props = PropList.newHolder(), code =  [getCell, getRefCell, getMesh, fieldAssign, worldPos]},
+							    S.Block{props = PropList.newHolder(), code =  [badAssign]})
+				 val actualFin = S.S_Assign(x'', S.E_Var(assignTemp))
+
+
+						     (*test valid*)
+						     (*var ret;*)
+						     (*build if condition*)
+						     (**)
 
 				in
-				 SOME([fin, fieldAssign, getRefCell, getMesh, getCell])
+				 (* SOME([fin, fieldAssign, getRefCell, getMesh, getCell]) *)
+				 SOME([actualFin, ifStm, getValid]@inits@[startAssign])
 				end
 			   (*end case*))
 			     
@@ -388,16 +411,40 @@ structure Simplify : sig
                           | (SOME pos, SOME 3) => result (BV.fn_sphere3_t, pos)
                           | _ => raise Fail "impossible"
                         (* end case *)
-                      end
-                    else (case Var.kindOf f
-                       of Var.BasisVar => let
-                            val tyArgs = List.map cvtTyArg tyArgs
-                            in
-                              (stms, S.E_Prim(f, tyArgs, xs, cvtTy ty))
-                            end
-                        | _ => raise Fail "bogus prim application"
-                      (* end case *))
-                end
+                  end
+		  else if Var.same(f, BV.fn_sphereMesh_t)
+		  then
+		   let
+		    val tyArgs as [S.TY(posTy), S.TY(STy.T_Strand strand)] = List.map cvtTyArg tyArgs
+		    val newTyArgs = [S.TY(STy.T_Strand strand)]
+		    val SOME sEnv = findStrand(cxt, strand)
+		    val posArgs = (case xs
+				    of [pos, radi] => [radi]
+				     | _ => raise Fail "impossible")
+                    fun result (query, pos) =
+                        (stms, S.E_Prim(query, newTyArgs, pos::posArgs, cvtTy ty))
+			  
+		    val posVar = StrandEnv.findPosVar sEnv
+		    val posVar' = Option.mapPartial getNewPosVar posVar
+		   in
+		    (* extract the position variable and spatial dimension *)
+		    
+                    (case (posVar', StrandEnv.getSpaceDim sEnv)
+                      of (SOME pos, SOME 1) => result (BV.fn_sphere1_r, pos)
+                       | (SOME pos, SOME 2) => result (BV.fn_sphere2_t, pos)
+                       | (SOME pos, SOME 3) => result (BV.fn_sphere3_t, pos)
+                       | _ => raise Fail "impossible"
+		    (* end case *))
+		   end
+                  else (case Var.kindOf f
+			 of Var.BasisVar => let
+                          val tyArgs = List.map cvtTyArg tyArgs
+                         in
+                          (stms, S.E_Prim(f, tyArgs, xs, cvtTy ty))
+                         end
+                          | _ => raise Fail "bogus prim application"
+                       (* end case *))
+          end
           fun doCoerce (srcTy, dstTy, e, stms) = let
                 val (stms, x) = simplifyExpToVar (cxt, e, stms)
                 val dstTy = cvtTy dstTy

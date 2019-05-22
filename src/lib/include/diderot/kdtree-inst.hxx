@@ -224,9 +224,15 @@ namespace diderot {
 #endif
 
       // return empty sequence on empty sphere
-        if (radius <= 0.0) {
+        if (radius <= 0.0 || std::isnan(radius)) {
             return result;
         }
+	//returns empty sequence on a pos that has infinite or nan values.
+	for (int i = 0; i < D; i++){
+	  if (std::isinf(center[i]) || std::isnan(center[i])){
+	    return result;
+	  }
+	}
 
       // stack of nodes for which we must still visit
         std::stack<const node *> stk;
