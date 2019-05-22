@@ -68,10 +68,11 @@ gradF = project(grad(f), spacep)
 # Tests: send grad(0) - since values are the same... it should be the same...
 # Test: 
 #generate points:
-newXc = np.random.uniform(low= -1, high = 1, size=args.num)
-newYc = np.random.uniform(low = -1, high = 1, size=args.num)
-newZc = np.random.uniform(size=args.num)
-points = map(list, zip(*(newXc, newYc, newZc)[0:dim]))
+newXc = [0.01 * x for x in range(100)]#np.random.uniform(low= -1, high = 1, size=args.num)
+newYc = [0.01 * x for x in range(100)] #np.random.uniform(low = -1, high = 1, size=args.num)
+newZc = [0.01 * x for x in range(100)] #np.random.uniform(size=args.num)
+#points = map(list, zip(*(newXc, newYc, newZc)[0:dim]))
+points = [(0.01 * x, 0.01 * y) for x in range(100) for y in range(100)]
 pointsNrrd = "points.nrrd"
 dataPoints = np.array(list(points))
 kindString = "{0}-vector".format(dim)
@@ -128,7 +129,7 @@ tests = zip(fResults, ourResults)
 #print(list(fResults), list(ourResults))
 cellsT = 0
 valsT = 0
-gradsT = 0 
+gradsT = 0
 for (idx, test) in enumerate(tests):
     print(idx)
     print(dataPoints[idx])

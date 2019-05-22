@@ -27,17 +27,7 @@ structure FemGeometry : sig
 	  end = struct
 
 
-
-(* fun makePrim(prim, argTys) = *)
-(*     let *)
-(*      val AST.E_Prim(var, metargs, exprs, result) = prim *)
-(*      val (tyArgs, Ty.T_Fun(domTy, rngTy)) = TU.instantiate(Var.typeOf var) *)
-(*      val exprs' = Option.valOf(Unify.matchArgs(domTy, exprs, argTys)) *)
-(*      val _ = Unify.matchType(result, rngTy) *)
-
-(*     in *)
-(*      AST.E_Prim(var, tyArgs, exprs', result) *)
-(*     end *)
+val verbosity = true;
 
 fun makePrinStatement(msg, vars, endMsg) = AST.S_Print((AST.E_Lit(Literal.String(msg)))::(vars@[AST.E_Lit(Literal.String(endMsg))]))
 						      
@@ -226,7 +216,7 @@ fun newtonLoopBlock(normal, dScalar, refPosExp, dPosExp, maxN, eps, t) =
  fun planePointDistSgn(normal, dScalar, refPosExp) =
      let
       val norDot = makePrim'(BV.op_inner_tt, [normal, refPosExp], [vecTy, vecTy], Ty.realTy)
-      val result = makePrim'(BV.sub_tt, [norDot, dScalar], [Ty.realTy, Ty.realTy], Ty.realTy)
+      val result = makePrim'(BV.sub_tt, [dScalar, norDot], [Ty.realTy, Ty.realTy], Ty.realTy)
 			    
      in
       result
@@ -317,19 +307,21 @@ fun newtonLoopBlock(normal, dScalar, refPosExp, dPosExp, maxN, eps, t) =
 										      
 
 
- fun facetPrint(test1, test2, insideTestval, dist, intExp, (r,d), error, off, dp, maybeInt) =
+ fun facetPrint(test1, test2, insideTestval, dist, signedDist, intExp, (r,d), error, off, dp, maybeInt, otherPossibleTime) =
      let
       val place = rayAtT(r, d, test1)
       fun mkStr x = AST.E_Lit(Literal.String(x))
       val extraPrints = (case maybeInt
 			  of NONE => []
-			   | SOME(fint) => [mkStr " original face: ", fint, mkStr "\n"])
+			   | SOME(fint) => [mkStr "\n original face: ", fint, mkStr " "])
      in
-      AST.S_Print(List.@([mkStr "test :", test1, mkStr " test2: ", test2, mkStr " insideTest: ", insideTestval,
-		   mkStr " dist: ", dist, mkStr " face: ", intExp, mkStr " place: ", place,
+      AST.S_Print(List.@([mkStr "\ntest :", test1, mkStr " test2: ", test2, mkStr " insideTest: ", insideTestval,
+			  mkStr " dist: ", dist, mkStr "signed dist: ", signedDist,
+			  mkStr " face: ", intExp, mkStr " place: ", place,
 		   mkStr " error: ", error,
 		   mkStr " offset :", off,
 		   mkStr " dp: ", dp,
+		   mkStr " otherPossibleTime: ", otherPossibleTime,
 		   mkStr "\n" ],extraPrints))
      end
 
@@ -352,6 +344,19 @@ fun newtonLoopBlock(normal, dScalar, refPosExp, dPosExp, maxN, eps, t) =
       val zero = AST.E_Lit(Literal.Real(RealLit.zero false))
       val eps = AST.E_Lit(Literal.Real(RealLit.fromDigits{isNeg = false, digits = [1], exp = IntInf.fromInt (~parallelTestNeps)}))
       val zeroEps = AST.E_Lit(Literal.Real(RealLit.fromDigits{isNeg = true, digits = [1], exp = IntInf.fromInt (~15)}))
+
+      val timeEps = AST.E_Lit(Literal.Real(RealLit.fromDigits{isNeg = true, digits = [1], exp = IntInf.fromInt (~07)}))
+      val normalEps = AST.E_Lit(Literal.Real(RealLit.fromDigits{isNeg = false, digits = [1], exp = IntInf.fromInt (~07)}))
+      val distEps = AST.E_Lit(Literal.Real(RealLit.fromDigits{isNeg = false, digits = [1], exp = IntInf.fromInt (~07)}))
+
+      fun build(isCloseToZero, eps) =
+	  let
+	   val absTest2 = makePrim'(BV.op_norm_t, [isCloseToZero], [Ty.realTy], Ty.realTy)
+	   val antiNanInfTest = makePrim'(BV.gte_rr, [absTest2, eps], [Ty.realTy, Ty.realTy], Ty.T_Bool)
+					 
+	  in
+	   antiNanInfTest
+	  end
 			 
       fun buildIf(test1, test2, insideTestVal, refine, errorAtT, dist, sgnDist, intExpr) =
 	  let
@@ -360,20 +365,26 @@ fun newtonLoopBlock(normal, dScalar, refPosExp, dPosExp, maxN, eps, t) =
 	   val absTestError = makePrim'(BV.op_norm_t, [testError], [Ty.realTy], Ty.realTy)
 				       
 	   val preRefinedTest1 = refine(preRefine, test1)
-	   val print1 = facetPrint(preRefinedTest1, test2, insideTestVal, dist, intExpr, (r, d), absTestError, r, d, facetIntTest)
+
 	   val posRefineTest2 = preRefinedTest1 (*refine(postRefine, preRefinedTest1)*)
 	   val absTest2 = makePrim'(BV.op_norm_t, [test2], [Ty.realTy], Ty.realTy)
 				   
-	   val positiveTest = makePrim'(BV.gte_rr, [preRefinedTest1, zeroEps], [Ty.realTy, Ty.realTy], Ty.T_Bool)
+	   val positiveTest = makePrim'(BV.gte_rr, [preRefinedTest1, timeEps], [Ty.realTy, Ty.realTy], Ty.T_Bool)
 	   val newUpdateTest = makePrim'(BV.gt_rr, [tempExp, preRefinedTest1], [Ty.realTy, Ty.realTy], Ty.T_Bool)
-	   val antiNanInfTest = makePrim'(BV.gte_rr, [absTest2, eps], [Ty.realTy, Ty.realTy], Ty.T_Bool)
+	   val antiNanInfTest = makePrim'(BV.gte_rr, [absTest2, normalEps], [Ty.realTy, Ty.realTy], Ty.T_Bool)
+	   val savePrint = if printFlag
+			   then [makePrinStatement("Saving at this face!", [preRefinedTest1, newUpdateTest], "\n")]
+			   else []
 	   (*Checks if a stored entry facet is equal to this facet; prevents failure if the pos is slightly outside the ref*)
 	   val optionalIntTest = (case facetIntTest
 				   of SOME(oldFacetInt) => (fn b =>
 							       let
 								val test = makePrim'(BV.neq_ii, [oldFacetInt, intExpr], [Ty.T_Int, Ty.T_Int], Ty.T_Bool)
+								val printBackup = if printFlag
+									    then [makePrinStatement("Saving backup time: ", [faceExp], "\n")]
+									    else []
 							       in
-								AST.S_IfThenElse(test, b, AST.S_Block([AST.S_Assign((faceReserveVar, span), test1)]))
+								AST.S_IfThenElse(test, b, AST.S_Block([AST.S_Assign((faceReserveVar, span), test1)]@printBackup))
 							       end)
 				   |  NONE => (fn b => b))
 	   val preTests = if parallelTest
@@ -387,11 +398,13 @@ fun newtonLoopBlock(normal, dScalar, refPosExp, dPosExp, maxN, eps, t) =
 
 	   (* makePrinStatement("Suc with:", [test1,AST.E_Lit(Literal.String(", ")), test2], "\n"), *)
 	   val fin = AST.S_IfThenElse(test, (optionalIntTest o proc)
-					      (AST.S_Block([
+					      (AST.S_Block(savePrint@[
 							   AST.S_Assign((tempVar, span), posRefineTest2),
 							   AST.S_Assign((tempVar', span), intExpr)
 					      ])),
 				      AST.S_Block([]))
+	   val print1 = facetPrint(preRefinedTest1, test2, insideTestVal, dist, sgnDist, intExpr, (r, d), absTestError, r, d, facetIntTest, faceExp)
+
 	  in
 	   if printFlag
 	   then	AST.S_Block([print1, fin])
@@ -402,38 +415,64 @@ fun newtonLoopBlock(normal, dScalar, refPosExp, dPosExp, maxN, eps, t) =
       val _ = listPairCheck(intersectionExprs, intLits)
       val zip = ListPair.map (fn ((x,y,a,b,c,d,e), z) => (x,y,a,b,c,d,e, z)) (intersectionExprs, intLits)
 		handle exn => raise exn
-
+      val onPlaneVals = List.map (fn  (x,y,a,b,c,d,e, z) => y) zip
 			     
       val ifs = List.map buildIf zip
+      val nanTests = List.map (fn x => build(x, eps)) onPlaneVals
+      val nanTestsWithFace = ListPair.zip (List.tabulate(List.length nanTests, fn x => x), nanTests)
+
 
       val timeReturn = makePrim'(BV.fn_max_r, [tempExp, zero], [Ty.realTy, Ty.realTy], Ty.realTy)
+      val backupTimeReturn = makePrim'(BV.fn_max_r, [faceExp, zero], [Ty.realTy, Ty.realTy], Ty.realTy)
       (*build base + time*dpos       val end = rayAtT(r, d, timeReturn)
 *)
       val workedTestFacet = makePrim'(BV.neq_ii, [tempExp', neg1], [Ty.T_Int, Ty.T_Int], Ty.T_Bool)
       val workedTestInside = buildInsideBool(r, d, timeReturn) (*use intersection time*)
       val workedTest = makeAnds([workedTestFacet, workedTestInside])
 
+      (*make actual fail*)
+
 
 
       val failBlock = AST.S_Block([ (*TODO: should this be ~1? What is the exact standard for this function?*)
 						  AST.S_Return(AST.E_Tensor([coerce neg1, coerce neg1], vec2Ty))
 				 ])
+      val failRet = AST.S_Return(AST.E_Tensor([coerce neg1, coerce neg1], vec2Ty))
+      fun wrapReturn(res as AST.S_Return(e), msg) = if printFlag
+						    then AST.S_Block([makePrinStatement("\nReturning via " ^ msg ^ " : ", [e], "\n"), res])
+						    else res
+      fun makeOnPlaneBackup([]) = failBlock
+	| makeOnPlaneBackup ((i, nanTest)::rest) = failBlock
+	  (* let *)
+	  (*  val thisInt = AST.E_Lit(Literal.Int(IntLit.fromInt i)) *)
+	  (*  val thisCellTest = (case facetIntTest *)
+	  (* 			of SOME(umm) => makePrim'(BV.neq_ii, [umm, thisInt], [Ty.T_Int, Ty.T_Int], Ty.T_Bool)) *)
+	  (*  val test =  makeAnds([nanTest, thisCellTest]) *)
+	  (*  val ret = AST.S_Return(AST.E_Tensor([zero, coerce thisInt], vec2Ty)) *)
+	   
+	  (* in *)
+	  (*  AST.S_IfThenElse(test, ret, makeOnPlaneBackup rest) *)
+      (* end *)
+
+
       val failBlock' = (case facetIntTest
 			 of NONE => failBlock
 			  | SOME(faceInt) =>
 			    let
+			     val antiNanFaceBackUp = makeOnPlaneBackup nanTestsWithFace
 			     val facetTest = makePrim'(BV.equ_rr, [AST.E_Lit(Literal.Real(RealLit.negInf)), faceExp], [Ty.realTy, Ty.realTy], Ty.T_Bool)
-			     val otherReturn = AST.S_Return(AST.E_Tensor([faceExp, coerce faceInt], vec2Ty))
+			     val otherReturn = AST.S_Return(AST.E_Tensor([backupTimeReturn, coerce faceInt], vec2Ty))
 			    in
-			     AST.S_IfThenElse(facetTest, failBlock, otherReturn)
+			     AST.S_IfThenElse(facetTest, wrapReturn(failRet, "fail"), wrapReturn(otherReturn, "backup"))
 			    end) (*TODO: This conditional is not needed... if facet is never tested I think...*)
 
       val ifReturn = AST.S_IfThenElse(workedTest,
 				      AST.S_Block([
-						  AST.S_Return(AST.E_Tensor([timeReturn, coerce tempExp'], vec2Ty))
+						  wrapReturn(AST.S_Return(AST.E_Tensor([timeReturn, coerce tempExp'], vec2Ty)), "standard")
 						 ]),
 				      failBlock'
-				      )
+				     )
+      (*check if we are on a facet and die just in case*)
 
       val stms = [tempStart, tempStart',faceStart]@ifs@[ifReturn]
 
@@ -458,7 +497,7 @@ fun newtonLoopBlock(normal, dScalar, refPosExp, dPosExp, maxN, eps, t) =
   val tests = buildIntersectionTestInfo(dim, geometry, refPosExp, dPosExp)
 
 
-  val body = AST.S_Block(intersectionTesting(tests, true, 20, false, 0, 0, false, SOME(intPosExp), RealLit.posInf, (refPosExp, dPosExp)))
+  val body = AST.S_Block(intersectionTesting(tests, true, 20, false, 0, 0, verbosity, SOME(intPosExp), RealLit.posInf, (refPosExp, dPosExp)))
   val result = ((funAtom, funVar), AST.D_Func(funVar, [refPosParam, dposParam, intPosParam], body))
 
 		 
@@ -466,7 +505,7 @@ fun newtonLoopBlock(normal, dScalar, refPosExp, dPosExp, maxN, eps, t) =
   val funType' = Ty.T_Fun([vecTy, vecTy], vec2Ty)
   val funVar' = Var.new (funAtom', span, Var.FunVar, funType')
 	
-  val body' = AST.S_Block(intersectionTesting(tests, true, 20, true, 0, 0, false, NONE, RealLit.posInf, (refPosExp, dPosExp)))
+  val body' = AST.S_Block(intersectionTesting(tests, true, 20, true, 0, 0, verbosity, NONE, RealLit.posInf, (refPosExp, dPosExp)))
   val result' = ((funAtom', funVar'), AST.D_Func(funVar', [refPosParam, dposParam], body'))
 
 
@@ -534,9 +573,11 @@ fun newtonLoopBlock(normal, dScalar, refPosExp, dPosExp, maxN, eps, t) =
       val printRet = makePrinStatement("temp:", [femExp, cellExp, facetExp], "\n");
       val ret = AST.S_Return(femExp)
       val badReturn = AST.S_Return(AST.E_Seq([neg1, neg1], retTy));
+
+      val test = AST.S_IfThenElse(validFacet, badReturn, ret)
       (*Could insert test here*)
      in
-      AST.S_Block(ret::[])
+      AST.S_Block(test::[])
      end
 
  local

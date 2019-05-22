@@ -517,7 +517,13 @@ fun planeNormal([p1,p2,p3]) =
      val norm =  norm n
      val n' = List.map (fn x => x/norm) n
      val _ = print("norma:"^printRealList(n')^"\n")
-     val dot = List.foldr (op+) 0.0 (ListPair.map Real.* (n', p1))
+
+     val dim = 3
+     val zeros = List.tabulate(dim, fn x => 0.0)
+     val summed = List.foldr (ListPair.map (Real.+)) zeros [p1, p2, p3]
+     val centroid =  List.map (fn x => Real./(x, Real.fromInt dim)) summed
+			      
+     val dot = List.foldr (op+) 0.0 (ListPair.map Real.* (n', centroid))
      val p4 = ListPair.map Real.+ (n', p1)
     in
      (n',dot, p4) (*plane of the form x\in P iff n*x = dot*)
@@ -912,11 +918,49 @@ fun buildTansform(pl1 : real list list, pl2 : real list list) =
 (*Insert testing for the above......pairs of points to hit...... alright...fine*)
 (*world version*)
 (*enter time: no *)
+
+fun swapSign(x) =
+    let
+     val sign = Real.sign x;
+     val newSign = ~sign; (*if 1, -1, if -1, 1*)
+    in
+     Real.copySign(x, Real.fromInt newSign)
+    end
+      
+fun correctNormalOrientation center (d, normal) =
+    let
+     val preDot = ListPair.map (Real.*) (center, normal);
+     val dot = List.foldr (Real.+) 0.0 preDot;
+     val result = d - dot;
+     val sign = Real.sign result;
+     (*We want the interior to be positive for all functional so if it is negative, we swap the sign*)
+     (*Thus, we just multiply everything by the sign*)
+     val d' = if sign > 0
+	      then d
+	      else swapSign(d)
+     val normal' = if sign > 0
+		   then normal
+		   else List.map swapSign normal;
+     val _ = print("Got scalar d:"^(Real.toString d')^"\n")
+     val _ = print("Went to scalar d':"^(Real.toString d')^"\n")
+     val _ = print("Sign is:" ^ (Int.toString sign) ^ "\n")
+     val _ = print("Got normal:["^(String.concatWith "," (List.map (Real.toString) normal))^"]\n");
+     val _ = print("Went to normal:["^(String.concatWith "," (List.map (Real.toString) normal'))^"]\n");
+    in
+     (d', normal')
+    end
 					  
 fun analyzeGeometry2(points, higher2) =
     let
      val Points(xs, _) = points
      val vecs = List.map (fn (x,y) => y) xs
+     val numPoints = List.length xs
+     val dim = (List.length (List.nth(vecs, 0)))
+     val zeros = List.tabulate(dim, fn x => 0.0)
+     val summed = List.foldr (ListPair.map (Real.+)) zeros vecs
+     val centroid = List.map (fn x => Real./(x, Real.fromInt numPoints)) summed
+     val signCorrection = correctNormalOrientation centroid
+			     
      fun getVector i = List.nth(vecs, i)
 
      val Higher(2, xs) = higher2
@@ -924,7 +968,8 @@ fun analyzeGeometry2(points, higher2) =
      val numPlanes = List.length planes
      val computedInfo = List.map planeNormal planes
      val extraPoints = List.map (fn (x,y,z) => z) computedInfo
-     val dNormPairs = List.map (fn (x,y,z) => (y, x)) computedInfo
+     val dNormPairsNoOrient = List.map (fn (x,y,z) => (y, x)) computedInfo
+     val dNormPairs = List.map signCorrection dNormPairsNoOrient
      val affineDefs = ListPair.map (fn ([x,y,z], a) => [x,y,z,a]) (planes, extraPoints)
      (*for x in affineDef, for y in affineDef: *)
 

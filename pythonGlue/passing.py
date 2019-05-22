@@ -41,7 +41,9 @@ class Library:
     def setVerobse(self, bl):
         verboseFunc = self.get_func(name="set_verbose")
         verboseFunc(self.world, ct.c_bool(bl))
-
+    def setWorkers(self, workers):
+        workerFunc = self.get_func(name="set_num_workers")
+        workerFunc(self.world, ct.c_uint(workers))
     def init_world(self):
         initFunc = self.get_func("init_world")
         world = self.world
@@ -96,12 +98,15 @@ class Library:
             self.errorCheck(name="Saving to nrrd: {0}".format(fileName),
                             returnCheck=saveRet)
 
-    def go(self, inputs, outputs, namedInputs=[], verbose=False, shutdown=True):
+    def go(self, inputs, outputs, namedInputs=[], verbose=False, shutdown=True,
+           workers=None):
         self.create_world()
         print("Created World")
         self.init_world()
         print("Running")
         self.setVerobse(verbose)
+        if workers is not None:
+            self.setWorkers(workers)
         for name in inputs:
             print("Set input:{0}".format(name))
             self.set_input(name, inputs[name])
