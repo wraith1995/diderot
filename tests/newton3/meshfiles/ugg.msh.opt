@@ -1,0 +1,8 @@
+Plugin(AnalyseCurvedMesh).Jacobian determinant=1;
+Plugin(AnalyseCurvedMesh).IGE measure=1;
+Plugin(AnalyseCurvedMesh).ICN measure=1;
+Plugin(AnalyseCurvedMesh).Hidding threshold=9;
+Plugin(AnalyseCurvedMesh).Draw PView=0;
+Plugin(AnalyseCurvedMesh).Recompute=0;
+Plugin(AnalyseCurvedMesh).Dimension of elements=-1;
+Plugin(AnalyseCurvedMesh).Run;

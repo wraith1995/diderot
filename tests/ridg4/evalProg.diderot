@@ -1,0 +1,527 @@
+#version 3.0
+
+
+type mesh mesh_t = file("evalProg.json");
+const int dim = mesh_t.dim;
+type functionSpace{mesh_t}[] fns_t = file("evalProg.json");
+type femFunction{fns_t} func_t = file("evalProg.json");
+
+input mesh_t meshData;
+input fns_t space = fns_t(meshData);
+input func_t data = func_t(space);
+
+field(dim)[] F = data.F;
+
+refCell{mesh_t} simplex = meshData.refcell();
+
+
+
+function vec3 grad(vec3 s){
+  real x = s[0];
+  real y = s[1];
+  real z = s[2];
+  vec3 g = [(y)^(2), 2*x*y, 2*z];
+  return g;
+}
+
+function tensor[3,3] hess(vec3 s){
+  real x = s[0];
+  real y = s[1];
+  real z = s[2];
+  tensor[3,3] hess = [[0, 2*y, 0], [2*y, 2*x, 0], [0, 0, 2]];
+
+  return hess;
+}
+
+
+input int timeSteps=32;
+input real timeEps = 0.0000001;
+//input tensor[dim, dim] flowMat = identity(dim);
+
+overload position{mesh_t} + (position{mesh_t} x, tensor[dim] dPos)
+{
+  if (!x.isValid()){
+    //identity on invalid pos.
+    //this way if something becomes invalid
+    //the program keeps chuging along without failing
+    //until the strand checks the validity and dies cleanly.
+    return(x);
+  }
+  /* real time = 1; //time keeping */
+  /* position{mesh_t} cmp = x; //current mesh pos */
+  /* // NOTE: This could be replaced by a while loop over time, */
+  /* // but I don't want to add while loops */
+  /* foreach (int i in 0..timeSteps ){ //for loop */
+  /*   tensor[dim] deltaP =  inv(∇⊗(cmp.mc.transform)(cmp.refPos)) • dPos; //project velocity */
+  /*   tensor[dim] normDetaP = deltaP/|deltaP|; */
+  /*   //time * (DT(x))^{-1} •( dpos ) */
+  /*   tensor[dim] newPos = cmp.refPos + time * deltaP; */
+  /*   //print("At s:", newPos, "\n"); */
+  /*   if (simplex.isInside(newPos)) { //we did not leave the refrence so we are done */
+  /*     position{mesh_t} nmp = cmp.mc.meshPos(newPos); //newMeshPos */
+  /*     //print("ref save\n"); */
+  /*     return(nmp); */
+  /*   } */
+  /*   else { */
+  /*     //print("timeStep\n"); */
+  /*     real eTime = simplex.exit(cmp, normDetaP); //expended time where 1 means we went to the full thing... - we want time for time * deltaP - 1 is time * delta */
+
+
+
+  /*     time-=eTime / |deltaP|; //remove expended time */
+  /*     if(eTime == -1){ */
+  /* 	//print("stupid 1 save\n"); */
+  /* 	cmp = meshData.findPos(x.worldPos() + dPos); */
+  /* 	return(cmp); */
+  /*     } */
+
+  /*     position{mesh_t} nmp = simplex.exitPos(cmp, normDetaP);//get next cell and position in it. */
+
+  /*     if ( !nmp.isValid || eTime < 0 ||  time < timeEps){ */
+  /* 	/\* if (!nmp.isValid || eTime < 0){print("error save\n");} *\/ */
+  /* 	/\* else {print("moving save\n");} *\/ */
+	
+  /* 	return(nmp); */
+  /*     } */
+  /*     cmp = nmp; */
+  /*   } */
+  /* } */
+  /* print("stupid  2 save\n"); */
+  position{mesh_t} result = meshData.findPos(x.worldPos() + dPos);
+  return result;
+}
+
+
+overload tensor[dim] - (position{mesh_t} x, position{mesh_t} y)
+{
+  if (x.isValid() && y.isValid()) {return(x.worldPos() - y.worldPos());}
+  /*   else if (x.isValid()) {return(rad*identity[dim][0]);} */
+  /* else if (y.isValid()) {return(zeros[dim]);} */
+
+  else {  print("Alt\n");return(zeros[dim]);}
+}
+
+
+input real fStrTh ("Feature strength threshold");
+input real fMaskTh ("feature mask threshold") = 0;
+input real fBias ("Bias in feature strength computing") = 0.0;
+input real tipd ("Target inter-particle distance") = 1.0;/*@\label{line:pbfs-tipd}@*/
+/* tipd is the only length or speed variable with data spatial
+   units; everything else measures space in units of tipd */
+input real mabd ("Min allowed birth distance (> 0.7351)") = 0.75;/*@\label{line:pbfs-mabd}@*/
+input real travMax ("Max allowed travel to or on feature") = 10;
+input int nfsMax ("Max allowed # feature steps ") = 20;
+// these next three control the Gradient Descent in Energy
+input real gdeTest ("Scaling in sufficient decrease test") = 0.5;
+input real gdeBack ("How to scale stepsize for backtrack") = 0.5;
+input real gdeOppor ("Opportunistic stepsize increase") = 1.2;
+input real fsEps ("Conv. thresh. on feature step size");
+input real geoEps ("Conv. thresh. on system geometry") = 0.1;
+input real mvmtEps ("Conv. thresh. on point movement") = 0.01;
+input real rpcEps ("Conv. thresh. on recent pop. changes") = 0.01;
+input real pcmvEps ("Motion limit before PC") = 0.3;
+input real isoval ("Which isosurface to sample") = 0;
+input int verb ("Verbosity level") = 0;
+input real sfs ("Scaling (<=1 for stability) on fStep") = 0.5;
+input real hist ("How history matters for convergence") = 0.5;
+// higher hist: slower change, more stringent convergence test
+input int pcp ("periodicity of population control (PC)") = 5;
+input vec3[] ipos ("Initial point positions");
+input int fDim = 2;
+
+function bool insideTest(position{mesh_t} pos){
+  return(pos.isValid() && |pos.worldPos()| <= 4.0 && 3.0 <=  |pos.worldPos()|);
+}
+
+
+
+function bool posNanCheck(vec3 up){
+  return (!(up[0] == up[0]) ||  !(up[1] == up[1]) || !(up[2] == up[2]));
+}
+
+function vec3 fStep(position{mesh_t} pos) {
+  if(pos.isValid){
+    vec3 x = pos.refPos;
+    cell{mesh_t} c = pos.mc;
+    cell{func_t} f = data.funcCell(c);
+    vec3 g = ∇(f.transformedRefField)(x);
+    tensor[dim, dim] H = ∇⊗∇(f.transformedRefField)(x);
+    /* if(|g - grad(pos.worldPos())| > 0.001){ */
+      
+    /*   print("smesh:", pos.refPos, "\n"); */
+    /*   print("Fucking error 1\n"); */
+    /*   print("World Pos:", pos.worldPos(), "\n"); */
+    /*   print("g:",g,"\n"); */
+    /*   print("grad:",grad(pos.worldPos()),"\n"); */
+    /* } else {print("fine\n");} */
+    /* if(|H - hess(pos.worldPos())| > 0.001){ */
+    /*   print("Fucking error 2\n"); */
+    /*   print("World Pos:", pos.worldPos(), "\n"); */
+    /*   print("H:", H, "\n"); */
+    /*   print("hess:", hess(pos.worldPos()),"\n"); */
+    /* } */
+    vec3[3] E = evecs(H);
+    real[3] L = evals(H);
+    vec3 up =  -(1/L[2])*E[2]⊗E[2]•g;
+    if(posNanCheck(up)){
+      return([∞, ∞, ∞]);
+    } else {  return up;}
+  } else {return([∞, ∞, ∞]);}
+}
+
+
+function tensor[3,3] fPerp(position{mesh_t} pos) {
+  if(pos.isValid){
+    vec3 x = pos.refPos;
+    cell{mesh_t} c = pos.mc;
+    cell{func_t} f = data.funcCell(c);
+    tensor[dim, dim] H = ∇⊗∇(f.transformedRefField)(x);
+    vec3 E2 = evecs(H)[2];
+    mat3 m =  identity[3] - E2⊗E2;
+    real t = m : m;
+    if(!(t == t)){
+      return(zeros[3,3]);
+    }
+    return m;
+  } else {return(zeros[dim, dim]);}
+}
+
+function real fStrength(position{mesh_t} pos) {
+  if(pos.isValid){
+    vec3 x = pos.refPos;
+    cell{mesh_t} c = pos.mc;
+    cell{func_t} f = data.funcCell(c);
+    vec3 g = ∇(f.transformedRefField)(x);
+    tensor[dim, dim] H = ∇⊗∇(f.transformedRefField)(x);
+    real str = -evals(H)[2]/(fBias + |g|);
+    return str;
+  } else {return(0.0);}
+}
+
+function real fMask(position{mesh_t} x) = 0.0;
+function bool fTest(position{mesh_t} x) = true;
+
+function bool posTest(position{mesh_t} x) =
+  (insideTest(x)            // in field
+     && fStrength(x) > fStrTh // possibly near feature
+     && fMask(x) >= fMaskTh   // meets feature mask
+     && fTest(x));            // passes addtl feature criterion
+
+// Each particle wants between nnmin and nnmax neighbors
+int nnmin = 6 if (2==fDim) else 2 if (1==fDim) else 0;
+int nnmax = 8 if (2==fDim) else 3 if (1==fDim) else 0;
+
+/* Potential function (found with Mathematica) phi(r):
+   phi(0)=1, phi(r)=0 for r >= 1, with minima (potential well)
+   phi'(2/3)=0 and phi(2/3)=-0.001.  Phi(r) is C^3
+   continuous across the well and with 0 for r >= 1. Potential
+   well induces good packing with energy minimization. */
+function real phi(real r) {/*@\label{line:pbfs-phi}@*/
+  real s=r-2.0/3;
+  return
+    1 + r*(-5.646 + r*(11.9835 + r*(-11.3535 + 4.0550625*r)))
+  if r < 2.0/3 else
+    -0.001 + ((0.09 + (-0.54 + (1.215 - 0.972*s)*s)*s)*s)*s
+  if r < 1 else 0;
+}
+function real phi'(real r) { // phi'(r) = d phi(r) / dr
+  real t=3*r-2;
+  return
+    -5.646 + r*(23.967 + r*(-34.0605 + 16.22025*r))
+  if r < 2.0/3 else
+    0.01234567901*t*(4.86 + t*(-14.58 + t*(14.58 - 4.86*t)))
+  if r < 1 else 0;
+}
+real phiWellRad = 2/3.0;    // radius of potential well
+real rad = tipd/phiWellRad; // actual radius of potential support
+function real enr(vec3 x) = phi(|x|/rad);/*@\label{line:pbfs-enr}@*/
+function vec3 frc(vec3 x) = phi'(|x|/rad) * (1/rad) * x/|x|;/*@\label{line:pbfs-frc}@*/
+
+// pchist reflects periodicity of PC: pchist^(2*pcp) = hist
+real pchist = hist^(1.0/(2*pcp));
+
+int iter = 0;        // iteration counter
+real rpc = 1;        // recent population change
+int popLast = -1;    // population at last iteration
+
+/* Finds a number in [0,1) roughly proportional to the low 32
+   bits of significand of given real x. NOTE: ONLY useful only
+   when compiling with --double */
+function real urnd(real x) {/*@\label{line:pbfs-urnd}@*/
+  if (x==0) return 0;
+  real l2 = log2(|x|);
+  real frxp = 2^(l2-floor(l2)-1); // in [0.5,1.0), like frexp(x)
+  // use iter to make different values for same x
+  return fmod((2^20 + 2*iter)*frxp, 1);
+}
+
+// Given vec3 (and iter), a random-ish value uniformly in [0,1)
+function real v3rnd(position{mesh_t} p){
+  if(!p.isValid){
+    return 0;
+  }
+  vec3 v = p.refPos;
+  return(fmod(urnd(v[0]) + urnd(v[1]) + urnd(v[2]), 1));
+}
+
+// Given vec3 (and iter), a big random-ish integer
+function real genID(position{mesh_t} v) = floor(1000000*v3rnd(v));/*@\label{line:pbfs-genid}@*/
+
+/* Is this an iteration in which to do population control (PC)?
+   If not, pcIter() returns 0. Otherwise, returns 1 when should
+   birth new particles, and -1 when should kill then off. This
+   alternation is not due to any language limitations; it just
+   plays well with the PC heuristics used here. */
+function int pcIter(){
+  if (pcp>0 && iter>0 && 0 == iter % pcp) {return (((iter/pcp)%2)*2 - 1);}
+  else {return 0;}
+}
+
+// Strands first find feature, then interact w/ or make neighbors
+strand point (position{mesh_t} p0, real hh0) {
+  output position{mesh_t} pos = p0; // current particle position
+  real ID = genID(p0);  // strand identifier
+  real hh = hh0;        // energy gradient descent stepsize
+  vec3 step = [0,0,0];  // energy+feature steps this iter
+  bool found = false;   // whether feature has been found/*@\label{line:pbfs-found-init}@*/
+  int nfs = 0;          // number feature steps taken
+  real trav = 0;        // total distance traveled
+  real mvmt = 1;        // average of recent movement
+  real closest = rad;   // distance to closest neighbor
+  int born = 0;         // how many particles I have birthed
+  bool first = true;    // first time through update
+  update {
+    //bool vv = |[pos[0], pos[1]] - [-0.569501,0.208949]| < 0.1; // HIDE
+    bool vv = false; // (ID == 464037); // HIDE
+    if (first && ((verb > 0 && vv) || verb > 1)) { // HIDE
+      print(ID, "(i#", iter, " @ ", pos, "): "); // HIDE
+      print(" HELLO!\n"); // HIDE
+    } // HIDE
+    if (!posTest(pos)) {
+      if ((verb > 0 && vv) || verb > 1) { // HIDE
+        print(ID, "(i#", iter, " @ ", pos, "): "); // HIDE
+        print("!inside=", insideTest(pos), " || fStrength=", fStrength(pos), " <= fStrTh=", fStrTh, " || fMask(pos)=", fMask(pos), " < fMaskTh=", fMaskTh, " || fTest(pos)=", fTest(pos), " ==>DIE\n"); // HIDE
+      } // HIDE
+      die;
+    }
+    if (travMax > 0 && trav > travMax) {  // too much travel
+      die;
+    }
+    if (!found) { // ------------------------ looking for feature/*@\label{line:pbfs-nfound0}@*/
+      if (nfsMax > 0 && nfs > nfsMax) {    // too many steps
+        if ((verb > 0 && vv) || verb > 1) { // HIDE
+          print(ID, "(i#", iter, " @ ", pos, "): "); // HIDE
+          print("nfs=", nfs, " > nfsMax=", nfsMax, " || trav=", trav, " > travMax=", travMax, " =>DIE\n"); // HIDE
+        } // HIDE
+        die;
+      }
+      step = sfs*fStep(pos); // one step towards feature
+      pos = pos +  step;
+      mvmt = lerp(|step|/tipd, mvmt, hist);
+      if (mvmt > fsEps) {        // still moving
+        trav += |step|/tipd;
+        nfs += 1;
+      } else {         // found feature, prepare for code below
+        found = true;
+        mvmt = 1;
+        trav = 0;
+      }/*@\label{line:pbfs-nfound1}@*/
+      if ((verb > 0 && vv) || verb > 1) { // HIDE
+        print(ID, "(i#", iter, " @ ", pos, "): "); // HIDE
+        print("step=", step, "; mvmt=", mvmt, " => found=", found, "\n"); // HIDE
+      } // HIDE
+    } else { // ------------------ feature found; minimize energy/*@\label{line:pbfs-found0}@*/
+      // if feature is isolated points, we're already done
+      if (0 == fDim) { stabilize; }
+      step = sfs*fStep(pos); pos = pos + step; trav += |step|/tipd;
+      real oldE = 0;             // energy at current location
+      vec3 force = [0,0,0];      // force on me from neighbors
+      int nn = 0;                // number of neighbors
+      foreach (point P in sphere(rad)) {
+        vec3 off = P.pos - pos;
+        if (|off|/tipd < fsEps && ID <= P.ID) {
+          // with 0-D features or unlucky intialization, points
+          // can really overlap; point w/ lower ID dies
+          if (verb > 0 && vv) print(" (", ID, " F) on top of ", P.ID, "; I have lower ID; bye\n"); // HIDE
+          die;
+        }
+        oldE += enr(off);
+        force += frc(off);
+        nn += 1;
+      }
+      if (0 == nn) { // else fDim is 1 or 2/*@\label{line:pbfs-0nn0}@*/
+        // No neighbors; create one if possible
+        if (!( pcIter() > 0 && born < nnmax )) { continue; }
+        // Ensure new pos is near feature, for all
+        // feature dimensions and orientations
+        vec3 noff0 = fPerp(pos)•[tipd,0,0];
+        vec3 noff1 = fPerp(pos)•[0,tipd,0];
+        vec3 noff2 = fPerp(pos)•[0,0,tipd];
+        vec3 noff = noff0;
+        noff = noff if |noff| > |noff1| else noff1;
+        noff = noff if |noff| > |noff2| else noff2;
+        // noff is now longest of noff0, noff1, noff2
+        position{mesh_t} npos = pos + tipd*normalize(noff);
+        npos = npos +  sfs*fStep(npos);
+        if ((verb > 0 && vv) || verb > 1) { // HIDE
+          print(ID, "(i#", iter, " @ ", pos, "): "); // HIDE
+          print(" 0==nn =>NEW(", npos, ") w/ ID=", genID(npos), "\n"); // NOTE: the new strand state gets initialized with the current value of iter // HIDE
+        } // HIDE
+        if (posTest(pos)) {
+          new point(npos, hh); born += 1;
+        }
+        if ((verb > 0 && vv) || verb > 1) { // HIDE
+          print(ID, "(i#", iter, " @ ", pos, "): "); // HIDE
+          print("nn=0; after birthing mvmt=", mvmt, "\n"); // HIDE
+        } // HIDE
+        continue;
+      }/*@\label{line:pbfs-0nn1}@*/
+      // Else I did have neighbors; interact with them
+      vec3 es = hh*fPerp(pos)•force; // energy step along force
+      if (|es| > tipd) {             // limit motion to tipd
+        hh *= tipd/|es|;             // decrease stepsize, step
+        es *= tipd/|es|;
+      }                              // now |es| <= tipd
+      vec3 fs = sfs*fStep(pos+es);   // step towards feature
+      //HEY HEY is fsEps needed if you do an fStep at every iter? //HIDE                    
+      if (|fs|/(fsEps*tipd + |es|) > 0.5) {
+        hh *= 0.5; // feature step too big, try w/ smaller step
+        if ((verb > 0 && vv) || verb > 1) { // HIDE
+          print(ID, "(i#", iter, " @ ", pos, "): "); // HIDE
+          print("nn=", nn, "; |fs|/|es|=", |fs|/|es|, " > 0.5; trying again with hh=", hh, "; mvmt=", mvmt, "\n"); // HIDE
+          print("        fs=", fs, "\n"); // HIDE
+          print("        es=", es, "\n"); // HIDE
+        } // HIDE
+        continue;
+      }
+      position{mesh_t} oldpos = pos;
+      vec3 up = fs + es;
+      pos = pos + up;            // take steps, find new energy
+      real newE = 0;
+      closest = rad;
+      // find mean neighbor offset (mno) to know (opposite)
+      // direction in which to add new particles with PC
+      vec3 mno = [0,0,0];
+      nn = 0;
+      foreach (point P in sphere(rad)) {/*@\label{line:pbfs-newE0}@*/
+        vec3 off = P.pos - pos;
+        newE += enr(off);
+        closest = min(closest, |off|);
+        mno += off;
+        nn += 1;
+      }
+      mno /= nn;/*@\label{line:pbfs-newE1}@*/
+      if ((verb > 0 && vv) || verb > 1) { // HIDE
+        print(ID, "(i#", iter, " @ ", pos, "): "); // HIDE
+        print("nn=", nn, "; oldE=", oldE, " newE=", newE, "\n"); // HIDE
+      } // HIDE
+      // test the Armijo sufficient decrease condition
+      if (newE - oldE > gdeTest*(pos - oldpos)•(-force)) {/*@\label{line:pbfs-armijo}@*/
+        // backtrack because energy didn't go down enough
+        hh *= gdeBack;    // try again next time w/ smaller step
+        if (0 == hh) {
+          print(ID, "(i#", iter, " @ ", pos, "): "); // HIDE
+          print("backtracked all the way to hh=0\n"); // HIDE
+          die; // backtracked all the way to hh=0!
+        }
+        if ((verb > 0 && vv) || verb > 1) { // HIDE
+          print(ID, "(i#", iter, " @ ", pos, "): "); // HIDE
+          print("nn=", nn, "; oldE=", oldE, " newE=", newE, "; backtracking; hh=", hh, "; mvmt=", mvmt, "\n"); // HIDE
+          print("      fs=", fs, "\n"); // HIDE
+          print("      es=", es, "\n"); // HIDE
+          print("      newE - oldE=", newE - oldE, "\n"); // HIDE
+          print("      force=", force, "\n"); // HIDE
+          print("      dpos=", pos - oldpos, "\n"); // HIDE
+          print("      0.5*(pos - oldpos).(-force)=", 0.5*(pos - oldpos)•(-force), "\n"); // HIDE
+        } // HIDE
+        pos = oldpos;
+        continue;
+      }
+      hh *= gdeOppor; // opportunistically increase stepsize/*@\label{line:pbfs-descent}@*/
+      step += fs + es;/*@\label{line:pbfs-recstep}@*/
+      trav += |step|/tipd;
+      mvmt = lerp(|step|/tipd, mvmt, hist);
+      if (|step|/tipd < pcmvEps && pcIter() != 0) {
+        // can do PC only if haven't moved a lot
+        if (pcIter()>0       // this is an iter to add
+            && newE<0        // already in a potential well
+            && nn<nnmin      // have fewer than expected neighbors
+            && born<nnmax) { // haven't birthed too many times
+          position{mesh_t} npos = pos + (-tipd*normalize(mno));/*@\label{line:pbfs-mno-use}@*/
+          npos = npos + sfs*fStep(npos); npos = npos + sfs*fStep(npos);
+          bool birth = true;
+          if (fDim == 2 && nn >= 4) {
+            foreach (point P in sphere(npos, tipd*mabd)) {/*@\label{line:pbfs-mabd-used}@*/
+              birth = false; // too close to existing point
+            }
+            if (birth) {
+              // Have nn neighbors: too few (nnmin > nn).
+              // Try adding a new neighbor with a probability
+              // that scales with nnmin-nn.
+              birth = v3rnd(pos) < (nnmin - nn)/real(nnmin);/*@\label{line:pbfs-birth}@*/
+            }
+          }
+          if (birth && posTest(npos)) {
+            new point(npos, hh); born += 1;
+          }
+        } else if (pcIter() < 0 && newE > 0 && nn > nnmax) {
+          // Have too many neighbors, so maybe die. If I have
+          // nn neighbors, they probably also have nn neighbors.
+          // To have fewer, that is, nnmax neighbors, we all
+          // die with chance of nn-nnmax out of nn.
+          if (v3rnd(pos) < (nn - nnmax)/real(nn)) {/*@\label{line:pbfs-death}@*/
+            if (verb > 0 && vv) print("  (", ID, " F); v3rnd=", v3rnd(pos), " < ", (nn - nnmax)/real(nn), " => die \n"); // HIDE
+            die;
+          }
+          // pc = 1; // over-population prevents convergence; HEY MISSING THIS NOW  // HIDE                  
+        }
+      }
+    } // else found/*@\label{line:pbfs-found1}@*/
+    first  = false;
+  } // update
+}
+update {/*@\label{line:pbfs-global}@*/
+  int pop = numActive();
+  int pc = 1 if pop != popLast else 0;
+  rpc = lerp(pc, rpc, pchist);
+  bool allfound = all { P.found | P in point.all};
+  real percfound =
+    100* mean { 1.0 if P.found else 0.0 | P in point.all};
+  real meancl = mean { P.closest | P in point.all };
+  real varicl = mean { (P.closest - meancl)^2 | P in point.all };
+  real covcl = sqrt(varicl) / meancl;
+  real maxmvmt = max { P.mvmt | P in point.all };
+  bool allValid = all {P.pos.isValid | P in point.all};
+  print("======= finished iter ", iter, " w/ ", pop, ")",
+        "; %found=", percfound,
+        "; mean(hh)=", mean { P.hh | P in point.all},
+        "; mean(cl)=", meancl,
+        "; COV(cl)=", covcl,
+        "; max(mvmt)=", maxmvmt,
+        "; pc=", pc,
+        "; rpc=", rpc,
+	"; allValid=", allValid,
+        "\n");
+  if (allfound            // all particles have found the feature/*@\label{line:pbfs-conv}@*/
+      && covcl < geoEps   // and system is geometrically uniform
+      && maxmvmt < mvmtEps  // and nothing's moving much
+      && rpc < rpcEps && allValid) { // and pop. hasn't changed recently
+    print("======= Stabilizing ", numActive(), " (iter ", iter, ")",
+          "; COV(cl)=", covcl, " < ", geoEps,
+          "; max(mvmt)=", maxmvmt, " < ", mvmtEps,
+          "; rpc=", rpc, " < ", rpcEps,
+          "\n");
+    stabilize;
+  }
+  else {
+        print("======= Not Stabilizing ", numActive(), " (iter ", iter, ")",
+          "; COV(cl)=", covcl, " > ", geoEps,
+          "; max(mvmt)=", maxmvmt, " > ", mvmtEps,
+          "; rpc=", rpc, " > ", rpcEps,
+          "\n");
+  }
+  iter += 1;
+  popLast = pop;
+}
+create_collection { point(meshData.findPos(p), 1) | p in ipos};
+  

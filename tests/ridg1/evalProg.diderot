@@ -1,0 +1,183 @@
+#version 3.0
+
+
+type mesh mesh_t = file("evalProg.json");
+const int dim = mesh_t.dim;
+int dimm = dim;
+type functionSpace{mesh_t}[] fns_t = file("evalProg.json");
+type femFunction{fns_t} func_t = file("evalProg.json");
+
+input mesh_t meshData;
+input fns_t space = fns_t(meshData);
+input func_t data = func_t(space);
+
+field(dim)[] F = data.F;
+
+refCell{mesh_t} simplex = meshData.refcell();
+
+function bool insideTest(vec3 x){
+  vec3 mid = x - [0.0, 0.0, 0.0];
+  return(|mid[0]| <= 4.0 && |mid[1]| <= 4.0 && |mid[2]| <= 4.0);
+}
+
+//particle system controls
+input real rad = 0.01;
+input real eps = 0.01;
+input real v0 = 0.0625;
+input real fBias = 0.01;
+input real fStren = 0.01;
+input real zfuz = 0.01;
+input tensor[dim][] ipos;
+
+
+function vec3 fStep(vec3 s) {
+  real x = s[0];
+  real y = s[1];
+  real z = s[2];
+  tensor[dim, dim] H = [[2 * (2 - 3*x^2)^2 - 12 * x * (-x^3 + 2 * x + y), 2 * (2 - 3*x^2), 0], [2* (2- 3*x^2), 2, 0], [0, 0, 2 * zfuz]];
+  vec3 g = [2 * (2 - 3 * x^2) *(-x^3 + 2 * x + y), 2* (-x^3 + 2*x + y), 2 * zfuz * z];
+  vec3[3] E = evecs(H);
+  real[3] L = evals(H);
+  vec3 up =  -(1/L[0])*E[0]⊗E[0]•g;
+  if(!(up[0] == up[0]) ||  !(up[1] == up[1]) || !(up[2] == up[2])){
+    return([∞, ∞, ∞]);
+  }
+  return up;
+  
+}
+
+function bool posNanCheck(vec3 up){
+  return (!(up[0] == up[0]) ||  !(up[1] == up[1]) || !(up[2] == up[2]));
+}
+
+function tensor[3,3] fPerp(vec3 s) {
+  real x = s[0];
+  real y = s[1];
+  real z = s[2];
+  tensor[dim, dim] H = [[2 * (2 - 3*x^2)^2 - 12 * x * (-x^3 + 2 * x + y), 2 * (2 - 3*x^2), 0], [2* (2- 3*x^2), 2, 0], [0, 0, 2 * zfuz]];
+  vec3 E2 = evecs(H)[0];
+  
+  mat3 m =  identity[3] - E2⊗E2;
+  real t = m : m;
+  if(!(t == t)){
+    return(zeros[3,3]);
+  }
+  return m;
+}
+
+function real fStrength(vec3 s) {
+  real x = s[0];
+  real y = s[1];
+  real z = s[2];
+  tensor[dim, dim] H = [[2 * (2 - 3*x^2)^2 - 12 * x * (-x^3 + 2 * x + y), 2 * (2 - 3*x^2), 0], [2* (2- 3*x^2), 2, 0], [0, 0, 2 * zfuz]];
+  vec3 g = [2 * (2 - 3 * x^2) *(-x^3 + 2 * x + y), 2* (-x^3 + 2*x + y), 2 * zfuz * z];
+  return evals(H)[0]/(fBias + |g|);
+}
+
+function real phi(real r) = (1-r)^4;
+function real phi'(real r) = -4 * (1-r)^3;
+function real enr(tensor[dim] x) = phi(|x|/rad);
+function tensor[dim] frc(tensor[dim] x) = phi'(|x|/rad) * (1/rad) * x/|x|;
+
+function bool posTest(vec3 pos){
+  return (insideTest(pos) && !posNanCheck(pos) && (fStrength(pos) >= fStren));
+}
+
+strand particle(tensor[dim] pos0, real hh0){
+  output tensor[dim] pos = pos0;
+  real hh = hh0;
+  tensor[dim] step = zeros[dim];
+  bool found = false;
+  int nfs = 0;
+  int test = 1;
+  int testp = 0;
+  int steps = 0;
+  update {
+    steps+=1;
+    if(!posTest(pos)){
+      die;
+    }
+    if(!found) {
+      step = fStep(pos);
+      pos = pos + step;
+      if(posNanCheck(pos)){die;}
+      if(|step|/rad > eps){
+	nfs += 1;
+	if(nfs > 10) { die;}
+	
+      } else {//real r = |pos - [0.5, 0.5, 0.5]|^2;print("Found at:", pos, " with error:", |r-v0| , "\n");
+	found = true; testp=1;
+	//print("We have eps:", eps, " and rad:", rad, "\n");print("And we had the step:", step, "\n");
+      }
+    }
+    else {
+	pos = pos + fStep(pos);
+	if(posNanCheck(pos)){die;}
+	step = zeros[dim];
+	real oldE = 0;
+	tensor[dim] force = zeros[dim];
+	int nn = 0;
+	/* if(!meshData.findPos(pos).isValid){ */
+	/*   die; */
+	/* } */
+	foreach (particle P in sphere(rad)){
+	  oldE += enr(P.pos - pos);
+	  force += frc(P.pos - pos);
+	  nn += 1;
+	}
+	if (0 == nn){
+	  //print("poop:", pos, "\n");
+	  //print("yay:",pos + [0.5*rad, 0,0 ],"\n");
+	  vec3 npos = pos + [0.5*rad, 0,0 ];
+	  if(posTest(npos)){
+	    new particle(npos, hh);
+	  }
+	  continue;
+	}
+	force = fPerp(pos) • force;
+	tensor[dim] es = hh*force;
+	if(|es| > rad){
+	  hh *= rad/|es|;
+	  es *= rad/|es|;
+	}
+	tensor[dim] samplePos = pos + es;
+	tensor[dim] fs = fStep(samplePos);
+	if (|fs|/|es| > 0.5){
+	  hh *= 0.5;
+	  continue;
+	}
+	tensor[dim] oldPos = pos;
+	tensor[dim] up = fs + es;
+	pos += up;
+	real newE = sum {enr(pos - P.pos) | P in sphere(rad)};
+	if (newE - oldE > 0.5 * (pos - oldPos) •( -force )) {
+	  pos = oldPos;
+	  hh *= 0.5;
+	  continue;
+	}
+	hh *= 1.1;
+	step = up;
+	if(posNanCheck(pos)){die;}
+	//print("Step ",|step|, " with nn:",nn, " and ", pos, "\n");
+	if (nn < 5){
+	  vec3 npos = pos + 0.5 * rad * normalize(es);
+	  if(posTest(npos)){
+	    new particle(npos, hh);
+	  }
+	}
+      }
+    }
+}
+update {
+  int num = sum {P.test | P in particle.all};
+  int steps = max {P.steps | P in particle.all};
+  int numFound = sum {P.testp | P in particle.all};
+  bool allFound = all {P.found | P in particle.all};
+  real maxStep = max {|P.step| | P in particle.all};
+  print("One run:", allFound, " and ", maxStep/rad, " and ",  maxStep/rad < eps, " and ", numFound, " of ", num, "\n");
+  if (allFound  && maxStep/rad < eps) {print("CONVERGED!\n"); stabilize;}
+  if(steps > 5000){stabilize;}
+}
+create_collection {particle(x, 1) | x in ipos};
+
+  

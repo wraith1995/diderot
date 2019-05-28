@@ -1,0 +1,153 @@
+#version 3.0
+
+
+type mesh mesh_t = file("evalProg.json");
+const int dim = mesh_t.dim;
+int dimm = dim;
+type functionSpace{mesh_t}[] fns_t = file("evalProg.json");
+type femFunction{fns_t} func_t = file("evalProg.json");
+
+input mesh_t meshData;
+input fns_t space = fns_t(meshData);
+input func_t data = func_t(space);
+
+field(dim)[] F = data.F;
+
+refCell{mesh_t} simplex = meshData.refcell();
+
+function bool insideTest(vec3 x){
+  vec3 mid = x - [0.5, 0.5, 0.5];
+  return(|mid[0]| <= 0.5 && |mid[1]| <= 0.5 && |mid[2]| <= 0.5);
+}
+
+//particle system controls
+input real rad = 0.01;
+input real eps = 0.01;
+input real v0 = 0.0625;
+input tensor[dim][] ipos;
+
+function tensor[dim] fStep(tensor[dim] x){
+  vec3 xp = x - [0.5, 0.5, 0.5];
+  real f = xp •( xp );
+  vec3 gf = 2 * xp;
+  return gf/(gf •gf ) * (v0 - f);
+  /* if(meshData.findPos(x).isValid){ */
+  /* tensor[dim] ret = (v0 - F(x)) * ∇F(x) /(∇F(x)  • ∇F(x)); */
+  /* return ret; */
+  /* }  */
+  /* else {return [∞,∞,∞];} */
+}
+
+function tensor[dim, dim] fPerp(tensor[dim] x){
+  vec3 xp = x - [0.5, 0.5, 0.5];
+  vec3 gf = 2 * xp;
+  vec3 n = normalize(gf);
+  return identity[dim] - n ⊗ n;
+  /* if ( meshData.findPos(x).isValid){ */
+  /* vec3 norm = normalize( ∇F(x) ); */
+  /* return identity[dim] - norm ⊗ norm; */
+  /* } */
+  /* else return(zeros[dim, dim]); */
+}
+function real fStrength(tensor[dim] x){
+  //= | ∇F(x) |;
+    vec3 xp = x - [0.5, 0.5, 0.5];
+  vec3 gf = 2 * xp;
+  return(|gf|);
+}
+//
+
+function real phi(real r) = (1-r)^4;
+function real phi'(real r) = -4 * (1-r)^3;
+function real enr(tensor[dim] x) = phi(|x|/rad);
+function tensor[dim] frc(tensor[dim] x) = phi'(|x|/rad) * (1/rad) * x/|x|;
+
+strand particle(tensor[dim] pos0, real hh0){
+  output tensor[dim] pos = pos0;
+  real hh = hh0;
+  tensor[dim] step = zeros[dim];
+  bool found = false;
+  int nfs = 0;
+  int test = 1;
+  int testp = 0;
+  update {
+    if(!insideTest(pos)|| fStrength(pos) == 0){
+      //print("Died at:",pos, "\n");
+      die;
+    }
+    if(!found) {
+      step = fStep(pos);
+      pos = pos + step;
+      if(|step|/rad > eps){
+	nfs += 1;
+	if(nfs > 10) { die;}
+	
+      } else {//real r = |pos - [0.5, 0.5, 0.5]|^2;print("Found at:", pos, " with error:", |r-v0| , "\n");
+	found = true; testp=1;
+	//print("We have eps:", eps, " and rad:", rad, "\n");print("And we had the step:", step, "\n");
+      }
+    }
+    else {
+	pos = pos + fStep(pos);
+	step = zeros[dim];
+	real oldE = 0;
+	tensor[dim] force = zeros[dim];
+	int nn = 0;
+	/* if(!meshData.findPos(pos).isValid){ */
+	/*   die; */
+	/* } */
+	foreach (particle P in sphere(rad)){
+	  oldE += enr(P.pos - pos);
+	  force += frc(P.pos - pos);
+	  nn += 1;
+	}
+	if (0 == nn){
+	  //print("poop:", pos, "\n");
+	  //print("yay:",pos + [0.5*rad, 0,0 ],"\n");
+	  new particle(pos + [0.5*rad, 0,0 ], hh);
+	  continue;
+	}
+	force = fPerp(pos) • force;
+	tensor[dim] es = hh*force;
+	if(|es| > rad){
+	  hh *= rad/|es|;
+	  es *= rad/|es|;
+	}
+	tensor[dim] samplePos = pos + es;
+	tensor[dim] fs = fStep(samplePos);
+	if (|fs|/|es| > 0.5){
+	  hh *= 0.5;
+	  continue;
+	}
+	tensor[dim] oldPos = pos;
+	tensor[dim] up = fs + es;
+	pos += up;
+	real newE = sum {enr(pos - P.pos) | P in sphere(rad)};
+	if (newE - oldE > 0.5 * (pos - oldPos) •( -force )) {
+	  pos = oldPos;
+	  hh *= 0.5;
+	  continue;
+	}
+	hh *= 1.1;
+	step = up;
+	//print("Step ",|step|, " with nn:",nn, " and ", pos, "\n");
+	if (nn < 5){
+	  new particle(pos + 0.5 * rad * normalize(es), hh);
+	}
+      }
+    }
+}
+update {
+  int num = sum {P.test | P in particle.all};
+  int numFound = sum {P.testp | P in particle.all};
+  bool allFound = all {P.found | P in particle.all};
+  real maxStep = max {|P.step| | P in particle.all};
+  real maxDist = max {|P.pos - [0.5, 0.5, 0.5]| | P in particle.all};
+  real minDist = min {|P.pos - [0.5, 0.5, 0.5]| | P in particle.all};
+  vec2 averageDist = [minDist, maxDist];
+  print("One run:", allFound, " and ", maxStep/rad, " and ",  maxStep/rad < eps, " and ", numFound, " of ", num, " and ", averageDist, "\n");
+  if (allFound  && maxStep/rad < eps) {print("CONVERGED!\n"); stabilize;}
+}
+create_collection {particle(x, 1) | x in ipos};
+
+  

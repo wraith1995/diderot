@@ -1,0 +1,207 @@
+
+ original face: -1 
+test :0.255604 test2: -2.17465e-06 insideTest: 1 dist: 5.55849e-07 face: 1 place: [0,0.932968,1.63537e-06] error: 0 offset :[5.55849e-07,0.973864,1.07115e-06] dp: [-2.17465e-06,-0.16,2.20739e-06] otherPossibleTime: -inf
+
+ original face: -1 
+test :6.08665 test2: 0.16 insideTest: 0 dist: 0.973864 face: 2 place: [-1.26805e-05,0,1.45068e-05] error: 0 offset :[5.55849e-07,0.973864,1.07115e-06] dp: [-2.17465e-06,-0.16,2.20739e-06] otherPossibleTime: -inf
+
+ original face: -1 
+test :-0.485257 test2: 2.20739e-06 insideTest: 0 dist: 1.07115e-06 face: 3 place: [1.61112e-06,1.05151,0] error: 0 offset :[5.55849e-07,0.973864,1.07115e-06] dp: [-2.17465e-06,-0.16,2.20739e-06] otherPossibleTime: -inf
+
+ original face: -1 
+Returning via standard : [0.255604,1]
+face 1 to 1
+got: [[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]]
+fine in cell 1:14268
+fine in cell 2:14268
+fine in cell 1:14268
+
+test :0.32669 test2: 0.0461869 insideTest: 0 dist: 0.0150888 face: 0 place: [-3.209e-07,1,6.30139e-07] error: 1.11022e-16 offset :[-1.75084e-08,0.973864,9.45202e-07] dp: [-9.28682e-07,0.08,-9.64411e-07] otherPossibleTime: -inf
+
+ original face: -1 
+test :-0.0188529 test2: -9.28682e-07 insideTest: 1 dist: 1.75084e-08 face: 1 place: [0,0.972356,9.63384e-07] error: 0 offset :[-1.75084e-08,0.973864,9.45202e-07] dp: [-9.28682e-07,0.08,-9.64411e-07] otherPossibleTime: -inf
+
+ original face: -1 
+test :-12.1733 test2: -0.08 insideTest: 1 dist: 0.973864 face: 2 place: [1.12876e-05,-1.11022e-16,1.26853e-05] error: 1.11022e-16 offset :[-1.75084e-08,0.973864,9.45202e-07] dp: [-9.28682e-07,0.08,-9.64411e-07] otherPossibleTime: -inf
+
+ original face: -1 
+test :0.980083 test2: -9.64411e-07 insideTest: 0 dist: 9.45202e-07 face: 3 place: [-9.27694e-07,1.05227,0] error: 0 offset :[-1.75084e-08,0.973864,9.45202e-07] dp: [-9.28682e-07,0.08,-9.64411e-07] otherPossibleTime: -inf
+
+ original face: -1 
+Returning via fail : [-1,-1]
+The time result is:-1
+Via ref:[-1.75084e-08,0.973864,9.45202e-07]->[-9.28682e-07,0.08,-9.64411e-07]
+Via world:[0.498367,0.5,0.5]->[0.005,1.18318e-07,6.02757e-08]
+Current cell:14268
+
+test :0.32669 test2: 0.0461869 insideTest: 0 dist: 0.0150888 face: 0 place: [-3.209e-07,1,6.30139e-07] error: 1.11022e-16 offset :[-1.75084e-08,0.973864,9.45202e-07] dp: [-9.28682e-07,0.08,-9.64411e-07] otherPossibleTime: -inf
+
+ original face: -1 
+test :-0.0188529 test2: -9.28682e-07 insideTest: 1 dist: 1.75084e-08 face: 1 place: [0,0.972356,9.63384e-07] error: 0 offset :[-1.75084e-08,0.973864,9.45202e-07] dp: [-9.28682e-07,0.08,-9.64411e-07] otherPossibleTime: -inf
+
+ original face: -1 
+test :-12.1733 test2: -0.08 insideTest: 1 dist: 0.973864 face: 2 place: [1.12876e-05,-1.11022e-16,1.26853e-05] error: 1.11022e-16 offset :[-1.75084e-08,0.973864,9.45202e-07] dp: [-9.28682e-07,0.08,-9.64411e-07] otherPossibleTime: -inf
+
+ original face: -1 
+test :0.980083 test2: -9.64411e-07 insideTest: 0 dist: 9.45202e-07 face: 3 place: [-9.27694e-07,1.05227,0] error: 0 offset :[-1.75084e-08,0.973864,9.45202e-07] dp: [-9.28682e-07,0.08,-9.64411e-07] otherPossibleTime: -inf
+
+ original face: -1 
+Returning via fail : [-1,-1]
+done:1
+ERG:Warning of validity intermed[0.275,0.975,0.425]
+--
+
+ original face: -1 
+test :-0.139904 test2: 0.16 insideTest: 1 dist: 0.0223846 face: 1 place: [0,5.49648e-06,0.99999] error: 0 offset :[0.0223846,3.18017e-06,0.977605] dp: [0.16,-1.65565e-05,-0.160002] otherPossibleTime: -inf
+
+ original face: -1 
+test :0.19208 test2: 1.65565e-05 insideTest: 1 dist: 3.18017e-06 face: 2 place: [0.0531174,0,0.946872] error: 0 offset :[0.0223846,3.18017e-06,0.977605] dp: [0.16,-1.65565e-05,-0.160002] otherPossibleTime: -inf
+
+ original face: -1 
+test :6.10996 test2: -0.160002 insideTest: 0 dist: 0.977605 face: 3 place: [0.999978,-9.79793e-05,0] error: 0 offset :[0.0223846,3.18017e-06,0.977605] dp: [0.16,-1.65565e-05,-0.160002] otherPossibleTime: -inf
+
+ original face: -1 
+Returning via standard : [0.19208,2]
+face 2 to 2
+got: [[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]]
+fine in cell 1:13551
+fine in cell 2:13551
+fine in cell 1:13551
+
+test :0.839422 test2: 4.65954e-06 insideTest: 0 dist: 3.91132e-06 face: 0 place: [-0.0447692,-6.72245e-06,1.04478] error: 1.11022e-16 offset :[0.0223846,-5.21507e-08,0.977609] dp: [-0.08,-7.9463e-06,0.080016] otherPossibleTime: -inf
+
+ original face: -1 
+test :0.279807 test2: -0.08 insideTest: 0 dist: 0.0223846 face: 1 place: [3.46945e-18,-2.27558e-06,0.999998] error: 3.46945e-18 offset :[0.0223846,-5.21507e-08,0.977609] dp: [-0.08,-7.9463e-06,0.080016] otherPossibleTime: -inf
+
+ original face: -1 
+test :-0.00656289 test2: 7.9463e-06 insideTest: 1 dist: 5.21507e-08 face: 2 place: [0.0229096,0,0.977084] error: 0 offset :[0.0223846,-5.21507e-08,0.977609] dp: [-0.08,-7.9463e-06,0.080016] otherPossibleTime: -inf
+
+ original face: -1 
+test :-12.2177 test2: 0.080016 insideTest: 1 dist: 0.977609 face: 3 place: [0.999798,9.7033e-05,0] error: 0 offset :[0.0223846,-5.21507e-08,0.977609] dp: [-0.08,-7.9463e-06,0.080016] otherPossibleTime: -inf
+
+ original face: -1 
+Returning via fail : [-1,-1]
+The time result is:-1
+Via ref:[0.0223846,-5.21507e-08,0.977609]->[-0.08,-7.9463e-06,0.080016]
+Via world:[0.498601,0.5,0.5]->[0.005,-1.00105e-06,-5.04409e-07]
+Current cell:13551
+
+test :0.839422 test2: 4.65954e-06 insideTest: 0 dist: 3.91132e-06 face: 0 place: [-0.0447692,-6.72245e-06,1.04478] error: 1.11022e-16 offset :[0.0223846,-5.21507e-08,0.977609] dp: [-0.08,-7.9463e-06,0.080016] otherPossibleTime: -inf
+
+ original face: -1 
+test :0.279807 test2: -0.08 insideTest: 0 dist: 0.0223846 face: 1 place: [3.46945e-18,-2.27558e-06,0.999998] error: 3.46945e-18 offset :[0.0223846,-5.21507e-08,0.977609] dp: [-0.08,-7.9463e-06,0.080016] otherPossibleTime: -inf
+
+ original face: -1 
+test :-0.00656289 test2: 7.9463e-06 insideTest: 1 dist: 5.21507e-08 face: 2 place: [0.0229096,0,0.977084] error: 0 offset :[0.0223846,-5.21507e-08,0.977609] dp: [-0.08,-7.9463e-06,0.080016] otherPossibleTime: -inf
+
+ original face: -1 
+test :-12.2177 test2: 0.080016 insideTest: 1 dist: 0.977609 face: 3 place: [0.999798,9.7033e-05,0] error: 0 offset :[0.0223846,-5.21507e-08,0.977609] dp: [-0.08,-7.9463e-06,0.080016] otherPossibleTime: -inf
+
+ original face: -1 
+Returning via fail : [-1,-1]
+done:1
+ERG:Warning of validity intermed[0.325,0.425,0.275]
+--
+
+ original face: -1 
+test :0.19208 test2: -1.65565e-05 insideTest: 1 dist: 3.18017e-06 face: 1 place: [0,0.0531174,1.0718e-05] error: 0 offset :[3.18017e-06,0.0223846,7.1853e-06] dp: [-1.65565e-05,0.16,1.8392e-05] otherPossibleTime: -inf
+
+ original face: -1 
+test :-0.139904 test2: -0.16 insideTest: 1 dist: 0.0223846 face: 2 place: [5.49648e-06,0,4.61219e-06] error: 0 offset :[3.18017e-06,0.0223846,7.1853e-06] dp: [-1.65565e-05,0.16,1.8392e-05] otherPossibleTime: -inf
+
+ original face: -1 
+test :-0.390676 test2: 1.8392e-05 insideTest: 0 dist: 7.1853e-06 face: 3 place: [9.64838e-06,-0.0401235,0] error: 0 offset :[3.18017e-06,0.0223846,7.1853e-06] dp: [-1.65565e-05,0.16,1.8392e-05] otherPossibleTime: -inf
+
+ original face: -1 
+Returning via standard : [0.19208,1]
+face 1 to 1
+got: [[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]]
+fine in cell 1:15678
+fine in cell 2:15678
+fine in cell 1:15678
+
+test :-12.2177 test2: -0.0461973 insideTest: 1 dist: 0.564423 face: 0 place: [9.7033e-05,0.999798,0.000105378] error: 0 offset :[-5.21507e-08,0.0223846,6.7746e-06] dp: [-7.9463e-06,-0.08,-8.07055e-06] otherPossibleTime: -inf
+
+ original face: -1 
+test :-0.00656289 test2: -7.9463e-06 insideTest: 1 dist: 5.21507e-08 face: 1 place: [0,0.0229096,6.82757e-06] error: 0 offset :[-5.21507e-08,0.0223846,6.7746e-06] dp: [-7.9463e-06,-0.08,-8.07055e-06] otherPossibleTime: -inf
+
+ original face: -1 
+test :0.279807 test2: 0.08 insideTest: 0 dist: 0.0223846 face: 2 place: [-2.27558e-06,0,4.5164e-06] error: 0 offset :[-5.21507e-08,0.0223846,6.7746e-06] dp: [-7.9463e-06,-0.08,-8.07055e-06] otherPossibleTime: -inf
+
+ original face: -1 
+test :0.839422 test2: -8.07055e-06 insideTest: 0 dist: 6.7746e-06 face: 3 place: [-6.72245e-06,-0.0447692,0] error: 0 offset :[-5.21507e-08,0.0223846,6.7746e-06] dp: [-7.9463e-06,-0.08,-8.07055e-06] otherPossibleTime: -inf
+
+ original face: -1 
+Returning via fail : [-1,-1]
+The time result is:-1
+Via ref:[-5.21507e-08,0.0223846,6.7746e-06]->[-7.9463e-06,-0.08,-8.07055e-06]
+Via world:[0.501399,0.5,0.5]->[-0.005,1.00105e-06,5.04409e-07]
+Current cell:15678
+
+test :-12.2177 test2: -0.0461973 insideTest: 1 dist: 0.564423 face: 0 place: [9.7033e-05,0.999798,0.000105378] error: 0 offset :[-5.21507e-08,0.0223846,6.7746e-06] dp: [-7.9463e-06,-0.08,-8.07055e-06] otherPossibleTime: -inf
+
+ original face: -1 
+test :-0.00656289 test2: -7.9463e-06 insideTest: 1 dist: 5.21507e-08 face: 1 place: [0,0.0229096,6.82757e-06] error: 0 offset :[-5.21507e-08,0.0223846,6.7746e-06] dp: [-7.9463e-06,-0.08,-8.07055e-06] otherPossibleTime: -inf
+
+ original face: -1 
+test :0.279807 test2: 0.08 insideTest: 0 dist: 0.0223846 face: 2 place: [-2.27558e-06,0,4.5164e-06] error: 0 offset :[-5.21507e-08,0.0223846,6.7746e-06] dp: [-7.9463e-06,-0.08,-8.07055e-06] otherPossibleTime: -inf
+
+ original face: -1 
+test :0.839422 test2: -8.07055e-06 insideTest: 0 dist: 6.7746e-06 face: 3 place: [-6.72245e-06,-0.0447692,0] error: 0 offset :[-5.21507e-08,0.0223846,6.7746e-06] dp: [-7.9463e-06,-0.08,-8.07055e-06] otherPossibleTime: -inf
+
+ original face: -1 
+Returning via fail : [-1,-1]
+done:1
+ERG:Warning of validity intermed[0.675,0.575,0.725]
+--
+
+ original face: -1 
+test :6.08665 test2: -0.16 insideTest: 0 dist: 0.973864 face: 1 place: [0,-1.26805e-05,0.999998] error: 0 offset :[0.973864,5.55849e-07,0.0261339] dp: [-0.16,-2.17465e-06,0.16] otherPossibleTime: -inf
+
+ original face: -1 
+test :0.255604 test2: 2.17465e-06 insideTest: 1 dist: 5.55849e-07 face: 2 place: [0.932968,0,0.0670305] error: 0 offset :[0.973864,5.55849e-07,0.0261339] dp: [-0.16,-2.17465e-06,0.16] otherPossibleTime: -inf
+
+ original face: -1 
+test :-0.163337 test2: 0.16 insideTest: 1 dist: 0.0261339 face: 3 place: [0.999998,9.11051e-07,-3.46945e-18] error: 3.46945e-18 offset :[0.973864,5.55849e-07,0.0261339] dp: [-0.16,-2.17465e-06,0.16] otherPossibleTime: -inf
+
+ original face: -1 
+Returning via standard : [0.255604,2]
+face 2 to 2
+got: [[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]]
+fine in cell 1:14980
+fine in cell 2:14980
+fine in cell 1:14980
+
+test :0.980083 test2: 5.56803e-07 insideTest: 0 dist: 5.45713e-07 face: 0 place: [1.05227,-9.27694e-07,-0.0522702] error: 0 offset :[0.973864,-1.75084e-08,0.0261346] dp: [0.08,-9.28682e-07,-0.0799981] otherPossibleTime: -inf
+
+ original face: -1 
+test :-12.1733 test2: 0.08 insideTest: 1 dist: 0.973864 face: 1 place: [0,1.12876e-05,0.999976] error: 0 offset :[0.973864,-1.75084e-08,0.0261346] dp: [0.08,-9.28682e-07,-0.0799981] otherPossibleTime: -inf
+
+ original face: -1 
+test :-0.0188529 test2: 9.28682e-07 insideTest: 1 dist: 1.75084e-08 face: 2 place: [0.972356,0,0.0276428] error: 0 offset :[0.973864,-1.75084e-08,0.0261346] dp: [0.08,-9.28682e-07,-0.0799981] otherPossibleTime: -inf
+
+ original face: -1 
+test :0.32669 test2: -0.0799981 insideTest: 0 dist: 0.0261346 face: 3 place: [1,-3.209e-07,0] error: 0 offset :[0.973864,-1.75084e-08,0.0261346] dp: [0.08,-9.28682e-07,-0.0799981] otherPossibleTime: -inf
+
+ original face: -1 
+Returning via fail : [-1,-1]
+The time result is:-1
+Via ref:[0.973864,-1.75084e-08,0.0261346]->[0.08,-9.28682e-07,-0.0799981]
+Via world:[0.501633,0.5,0.5]->[-0.005,-1.18318e-07,-6.02757e-08]
+Current cell:14980
+
+test :0.980083 test2: 5.56803e-07 insideTest: 0 dist: 5.45713e-07 face: 0 place: [1.05227,-9.27694e-07,-0.0522702] error: 0 offset :[0.973864,-1.75084e-08,0.0261346] dp: [0.08,-9.28682e-07,-0.0799981] otherPossibleTime: -inf
+
+ original face: -1 
+test :-12.1733 test2: 0.08 insideTest: 1 dist: 0.973864 face: 1 place: [0,1.12876e-05,0.999976] error: 0 offset :[0.973864,-1.75084e-08,0.0261346] dp: [0.08,-9.28682e-07,-0.0799981] otherPossibleTime: -inf
+
+ original face: -1 
+test :-0.0188529 test2: 9.28682e-07 insideTest: 1 dist: 1.75084e-08 face: 2 place: [0.972356,0,0.0276428] error: 0 offset :[0.973864,-1.75084e-08,0.0261346] dp: [0.08,-9.28682e-07,-0.0799981] otherPossibleTime: -inf
+
+ original face: -1 
+test :0.32669 test2: -0.0799981 insideTest: 0 dist: 0.0261346 face: 3 place: [1,-3.209e-07,0] error: 0 offset :[0.973864,-1.75084e-08,0.0261346] dp: [0.08,-9.28682e-07,-0.0799981] otherPossibleTime: -inf
+
+ original face: -1 
+Returning via fail : [-1,-1]
+done:1
+ERG:Warning of validity intermed[0.725,0.025,0.575]

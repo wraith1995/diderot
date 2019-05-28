@@ -1,0 +1,45 @@
+#version 3.0
+
+
+type mesh mesh_t = file("evalProg.json");
+const int dim = mesh_t.dim;
+int dimm = dim;
+type functionSpace{mesh_t}[] fns_t = file("evalProg.json");
+type femFunction{fns_t} func_t = file("evalProg.json");
+
+
+input mesh_t meshData;
+input fns_t space = fns_t(meshData);
+input func_t data = func_t(space);
+
+field(dim)[] F = data.F;
+
+input tensor[dim][] ipos;
+
+function tensor[dim] findNormal(position{mesh_t}  pos0){
+  cell{func_t} c = data.funcCell(pos0.mc);
+  tensor[dim] evalPoint  = pos0.refPos;
+  tensor[dim] grad = ∇(c.transformedRefField)(evalPoint);
+  return(normalize(-grad));
+}
+
+strand normal(position{mesh_t}  pos0, tensor[dim] xp){
+  output tensor[dim] normal = zeros[dim];
+  update {
+    if(pos0.isValid){
+      normal = findNormal(pos0);
+      
+      real temp1 = det(∇⊗(pos0.mc.transform)(pos0.refPos));
+      real temp2 = det(∇⊗(pos0.mc.transform)([0,0.1, 0.1]));
+      real temp3 = det(∇⊗(pos0.mc.transform)([0.25,0.25, 0.25]));
+      //print("Ratios:", temp1/temp2, temp1/temp3, temp2/temp3, "\n");
+      print(pos0.mc, ",");
+    }
+    else {print("Error at input pos:", xp, "\n");}
+    
+    stabilize;
+  }
+}
+create_collection {normal(meshData.findPos(x), x) | x in ipos};
+
+  

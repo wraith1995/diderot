@@ -1,0 +1,209 @@
+#version 3.0
+
+
+type mesh mesh_t = file("evalProg.json");
+const int dim = mesh_t.dim;
+int dimm = dim;
+type functionSpace{mesh_t}[] fns_t = file("evalProg.json");
+type femFunction{fns_t} func_t = file("evalProg.json");
+
+
+input mesh_t meshData;
+input fns_t space = fns_t(meshData);
+input func_t data = func_t(space);
+
+field(dim)[] F = data.F;
+refCell{mesh_t} simplex = meshData.refcell();
+
+
+//particle system controls
+input real rad = 0.01;
+input real eps = 0.01;
+input real v0 = 0.0;
+input tensor[dim][] ipos;
+//overload these functions with pos
+//overload -, + with dumb things
+//change var labels
+//run
+function tensor[dim] fStep(position{mesh_t} y){
+  if(y.isValid){
+    tensor[dim]  x = y.refPos;
+    cell{mesh_t} c = y.mc;
+    cell{func_t} f = data.funcCell(c);
+    tensor[dim] ret = (v0 - (f.refField)(x)) * ∇(f.transformedRefField)(x) /(∇(f.transformedRefField)(x)  • ∇(f.transformedRefField)(x));
+    return ret;
+  } else {return [∞,∞,∞];}
+}
+
+function tensor[dim, dim] fPerp(position{mesh_t} y){
+  if (y.isValid){
+    tensor[dim] x = y.refPos;
+    cell{mesh_t} c = y.mc;
+    cell{func_t} f = data.funcCell(c);
+    vec3 norm = normalize(∇(f.transformedRefField)(x));
+    return identity[dim] - norm ⊗ norm;
+   
+  } else return(zeros[dim, dim]);
+}
+function real fStrength(position{mesh_t} y){
+  if(y.isValid()){
+    cell{mesh_t} c = y.mc;
+    cell{func_t} f = data.funcCell(c);
+    
+    return |∇(f.transformedRefField)((y.refPos))|;
+  } else {return(0.0);}
+}
+//
+
+function real phi(real r) = (1-r)^4;
+function real phi'(real r) = -4 * (1-r)^3;
+function real enr(tensor[dim] x) = phi(|x|/rad);
+function tensor[dim] frc(tensor[dim] x) = phi'(|x|/rad) * (1/rad) * x/|x|;
+
+input int timeSteps=32;
+input real timeEps = 0.0000001;
+//input tensor[dim, dim] flowMat = identity(dim);
+
+overload position{mesh_t} + (position{mesh_t} x, tensor[dim] dPos)
+{
+  if (!x.isValid()){
+    //identity on invalid pos.
+    //this way if something becomes invalid
+    //the program keeps chuging along without failing
+    //until the strand checks the validity and dies cleanly.
+    return(x);
+  }
+  real time = 1; //time keeping
+  position{mesh_t} cmp = x; //current mesh pos
+  // NOTE: This could be replaced by a while loop over time,
+  // but I don't want to add while loops
+  foreach (int i in 0..timeSteps ){ //for loop
+    tensor[dim] deltaP =  inv(∇⊗(cmp.mc.transform)(cmp.refPos)) • dPos; //project velocity
+    tensor[dim] normDetaP = deltaP/|deltaP|;
+    //time * (DT(x))^{-1} •( dpos )
+    tensor[dim] newPos = cmp.refPos + time * deltaP;
+    //print("At s:", newPos, "\n");
+    if (simplex.isInside(newPos)) { //we did not leave the refrence so we are done
+      position{mesh_t} nmp = cmp.mc.meshPos(newPos); //newMeshPos
+      //print("ref save\n");
+      return(nmp);
+    }
+    else {
+      //print("timeStep\n");
+      real eTime = simplex.exit(cmp, normDetaP); //expended time where 1 means we went to the full thing... - we want time for time * deltaP - 1 is time * delta
+
+
+
+      time-=eTime / |deltaP|; //remove expended time
+      if(eTime == -1){
+	//print("stupid 1 save\n");
+	cmp = meshData.findPos(x.worldPos() + dPos);
+	return(cmp);
+      }
+
+      position{mesh_t} nmp = simplex.exitPos(cmp, normDetaP);//get next cell and position in it.
+
+      if ( !nmp.isValid || eTime < 0 ||  time < timeEps){
+	/* if (!nmp.isValid || eTime < 0){print("error save\n");} */
+	/* else {print("moving save\n");} */
+	
+	return(nmp);
+      } 
+      cmp = nmp;
+    }
+  }
+  //print("stupid  2 save\n");
+  
+  cmp = meshData.findPos(x.worldPos() + dPos);
+  return(cmp);
+}
+
+
+overload tensor[dim] - (position{mesh_t} x, position{mesh_t} y)
+{
+  if (x.isValid() && y.isValid()) {return(x.worldPos() - y.worldPos());}
+  /*   else if (x.isValid()) {return(rad*identity[dim][0]);} */
+  /* else if (y.isValid()) {return(zeros[dim]);} */
+
+  else {  print("Alt\n");return(zeros[dim]);}
+}
+
+strand particle(position{mesh_t}  pos0, real hh0){
+  output position{mesh_t} pos = pos0;
+  real hh = hh0;
+  tensor[dim] step = zeros[dim];
+  bool found = false;
+  int nfs = 0;
+  int test = 1;
+  int testp = 0;
+  update {
+    if(!pos.isValid || fStrength(pos) == 0 || hh == 0){
+      die;
+    }
+    if(!found) {
+      step = fStep(pos);
+      pos = pos + step;
+      if(|step|/rad > eps){
+	nfs += 1;
+	if(nfs > 10) { die;}
+      } else { found = true; testp=1;}
+      //print("The nfs is:", nfs, "\n");
+    }
+    else {
+	pos = pos + fStep(pos);
+	step = zeros[dim];
+	real oldE = 0;
+	tensor[dim] force = zeros[dim];
+	int nn = 0;
+
+	foreach (particle P in sphere(rad)){
+	  oldE += enr(P.pos - pos);
+	  force += frc(P.pos - pos);
+	  nn += 1;
+	}
+	if (0 == nn && pos.isValid()){
+	  new particle(pos + [0.5*rad, 0,0 ], hh);
+	  continue;
+	}
+	force = fPerp(pos) • force;
+	tensor[dim] es = hh*force;
+	if(|es| > rad){
+	  hh *= rad/|es|;
+	  es *= rad/|es|;
+	}
+	position{mesh_t} samplePos = pos + es;
+	tensor[dim] fs = fStep(samplePos);
+	if (|fs|/|es| > 0.5){
+	  hh *= 0.5;
+	  continue;
+	}
+        position{mesh_t} oldPos = pos;
+	pos += fs + es;
+	real newE = sum {enr(pos - P.pos) | P in sphere(pos, rad)};
+	if (newE - oldE > 0.5 * (pos - oldPos) •( -force )) {
+	  pos = oldPos;
+	  hh *= 0.5;
+	  continue;
+	}
+	  
+	
+	hh *= 1.1;
+	step = fs + es;
+	if (nn < 5){
+	  new particle(pos + 0.5 * rad * normalize(es), hh);
+	}
+      }
+    }
+}
+update {
+  int num = sum {P.test | P in particle.all};
+  int numFound = sum {P.testp | P in particle.all};
+  bool allValid = all {P.pos.isValid() | P in particle.all};//Is this a good idea?
+  bool allFound = all {P.found | P in particle.all};
+  real maxStep = max {|P.step| | P in particle.all};
+  print("One run:", allFound, " and ", allValid, " and ", maxStep, " and ", num, " of ", numFound, "\n");
+  if (allFound && allValid && maxStep/rad < eps) {print("CONVERGED!\n"); stabilize;}
+}
+create_collection {particle(meshData.findPos(x), 1) | x in ipos};
+
+  
