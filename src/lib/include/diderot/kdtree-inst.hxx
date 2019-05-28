@@ -78,6 +78,9 @@ namespace diderot {
         while ((jx < hi) && (this->strand(jx)->_pos(inIdx)[axis] < X)) {
             jx++;
         }
+	if(!(this->strand(jx)->_pos(inIdx)[axis] >= X)){
+	  std:: cout << this->strand(jx)->_pos(inIdx)[axis] << " < " << X << "\n";
+	}
         assert (this->strand(jx)->_pos(inIdx)[axis] >= X);
         index_t ix = jx;
         while (jx < hi) {

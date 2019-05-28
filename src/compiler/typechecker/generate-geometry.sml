@@ -27,7 +27,7 @@ structure FemGeometry : sig
 	  end = struct
 
 
-val verbosity = true;
+val verbosity = false;
 
 fun makePrinStatement(msg, vars, endMsg) = AST.S_Print((AST.E_Lit(Literal.String(msg)))::(vars@[AST.E_Lit(Literal.String(endMsg))]))
 						      
@@ -719,7 +719,7 @@ fun newtonLoopBlock(normal, dScalar, refPosExp, dPosExp, maxN, eps, t) =
 	   val printStm = printSolveInfo(seqExp, srcFacetExp, dstFacetExpr, selectedTensor )
 
 	  in
-	   (SOME(printStm), result) handle exn => raise exn
+	   (SOME(AST.S_Block([])), result) handle exn => raise exn
 	  end
 
 

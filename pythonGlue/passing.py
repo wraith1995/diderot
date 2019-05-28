@@ -65,10 +65,10 @@ class Library:
         strandRet = strandFunc(self.world)
         self.errorCheck(name="create_strands", returnCheck=strandRet)
 
-    def runStrands(self):
+    def runStrands(self, steps=0):
         runFunc = self.get_func("run")
         print("run")
-        steps = runFunc(self.world, ct.c_uint(0))
+        steps = runFunc(self.world, ct.c_uint(steps))
         print("end")
         return(steps)
 
@@ -99,7 +99,7 @@ class Library:
                             returnCheck=saveRet)
 
     def go(self, inputs, outputs, namedInputs=[], verbose=False, shutdown=True,
-           workers=None):
+           workers=None, steps=0):
         self.create_world()
         print("Created World")
         self.init_world()
@@ -117,7 +117,7 @@ class Library:
         print("Set named inputs")
         self.create_strands()
         print("Create Strands")
-        steps = self.runStrands()
+        steps = self.runStrands(steps=steps)
         print("Ran steps: {0}".format(steps))
         for output in outputs:
             fileName = output[2]
