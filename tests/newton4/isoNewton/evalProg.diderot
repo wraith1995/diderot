@@ -19,8 +19,34 @@ input tensor[dim][] ipos;
 function tensor[dim] findNormal(position{mesh_t}  pos0){
   cell{func_t} c = data.funcCell(pos0.mc);
   tensor[dim] evalPoint  = pos0.refPos;
+  tensor[dim] et = pos0.worldPos();
   tensor[dim] grad = ∇(c.transformedRefField)(evalPoint);
-  return(normalize(-grad));
+  real a = et[0]^5;
+  real b = et[1]^5;
+  real cc = et[2]^5;
+  real z1 = et[0]^6;
+  real z2 = et[1]^6;
+  real z3 = et[2]^6;
+  real t = z1+z2+z3-1;
+  real tp = c.refField(evalPoint);
+  tensor[dim] gradp = 6 * [a,b,cc];
+  print("Doting:", normalize(grad) • normalize(gradp), "\n");
+  if(|normalize(grad) - normalize(gradp)| > 0.000001){
+    print("=========\n");
+
+    if(acos(normalize(grad) • normalize(gradp)) * π > 0.1){print("warn\n");}
+    print("Error is:", acos(normalize(grad) • normalize(gradp)), "\n");
+    print("The ref pos:", evalPoint, "\n");
+    print("The world pos:", et, "\n");
+    print("Error:",normalize(grad) , normalize(gradp), "\n");
+    print("Error in impl:", t, "\n");
+    print("Error in ugg:", |t-tp|, "\n");
+    print("=========\n");
+
+  }
+  else {print("COR\n"); print("Erorr in impl:", t, "\n");
+    print("Error in ugg:", |t-tp|, "\n");}
+  return(normalize(-gradp));
 }
 
 strand normal(position{mesh_t}  pos0, tensor[dim] xp){
@@ -33,7 +59,7 @@ strand normal(position{mesh_t}  pos0, tensor[dim] xp){
       real temp2 = det(∇⊗(pos0.mc.transform)([0,0.1, 0.1]));
       real temp3 = det(∇⊗(pos0.mc.transform)([0.25,0.25, 0.25]));
       //print("Ratios:", temp1/temp2, temp1/temp3, temp2/temp3, "\n");
-      print(pos0.mc, ",");
+      //print(pos0.mc, ",");
     }
     else {print("Error at input pos:", xp, "\n");}
     

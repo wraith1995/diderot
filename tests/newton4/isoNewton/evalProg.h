@@ -3,7 +3,7 @@
  *
  * C interface to library generated from evalProg.diderot.
  *
- * Command: /home/teocollin/gitcode/diderot/bin/diderotc --debug --log --dump-pt --dump-ast --dump-simple --dump-high --dump-mid --dump-low --dump-tree --double --namespace=evalProg --target=parallel evalProg.diderot
+ * Command: /home/teocollin/gitcode/diderot/bin/diderotc --debug --log --dump-pt --dump-ast --dump-simple --dump-high --dump-mid --dump-low --dump-tree --double --namespace=evalProg evalProg.diderot
  * Version: master:2016-07-29
  */
 
@@ -12,7 +12,7 @@
 
 #define DIDEROT_DOUBLE_PRECISION
 #define DIDEROT_INT
-#define DIDEROT_TARGET_PARALLEL
+#define DIDEROT_TARGET_SEQUENTIAL
 
 #include "diderot/config.h"
 
@@ -115,26 +115,6 @@ bool evalProg_get_verbose (evalProg_world_t *wrld);
 //! \return true if there are any errors
 bool evalProg_set_printer_cb (evalProg_world_t *wrld, bool (*pr)(void *, char *), void *data);
 /*---------- end lib-h-body.in ----------*/
-/*---------- begin lib-h-par-extras.in ----------*/
-//! get the number of hardware cores
-//! \param wrld the world-state of the Diderot program
-//! \return the number of cores on the system
-uint32_t evalProg_get_num_cores (evalProg_world_t *wrld);
-
-//! set the number of workers.  The value should be between 0 and the number of
-//! hardware cores.  Note that this function should be called after evalProg_init_world
-//! and before evalProg_create_strands.
-//! \param wrld the world-state of the Diderot program
-//! \param nWorkers the requested number of workers; 0 means set the number of
-//!        workers to the number of cores.
-//! \return true if there are any errors
-bool evalProg_set_num_workers (evalProg_world_t *wrld, uint32_t nWorkers);
-
-//! get the number of workers.
-//! \param wrld the world-state of the Diderot program
-//! \return the number of workers
-uint32_t evalProg_get_num_workers (evalProg_world_t *wrld);
-/*---------- end lib-h-par-extras.in ----------*/
 
 /**** Getters for output values ****/
 bool evalProg_output_get_normal (evalProg_world_t *wrld, Nrrd *data);

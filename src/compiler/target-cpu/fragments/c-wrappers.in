@@ -102,6 +102,22 @@ extern "C" uint32_t @PREFIX@_run (@PREFIX@_world_t *wrld, uint32_t maxNSteps)
     return w->run(maxNSteps);
 }
 
+extern "C" uint32_t @PREFIX@_run_with_time (@PREFIX@_world_t *wrld, uint32_t maxNSteps, double * time)
+{
+    @PREFIX@::world *w = reinterpret_cast<@PREFIX@::world *>(wrld);
+
+    if (w->_stage < diderot::POST_CREATE) {
+        w->error ("attempt to run uninitialized program");
+        return 0;
+    }
+    else if (w->_stage == diderot::DONE) {
+        return 0;
+    }
+    uint32_t ret =  w->run(maxNSteps);
+    *time = w->_run_time;
+    return ret;
+}
+
 extern "C" void @PREFIX@_shutdown (@PREFIX@_world_t *wrld)
 {
     @PREFIX@::world *w = reinterpret_cast<@PREFIX@::world *>(wrld);
@@ -112,6 +128,13 @@ extern "C" void @PREFIX@_set_verbose (@PREFIX@_world_t *wrld, @BOOLTY@ mode)
 {
     @PREFIX@::world *w = reinterpret_cast<@PREFIX@::world *>(wrld);
     w->_verbose = (mode ? true : false);
+}
+
+extern "C" double @PREFIX@_get_runTime (@PREFIX@_world_t *wrld)
+{
+    @PREFIX@::world *w = reinterpret_cast<@PREFIX@::world *>(wrld);
+    //std::cout << "ugg:" << w->_run_time << "\n";
+    return (w->_run_time);
 }
 
 extern "C" @BOOLTY@ @PREFIX@_get_verbose (@PREFIX@_world_t *wrld)

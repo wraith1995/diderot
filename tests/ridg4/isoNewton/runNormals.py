@@ -28,10 +28,11 @@ def getNormals(f, pointsNrrdFile):
     programNameArg = "isoNewton/evalProg"
     nameSpaceArg = "evalProg"
     outFileName = "normals"
+    outFileName1 = "strens"
     library = ct.CDLL("./" + programNameArg + ".so")
     program = passing.Library(library, nameSpace=nameSpaceArg)
     inputs = {"meshData": [femArgs[0]], "space": [femArgs[1]], "data": [femArgs[2]]}
     namedInputs = {"ipos": pointsNrrdFile}
-    outputs = [ ("normal", 1, outFileName)]
+    outputs = [("ref", 1, outFileName)]
     program.go(inputs, outputs, namedInputs=namedInputs, verbose=True, workers=None, shutdown=False)
 

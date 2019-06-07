@@ -16,11 +16,13 @@ def make3d(x):
     else:
         raise Exception("Stupid")
 
-def writePointsToVtk(data, vtkFile, normals=None):
+def writePointsToVtk(data, vtkFile, normals=None, scalars=None):
     vtkPoints = vtk.vtkPoints()
     vertices = vtk.vtkCellArray()
     numPoints = len(data)
     pointNormalsArray = vtk.vtkDoubleArray()
+    scalarArray = vtk.vtkDoubleArray()
+    scalarArray.SetNumberOfComponents(1)
     pointNormalsArray.SetNumberOfComponents(3)
     countAdded = 0
     for (idx, point) in enumerate(data):
@@ -39,7 +41,11 @@ def writePointsToVtk(data, vtkFile, normals=None):
             pointNormalsArray.SetTuple(idx, tuple(normal))
             
         polygon.GetPointData().SetNormals(pointNormalsArray)
-
+    if scalars is not None:
+        scalarArray.SetNumberOfTuples(countAdded)
+        for (idx, datam) in enumerate(scalars):
+            scalarArray.SetTuple(idx, tuple([datam]))
+        polygon.GetPointData().SetScalars(scalarArray)
     polygonMapper = vtk.vtkPolyDataMapper()
     polygonMapper.SetInputData(polygon)
     polygonMapper.Update()
@@ -53,15 +59,18 @@ def writePointsToVtk(data, vtkFile, normals=None):
 #data = readLines("stream_0.nrrd", "stream_1.nrrd", dim=2)
 #writeToVtk(data, "test.vtk")
 
-def render(fileNameIn, fileNameOut, dim=2, normalsFile=None):
+def render(fileNameIn, fileNameOut, dim=2, normalsFile=None, scalarsFile=None):
     (data, _) = nrrd.read(fileNameIn + "_0.nrrd")
     reformulatedData = nu.expectedOrder(data)
     normals = None
+    scalars= None
     if normalsFile is not None:
-        (ndata, _) = nrrd.read(fileNameIn + "_0.nrrd")
+        (ndata, _) = nrrd.read(normalsFile + "_0.nrrd")
+        (ndata1, _) = nrrd.read(scalarsFile + "_0.nrrd")
         normReform = nu.expectedOrder(ndata)
         normals = normReform
-    writePointsToVtk(reformulatedData, fileNameOut + ".vtk", normals=normals)
+        scalars = ndata1
+    writePointsToVtk(reformulatedData, fileNameOut + ".vtk", normals=normals, scalars=scalars)
     
 
 #render("ugg1", "ugg")

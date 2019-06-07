@@ -68,7 +68,7 @@ f = Function(space)
 x,y,z = SpatialCoordinate(mesh)
 f = interpolate(x*x*x*x*x*x + y*y*y*y*y*y + z*z*z*z*z*z - 1, space)
 getNormals(f, "ugg1_0.nrrd")
-render("ugg1", "normed.vtk", dim=3, normalsFile="normals")
+render("ugg1", "normed.um", dim=3, normalsFile="normals")
 exit(0)
 
 

@@ -57,6 +57,10 @@ f = Function(space)
 x,y,z = SpatialCoordinate(mesh)
 #f = interpolate(y*y*x + z*z, space)
 f = interpolate(z*z*(sin(x*x + y*y + z*z)), space)
+getNormals(f, "test1.nrrd")
+exit(0)
+#render("pos", "normedpp", dim=3, normalsFile="normals", scalarsFile="stren")
+
 
 # print(f.at([2.13336,1.92878,1.31913]))
 # exit(0)
@@ -109,7 +113,7 @@ outputs = [("_pos", 1, outFileName)]
 namedInputs = {"ipos": pointsNrrd}
 program.go(inputs, outputs, namedInputs=namedInputs, verbose=True, workers=None, shutdown=False)
 getNormals(f, "pos_0.nrrd")
-render("pos", "normedp", dim=3, normalsFile="normals")
+render("pos", "normedp", dim=3, normalsFile="normals", scalars="stren")
 exit(0)
 #render(outFileName, outFileName, dim=dim)
 #File(outFileName + ".pvd").write(f)

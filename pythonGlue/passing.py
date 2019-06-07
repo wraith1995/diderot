@@ -31,7 +31,9 @@ class Library:
     def get_func(self, name):
         funcName = self.nameSpace + "_" + name
         return(self.lib.__getattr__(funcName))
-
+    def runTime(self):
+        f = self.get_func("get_runTime")
+        return(f())
     def create_world(self):
         world_func = self.get_func("new_world")
         world = world_func()
@@ -65,12 +67,24 @@ class Library:
         strandRet = strandFunc(self.world)
         self.errorCheck(name="create_strands", returnCheck=strandRet)
 
-    def runStrands(self, steps=0):
-        runFunc = self.get_func("run")
-        print("run")
-        steps = runFunc(self.world, ct.c_uint(steps))
-        print("end")
-        return(steps)
+    def runStrands(self, steps=0, time=False):
+        if not(time):
+            runFunc = self.get_func("run")
+            print("run")
+            steps = runFunc(self.world, ct.c_uint(steps))
+            print("end")
+            return(steps)
+        else:
+            time =-10.0
+            timeVal = ct.c_double(time)
+            ugg = ct.byref(timeVal)
+            hmm = (ct.c_double * 1)()
+            runFunc = self.get_func("run_with_time")
+            print("run")
+            steps = runFunc(self.world, ct.c_uint(steps),
+                            hmm)
+            print("end")
+            return(steps, hmm[0])
 
     def shutDown(self):
         runFunc = self.get_func("shutdown")
@@ -99,7 +113,7 @@ class Library:
                             returnCheck=saveRet)
 
     def go(self, inputs, outputs, namedInputs=[], verbose=False, shutdown=True,
-           workers=None, steps=0):
+           workers=None, steps=0, time=False):
         self.create_world()
         print("Created World")
         self.init_world()
@@ -117,8 +131,8 @@ class Library:
         print("Set named inputs")
         self.create_strands()
         print("Create Strands")
-        steps = self.runStrands(steps=steps)
-        print("Ran steps: {0}".format(steps))
+        result = self.runStrands(steps=steps, time=time)
+        print("Ran steps: {0}".format(result))
         for output in outputs:
             fileName = output[2]
             self.saveOutput(fileName, output[0], num=output[1])
@@ -127,44 +141,4 @@ class Library:
                 self.shutDown()
             except Exception:
                 print("Time out in shutdown")
-                        
-
-
-#make sequence arg
-#make 
-# meshType = makeMeshType()
-# mesh =  meshType()
-# spaceType = makeSpaceType(meshType)
-# space = spaceType()
-# funcType = makeFuncType(spaceType)
-# func = funcType()
-
-
-# mesh.dim = 2
-# mesh.mapDim = 4
-# mesh.numCells = 2
-# c_int_p = POINTER(ctylesInt)
-# indexMap = np.array([[0, 1, 2, 3], [4, 5, 6, 7]], dtype=intString)
-# indexMap.flatten()
-# coordMap = np.array([[1.0, 2.0], [3.0, 5.0], [7.0, 11.0], [13.0, 17.0], [19.0, 23.0], [27.0, 29.0],[31.0, 37.0], [41.0, 43.0]], dtype=floatString)
-# coordMapPrime = np.array([2.0,3.0,5.0,7.0,11.0,13.0,17.0,19.0,23.0,29.0,31.0,37.0,41.0, 43.0, 47.0, 53.0, 59.0, 61.0, 68.0, 71.0, 73.0, 79.0, 83.0, 89.0, 97.0, 101.0, 103.0, 107.0, 109.0, 113.0, 127.0, 131.0], dtype=floatString)
-# print(coordMapPrime.reshape(8,2,2))
-# coordMap.flatten()
-
-# mesh.indexMap = indexMap.ctypes.data_as(c_int_p)
-# mesh.coordMap = coordMap.ctypes.data_as(POINTER(ctylesFloat))
-
-# space.indexMap = indexMap.ctypes.data_as(c_int_p)
-# space.mesh = mesh
-# func.coordMap = coordMapPrime.ctypes.data_as(POINTER(ctylesFloat))
-# func.space = space
-
-# meshPtr = ct.cast(ct.pointer(mesh), ct.c_void_p)
-# spacePtr = ct.cast(ct.pointer(space), ct.c_void_p)
-# funcPtr = ct.cast(ct.pointer(func), ct.c_void_p)
-
-# inputs = {"a" : [meshPtr], "b" : [spacePtr], "c" : [funcPtr]}
-# outputs = ["z"]
-
-# doingSometing = Library(library, nameSpace=nameSpaceArg)
-# doingSometing.go(inputs, outputs)
+        return(result)

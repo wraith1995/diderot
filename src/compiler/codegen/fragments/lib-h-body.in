@@ -40,6 +40,12 @@ bool @PREFIX@_create_strands (@PREFIX@_world_t *wrld);
 //! \return the number of steps taken.
 uint32_t @PREFIX@_run (@PREFIX@_world_t *wrld, uint32_t maxNSteps);
 
+//! Run the Diderot program and track run time
+//! \param wrld the world-state of the Diderot program
+//! \param maxNSteps the limit on the number of super steps; 0 means unlimited
+//! \return the number of steps taken.
+uint32_t @PREFIX@_run_with_time (@PREFIX@_world_t *wrld, uint32_t maxNSteps, double * time);
+
 //! shutdown and deallocate the world
 //! \param wrld the world-state of the Diderot program
 void @PREFIX@_shutdown (@PREFIX@_world_t *wrld);
@@ -54,6 +60,10 @@ void @PREFIX@_set_verbose (@PREFIX@_world_t *wrld, bool mode);
 //! Get verbose mode
 //! \return true if there are any errors
 bool @PREFIX@_get_verbose (@PREFIX@_world_t *wrld);
+
+//! Get runTime
+//! \\param wrld the world-state of the Diderot program
+double @PREFIX@_get_runTime (@PREFIX@_world_t *wrld);
 
 //! Register a callback function for Diderot print() calls
 //! \param wrld the world-state of the Diderot program

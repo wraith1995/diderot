@@ -6,7 +6,8 @@ const int dim = mesh_t.dim;
 int dimm = dim;
 type functionSpace{mesh_t}[] fns_t = file("evalProg.json");
 type femFunction{fns_t} func_t = file("evalProg.json");
-
+input real fStrTh ("Feature strength threshold") = 24.0;
+input real fBias ("Bias in feature strength computing") = 0.1;
 
 input mesh_t meshData;
 input fns_t space = fns_t(meshData);
@@ -23,19 +24,43 @@ function tensor[dim] findNormal(position{mesh_t}  pos0){
   return(grad);
 }
 
+function real fStrength(position{mesh_t} pos) {
+  if(pos.isValid){
+    vec3 x = pos.refPos;
+    cell{mesh_t} c = pos.mc;
+    cell{func_t} f = data.funcCell(c);
+    vec3 g = ∇(f.transformedRefField)(x);
+    tensor[dim, dim] H = ∇⊗∇(f.transformedRefField)(x);
+    real str = -evals(H)[2]/(fBias + |g|);
+    return str;
+  } else {return(0.0);}
+}
+
+function real fVal(position{mesh_t} pos) {
+  if(pos.isValid){
+    vec3 x = pos.refPos;
+    cell{mesh_t} c = pos.mc;
+    cell{func_t} f = data.funcCell(c);
+    real v = (f.transformedRefField)(x);
+    return v;
+  } else {return(0.0);}
+}
+
 strand normal(position{mesh_t}  pos0, tensor[dim] xp){
   output tensor[dim] normal = zeros[dim];
+  output real stren = nan;
+  output real val = nan;
+  output vec3 ref = nan[3];
   update {
     if(pos0.isValid){
-      normal = findNormal(pos0);
-      
-      real temp1 = det(∇⊗(pos0.mc.transform)(pos0.refPos));
-      real temp2 = det(∇⊗(pos0.mc.transform)([0,0.1, 0.1]));
-      real temp3 = det(∇⊗(pos0.mc.transform)([0.25,0.25, 0.25]));
+      //      normal = findNormal(pos0);
+      stren = fStrength(pos0);
+      val = fVal(pos0);
+      ref = pos0.refPos;
       //print("Ratios:", temp1/temp2, temp1/temp3, temp2/temp3, "\n");
-      print(pos0.mc, ",");
+      //      print(pos0.mc, ",");
     }
-    else {print("Error at input pos:", xp, "\n");}
+    //    else {print("Error at input pos:", xp, "\n");}
     
     stabilize;
   }

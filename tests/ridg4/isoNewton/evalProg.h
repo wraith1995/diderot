@@ -44,6 +44,12 @@ typedef struct evalProg_struct_world evalProg_world_t;
 /*---------- end lib-h-head.in ----------*/
 
 /**** Functions etc. for input variables ****/
+extern const char *evalProg_input_desc_fStrTh;
+void evalProg_input_get_fStrTh (evalProg_world_t *wrld, double *v);
+bool evalProg_input_set_fStrTh (evalProg_world_t *wrld, double v);
+extern const char *evalProg_input_desc_fBias;
+void evalProg_input_get_fBias (evalProg_world_t *wrld, double *v);
+bool evalProg_input_set_fBias (evalProg_world_t *wrld, double v);
 bool evalProg_input_set_meshData (evalProg_world_t *wrld, void *v);
 bool evalProg_input_set_space (evalProg_world_t *wrld, void *v);
 bool evalProg_input_set_data (evalProg_world_t *wrld, void *v);
@@ -138,6 +144,9 @@ uint32_t evalProg_get_num_workers (evalProg_world_t *wrld);
 
 /**** Getters for output values ****/
 bool evalProg_output_get_normal (evalProg_world_t *wrld, Nrrd *data);
+bool evalProg_output_get_stren (evalProg_world_t *wrld, Nrrd *data);
+bool evalProg_output_get_val (evalProg_world_t *wrld, Nrrd *data);
+bool evalProg_output_get_ref (evalProg_world_t *wrld, Nrrd *data);
 /*---------- begin lib-h-foot.in ----------*/
 
 #ifdef __cplusplus

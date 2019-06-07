@@ -1,0 +1,70 @@
+#version 3.0
+
+
+type mesh mesh_t = file("evalProg.json");
+const int dim = mesh_t.dim;
+type functionSpace{mesh_t}[dim] fns_t = file("evalProg.json");
+type femFunction{fns_t} func_t = file("evalProg.json");
+
+input mesh_t meshData;
+input fns_t space = fns_t(meshData);
+input func_t data = func_t(space);
+refCell{mesh_t} simplex = meshData.refcell();
+input int timeSteps=32;
+input real timeEps = 0.0000001;
+input real errorMax = 0.0000001;
+input int second = 0;
+
+overload position{mesh_t} + (position{mesh_t} x, tensor[dim] dPos)
+{
+  if (!x.isValid()){
+    //identity on invalid pos.
+    //this way if something becomes invalid
+    //the program keeps chuging along without failing
+    //until the strand checks the validity and dies cleanly.
+    return(x);
+  }
+  return(meshData.findPos(x.worldPos() + dPos));
+}
+
+
+input tensor[dim][] startPoints;
+input real stepSize = 0.01;
+input int stepMax = 32;
+
+function tensor[dim] nV(position{mesh_t} x){
+  if(x.isValid()){
+    cell{mesh_t} c = x.mc;
+    tensor[dim] ref = x.refPos();
+    tensor[dim] val = data.funcCell(c).refField(ref);
+    return(val/|val|);
+  }
+  else
+    {
+      print("Error:Eval at Invalid\n");
+      return(zeros[dim]);
+    }
+    
+}
+strand gg(tensor[dim] startPos){
+  output tensor[dim][] stream = {};
+  int step = 0;
+  bool validAtEnd = true;
+  position{mesh_t} cPos = meshData.findPos(startPos);
+  update {//if not valid, get out
+    if(!cPos.isValid()  || step == stepMax){
+      validAtEnd = cPos.isValid;
+      print("validity of ", startPos, " at end:", cPos.isValid, "\n");
+      stabilize;}
+    stream = stream@{cPos.worldPos()};
+    position{mesh_t} intermed = cPos + 0.5 * stepSize * nV(cPos);
+    if(!intermed.isValid){
+      validAtEnd = false;
+      print("validity of ", startPos, " at end:", validAtEnd, "\n");
+      stabilize;
+    }
+    cPos = cPos +  stepSize * nV(intermed);
+
+    step+=1;
+  }
+} create_collection {gg(x) | x in startPoints};
