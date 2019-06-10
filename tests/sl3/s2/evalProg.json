@@ -1409,7 +1409,7 @@
                 "contraction": true,
                 "itters": 64,
                 "killAfterTol": false,
-                "newtonTol": 1e-07,
+                "newtonTol": 1e-08,
                 "start": [
                     0.25,
                     0.25,

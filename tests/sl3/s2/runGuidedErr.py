@@ -38,7 +38,7 @@ def runGuidedErr(outFile, pointsNrrd, femArgs,
               "errorMax": [floatTy(errorMax)], "second": [intTy(second)]}
     outputs = [("stream", 2, outFileName)]
     namedInputs = {"startPoints": pointsNrrd}
-    r = program.go(inputs, outputs, namedInputs=namedInputs, shutdown=False, verbose=True, time=True)
+    r = program.go(inputs, outputs, namedInputs=namedInputs, shutdown=False, verbose=False, time=True)
     dlclose(library._handle)
     return(r)
     

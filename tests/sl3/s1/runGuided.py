@@ -40,11 +40,7 @@ def runGuided(outFile, pointsNrrd, femArgs,
               "errorMax": [floatTy(errorMax)], "second": [intTy(second)]}
     outputs = [("stream", 2, outFileName)]
     namedInputs = {"startPoints": pointsNrrd}
-    r = program.go(inputs, outputs, namedInputs=namedInputs, shutdown=False, verbose=True, time=True)
-    return(r)
+    r = program.go(inputs, outputs, namedInputs=namedInputs, shutdown=False, verbose=False, time=True)
+
     dlclose(library._handle)
-    exit(0)
-    
-    # render(outFileName, outFileName, dim=dim)
-    # render(outFileNamep, outFileNamep, dim=dim)
-    # File(outFileName + ".pvd").write(f)
+    return(r)

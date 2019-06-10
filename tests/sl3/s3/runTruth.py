@@ -27,7 +27,7 @@ floatTy = ct.c_double
 def runTruth(outFile, pointsNrrd, femArgs,
               timeSteps=32, timeEps=0.0000001,
               stepSize=0.04, stepMax=32,
-              errorMax=10000000, second=0):
+              errorMax=10000000, second=0, save=True):
 
     programNameArg = "evalProg"
     nameSpaceArg = "evalProg"
@@ -38,9 +38,12 @@ def runTruth(outFile, pointsNrrd, femArgs,
             "timeSteps": [intTy(timeSteps)], "timeEps" : [floatTy(timeEps)],
               "stepSize": [floatTy(stepSize)], "stepMax": [intTy(stepMax)],
               "errorMax": [floatTy(errorMax)], "second": [intTy(second)]}
-    outputs = [("stream", 2, outFileName)]
+    if save:
+        outputs = [("stream", 2, outFileName)]
+    else:
+        outputs = []
     namedInputs = {"startPoints": pointsNrrd}
-    r = program.go(inputs, outputs, namedInputs=namedInputs, shutdown=False, verbose=True, time=True)
+    r = program.go(inputs, outputs, namedInputs=namedInputs, shutdown=False, verbose=False, time=True)
     dlclose(library._handle)
     return(r)
     

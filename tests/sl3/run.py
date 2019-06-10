@@ -1,5 +1,6 @@
 import sys
 import csv
+from math import ceil
 sys.path.append('/home/teocollin/gitcode/diderot/pythonGlue')
 sys.path.append('/home/teocollin/gitcode/curvedMesh')
 sys.path.append('s1')
@@ -30,7 +31,7 @@ from runGuidedErrRk import runGuidedErrRk
 from runTruth import runTruth
 from runTruthFaster import runTruthFaster
 #get the damn mesh
-meshDatas = buildFiredrakeTetMesh("meshfiles/gsc5.msh", 3, linearGmshBackup="lin_meshfiles/gsc5.msh")
+meshDatas = buildFiredrakeTetMesh("meshfiles/sgsc5.msh", 3, linearGmshBackup="lin_meshfiles/sgsc5.msh")
 linMesh = meshDatas[-1]
 curvedMesh = meshDatas[0]
 mesh = curvedMesh
@@ -67,12 +68,14 @@ nu.writeSequence(dataPoints, pointsNrrd, dataKind=kindString)
 #add another mesh
 #write this section
 
-stepSizes = [0.5, 0.05, 0.005, 0.0005]
+stepSizes = [0.2, 0.02, 0.002]
+maxTimes = [30.0]
 stepsMaxes = [5000]
+
 #common to newtons
 timeStepses = [32]
 secondes = [0]
-innerRkSteps = [1, 2, 4, 8]
+innerRkSteps = [1]
 timeEpses = [0.0000001]
 #specific to error:
 errorMaxes = [0.1, 0.01, 0.001, 0.0001, 0.00001, 0.000001, 0.0000001]
@@ -83,7 +86,8 @@ errorDict = dict()
 timingDict = dict()
 allOtherErrors = []
 for stepSize in stepSizes:
-    for stepsMax in stepsMaxes:
+    for maxTime in maxTimes:
+        stepsMax = ceil(maxTime / stepSize)
         errorComps = []
         first = "run_{0}_{1}".format(str(stepSize), stepsMax)
         firstNrrd = prefixNrrd + first + "_truth"
