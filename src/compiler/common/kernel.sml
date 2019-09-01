@@ -191,14 +191,14 @@ structure Kernel : sig
                 [r 2, r ~4, 5/2, ~1/2]  (*  1 .. 2 *)
               ]
           }
-    val bspln3 = mkKernel{              (* cubic bspline reconstruction; doesn't interpolate *)
+    val bspln3=mkKernel{              (* cubic bspline reconstruction; doesn't interpolate *)
             name = "bspln3",
             support = 2,
             continuity = 2,
             segs = [
                 [ 4/3, r 2,  r 1,   1/6 ],      (* -2 .. -1 *)
                 [ 2/3, r 0,  r ~1, ~1/2 ],      (* -1 .. 0 *)
-                [ 2/3, r 0,  r ~1,  1/2 ],      (*  0 .. 1 *)
+               [ 2/3, r 0,  r ~1,  1/2 ],      (*  0 .. 1 *)
                 [ 4/3, r ~2, r 1,  ~1/6 ]       (*  1 .. 2 *)
               ]
           }

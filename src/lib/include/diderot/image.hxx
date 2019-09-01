@@ -442,9 +442,9 @@ namespace diderot {
     inline bool image3d<REAL,TY,VOXSZ>::inside (array<int,3> const &idx, int s) const
     {
       // NOTE: we cast to signed int to handle the case with it is less than s!
-        return ((s-1 <= idx[0]) && (idx[0] < static_cast<int>(this->_img->_size[0] - s))
-            &&  (s-1 <= idx[1]) && (idx[1] < static_cast<int>(this->_img->_size[1] - s))
-            &&  (s-1 <= idx[2]) && (idx[2] < static_cast<int>(this->_img->_size[2] - s)));
+        return ((0 <= idx[0]) && (idx[0] < static_cast<int>(this->_img->_size[0] - s))
+            &&  (0 <= idx[1]) && (idx[1] < static_cast<int>(this->_img->_size[1] - s))
+            &&  (0 <= idx[2]) && (idx[2] < static_cast<int>(this->_img->_size[2] - s)));
     }
 
     template <typename REAL, typename TY, int VOXSZ>

@@ -91,7 +91,7 @@ class Library:
         runFunc(self.world)
         self.world = 0
 
-    def saveOutput(self, fileName, outName, num=1):
+    def saveOutput(self, fileName, outName, num=1, snapshot=False):
         nrrdNew = self.lib.__getattr__("nrrdNew")
         nrrdSave = self.lib.__getattr__("nrrdSave")
         nrrdNuke = self.lib.__getattr__("nrrdNuke") # use this.
@@ -102,6 +102,8 @@ class Library:
             raise Exception("Unable to allocate Nrrd(s) for ouput {0}".format(outName))
         outFunc = self.get_func("output_get_" + outName)
         outArgs = [self.world] + nrrds
+        if snapshot:
+            outFunc = self.get_func("snapshot_" + outName)
         outRet = outFunc(*outArgs)
         self.errorCheck(name="outputing " + outName, returnCheck=outRet)
         for (idx, nrrd) in enumerate(nrrds):
@@ -111,6 +113,40 @@ class Library:
             print("Saving:"+fileNameIdx) #c_char_p
             self.errorCheck(name="Saving to nrrd: {0}".format(fileName),
                             returnCheck=saveRet)
+
+    def setup(self, inputs, namedInputs=[], verbose=False, workers=None):
+        self.create_world()
+        print("Created World")
+        self.init_world()
+        print("Running")
+        self.setVerobse(verbose)
+        if workers is not None:
+            self.setWorkers(workers)
+        for name in inputs:
+            print("Set input:{0}".format(name))
+            self.set_input(name, inputs[name])
+        print("Set inputs")
+        for name in namedInputs:
+            print("Setting input: {0}".format(name))
+            self.set_input_by_name(name, namedInputs[name])
+        print("Set named inputs")
+        self.create_strands()
+        print("Create Strands")
+
+    def snapshotGo(self, inputs, outputs, namedInputs=[], verbose=False, workers=None, stepsize=1):
+        print("setting up:")
+        self.setup(inputs, namedInputs=namedInputs, verbose=verbose, workers=workers)
+        print("snapshot run")
+        itter = 0
+        while True:
+            test = self.runStrands(steps=stepsize, time=None)
+            print("Snapshot ran ({0}):{1}".format(itter, test))
+            for output in outputs:
+                fileName = str(itter) + output[2]
+                self.saveOutput(fileName, output[0], num=output[1], snapshot=True)
+            itter+=1
+            if test == 0:
+                return(0)
 
     def go(self, inputs, outputs, namedInputs=[], verbose=False, shutdown=True,
            workers=None, steps=0, time=False):
@@ -131,7 +167,7 @@ class Library:
         print("Set named inputs")
         self.create_strands()
         print("Create Strands")
-        result = self.runStrands(steps=steps, time=time)
+        result = self.runStrands(steps=steps, time=None)
         print("Ran steps: {0}".format(result))
         for output in outputs:
             fileName = output[2]

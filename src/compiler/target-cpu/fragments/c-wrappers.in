@@ -133,7 +133,6 @@ extern "C" void @PREFIX@_set_verbose (@PREFIX@_world_t *wrld, @BOOLTY@ mode)
 extern "C" double @PREFIX@_get_runTime (@PREFIX@_world_t *wrld)
 {
     @PREFIX@::world *w = reinterpret_cast<@PREFIX@::world *>(wrld);
-    //std::cout << "ugg:" << w->_run_time << "\n";
     return (w->_run_time);
 }
 

@@ -1,4 +1,5 @@
 //diderot::dynseq<@intTy@> myFunction(void * index, @meshTy@ * mesh, @realTy@ * data)
+std::cout << "calling mkpos\n";
 try {
 Index * idx = reinterpret_cast<Index*>(index);
 

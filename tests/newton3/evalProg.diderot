@@ -53,7 +53,6 @@ function real fStrength(position{mesh_t} y){
     return |∇(f.transformedRefField)((y.refPos))|;
   } else {return(0.0);}
 }
-//
 
 function real phi(real r) = (1-r)^4;
 function real phi'(real r) = -4 * (1-r)^3;

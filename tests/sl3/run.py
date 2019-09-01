@@ -68,7 +68,7 @@ nu.writeSequence(dataPoints, pointsNrrd, dataKind=kindString)
 #add another mesh
 #write this section
 
-stepSizes = [0.2, 0.02, 0.002]
+stepSizes = [0.2, 0.02, 0.002] #, 0.125, 0.0125, 0.00125, 0.15, 0.015, 0.0015, 0.175, 0.0175, 0.00175]
 maxTimes = [30.0]
 stepsMaxes = [5000]
 
@@ -78,7 +78,7 @@ secondes = [0]
 innerRkSteps = [1]
 timeEpses = [0.0000001]
 #specific to error:
-errorMaxes = [0.1, 0.01, 0.001, 0.0001, 0.00001, 0.000001, 0.0000001]
+errorMaxes = [0.0001, 0.00001, 0.000001]
 prefixNrrd = "nrrdResults/"
 prefixVtk = "vtkResults/"
 errFileDict = dict()

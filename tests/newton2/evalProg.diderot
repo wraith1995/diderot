@@ -194,8 +194,6 @@ strand particle(position{mesh_t}  pos0, real hh0){
     }
 }
 update {
-  int num = sum {P.test | P in particle.all};
-  int numFound = sum {P.testp | P in particle.all};
   bool allValid = all {P.pos.isValid() | P in particle.all};//Is this a good idea?
   bool allFound = all {P.found | P in particle.all};
   real maxStep = max {|P.step| | P in particle.all};

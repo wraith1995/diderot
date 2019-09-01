@@ -20,6 +20,8 @@ from render import render
 from load import buildFiredrakeTetMesh
 from runNormals import getNormals
 
+m = Mesh("lin_meshfiles/cs1.msh")
+
 meshDatas = buildFiredrakeTetMesh("meshfiles/cs1.msh", 3, linearGmshBackup="lin_meshfiles/cs1.msh")
 linMesh = meshDatas[-1]
 curvedMesh = meshDatas[0]
@@ -38,17 +40,10 @@ verb = 0
 sfs = 0.5
 hist = 0.5
 pcp = 5
-
-
-
-#stren = 10 - 0.01 - zfuz = 0 - what we want almost. 
-
-# select the types
 intTy = ct.c_int32
 floatTy = ct.c_double
 myDim = 3
-#Firedrake stuff would go here.
-#
+
 
 dim = mesh.geometric_dimension()
 space = FunctionSpace(mesh, "Lagrange", 6)
@@ -80,21 +75,12 @@ else:
 # build data
 (preFemArgs, femArgs) = fb.passAll(f, intTy, floatTy, geometric=True)
 
-# xPoints = np.random.uniform(low = bot[0], high = top[0], size=sizes[0])
-# yPoints = np.random.uniform(low = bot[1], high = top[1], size=sizes[1])
-# zPoints = np.random.uniform(low = bot[2], high = top[2], size=sizes[2])
-#[0.8, 0.1, 0.5],
+
 numPoints =20000
 newXc = np.random.uniform(low=-4.0, high=4, size=numPoints)
 newYc = np.random.uniform(low=-4.0, high=4, size=numPoints)
 newZc = np.random.uniform(low=-4.0, high=4, size=numPoints)
-# if dim == 3:
-#     points = [[0.8, 0.1, 0.5], [0.3, 0.3, 0.3]]#list(map(list, zip(*(xPoints, yPoints, zPoints)[0:dim]))) # list([[-2.42058914,  3.01164183, -7.03902682]])#
-# elif dim == 2:
-    #points = [[0.8, 0.2]]
 points = list(map(list, zip(*(newXc, newYc, newZc)[0:dim])))
-#points = [(0.05 * x + 0.025, 0.05 *y + 0.025, 0.05 * z + 0.025) for x in range(20) for y in range(20) for z in range(20)]
-#points = [[0.225,0.525,0.575]]
 pointsNrrd = "points.nrrd"
 dataPoints = np.array(points, dtype="float64")
 kindString = "{0}-vector".format(dim)

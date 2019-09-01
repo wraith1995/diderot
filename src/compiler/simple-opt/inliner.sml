@@ -105,10 +105,18 @@ structure Inliner : sig
                         | info => info
                       (* end case *))
                 val result = chkTop code
-                in
-                  setFn (f, SOME result);
-                  result
-                end
+		val fname = F.nameOf(f)
+		val badNamesList = ["_exit"] (*horrible hack*)
+		val badNameTest = Option.isSome (List.find (fn x => x =fname) badNamesList)
+
+            in
+	     if badNameTest
+	     then
+	      (setFn (f, SOME MIXED);
+	      MIXED)
+	     else
+              (setFn (f, SOME result);result)
+            end
           (* end case *))
     end (* local *)
 
