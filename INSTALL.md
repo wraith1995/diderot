@@ -62,6 +62,19 @@ or you can browse the source code
 Once you have downloaded the **Diderot** source code, go to the root of
 the source tree and configure the build for your machine.
 
+First run autoheader:
+
+````bash
+    autoheader -Iconfig
+````
+
+Then run autoconf:
+
+````bash
+  autoconf -Iconfig
+````
+
+Finally, configure the install:
 ````bash
     ./configure
 ````
@@ -181,7 +194,7 @@ To make sure your build works, try:
 ````
 
 Note that we do **not** recommend adding this `teem-ddro/bin` to your path;
-it's not very useful.
+it's not very usefulLOCAL.
 
 ### SML/NJ <a name="smlnj-details"></a>
 

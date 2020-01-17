@@ -45,3 +45,14 @@
 # Makefile dependencies
 .depend
 
+#Specific files created in config:
+config/config_h.in
+doc/src/man/Makefile
+src/compiler/common/paths.sml
+src/lib/build/mk/build.gmk
+src/lib/include/diderot/config.h
+Makefile
+autom4te.cache/
+config.status
+config/config_h.in~
+configure
