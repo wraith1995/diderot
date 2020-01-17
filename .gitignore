@@ -1,7 +1,7 @@
 # Compiled Diderot Files
 *.log
 # Created nrrds:
-*.nrrds
+*.nrrd
 
 # Object files
 *.o
