@@ -1,3 +1,6 @@
+# Compiled Diderot Files
+.log
+
 # Object files
 *.o
 *.ko
