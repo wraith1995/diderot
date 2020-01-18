@@ -1,11 +1,13 @@
 #version 3.0
-const int dim = 2;
+const int dim = 9;
 
 strand dumb(int i)
 {
   output tensor[dim] d = zeros[dim];
+  output real r = 2.0;
   update{
     print(d •( d ));
+    r = d •( d );
     stabilize;
   }
 } create_collection {dumb(j) | j in 1..3};
