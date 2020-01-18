@@ -1,0 +1,11 @@
+#version 3.0
+const int dim = 2;
+
+strand dumb(int i)
+{
+  output tensor[dim] d = zeros[dim];
+  update{
+    print(d •( d ));
+    stabilize;
+  }
+} create_collection {dumb(j) | j in 1..3};
