@@ -155,7 +155,7 @@ structure Paths : sig
           val teemLib = resolveTeemDir "lib"
           in
             if @LD_NEEDS_RPATH@
-              then ["-rpath=" ^ teemLib, "-L" ^ teemLib, "-lteem"]
+              then ["-rpath " ^ teemLib, "-L" ^ teemLib, "-lteem"]
               else ["-L" ^ teemLib, "-lteem"]
           end
     end (* local *)
