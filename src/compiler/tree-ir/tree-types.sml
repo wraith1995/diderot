@@ -78,13 +78,24 @@ structure TreeTypes =
 
   (* return the unpadded width of the n'th component of a vector layout *)
     fun nthWidth (layout : vec_layout, n) = let
-          fun get (_, _, []) =
+     fun get (_, _, []) =
+	 (*FIX ME: if you have an 0, 9, [8, 1] -> 9 when you should get 8 -> alt layout might be broken -> hmmm*)
                 raise Fail(concat["nthWidth(", VectorLayout.toString layout, ", ", Int.toString n, ")"])
             | get (0, wid, _) = wid
             | get (n, wid, w::ws) = get (n-1, wid-w, ws)
-          in
-            get (n, #wid layout, #pieces layout)
-          end
+	  val ret = get (n, #wid layout, #pieces layout)
+	  val _ = print("producing a " ^ (Int.toString ret) ^ " vec...")
+	  val _ = print("from a " ^ (Int.toString (#wid layout )) ^ " - " ^ (Bool.toString (#padded layout)) ^ " - " )
+	  val _ = print("[");
+	  val _ = List.app (print o Int.toString) (#pieces layout)
+	  val _ = print("... looking for " ^ (Int.toString n))
+	  val _ = print("]\n")
+
+
+    in
+     case (List.nth(piecesOf(layout), n))
+      of VecTy(wid, w) => wid
+    end
 
   (* return the n'th component of a vector layout as a vector type. *)
     fun nthVec (layout : vec_layout, n) = let
@@ -94,7 +105,8 @@ structure TreeTypes =
             | get (0, wid, w::_) = VecTy(wid, w)
             | get (n, wid, w::ws) = get (n-1, wid-w, ws)
           in
-            get (n, #wid layout, #pieces layout)
+           (* get (n, #wid layout, #pieces layout) *)
+	   List.nth(piecesOf(layout), n)
           end
 
   (* return the offset of the first component in the i'th piece of a vec_layout *)

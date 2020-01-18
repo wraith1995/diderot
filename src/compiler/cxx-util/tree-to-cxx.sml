@@ -188,9 +188,10 @@ structure TreeToCxx : sig
             | (Op.VMul d, [a, b]) => CL.mkBinOp(a, CL.#*, b)
             | (Op.VNeg d, [a]) => CL.mkUnOp(CL.%-, a)
             | (Op.VSum(w, _), [a]) => CL.mkApply(RN.vsum w, [a])
-            | (Op.VDot(w, _), [a, b]) => if w = 1
-					 then CL.mkBinOp(a, CL.#*, b)
-					 else CL.mkApply(RN.vdot w, [a, b])
+            | (Op.VDot(w, _), [a, b]) => CL.mkApply(RN.vdot w, [a, b])
+	    (*if w = 1
+	      then CL.mkBinOp(a, CL.#*, b)
+	      else*)
             | (Op.VIndex(w, p, i), [a]) => if w = 1
 					   then a
 					   else CL.mkSubscript(a, mkInt i)

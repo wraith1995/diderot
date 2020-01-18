@@ -75,6 +75,9 @@ structure VectorLayout : sig
     fun hash (l : t) = Word.fromInt(#wid l)
 
     fun layout (sizes : int list) = let
+     val _ = print("sizes:")
+     val _ = print("[" ^ (String.concatWith ", " (List.map Int.toString sizes)) ^ "]")
+     val _ = print("\n")
         (* find smallest supported vector width that is >= n; return the largest
          * size if n is bigger than the largest supported vector.
          *)
@@ -94,7 +97,8 @@ structure VectorLayout : sig
                     else split (m, pieces)
                 end
           in
-            fn n => let
+           fn n => let
+	    val _ = print("Looking at size: "^(Int.toString n) ^ "\n")
                 val (padded, pieces) = split (n, [])
                 in
                   {wid=n, padded=padded, pieces=pieces}
