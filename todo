@@ -1,22 +1,130 @@
---Cleanup check-expr (many redudant comps) and make check-global more precise
--
---Individual cell loading needs to be made
---cell sequence loading
---Other todo
---Clean up print statements
---expansion to the other types
+====================
+Precdence fixing:
+-select should be a deepest level
+--Atomic Expr should feature .selec - remove from suffix
+====================
+Sphere bug:
+curent _pos rewrite doesn't commute with sphere(a,b)
+(Or at least it doesn't if another sphere isn't there too)
+====================
+Equality checking bug:
+Is the SSA thing really working? I have some doubts...
+=====================
+Delayed evaluation and composition with functions:
+-We need a mechanism that compose swith FEM so that we can go between derivatives w.r.t to reference and w.r.t. to world
+-Something like T^{*}F = F(T(x)), but we want T^{*}(DF) -> same as composition
+---F = A \circ B^-1
+---G = DF
+---H = G \circ B //remove internal B^-1 !!!
+---DH //future derivative doesn't add extra B^-1 term -- but does affect (DB)^-1 terms.
 
+-Impl notes: Roughly like this....
+--So we want T\circ T^-1 to happen -> idea is if you detect this in the inner thing - cancel and replace with one that only affects the deriative
+--if you have |_ -> replace and then kill derivative after applying the ones around htis.
+--so if I have P(D) (P(D)(F\ circ T^-1) |_{ T}) -> we stop replacing the derivative of P(D)
+--General allow functions in the field language
+==================
+AD LIKE Related to above: Look at Chiw and think about functions in the field language vs. fields in the function language.
+-Merge in Chiw's branch
+-allow functions to have specified derivatives (field valued or maybe not)
+-allows recovery
+-Maybe look at exposing ImgToWorld/ImgCell/Positions on images.
+=========================
+Better TT^-1 cancelling (relates highly to the above.)
+--Capture TT^-1 and opposite - cancel them
+--Done at simple-ir -> sometimes replace with no derivative version if there is a derivative being taken. (See above)
+--Idea: cancel out these, but still allow world space and regular space derivatives.
+--add potential cell/mesh checks (See other section)
+==========================
+Basic Tuples
+=========================
+Tuple + Scalarize
+==========================
+Tuple + FEM + Type one item
+=========================
+Sequence lazynesss
+=========================
+Pos lazyness/caching
+========================
+Caches:
+-Consider instruction level/thread level cache for:
+--cells
+--Dofs (defeat out of order stuff)
+--certain situations to override the cache?
+===========================
+Basis function structure parsing and Basis SSA check.
+===========================
+Better Geometry and Bound box access:
+-Would be useful to access bounding box at high level
+-Would be useful to access simplexization of cell
+-Would be useful to access distance functions/indicators
+-Would be useful to access kernel fields
+-Fix non-linear cell intersection - I don't think the C code intersections work
+-Allow a default non-linear cell intersection algorithim - (would help if affine was around)
+=============================
+Allow a basis dump would be nice.
+=============================
+Affine SSA transformation
+--affine keyword
+--propogation until SSA level
+--replace with new operators (vector min/max)
+--Policy settomg
+--function cooperation/insertion into field language
+=============================
+Old notes:
+Overall things to do:
 
-Tomorrow:
--Load mesh (Works for now)
----Load others?
--Transforms down the way:
+-Fix precdence of select (pure parsing fixing)
 
-EIN mods
-FieldSampling
-trans, field, inverseTrans, refTrans, field:
+-Consider |_ operator - (compose but don't compute derivative -- we want to fix issue with TT^-1 canceling - we want deriatives of it - but we sometimes want the derivative component and then to stop counting it - maybe G = F \circ T^-1 -> H = DD(G) \circ T -> use the derivatives of T^-1 but not the comp - take derivatives of H now doesn't add more derivatives of T^-1 )
 
+-Consier lazy computation with respect to POS -do we or do we not cache world position -- locally, we do, but how much - careful rewrites.
+--especially in places that take a world pos 
 
+-Consider basic tuples
+--Consider tuple scalarization
+---strands
+---inputs
+---outputs
+---sequences - AOS vs. SOA
+--Consider FEM to tuple prior to scalarizatoin
+---Combine with type item specaliztiation so that globals are lifted.
+---Combine with turning into scalars to get rid of unneded arguments
+---Etc
+---Extract loading fix--loading should allow both specifications
+---Consider compltely getting rid of fem stuff
+
+-Sequence short cutting (global cells list and stuff -> allow function instead of sequence?)
+
+-consider checking equality in SSA
+
+-Consider parsing basis structure and checking basis equality checking
+
+-Consider affine variables and type checking of them:
+--affine keyword
+--transform at SSA level
+--type checking works as long as inverses are not passed through (unless inverse is affine on a cell level, but short cutting can help with this.)
+
+-Consider instruction level/thread level cache for:
+--cells
+--Dofs (defeat out of order stuff)
+
+-Better bounding box access -> cell level bounding box? 
+-better error checking for cell/insider
+
+-Better geometry of reference
+--simplization
+--distance function
+--zero functions
+--indicators
+
+-Dump list of functions
+
+-Chiw's expression stuff
+
+====================
+
+-Tuple/elegance/pos as scalars - (steps: tuples on surface down all the way, functor for scalarization; after simple, translate fem to tuples + add pos overload, fix out pos TT^-1, T^-1T - cell issue - well - we have a cell and pos argument - so we trace back both of them, globalization of mesh, function space, etc |_ ,)
 
 EIN transformations:
 (mesh, int, vec) -> (tensor, vec)
