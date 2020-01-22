@@ -593,8 +593,6 @@ Suffix
                 => (fn e => PT.E_Apply(e, Arguments))
         | "[" Indices "]"
                 => (fn e => PT.E_Subscript(e, Indices))
-        | "." ID
-                => (fn e => PT.E_Select(e, ID))
         ;
 
 Indices
@@ -627,7 +625,9 @@ AtomicExpr
         : ID
                 => (markExpr (FULL_SPAN, PT.E_Var ID))
         | ID "#" Continuity
-                => (markExpr (FULL_SPAN, PT.E_Kernel(ID, Continuity)))
+          => (markExpr (FULL_SPAN, PT.E_Kernel(ID, Continuity)))
+        | Expression "." ID
+	  => (markExpr (FULL_SPAN, PT.E_Select(Expression, ID)))
         | INT
                 => (markExpr (FULL_SPAN, ilit INT))
         | REAL
