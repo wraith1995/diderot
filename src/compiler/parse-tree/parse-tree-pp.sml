@@ -204,6 +204,9 @@ structure ParseTreePP : sig
             | PT.T_Seq(t, e) => (
                 prNode (strm, "Seq");
                 nest strm (fn strm => (ty (strm, t); expr (strm, e))))
+            | PT.T_Tuple(tys) => (
+                prNode (strm, "Tuple");
+                nest strm (fn strm => (prList ty (strm, tys))))
             | PT.T_DynSeq t => (
                 prNode (strm, "DynSeq");
                 nest strm (fn strm => ty (strm, t)))
@@ -359,6 +362,9 @@ structure ParseTreePP : sig
                 nest strm (fn strm => comprehension (strm, comp)))
             | PT.E_Cons es => (
                 prNode (strm, "Cons");
+                nest strm (fn strm => prList expr (strm, es)))
+	    | PT.E_Tuple es => (
+                prNode (strm, "Tuple");
                 nest strm (fn strm => prList expr (strm, es)))
           (* end case *))
 

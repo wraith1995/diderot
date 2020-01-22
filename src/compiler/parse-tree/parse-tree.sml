@@ -82,6 +82,7 @@ structure ParseTree =
       | T_Image of {dim : expr, shape : expr list}
       | T_Seq of ty * expr
       | T_DynSeq of ty
+      | T_Tuple of ty list
       | T_Mesh  (*Fem types --- used for type definitions and so forth*)
       | T_Space of var * expr list (* expr list is a shape *)
       | T_Func of var
@@ -152,5 +153,6 @@ structure ParseTree =
       | E_Sequence of expr list                 (* sequence construction *)
       | E_SeqComp of comprehension              (* sequence comprehension *)
       | E_Cons of expr list                     (* tensor construction *)
+      | E_Tuple of expr list                    (* tuple construction *)
 
   end

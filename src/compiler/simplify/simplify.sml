@@ -803,6 +803,7 @@ structure Simplify : sig
     fun simplifyAndPruneBlock cxt blk =
           DeadCode.eliminate (simplifyBlock (cxt, blk))
 
+    (*FIXME: If there is a pos var and a sphere querry, we need a _pos no matter what.*)
     fun simplifyStrand (cxt, strand) = let
           val AST.Strand{
                   name, params, spatialDim, state, stateInit, startM, updateM, stabilizeM

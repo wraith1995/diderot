@@ -411,7 +411,9 @@ Type
         | "kernel" "#" Continuity
                 => (markTy (FULL_SPAN, PT.T_Kernel Continuity))
         | ConcreteType
-                => (ConcreteType)
+          => (ConcreteType)
+	| "(" ConcreteType ("," ConcreteType)+ ")"
+	  => (markTy (FULL_SPAN, PT.T_Tuple(ConcreteType :: SR)))
         ;
 
 Continuity
@@ -636,14 +638,16 @@ AtomicExpr
                 => (markExpr (FULL_SPAN, PT.E_Lit(L.Bool true)))
         | "false"
                 => (markExpr (FULL_SPAN, PT.E_Lit(L.Bool false)))
-        | "(" Expression ")"
-                => (Expression)
         | "{" "}"
                 => (markExpr (FULL_SPAN, PT.E_Sequence[]))
         | "{" Expression SeqRest "}"
                 => (markExpr (FULL_SPAN, SeqRest Expression))
         | "[" Expression ( "," Expression )* "]"
                 => (markExpr (FULL_SPAN, PT.E_Cons(Expression::SR)))
+	| %try "(" Expression ( "," Expression )+ ")"
+	        => (markExpr (FULL_SPAN, PT.E_Tuple(Expression::SR)))
+        | %try "(" Expression ")"
+                => (Expression)
         | "|" Expression "|"
                 => (markExpr (FULL_SPAN, PT.E_UnaryOp(BasisNames.op_norm, Expression)))
         ;

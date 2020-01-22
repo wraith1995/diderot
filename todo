@@ -37,14 +37,28 @@ Better TT^-1 cancelling (relates highly to the above.)
 --add potential cell/mesh checks (See other section)
 ==========================
 Basic Tuples
+--simple enough
+--inputs/outputs are messy
+---post is a fine solution
+---multiple in/out for tuple arg
+---teem is unclear about this
 =========================
 Tuple + Scalarize
+--where to put scalarize (see below)
+--how to deal with AOS vs. SOA
+--how to deal with strand vars, outputs, inputs
 ==========================
 Tuple + FEM + Type one item
+--When this should occur in relation to pos semantics
+--When this should occur in relation to other optimizations
+e--scalarization relation
 =========================
 Sequence lazynesss
+--If I build a sequence, but only access once -> just grab result?
 =========================
 Pos lazyness/caching
+--local rewrites to make CSE more likely/to continue to grab global results
+--a sort of sub-typing maybe
 ========================
 Caches:
 -Consider instruction level/thread level cache for:
