@@ -684,8 +684,14 @@ structure GenTysAndOps : sig
                       in
                         (structDcl :: tyDcls, fnDefs)
                       end
-                  | Ty.TupleTy tys => raise Fail "FIXME: TupleTy"
-(* TODO
+                  | Ty.TupleTy tys =>
+		    let
+		     val name = CodeGenUtil.tupleName(TreeTypes.TupleTy(tys))
+		     val members = List.tabulate(List.length tys, fn x => (trType TypeToCxx.NSDiderot env (List.nth(tys, x)), "_"^(Int.toString x)))
+		    in
+		     (CL.D_StructDef(SOME(name), members, NONE) :: tyDcls, fnDefs)
+		    end
+(* TODO: QUESTION: IS this really needed? I think this is handled elsewhere
                   | Ty.SeqTy(ty, NONE) =>
                   | Ty.SeqTy(ty, SOME n) =>
 *)

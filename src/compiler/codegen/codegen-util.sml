@@ -15,6 +15,8 @@ structure CodeGenUtil : sig
   (* is an expression "simple" (i.e., a variable or literal)? *)
     val isSimple : TreeIR.exp -> bool
 
+    val tupleName : TreeTypes.t -> string
+
   (* translate an API type to a C type suitable for external use *)
 (*
     val trAPIType : CodeGenEnv.t * APITypes.t -> CLang.ty
@@ -63,7 +65,15 @@ structure CodeGenUtil : sig
             | IR.E_Var _ => true
             | IR.E_Lit _ => true
             | _ => false
-          (* end case *))
+		     (* end case *))
+
+    fun tupleName (tupleTy) =
+	let
+	 val hash = TreeTypes.hash tupleTy
+	 val str = Word.toString hash
+	in
+	 str
+	end
     (* QUESTION: WHAT IS THIS SUPPOSED TO BE USED FOR?*)
   (* translate API types to C types *)
     (* fun trAPIType (env, ty) = (case ty *)

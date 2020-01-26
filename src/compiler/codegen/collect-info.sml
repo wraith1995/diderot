@@ -411,7 +411,7 @@ structure CollectInfo : sig
    *)
     val tySort = let
         (* partial ordering on types is defined by a "depth" metric *)
-          fun depth (Ty.TupleTy tys) = 7 + List.foldl (fn (ty, d) => Int.max(depth ty, d)) 0 tys
+          fun depth (Ty.TupleTy tys) = 8 + List.foldl (fn (ty, d) => Int.max(depth ty, d)) 0 tys
             | depth (Ty.SeqTy(ty, _)) = 7 + depth ty
             | depth (Ty.TensorTy[]) = 0
             | depth (Ty.TensorRefTy _) = 1

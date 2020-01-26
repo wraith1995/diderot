@@ -229,7 +229,12 @@ structure TreeToCxx : sig
                *)
             | (Op.TensorRef shp, [a]) => CL.mkCons(RN.tensorRefTy shp, [a])
             | (Op.Select(Ty.TupleTy tys, i), [a]) =>
-                CL.mkSelect(a, "tpl_" ^ Int.toString i)
+              CL.mkSelect(a, "_" ^ Int.toString i)
+	    | (Op.Tuple(tys), xs) => let
+	     val name = CodeGenUtil.tupleName(TreeTypes.TupleTy(tys))
+	    in
+	     CL.mkApply(name, xs)
+	    end
 (* QUESTION: if this is a sequence of tensors, will there be an extra copy? *)
             | (Op.Subscript ty, [a, b]) => CL.mkSubscript(a, b)
             | (Op.MkDynamic(ty, n), [a]) =>
