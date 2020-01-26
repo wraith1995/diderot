@@ -441,6 +441,7 @@ structure LowToTree : sig
                     (Env.TREE(T.E_Op(TOp.ProjectLast(ty, idxs), [arg])), stms)
                   end
               | Op.Select(ty, i) => bindTREE (TOp.Select(U.trType ty, i))
+	      | Op.Tuple(tys) => bindTREE (TOp.Tuple(List.map (U.trType) tys))
               | Op.Subscript ty => bindTREE (TOp.Subscript(U.trType ty))
               | Op.Append ty => let
                   val (args as [_, item], stms) = singleArgs (env, args)

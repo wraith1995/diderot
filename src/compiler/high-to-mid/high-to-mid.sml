@@ -140,6 +140,7 @@ structure HighToMid : sig
               | SrcOp.Zero ty => assign (DstOp.Zero(cvtTy ty))
               | SrcOp.TensorIndex(ty, shp) => assign (DstOp.TensorIndex(cvtTy ty, shp))
               | SrcOp.Select(ty, i) => assign (DstOp.Select(cvtTy ty, i))
+	      | SrcOp.Tuple(tys) => assign (DstOp.Tuple(List.map cvtTy tys))
               | SrcOp.Subscript(ty as SrcTy.SeqTy _) => assign (DstOp.Subscript(cvtTy ty))
               | SrcOp.MkDynamic(ty, n) => assign (DstOp.MkDynamic(cvtTy ty, n))
               | SrcOp.Append ty => assign (DstOp.Append(cvtTy ty))

@@ -20,11 +20,13 @@ structure APITypes =
       | ImageTy of int * int list
       | FemData of FemData.femType
       | SeqTy of t * int option
+      | TupleTy of t list
 
     val realTy = TensorTy[]
 
     fun hasFem (SeqTy(ty,_)) = hasFem ty
       | hasFem (FemData(_)) = true
+      | hasFem (TupleTy(tys)) = not (List.all (not o hasFem) tys)
       | hasFem _ = false
     fun depth ty =
 	      let
@@ -41,6 +43,7 @@ structure APITypes =
       | toString (TensorTy[3]) = "vec3"
       | toString (TensorTy[4]) = "vec4"
       | toString (TensorTy dd) = concat["tensor[", String.concatWithMap "," Int.toString dd, "]"]
+      | toString (TupleTy(tys)) = concat ["(", concat (List.map toString tys), ")"]
       | toString StringTy = "string"
       | toString (ImageTy(d, dd)) = concat[
             "image(", Int.toString d, ")[", String.concatWithMap "," Int.toString dd, "]"

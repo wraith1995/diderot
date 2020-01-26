@@ -349,8 +349,14 @@ print(concat["doVar (", SV.uniqueNameOf srcVar, ", ", IR.phiToString phi, ", _) 
                   [IR.ASSGN(lhs, ein)]
                 end
             | S.E_Seq(args, _) => [IR.ASSGN(lhs, IR.SEQ(List.map (lookup env) args, IR.Var.ty lhs))]
-            | S.E_Tuple xs => raise Fail "FIXME: E_Tuple"
-            | S.E_Project(x, i) => raise Fail "FIXME: E_Project"
+            | S.E_Tuple xs =>
+	      let
+	       val vars = List.map (lookup env) xs
+	       val tys = List.map (IR.Var.ty) vars
+	      in
+	       [IR.ASSGN(lhs, IR.OP(Op.Tuple tys, vars))]
+	      end
+            | S.E_Project(x, i) => [IR.ASSGN(lhs, IR.OP(Op.Select(IR.Var.ty (lookup env x), i), [lookup env x]))]
             | S.E_Slice(x, indices, ty as Ty.T_Field{diff, dim, shape}) => let
                 val x = lookup env x
                 (* extract the integer indices from the mask *)

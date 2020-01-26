@@ -91,7 +91,8 @@ EigenVals3x3 : : 1 : 1 : Eigen values for 3x3 matrix
 ### tuple operations
 #
 # Select<ty,i>(u)  -- select ith element of tuple; ty is tuple type
-Select : ty * int : 1 : 1 :
+Select : ty * int : 1 : 1 : Projection of Tuple
+Tuple : tys : 1 : * : Construction of Tuple
 #
 ### operations on sequences
 #

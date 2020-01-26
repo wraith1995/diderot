@@ -92,6 +92,7 @@ structure Simplify : sig
             | Ty.T_String => STy.T_String
             | Ty.T_Sequence(ty, NONE) => STy.T_Sequence(cvtTy ty, NONE)
             | Ty.T_Sequence(ty, SOME dim) => STy.T_Sequence(cvtTy ty, SOME(TU.monoDim dim))
+	    | Ty.T_Tuple(tys) => STy.T_Tuple(List.map cvtTy tys)
             | Ty.T_Strand id => STy.T_Strand id
             | Ty.T_Kernel _ => STy.T_Kernel
             | Ty.T_Tensor shape => STy.T_Tensor(TU.monoShape shape)
@@ -114,6 +115,7 @@ structure Simplify : sig
             | cvtTy STy.T_Int = APITypes.IntTy
             | cvtTy STy.T_String = APITypes.StringTy
             | cvtTy (STy.T_Sequence(ty, len)) = APITypes.SeqTy(cvtTy ty, len)
+	    | cvtTy (STy.T_Tuple(tys)) = APITypes.TupleTy(List.map cvtTy tys)
             | cvtTy (STy.T_Tensor shape) = APITypes.TensorTy shape
             | cvtTy (STy.T_Image info) =
               APITypes.ImageTy(II.dim info, II.voxelShape info)
@@ -436,6 +438,28 @@ structure Simplify : sig
                        | _ => raise Fail "impossible"
 		    (* end case *))
 		   end
+		  else if Var.same(f,BV.fn_sphere1_r) orelse Var.same(f, BV.fn_sphere2_t) orelse Var.same(f, BV.fn_sphere3_t)
+		  then
+		   let
+                    (* get the strand type for the query *)
+                    val tyArgs as [S.TY(STy.T_Strand strand)] = List.map cvtTyArg tyArgs
+                    (* get the strand environment for the strand *)
+                    val SOME sEnv = findStrand(cxt, strand)
+                    fun result (query, pos) =
+                        (stms, S.E_Prim(query, tyArgs, pos::xs, cvtTy ty))
+
+		    val posVar = StrandEnv.findPosVar sEnv
+		    val posVar' = Option.mapPartial getNewPosVar posVar
+                   in
+                    (* extract the position variable and spatial dimension *)
+                    case (posVar', StrandEnv.getSpaceDim sEnv)
+                     of (SOME pos, SOME 1) => result (BV.fn_sphere1_r, pos)
+                      | (SOME pos, SOME 2) => result (BV.fn_sphere2_t, pos)
+                      | (SOME pos, SOME 3) => result (BV.fn_sphere3_t, pos)
+                      | _ => raise Fail "impossible"
+				   (* end case *)		   
+		   end
+		   
                   else (case Var.kindOf f
 			 of Var.BasisVar => let
                           val tyArgs = List.map cvtTyArg tyArgs
@@ -577,16 +601,19 @@ structure Simplify : sig
                   val (stms, xs) = simplifyExpsToVars (cxt, es, stms)
                   in
                     (stms, S.E_Seq(xs, cvtTy ty))
-                  end
+              end
               | AST.E_Slice(e, indices, ty) => let (* tensor slicing *)
                   val (stms, x) = simplifyExpToVar (cxt, e, stms)
                   fun f NONE = NONE
                     | f (SOME(AST.E_Lit(Literal.Int i))) = SOME(Int.fromLarge i)
                     | f _ = raise Fail "expected integer literal in slice"
                   val indices = List.map f indices
-                  in
-                    (stms, S.E_Slice(x, indices, cvtTy ty))
-                  end
+              in
+	       (case (SimpleVar.typeOf x, indices)
+		 of (STy.T_Tensor(_), _) => (stms, S.E_Slice(x, indices, cvtTy ty))
+		 |  (STy.T_Tuple(_), [SOME(idx)]) => (stms, S.E_Project(x, idx))
+	       (*end case*))
+              end
               | AST.E_Cond(e1, e2, e3, ty) => let
                 (* a conditional expression gets turned into an if-then-else statememt *)
                   val result = newTemp(cvtTy ty)
