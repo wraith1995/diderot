@@ -423,8 +423,18 @@ structure CheckExpr : sig
                           then eTy
                           else err (cxt, [
                               S "expected type 'int' for index, but found ", TY ty
-                            ])
-                      end
+				   ])
+                end
+                (* for tensor/field/tuple slicing/indexing, the indices must be constant expressions *)
+                fun chkConstIndex NONE = NONE
+                  | chkConstIndex (SOME e) = (case chkIndex e
+					       of (_, Ty.T_Error) => SOME bogusExp
+						| (e', _) => (case CheckConst.eval (cxt, false, e')
+										   (* FIXME: should check that index is in range for type! *)
+							       of SOME cexp => SOME(ConstExpr.valueToExpr cexp)
+								| NONE => SOME e' (* use e' to preserve variable uses *)
+							     (* end case *))
+					     (* end case *))				   
                 val (e', ty) = check(env, cxt, e)
                 in
                   case (TU.pruneHead ty, indices)
@@ -445,20 +455,32 @@ structure CheckExpr : sig
                                 (exp, rngTy)
                               end
                             else raise Fail "unexpected unification failure"
-                        end
+                    end
+		    | (ty1 as Ty.T_Tuple(tys), e2) => let
+		     val size = List.length tys
+		     val indicies = List.map chkConstIndex e2
+		     val indexLength = List.length e2
+		    in
+		     if indexLength <> 1
+		     then err (cxt, [S "Type error in slice operation\n",
+				     S "Tuple types expect exactly one index."])
+		     else
+		      (case indicies
+			of [SOME(AST.E_Lit(L.Int i))] => (let val idx = IntInf.toInt i
+							  in if 0 <= idx andalso idx < indexLength
+							     then (AST.E_Slice(e', indicies, List.nth(tys, idx)), List.nth(tys, idx))
+							     else err (cxt, [S "Type error in slice operation\n",
+									     S "Tuple type slices expect exactly one index in range."])
+							  end)
+			 | _ => err (cxt, [S "Type error in slice operation\n",
+					   S "Tuple type slices expect exactly integer one index."])
+		      (*end case*))
+		    end
+		      
                     | (ty as Ty.T_Sequence _, [NONE]) => expectedTensor ty
                     | (ty as Ty.T_Sequence _, _) => expectedTensor ty
                     | (ty, _) => let
-                      (* for tensor/field slicing/indexing, the indices must be constant expressions *)
-                        fun chkConstIndex NONE = NONE
-                          | chkConstIndex (SOME e) = (case chkIndex e
-                               of (_, Ty.T_Error) => SOME bogusExp
-                                | (e', _) => (case CheckConst.eval (cxt, false, e')
-(* FIXME: should check that index is in range for type! *)
-                                     of SOME cexp => SOME(ConstExpr.valueToExpr cexp)
-                                      | NONE => SOME e' (* use e' to preserve variable uses *)
-                                    (* end case *))
-                              (* end case *))
+
                         val indices' = List.map chkConstIndex indices
                         val order = List.length indices'
                         (* val expectedTy = TU.mkTensorTy order*)
@@ -628,6 +650,15 @@ structure CheckExpr : sig
                       (* end case *))
                 (* end case *))
             | PT.E_SeqComp comp => chkComprehension (env, cxt, comp)
+	    | PT.E_Tuple args => let
+	     val (args, tys) = checkList (env, cxt, args) (*Length args >= 2 b/c parser*)
+	     val badType = List.find (TU.isValueType) tys
+	    in
+	     (case badType
+	       of NONE => (AST.E_Tuple(args, tys), Ty.T_Tuple(tys))
+		| SOME(ty) => err(cxt, [S "invalid element type for tuple: ", TY ty])
+	     (*end case*))
+	    end
             | PT.E_Cons args => let
               (* Note that we are guaranteed that args is non-empty *)
                 val (args, tys) = checkList (env, cxt, args)

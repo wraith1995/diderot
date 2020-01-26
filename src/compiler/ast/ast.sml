@@ -92,6 +92,7 @@ structure AST =
             dstTy : Ty.ty,
             e : expr
       }
+      | E_Tuple of expr list * Ty.ty list               (* tuple construction *)
       | E_LoadFem of FemData.femType * expr option * expr option (*Given FemData of type femType and a dependency of it, makes femData of femType; used to glue inputs togeather. For meshes, both are NONE. For direct inputs, the second is NONE. When comining them, both are there. If femData is a cell, then the first is the dependent data and the second is an int*)
      
       | E_ExtractFem of expr * FemData.femType                   (* extract femdata from an expression of the given femdata type*)

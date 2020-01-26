@@ -75,7 +75,10 @@ structure ASTPP : sig
                   | AST.E_Tensor(es, _) => (
                       ppList ppExp ("[", ",", "]") (ppStrm, es))
                   | AST.E_Seq(es, _) => (
-                      ppList ppExp ("{", ",", "}") (ppStrm, es))
+                   ppList ppExp ("{", ",", "}") (ppStrm, es))
+		  | AST.E_Tuple(es, _) => (
+		   ppList ppExp ("(", ",", ")") (ppStrm, es)
+		  )
                   | AST.E_Slice(e, indices, _) => (
                       pp e;
                       ppList ppIndex ("[", ",", "]") (ppStrm, indices))

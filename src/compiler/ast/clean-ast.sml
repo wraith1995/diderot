@@ -89,6 +89,7 @@ fun cleanAST (AST.Program({props, const_dcls,
 	   | AST.E_Tensor(exps, ty) => AST.E_Tensor(List.map cleanExp exps, cleanTy ty)
 	   | AST.E_Field(exps, ty) => AST.E_Field(List.map cleanExp exps, cleanTy ty)
 	   | AST.E_Seq(exps, ty) => AST.E_Seq(List.map cleanExp exps, cleanTy ty)
+	   | AST.E_Tuple(exps, tys) => AST.E_Tuple(List.map cleanExp exps, List.map cleanTy tys)
 	   | AST.E_Slice(exp, exps, ty) => AST.E_Slice(cleanExp exp, List.map (Option.map cleanExp) exps, cleanTy ty)
 	   | AST.E_Cond(e1,e2,e3, ty) => AST.E_Cond(cleanExp e1,cleanExp e2,cleanExp e3, cleanTy ty)
 	   | AST.E_Orelse(e1,e2) => AST.E_Orelse(cleanExp e1,cleanExp e2)

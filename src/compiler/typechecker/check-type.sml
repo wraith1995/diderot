@@ -92,6 +92,15 @@ structure CheckType : sig
                     then Ty.T_Sequence(ty, NONE)
                   else err(cxt, [S "invalid element type for sequence: ", TY ty])
             end
+	    | PT.T_Tuple(tys) => let
+	     val tys' = List.map (fn x => check(env, cxt, x)) tys
+	     val res = Ty.T_Tuple(tys')
+	    in
+	     (case List.find TU.isValueType tys'
+	       of SOME(ty) => err(cxt, [S "invalid element type for tuple: ", TY ty])
+		| NONE => res
+	     (*end case*))
+	    end
 	    | PT.T_Mesh => err(cxt, [S "Mesh is not a valid base type."]) 
 	    | PT.T_Space(_) => err(cxt, [S "Function Space is not a valid base type."])
 	    | PT.T_Func(_) => err(cxt, [S "Fem Function is not a valid base type."])

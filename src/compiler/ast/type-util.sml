@@ -113,6 +113,7 @@ structure TypeUtil : sig
 	    | Ty.T_Named(name, ty') =>  Ty.T_Named(name, prune ty') (*QUESTION: Is this even a concern?*)
             | Ty.T_Sequence(ty, NONE) => Ty.T_Sequence(prune ty, NONE)
             | Ty.T_Sequence(ty, SOME dim) => Ty.T_Sequence(prune ty, SOME(pruneDim dim))
+	    | Ty.T_Tuple(tys) => Ty.T_Tuple(List.map prune tys)
             | (Ty.T_Kernel diff) => Ty.T_Kernel(pruneDiff diff)
             | (Ty.T_Tensor shape) => Ty.T_Tensor(pruneShape shape)
             | (Ty.T_Image{dim, shape}) => Ty.T_Image{
@@ -190,6 +191,7 @@ structure TypeUtil : sig
                 (* end case *))
             | prune' (Ty.T_Sequence(ty, NONE)) = Ty.T_Sequence(ty, NONE)
             | prune' (Ty.T_Sequence(ty, SOME dim)) = Ty.T_Sequence(ty, SOME(pruneDim dim))
+	    | prune' (Ty.T_Tuple(tys)) = Ty.T_Tuple(List.map prune' tys)
             | prune' (Ty.T_Kernel diff) = Ty.T_Kernel(pruneDiff diff)
             | prune' (Ty.T_Tensor shape) = Ty.T_Tensor(pruneShape shape)
             | prune' (Ty.T_Image{dim, shape}) = Ty.T_Image{
@@ -218,6 +220,7 @@ structure TypeUtil : sig
             | Ty.T_Sequence(ty, SOME _) => isFixedSize (allowStrand, ty)
             | Ty.T_Strand _ => allowStrand
             | Ty.T_Tensor _ => true
+	    | Ty.T_Tuple(tys) => List.all (fn x => isFixedSize(allowStrand, x)) tys
             | Ty.T_Error => true
 	    | Ty.T_Named(_, def) => isFixedSize (allowStrand, def)
 	    | Ty.T_Fem(_,_) => true
@@ -234,6 +237,7 @@ structure TypeUtil : sig
             | Ty.T_Sequence(ty, SOME _) => isValueType ty
             | Ty.T_Sequence(ty, NONE) => isFixedSize (false, ty)
             | Ty.T_Tensor _ => true
+	    | Ty.T_Tuple(tys) => (List.all isValueType tys) andalso (List.all (fn x => isFixedSize (false, x)) tys)
             | Ty.T_Error => true
 	    | Ty.T_Named(_, ty') => isValueType ty'
 	    | Ty.T_Fem(data,_) => FemData.isValue data
@@ -247,6 +251,7 @@ structure TypeUtil : sig
             | Ty.T_String => true
             | Ty.T_Sequence(ty, SOME _) => isValueOrStrandType ty
             | Ty.T_Sequence(ty, NONE) => isFixedSize (true, ty)
+	    | Ty.T_Tuple(tys) => List.all isValueOrStrandType tys
             | Ty.T_Strand _ => true
 	    | Ty.T_Fem(data, _) => FemData.isValue data
 	    | Ty.T_Named(_, ty') => isValueOrStrandType ty'
@@ -327,6 +332,7 @@ structure TypeUtil : sig
             | Ty.T_String => "string"
             | Ty.T_Sequence(ty, NONE) => concat[toString ty, "[]"]
             | Ty.T_Sequence(ty, SOME dim) => concat[toString ty, "[", dimToString dim, "]"]
+	    | Ty.T_Tuple(tys) => concat ["(", concat(List.map toString tys), ")"]
             | Ty.T_Strand id => Atom.toString id
 	    | Ty.T_Named (id, ty') => (Atom.toString id ) ^"( using " ^ toString ty' ^ ")"
             | Ty.T_Kernel(Ty.DiffConst NONE) => raise Fail "unexpected infinite kernel"
@@ -383,7 +389,7 @@ structure TypeUtil : sig
             | f (d, false, dd) = d::dd
           in
             Ty.T_Field{diff=diff, dim=dim, shape= Ty.Shape (ListPair.foldr f [] (l, mask))}
-          end
+      end
       | slice (ty, _) = raise Fail(concat["slice(", toString ty, ", _)"])
 
   (* convert to fully resolved monomorphic forms *)
@@ -438,6 +444,7 @@ structure TypeUtil : sig
             | ity Ty.T_String = Ty.T_String
             | ity (Ty.T_Sequence(ty, NONE)) = Ty.T_Sequence(ity ty, NONE)
             | ity (Ty.T_Sequence(ty, SOME d)) = Ty.T_Sequence(ity ty, SOME(iDim d))
+	    | ity (Ty.T_Tuple(tys)) = Ty.T_Tuple(List.map ity tys)
             | ity (ty as Ty.T_Strand _) = ty
             | ity (Ty.T_Kernel k) = Ty.T_Kernel(iDiff k)
             | ity (Ty.T_Tensor shape) = Ty.T_Tensor(iShape shape)

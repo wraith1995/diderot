@@ -180,7 +180,8 @@ structure Unify : sig
             | match (Ty.T_String, Ty.T_String) = true
             | match (Ty.T_Sequence(ty1, NONE), Ty.T_Sequence(ty2, NONE)) = match(ty1, ty2)
             | match (Ty.T_Sequence(ty1, SOME d1), Ty.T_Sequence(ty2, SOME d2)) =
-                equalDim(pl, d1, d2) andalso match(ty1, ty2)
+              equalDim(pl, d1, d2) andalso match(ty1, ty2)
+	    | match (Ty.T_Tuple(tys1), Ty.T_Tuple(tys2)) = ListPair.all match (tys1, tys2)
             | match (Ty.T_Strand s1, Ty.T_Strand s2) = Atom.same(s1, s2)
 	    | match (Ty.T_Named(s1,_), Ty.T_Named (s2,_)) = Atom.same(s1, s2)
             | match (Ty.T_Kernel k1, Ty.T_Kernel k2) = equalDiff (pl, k1, k2)

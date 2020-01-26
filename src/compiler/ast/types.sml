@@ -25,6 +25,7 @@ structure Types =
       | T_Int
       | T_String
       | T_Sequence of ty * dim option
+      | T_Tuple of ty list
                                 (* sequence of values; the dimension is none for *)
                                 (* dynamic-length sequences *)
       | T_Strand of Atom.atom   (* named type (i.e., a strand) *)
