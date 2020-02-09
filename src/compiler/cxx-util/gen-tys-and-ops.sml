@@ -687,9 +687,45 @@ structure GenTysAndOps : sig
                   | Ty.TupleTy tys =>
 		    let
 		     val name = CodeGenUtil.tupleName(TreeTypes.TupleTy(tys))
-		     val members = List.tabulate(List.length tys, fn x => (trType TypeToCxx.NSDiderot env (List.nth(tys, x)), "_"^(Int.toString x)))
+		     val members = List.tabulate(List.length tys, fn x =>
+								     let
+								      val nty = trType TypeToCxx.NSDiderot env (List.nth(tys, x))
+								      val nname = "t_"^(Int.toString x)
+								     in
+								      CL.D_Var([], nty, [], nname, NONE)
+								     end)
+		     val osty = CL.T_Named("std::ostream &")
+		     (* Printer *)
+		     val acceses = [CL.E_Str(")")]@(List.concat(List.rev(List.drop(List.rev(List.tabulate (List.length(tys) + 1, fn x => [ CL.E_Str(","), CL.E_Select(CL.E_Var("obj"), "t_"^(Int.toString (List.length(tys) - x - 1)))])), 1))))@[CL.E_Str("(")]
+
+		     val print = List.foldr (fn (x,y) => CL.E_BinOp(y, CL.#<<, x)) (CL.E_Var("os")) acceses
+		     val printer = CL.mkFuncDcl(osty, "operator<<",
+						[CL.PARAM([], osty, "os"),
+						 CL.PARAM(["const"], CL.T_Named(name), "obj")], 
+						CL.S_Block([
+							   CL.S_Return(
+							    SOME(print))]))
+
+		     (*dumb constructor*)
+		     val params = List.tabulate (List.length tys,
+						 fn idx =>
+						    CL.PARAM([],
+							     trType TypeToCxx.NSDiderot env (List.nth(tys, idx)), "p_" ^ (Int.toString idx)
+						))
+		     val inits = List.tabulate (List.length tys, fn idx =>
+								    let
+								     val v = CL.E_Var("t_" ^ (Int.toString idx))
+								     val vp = CL.E_Var("p_" ^ (Int.toString idx))
+								    in CL.E_Apply(v,[vp]) end)
+						
+		     val constr =  CL.D_Constr(["inline"], [CL.SC_Type(CL.T_Named name)], name, params, SOME(inits, CL.mkBlock([]))) 
+						
 		    in
-		     (CL.D_StructDef(SOME(name), members, NONE) :: tyDcls, fnDefs)
+		     (*(CL.D_StructDef(SOME(name), members, NONE) :: tyDcls,  constr :: printer :: fnDefs)*)
+		     ( CL.D_ClassDef{name = name, args=NONE, from=NONE,
+				   public = members@[constr],
+				   protected = [],
+				   private = []} :: tyDcls , printer :: fnDefs)
 		    end
 (* TODO: QUESTION: IS this really needed? I think this is handled elsewhere
                   | Ty.SeqTy(ty, NONE) =>
@@ -913,7 +949,7 @@ structure GenTysAndOps : sig
                 end
           val dcl = (case rator
                  of Print(Ty.TensorRefTy shape) => genTensorPrinter shape
-                  | Print(Ty.TupleTy tys) => raise Fail "FIXME: printer for tuples"
+                  | Print(Ty.TupleTy tys) => CL.D_Verbatim[] (* no printer needed*)
                   | Print(Ty.SeqTy(ty, NONE)) => CL.D_Verbatim[] (* no printer needed *)
                   | Print(Ty.SeqTy(ty, SOME n)) => genSeqPrinter (env, ty, n)
                   | Print ty => CL.D_Verbatim[] (* no printer needed *)

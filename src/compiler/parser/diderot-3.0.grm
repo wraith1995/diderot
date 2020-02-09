@@ -608,8 +608,8 @@ IndexExpr
         ;
 
 DiffExpr
-        : AtomicExpr
-                => (AtomicExpr)
+        : SelectExpr
+                => (SelectExpr)
         | DiffOp DiffExpr
                 => (markExpr (FULL_SPAN, PT.E_UnaryOp(DiffOp, DiffExpr)))
         ;
@@ -621,13 +621,26 @@ DiffOp
         | "∇•"  => (Op.op_Ddot)
         ;
 
+SelectExpr
+        : AtomicExpr (SelectSuffs)*
+          => (case SR
+	       of [] => AtomicExpr
+		| ss => markExpr(FULL_SPAN, List.foldl (fn (f, e) => f e) AtomicExpr ss)
+	     (*end case*))
+	;
+
+SelectSuffs
+        : "." ID => (fn e => PT.E_Select(e, ID))
+	;
+	      
+               
+	       
+
 AtomicExpr
         : ID
                 => (markExpr (FULL_SPAN, PT.E_Var ID))
         | ID "#" Continuity
           => (markExpr (FULL_SPAN, PT.E_Kernel(ID, Continuity)))
-        | Expression "." ID
-	  => (markExpr (FULL_SPAN, PT.E_Select(Expression, ID)))
         | INT
                 => (markExpr (FULL_SPAN, ilit INT))
         | REAL

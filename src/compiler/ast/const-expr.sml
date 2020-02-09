@@ -18,6 +18,7 @@ structure ConstExpr : sig
       | Real of RealLit.t
       | Tensor of t list * Types.ty
       | Seq of t list * Types.ty
+      | Tuple of t list * Types.ty
       | Expr of AST.expr        (* for more complicated tensor-valued expressions *)
 
   (* a property to attach to 'const' variables to track their value *)
@@ -49,6 +50,7 @@ structure ConstExpr : sig
       | Real of RealLit.t
       | Tensor of t list * Ty.ty
       | Seq of t list * Ty.ty
+      | Tuple of t list * Types.ty
       | Expr of AST.expr        (* for more complicated tensor-valued expressions *)
 
   (* a property to attach to 'const' variables to track their value *)
@@ -66,6 +68,7 @@ structure ConstExpr : sig
       | typeOfConst (Real _) = Ty.realTy
       | typeOfConst (Tensor(_, ty)) = ty
       | typeOfConst (Seq(_, ty)) = ty
+      | typeOfConst (Tuple(_, ty)) = ty
       | typeOfConst (Expr e) = TypeOf.expr e
 
     fun valueToExpr (String s) = AST.E_Lit(L.String s)
@@ -74,6 +77,7 @@ structure ConstExpr : sig
       | valueToExpr (Real r) = AST.E_Lit(L.Real r)
       | valueToExpr (Tensor(vs, ty)) = AST.E_Tensor(List.map valueToExpr vs, ty)
       | valueToExpr (Seq(vs, ty)) = AST.E_Seq(List.map valueToExpr vs, ty)
+      | valueToExpr (Tuple(vs, Ty.T_Tuple(tys))) = AST.E_Tuple(List.map valueToExpr vs, tys)
       | valueToExpr (Expr e) = e
 
     val skipWS = StringCvt.skipWS SS.getc
@@ -132,7 +136,8 @@ structure ConstExpr : sig
                               | NONE => NONE
                             (* end case *))
                         | _ => NONE
-                      (* end case *))
+					      (* end case *))
+		  (*FIXME: Parse Tuples*)
                   | Ty.T_Tensor(Ty.Shape[]) => let
                       val (isNeg, rest) = (case SS.getc def
                              of SOME(#"-", rest) => (true, rest)

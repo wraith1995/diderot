@@ -126,7 +126,13 @@ structure CheckConst : sig
                                   handle _ => err [S "out-of-bounds sequence access in constant expression"])
                               | C.Expr _ => C.Expr e
                               | _ => raise Fail "impossible"
-                            (* end case *))
+							(* end case *))
+			| (C.Tuple(vs, ty), [SOME idx]) => (
+			 case eval' idx
+			  of C.Int i => (List.nth(vs, Int.fromLarge i)
+					 handle _ => err [S "out-of-bounds Tuple access in constant expression"])
+			   | _ => err[S "invalid constant expression"]
+			(*End case*))
                         | (C.Expr _, _) => C.Expr e
                         | _ => raise Fail "impossible"
                       (* end case *))

@@ -410,6 +410,7 @@ structure GenOutputs : sig
             ([CL.PARAM([], nrrdPtrTy, "nData")], CL.mkBlock stms)
           end
 
+    (*TODO: SOA for tuple outputs.*)
     fun gen (env, nAxes, outputs) = let
           val spec = Env.target env
           val mkFunc = if (#exec spec)

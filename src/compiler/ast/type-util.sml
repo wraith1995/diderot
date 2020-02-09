@@ -237,7 +237,8 @@ structure TypeUtil : sig
             | Ty.T_Sequence(ty, SOME _) => isValueType ty
             | Ty.T_Sequence(ty, NONE) => isFixedSize (false, ty)
             | Ty.T_Tensor _ => true
-	    | Ty.T_Tuple(tys) => (List.all isValueType tys) andalso (List.all (fn x => isFixedSize (false, x)) tys)
+	    | Ty.T_Tuple(tys) => (List.all isValueType tys)
+			 (*andalso (List.all (fn x => isFixedSize (false, x)) tys)*)
             | Ty.T_Error => true
 	    | Ty.T_Named(_, ty') => isValueType ty'
 	    | Ty.T_Fem(data,_) => FemData.isValue data

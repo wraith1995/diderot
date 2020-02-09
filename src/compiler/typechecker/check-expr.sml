@@ -467,13 +467,14 @@ structure CheckExpr : sig
 		     else
 		      (case indicies
 			of [SOME(AST.E_Lit(L.Int i))] => (let val idx = IntInf.toInt i
-							  in if 0 <= idx andalso idx < indexLength
+							      val _ = print("poop:" ^ (Int.toString idx))
+							  in if 0 <= idx andalso idx < size
 							     then (AST.E_Slice(e', indicies, List.nth(tys, idx)), List.nth(tys, idx))
 							     else err (cxt, [S "Type error in slice operation\n",
-									     S "Tuple type slices expect exactly one index in range."])
+									     S "Tuple type slices expect exactly one index in range.\n"])
 							  end)
 			 | _ => err (cxt, [S "Type error in slice operation\n",
-					   S "Tuple type slices expect exactly integer one index."])
+					   S "Tuple type slices expect integers."])
 		      (*end case*))
 		    end
 		      
@@ -652,7 +653,7 @@ structure CheckExpr : sig
             | PT.E_SeqComp comp => chkComprehension (env, cxt, comp)
 	    | PT.E_Tuple args => let
 	     val (args, tys) = checkList (env, cxt, args) (*Length args >= 2 b/c parser*)
-	     val badType = List.find (TU.isValueType) tys
+	     val badType = List.find (Bool.not o TU.isValueType) tys
 	    in
 	     (case badType
 	       of NONE => (AST.E_Tuple(args, tys), Ty.T_Tuple(tys))

@@ -334,7 +334,8 @@ structure CollectInfo : sig
                         | Op.Translate info => (case ImageInfo.dim info
                              of 1 => ()
                               | d => addType (Ty.TensorRefTy[d])
-                            (* end case *))
+					       (* end case *))
+			| Op.Tuple(tys) => addType (Ty.TupleTy(tys))
                         | _ => ()
                       (* end case *);
                       addOp rator;

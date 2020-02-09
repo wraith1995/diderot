@@ -93,7 +93,7 @@ structure TypeToCxx : sig
             | (Ty.TensorTy []) => Env.realTy env
             | (Ty.TensorTy dd) => RN.tensorTy dd
             | (Ty.TensorRefTy dd) => RN.tensorRefTy dd
-            | (Ty.TupleTy tys) => raise Fail "FIXME: TupleTy"
+            | (Ty.TupleTy tys) => CL.T_Named(CodeGenUtil.tupleName(TreeTypes.TupleTy(tys)))
             | (Ty.SeqTy(ty, NONE)) => dynseqTy (env, ty)
             | (Ty.SeqTy(ty, SOME n)) =>
                 CL.T_Template("diderot::array", [trType(env, ty), CL.T_Named(Int.toString n)])

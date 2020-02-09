@@ -72,7 +72,7 @@ structure CodeGenUtil : sig
 	 val hash = TreeTypes.hash tupleTy
 	 val str = Word.toString hash
 	in
-	 str
+	 "tpl_" ^ str
 	end
     (* QUESTION: WHAT IS THIS SUPPOSED TO BE USED FOR?*)
   (* translate API types to C types *)

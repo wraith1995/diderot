@@ -602,6 +602,12 @@ structure Simplify : sig
                   in
                     (stms, S.E_Seq(xs, cvtTy ty))
               end
+	      | AST.E_Tuple(es, tys) => let
+	       val tys = List.map cvtTy tys
+	       val (stms, vars) = simplifyExpsToVars (cxt, es, stms)
+	      in
+	       (stms, S.E_Tuple(vars))
+	      end
               | AST.E_Slice(e, indices, ty) => let (* tensor slicing *)
                   val (stms, x) = simplifyExpToVar (cxt, e, stms)
                   fun f NONE = NONE
