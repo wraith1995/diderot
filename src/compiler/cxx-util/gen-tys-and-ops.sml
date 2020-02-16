@@ -50,6 +50,30 @@ structure GenTysAndOps : sig
 	  val (intTy, intTyName, intTySize) = if #longint(Env.target env)
 					      then (CL.int64, "int64_t", 8)
 					      else (CL.int32, "int32_t", 4)
+	  (*generate parse function for tuple type*)
+	  fun generateTupleTyParse(tys, name) =
+	      let
+	       val tplname = "tpl_" ^ name
+	       val parsename = tplname ^ "_parse"
+	       val destoryname = tplname ^ "_destory"
+	       val paramsParse = [
+		CL.PARAM([], CL.voidPtr, "ptr"),
+		CL.PARAM([], CL.charPtr, "str"),
+		CL.PARAM([], CL.charPtr, "err")
+	       ]
+	       val paramsDestory = [CL.PARAM([], CL.voidPtr, "ptr")]
+				     (*need to make sure input types properly converted and generated!*)
+				     (*assume [] are only on teem types*)
+				     (*init struct*)
+				     (*create prase stuff*)
+				     (*try to parse each one and check*)
+				     (*if fail -> parse and use error*)
+				     (*if you get a nrrd, we are pasing strings*)
+				     (*build struct*)
+
+				     
+	      in
+	      end
 						      
           (* generate the type and member declarations for a recorded type *)
 
@@ -718,7 +742,11 @@ structure GenTysAndOps : sig
 								     val vp = CL.E_Var("p_" ^ (Int.toString idx))
 								    in CL.E_Apply(v,[vp]) end)
 						
-		     val constr =  CL.D_Constr(["inline"], [CL.SC_Type(CL.T_Named name)], name, params, SOME(inits, CL.mkBlock([]))) 
+		     val constr =  CL.D_Constr(["inline"], [CL.SC_Type(CL.T_Named name)], name, params, SOME(inits, CL.mkBlock([])))
+
+					      (*tuple parse*)
+					      
+					      
 						
 		    in
 		     (*(CL.D_StructDef(SOME(name), members, NONE) :: tyDcls,  constr :: printer :: fnDefs)*)
