@@ -50,6 +50,28 @@ structure TreeTypes =
 	in TensorTy([dim * 2 + 1]) end
       | replaceFem _ = raise Fail "impossible"
 
+    fun toSOA (SeqTy(s, NONE)) =
+	let
+	 fun toSOA' ty =
+	     (case ty
+	       of SeqTy(ty', NONE) => raise Fail "[] [] detected"
+		| SeqTy(ty', SOME(n)) => SeqTy(toSOA' ty', SOME(n))
+		| TupleTy(tys) => TupleTy(List.map toSOA' tys)
+		| _ => SeqTy(ty, NONE)
+	     (*End Case*))
+	in
+	 toSOA' s
+	end
+      | toSOA _ = raise Fail "invalid input to SOA"
+			
+    fun toAOS ty =
+	let
+	 fun cleanTy (TupleTy(tys)) = TupleTy(List.map cleanTy tys)
+	   | cleanTy (SeqTy(ty', NONE)) = ty'
+	   | cleanTy (SeqTy(ty', SOME(n))) = SeqTy(cleanTy ty', SOME(n)) 
+	in
+	 SeqTy(cleanTy ty, NONE)
+	end
 			     
     fun fromAPI (APITypes.IntTy) = IntTy
       | fromAPI (APITypes.BoolTy) = BoolTy
@@ -58,7 +80,15 @@ structure TreeTypes =
       | fromAPI (APITypes.FemData(data)) = FemData(data)
       | fromAPI (APITypes.SeqTy(ty, opt)) = SeqTy(fromAPI ty, opt)
       | fromAPI (APITypes.ImageTy _) = raise Fail "impossible"
-		   
+
+    (* (*FIXME: VecTys and TensorRefTy*) *)
+    (* fun toAPI (IntTy) = APITypes.IntTy *)
+    (*   | toAPI (BoolTy) = APITypes.BoolTy *)
+    (*   | toAPI (TensorTy(s)) = APITypes.TensorTy(s) *)
+    (*   | toAPI (TensorRefTy(s)) = APITypes.TensorTy(s) (*WARNING*) *)
+    (*   | toAPI (FemData(data)) = APITypes.FemData(data) *)
+    (*   | toAPI (SeqTy(ty, opt)) = (APITypes.SeqTy(ty, opt)) *)
+    (*   | toAPI _ = raise Fail "impossible" *)
 
     val intTy = IntTy
 

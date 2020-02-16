@@ -3,6 +3,8 @@ const int dim = 9;
 input int poop = 3;
 input real[3] poops = {1,2,3};
 input int[] fug;
+input int[10][] pug;
+
 strand dumb(int i)
 {
   output tensor[dim] d = zeros[dim];

@@ -36,6 +36,29 @@ structure APITypes =
 	       depth'(ty, [])
 	      end
 
+    fun toSOA (SeqTy(s, NONE)) =
+	let
+	 fun toSOA' ty =
+	     (case ty
+	       of SeqTy(ty', NONE) => raise Fail "[] [] detected"
+		| SeqTy(ty', SOME(n)) => SeqTy(toSOA' ty', SOME(n))
+		| TupleTy(tys) => TupleTy(List.map toSOA' tys)
+		| _ => SeqTy(ty, NONE)
+	     (*End Case*))
+	in
+	 toSOA' s
+	end
+      | toSOA _ = raise Fail "invalid input to SOA"
+			
+    fun toAOS ty =
+	let
+	 fun cleanTy (TupleTy(tys)) = TupleTy(List.map cleanTy tys)
+	   | cleanTy (SeqTy(ty', NONE)) = ty'
+	   | cleanTy (SeqTy(ty', SOME(n))) = SeqTy(cleanTy ty', SOME(n)) 
+	in
+	 SeqTy(cleanTy ty, NONE)
+	end		
+
     fun toString IntTy = "int"
       | toString BoolTy = "bool"
       | toString (TensorTy[]) = "real"
