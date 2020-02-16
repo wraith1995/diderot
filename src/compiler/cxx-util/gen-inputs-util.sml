@@ -87,10 +87,10 @@ structure GenInputsUtil : sig
       fun nrrdTy env = if #exec(Env.target env)
 		       then CL.T_Named "std::string"
 		       else CL.T_Ptr(CL.T_Named "Nrrd") 
-      fun detectTupleSeq ty =
-	  (case ty
-	    of
-	  (*end case*))
+      (* fun detectTupleSeq ty = *)
+      (* 	  (case ty *)
+      (* 	    of *)
+      (* 	  (*end case*)) *)
 
       fun bigFemTy env data = if #exec(Env.target env)
 			      then CL.T_Named "std::string"

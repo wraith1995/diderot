@@ -43,7 +43,7 @@ structure GenTysAndOps : sig
     fun sequenceTy (elemTy, sz) =
           CL.T_Template("diderot::array", [elemTy, CL.T_Named(Int.toString sz)])
 
-    fun genTyDecl env = let
+    fun genTyDecl traitGen env = let
           val (realTy, realTyName, realTySz) = if #double(Env.target env)
 					       then (CL.double, "double", 8)
 					       else (CL.float, "float", 4)
@@ -73,6 +73,7 @@ structure GenTysAndOps : sig
 
 				     
 	      in
+	       ()
 	      end
 						      
           (* generate the type and member declarations for a recorded type *)
@@ -559,7 +560,7 @@ structure GenTysAndOps : sig
 		
 	      (* end case*))
 	       end
-          fun genDecl (ty, (tyDcls, fnDefs)) = (case ty
+          fun genDecl (ty, (tyDcls, fnDefs, traitDcls)) = (case ty
                  of Ty.VecTy(w, pw) => let
                       val cTyName = RN.vecTyName w
                       val cTy = CL.T_Named cTyName
@@ -569,7 +570,7 @@ structure GenTysAndOps : sig
                               Int.toString(realTySz * pw), ")));"
                             ]]
                       in
-                        (typedefDcl :: tyDcls, fnDefs)
+                        (typedefDcl :: tyDcls, fnDefs, traitDcls)
                       end
                   | Ty.TensorRefTy shape => let
                       val name = RN.tensorRefStruct shape
@@ -616,7 +617,9 @@ structure GenTysAndOps : sig
                               private = []
                             }
                       in
-                        (structDcl :: tyDcls, constrDef1 :: constrDef2 :: constrDef3 :: fnDefs)
+                       (structDcl :: tyDcls,
+			constrDef1 :: constrDef2 :: constrDef3 :: fnDefs,
+			traitDcls)
                       end
                   | Ty.TensorTy shape => let
                       val len = List.foldl Int.* 1 shape
@@ -706,7 +709,9 @@ structure GenTysAndOps : sig
                             }
                       val fnDefs = assignDef1 :: assignDef2 :: assignDef3 :: assignDef4 :: fnDefs
                       in
-                        (structDcl :: tyDcls, fnDefs)
+                       (structDcl :: tyDcls,
+			fnDefs,
+			traitDcls)
                       end
                   | Ty.TupleTy tys =>
 		    let
@@ -753,20 +758,29 @@ structure GenTysAndOps : sig
 		     ( CL.D_ClassDef{name = name, args=NONE, from=NONE,
 				   public = members@[constr],
 				   protected = [],
-				   private = []} :: tyDcls , printer :: fnDefs)
+				   private = []} :: tyDcls ,
+		       printer :: fnDefs,
+		       traitDcls)
 		    end
-(* TODO: QUESTION: IS this really needed? I think this is handled elsewhere
                   | Ty.SeqTy(ty, NONE) =>
-                  | Ty.SeqTy(ty, SOME n) =>
-*)
-                  
+		    let
+		     val traitDcls' = traitGen (Ty.SeqTy(ty, NONE), traitDcls)
+		    in
+		     (tyDcls, fnDefs, traitDcls')
+		    end
+		  | Ty.SeqTy(ty, SOME(n)) =>
+		    let
+		     val traitDcls' = traitGen (Ty.SeqTy(ty, SOME(n)), traitDcls)
+		    in
+		     (tyDcls, fnDefs, traitDcls')
+		    end
 		  | Ty.FemData(data) =>
 		    let
 		     val (newTy, newFnDefs) = generateFemType data
 		    in
-		     (newTy :: tyDcls, List.@ (newFnDefs, fnDefs))
+		     (newTy :: tyDcls, List.@ (newFnDefs, fnDefs), traitDcls)
 		    end
-		  | ty => (tyDcls, fnDefs)
+		  | ty => (tyDcls, fnDefs, traitDcls)
                 (* end case *))
           in
             genDecl
@@ -1266,12 +1280,11 @@ structure GenTysAndOps : sig
     fun gen (env, info) = let
           val spec = Env.target env
           val genTrait = genSeqTrait env
-          val genTyDecl = genTyDecl env
+          val genTyDecl = genTyDecl genTrait env 
           val opDcls = List.foldl (doOp env) [] (CollectInfo.listOps info)
           val tys = CollectInfo.listTypes info
-          val (tyDcls, fnDefs) = List.foldr genTyDecl ([], []) tys
+          val (tyDcls, fnDefs, traitDcls) = List.foldr genTyDecl ([], [], []) tys
           val dcls = tyDcls @ fnDefs
-          val traitDcls = List.foldl genTrait [] tys
           val preDcls = if List.null dcls andalso List.null traitDcls
                 then [noDclsTy]
                 else let
