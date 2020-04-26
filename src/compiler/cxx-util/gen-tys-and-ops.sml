@@ -765,15 +765,17 @@ structure GenTysAndOps : sig
                   | Ty.SeqTy(ty, NONE) =>
 		    let
 		     (*TODO: 
-		       Check for tuple outside too...
-check for Tuple -> generate appropriate structs and funs depending on env -> if exec, we need:
+		       Check for tuple outside too...	
+		       check for Tuple -> generate appropriate structs and funs depending on env -> if exec, we need:
 		       	     
-		       	     input_struct-> needs to be used and you need a generator option for it -> easy because we can convert  -> (We do it here, but we name it using hashes so it can be recovered)
-			     Associated parseCB struct -> (parser of strings -> use a general gen parse function from above for Tuples and [n]s )
-			     Load parse CB
-			     loader from input struct to this 
-			     a dumb load function in trait gen
-			     ---modify the trait gen function to do this for us...
+			input_struct-> needs to be used and you need a generator option for it -> easy because we can convert  -> (We do it here, but we name it using hashes so it can be recovered)
+			Associated parseCB struct -> (parser of strings -> use a general gen parse function from above for Tuples and [n]s )
+			Load parse CB
+			loader from input struct to this 
+			a dumb load function in trait gen
+			---modify the trait gen function to do this for us...
+			--for regulr tuples, need to build parser and loader to make this work...
+			--that all happens at input section...
 
 			  if exec:
 			  no input struct, just two functions - AOS and SOA loaders

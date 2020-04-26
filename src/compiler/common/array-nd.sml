@@ -334,6 +334,7 @@ fun expandMap f size (t as AND{dims, shape, elems, ...}) =
      (appi' appMap t; newT)
     end
 fun reshape(AND{dims, shape, elems, ...}, shape') = (computeIndex o computeInverseIndex) (AND{dims=List.length shape', shape=shape', elems = elems, index = ref NONE, inverseIndex = ref NONE})
+											 
 fun toArrayMap expandMap insertShape (t as AND{dims, shape, elems, ...}) =
     let
      val a = ()

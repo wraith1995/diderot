@@ -412,8 +412,6 @@ Type
                 => (markTy (FULL_SPAN, PT.T_Kernel Continuity))
         | ConcreteType
           => (ConcreteType)
-	| "(" ConcreteType ("," ConcreteType)+ ")"
-	  => (markTy (FULL_SPAN, PT.T_Tuple(ConcreteType :: SR)))
         ;
 
 Continuity
@@ -421,8 +419,7 @@ Continuity
         ;
 
 ConcreteType
-        : PrimitiveType SequenceDims
-                => (markTy (FULL_SPAN, SequenceDims PrimitiveType))
+        : PrimitiveType SequenceDims => (markTy (FULL_SPAN, SequenceDims PrimitiveType))
         ;
 
 SequenceDims
@@ -450,6 +447,7 @@ PrimitiveType
 	| "refCell" "{" ID "}"  => (markTy(FULL_SPAN, PT.T_RefCell ID))
 	| "cell" "{" ID "}"     => (markTy(FULL_SPAN, PT.T_Cell ID))
 	| "position" "{" ID "}"      => (markTy(FULL_SPAN, PT.T_MeshPos ID))
+   	| "(" ConcreteType ("," ConcreteType)+ ")"  => (markTy (FULL_SPAN, PT.T_Tuple(ConcreteType :: SR)))
         ;
 
 Shape

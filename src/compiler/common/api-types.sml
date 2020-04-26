@@ -35,7 +35,7 @@ structure APITypes =
 	      in
 	       depth'(ty, [])
 	      end
-
+    (*NOTE: IN A JUST WORLD, THESE WOULD NOT BE HERE.*)
     fun toSOA (SeqTy(s, NONE)) =
 	let
 	 fun toSOA' ty =

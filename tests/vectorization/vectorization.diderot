@@ -3,7 +3,9 @@ const int dim = 9;
 input int poop = 3;
 input real[3] poops = {1,2,3};
 input int[] fug;
-input int[10][] pug;
+input (int, int) cug;
+input (int, int)[10] mug;
+input (int, int, real[3], tensor[2,2])[10][] pug;
 
 strand dumb(int i)
 {
