@@ -715,7 +715,7 @@ structure GenTysAndOps : sig
                       end
                   | Ty.TupleTy tys =>
 		    let
-		     val name = CodeGenUtil.tupleName(TreeTypes.TupleTy(tys))
+		     val name = CodeGenUtil.tupleName(Ty.TupleTy(tys))
 		     val members = List.tabulate(List.length tys, fn x =>
 								     let
 								      val nty = trType TypeToCxx.NSDiderot env (List.nth(tys, x))
@@ -1151,11 +1151,39 @@ structure GenTysAndOps : sig
                             end
                       fun mkAssigns (_, [], _, stms) = CL.mkBlock(List.rev stms)
                         | mkAssigns (i, Ty.VecTy(w, _)::tys, offset, stms) =
-                            mkAssigns (i+1, tys, offset+w, mkAssignsForPiece(offset, i, w, stms))
-                      in
-                        mkFunc(CL.voidTy, name,
+                          mkAssigns (i+1, tys, offset+w, mkAssignsForPiece(offset, i, w, stms))
+		      val Ty.VecTy(lastSize, _) = List.last vParamTys
+		      val assigns = mkAssigns (0, vParamTys, 0, [])
+		      val fin =  mkFunc(CL.voidTy, name,
                           CL.PARAM([], dstTy, "&dst") :: vParams,
-                          mkAssigns (0, vParamTys, 0, []))
+                          assigns)
+		      val extraFlag = lastSize = 1
+		      val extra = if extraFlag
+				  then
+				   let
+				    val numParams = List.length vParams
+				    val vecLength = #wid layout
+				    val vParams' = ((List.rev o List.tl o List.rev)(vParams))
+				    val vParams'' = vParams' @ [CL.PARAM([], realTy, "v"^Int.toString numParams)]
+				    val CL.S_Block(preAssigns) = assigns
+				    val assigns' = (List.rev o List.tl o List.rev)(preAssigns)
+				    val assigns'' = assigns' @[ CL.mkAssign(
+						     CL.mkSubscript(CL.mkSelect(CL.mkVar "dst", "_data"), mkInt (vecLength - 1)),
+						     CL.mkVar("v"^(Int.toString numParams)))]
+				    val altFin =  mkFunc(CL.voidTy, name,
+						      CL.PARAM([], dstTy, "&dst") :: vParams'',
+						      CL.mkBlock(assigns''))
+
+				    (*get new param*)
+				    (*get last assign*)
+				    (*yay - assign issue*)
+				   in
+				    altFin
+				   end
+				  else fin
+n
+                      in
+                       extra
                       end
                   | TensorCopy shp => CL.D_Verbatim[]
 (*

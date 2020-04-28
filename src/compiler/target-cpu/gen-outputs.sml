@@ -382,15 +382,6 @@ structure GenOutputs : sig
 		val targetVar = stateVar name
                 val copyBlk = copy(false, ty, targetVar, nElems, elemCTy)
 
-		    (* CL.mkBlock[ *)
-                (*         CL.mkCall("memcpy", [ *)
-                (*             cpV, *)
-                (*             CL.mkUnOp(CL.%&, stateVar name), *)
-                (*             CL.mkBinOp(mkInt nElems, CL.#*, CL.mkSizeof elemCTy) *)
-                (*           ]), *)
-                (*         CL.mkExpStm(CL.mkAssignOp(cpV, CL.+=, *)
-                (*           CL.mkBinOp(mkInt nElems, CL.#*, CL.mkSizeof elemCTy))) *)
-                (*       ] *)
                 val mode = if #isGrid spec orelse snapshot
                       then "alive"
                       else "stable"
@@ -410,7 +401,7 @@ structure GenOutputs : sig
             ([CL.PARAM([], nrrdPtrTy, "nData")], CL.mkBlock stms)
           end
 
-    (*TODO: SOA for tuple outputs.*)
+    (*TODO: SOA and AOS for tuple outputs.*)
     fun gen (env, nAxes, outputs) = let
           val spec = Env.target env
           val mkFunc = if (#exec spec)

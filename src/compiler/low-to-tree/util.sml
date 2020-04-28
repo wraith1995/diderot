@@ -79,6 +79,7 @@ structure Util : sig
             | LowTypes.ImageTy info =>
               APITypes.ImageTy(ImageInfo.dim info, ImageInfo.voxelShape info)
 	    | LowTypes.FemData(data) => APITypes.FemData(data)
+	    | LowTypes.TupleTy(tys) => APITypes.TupleTy(List.map toAPIType tys)
             | _ => raise Fail("toAPIType: unexpected " ^ LowTypes.toString ty)
           (* end case *))
 

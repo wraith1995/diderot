@@ -1,4 +1,82 @@
 ====================
+Tuples:
+internal looks fine.
+External:
+-Input, starting inputs, outputs
+--base: do not thing, but generate void * function
+--seq issue - AOS vs AOS - what about starting inputs -> don't allow for now -> solution would be check AOS vs. SOA
+
+--inputs:
+Do copy... but where
+gen-inputs-util - this is where default ones are allowed - *IGNORE*
+gen-library-interface - where funcs are delcared (First)
+gen-inputs - actual functions 
+gen-outputs - actual functions
+
+Plan:
+input:
+*base type: list of things and void *
+*[n][n][n][]T where T can be anything -> [n][n][n]Tuples[n]base[] -> require [n][n][n]Tuple[n][n] args of seqs
+
+Output:
+another issue that must be solved:
+dyn vs image inputs
+image: simple -> SOA vs AOS
+dyn: simple again if there isn't a size issue, but probably isn't
+base type:needs to be pulled through that
+
+
+output first:
+
+--fixed size--- [][n][n]Tuple....
+
+Tuple([][n][n]...T1, [][n][n]...T2, [][n][n]...Tn)
+
+If T1 contains a tuple,
+Tuple( Tuple(T11, T12, T13, ...), ... )
+
+Tuple([]T11, []t12, []t13, ....)
+
+So what does this mean for the tranformation
+
+We have a tree and we are pushing [] down... we need the index or the struct address....
+
+Tuple structure -> pass info about how to acess (path on graph -> list -> -> -> )
+
+Check Tuple([], [], []) -> can't have []
+
+Algo:
+*Take structure where Tuple is not top level and [] is not bottom level
+*
+
+Transpose
+Merge
+
+Step 0:
+
+!Build array of leaf nodes and how to access them : List 
+
+Step 1:
+While Check that tuple is top and no leaf tuples
+
+step 2:
+*Find first tuple middle nodes and transpose up
+T(Tuple(A, B, C)) -> Tuple(TA, TB, TC)
+
+Base types = T[n]*[]
+
+
+
+
+we have a copy lopo
+
+snapshot:
+???
+
+
+
+
+====================
 Precdence fixing:
 -select should be a deepest level
 --Atomic Expr should feature .selec - remove from suffix

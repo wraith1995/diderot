@@ -701,7 +701,7 @@ structure LowToTree : sig
               :: stms' @ stms
                   end
               | IR.OP(Op.Strands _, _) => stms (* Op.Strands is translated by trMapReduce *)
-              | IR.OP(Op.LoadSeq(ty, file), []) => let
+              | IR.OP(Op.LoadSeq(ty, file), []) => let (*AOS vs SOA concern*)
                   val lhs = newLocal (env, getLHS ())
                   in
                     T.S_LoadNrrd(lhs, U.toAPIType ty, file, NONE) :: stms

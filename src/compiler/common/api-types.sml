@@ -36,29 +36,38 @@ structure APITypes =
 	       depth'(ty, [])
 	      end
     (*NOTE: IN A JUST WORLD, THESE WOULD NOT BE HERE.*)
-    fun toSOA (SeqTy(s, NONE)) =
-	let
-	 fun toSOA' ty =
-	     (case ty
-	       of SeqTy(ty', NONE) => raise Fail "[] [] detected"
-		| SeqTy(ty', SOME(n)) => SeqTy(toSOA' ty', SOME(n))
-		| TupleTy(tys) => TupleTy(List.map toSOA' tys)
-		| _ => SeqTy(ty, NONE)
-	     (*End Case*))
-	in
-	 toSOA' s
-	end
-      | toSOA _ = raise Fail "invalid input to SOA"
-			
-    fun toAOS ty =
-	let
-	 fun cleanTy (TupleTy(tys)) = TupleTy(List.map cleanTy tys)
-	   | cleanTy (SeqTy(ty', NONE)) = ty'
-	   | cleanTy (SeqTy(ty', SOME(n))) = SeqTy(cleanTy ty', SOME(n)) 
-	in
-	 SeqTy(cleanTy ty, NONE)
-	end		
 
+    fun isOutputAble(ty) =
+	(case ty
+	  of IntTy => true
+	   | BoolTy => true
+	   | TensorTy _ => true
+	   | StringTy => true
+	   | ImageTy(_, _) => raise Fail "ImageTy should not be considered in output"
+	   | FemData _ => raise Fail "FemData should not be considered in output"
+	   | SeqTy(ty', SOME(n)) => isOutputAble ty'
+	   | SeqTy(ty', NONE) => isOutputAble ty'
+	   | TupleTy _ => false 
+	(*end case*))
+
+    fun buildAccessPattern(bTy) =
+	(*Given a type, figure out a way to access all elements of the form [n][n][n](real or tensor or int or bool or stringTy)*)
+	(*Returns a [(path, ty)] where the nth element contains a path to that element through the tree and the result type; ~1 indicates going through a sequence*)
+	
+	let
+	(*basically a sort of pre-order traversal*)
+	 fun bap(ty, path) =
+	      if isOutputAble ty
+	      then [(List.rev path, ty)]
+	      else
+	       (case ty
+		 of SeqTy(ty', _) => bap(ty', ~1 :: path)
+		  | TupleTy(tys) => List.concatMap bap (List.tabulate(List.length tys, fn x => (List.nth(tys, x), x :: path)))
+		  | _ => raise Fail "Impossible"
+	       (*end case*))
+	in
+	 bap(bTy, [])
+	end
     fun toString IntTy = "int"
       | toString BoolTy = "bool"
       | toString (TensorTy[]) = "real"
@@ -69,11 +78,53 @@ structure APITypes =
       | toString (TupleTy(tys)) = concat ["(", concat (List.map toString tys), ")"]
       | toString StringTy = "string"
       | toString (ImageTy(d, dd)) = concat[
-            "image(", Int.toString d, ")[", String.concatWithMap "," Int.toString dd, "]"
-          ]
+         "image(", Int.toString d, ")[", String.concatWithMap "," Int.toString dd, "]"
+        ]
       | toString (SeqTy(ty, NONE)) = toString ty ^ "[]"
       | toString (SeqTy(ty, SOME d)) = concat[toString ty, "[", Int.toString d, "]"]
       | toString (FemData data) = "FemData:" ^ (FemData.toString data)
+
+    fun toOutputAbleType(ty) =
+	(*Converts types to the form Tuple([]base) so that base = base Ty ([n][n]...) ad so that base is in pre-order traversal order *)
+	let
+	 fun isTuple (n, TupleTy _) = true
+	   | isTuple _ = false
+	 (*inefficient but simple:
+	  *First, flatten a nested tupple i.e Tuple(..., Tuple, ...)
+	  *Second, traverse tuple to analyze next level
+	  *If a seq type is ever found with a tuple directly inside it, switch them.
+	  *Otherwise, continue down
+	  *preverse other types, except fem types wher we fail
+	 **By applying thes rules, we put the type in the suitable form and we maintain pre-order rules on base types as nodes (i.e if you wrote out the pre-order, took out all non-base types, the orders between the original type and toOutpuTableType would be the same.)
+	 *)
+	 fun toat(ty) =
+	      (case ty
+		of TupleTy(tys) => (case List.find isTuple (List.tabulate(List.length tys, fn x => (x, List.nth(tys, x))))
+				     of SOME((n, TupleTy(tys'))) => let
+				     in
+				      TupleTy(List.take(tys, n) @ tys' @ List.drop(tys, n + 1))
+				     end
+				      | NONE => TupleTy(List.map toat tys)
+				   (*end case*))
+		 | SeqTy(ty', r) => (case ty'
+				     of TupleTy(tys) => TupleTy(List.map (fn t => SeqTy(t, r)) tys)
+				      | _ => SeqTy(toat ty', r)
+				   (*end case*))
+		| FemData _ => raise Fail "unexpected Fem Data"
+		| _ => ty 
+	      (*end case*))
+	 fun loop ty = let
+	  val ty' = toat ty
+	 in
+	  if (toString ty) = (toString ty') (*TODO: Fix stupid lazy hack -> will fail on FEM data, but this will crash earlier when making access pattern*)
+	  then ty'
+	  else loop ty'
+	 end
+	in
+	 loop ty
+	end
+
+
 
   (* does a type have a non-static size? *)
     fun hasDynamicSize StringTy = true

@@ -3,18 +3,23 @@ const int dim = 9;
 input int poop = 3;
 input real[3] poops = {1,2,3};
 input int[] fug;
-input (int, int) cug;
-input (int, int)[10] mug;
-input (int, int, real[3], tensor[2,2])[10][] pug;
+//input (int, int) cug;
+//input (int, int)[10] mug;
+//input (int, int, real[3], tensor[2,2])[10][] pug;
 
 strand dumb(int i)
 {
   output tensor[dim] d = zeros[dim];
+  output tensor[dim][3]dd = {zeros[dim], zeros[dim], zeros[dim]};
+  output int[3] ugg = {1,2,3};
   output real r = 2.0;
+  //  output (int, int) g = (2,2);
   update{
     print(d •( d ));
+    print(dd);
     print((2,3,4)[1]);
     r = d •( d );
+    print(fug);
     stabilize;
   }
-} create_collection {dumb(j) | j in 1..3};
+} create_array {dumb(j) | j in 1..3};

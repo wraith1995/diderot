@@ -70,7 +70,7 @@ structure TypeToCxx : sig
                 | (Ty.TensorTy []) => Env.realTy env
                 | (Ty.TensorTy dd) => programQ(RN.tensorStruct dd)
                 | (Ty.TensorRefTy dd) => programQ(RN.tensorRefStruct dd)
-                | (Ty.TupleTy tys) => raise Fail "FIXME: TupleTy"
+                | (Ty.TupleTy tys) => CL.T_Named(CodeGenUtil.tupleName(Ty.TupleTy(tys)))
                 | (Ty.SeqTy(ty, NONE)) => diderotTQ("dynseq", [tr ty])
                 | (Ty.SeqTy(ty, SOME n)) =>
                     diderotTQ("array", [tr ty, CL.T_Named(Int.toString n)])
