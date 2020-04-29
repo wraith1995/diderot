@@ -47,8 +47,20 @@ namespace diderot {
     inline double trunc (double x) { return ::trunc(x); }
 
     inline float sign (float x) { return (x > 0) - (x < 0); }
-    inline double sign (double x) { return (x > 0) - (x < 0); }
-
+  inline double sign (double x) { return (x > 0) - (x < 0); }
+  template <typename T, size_t SZ>
+  std::ostream & operator<< (std::ostream & os, array<T, SZ> const seq)
+  {
+    os << "{";
+    for(int i = 0; i < SZ; i++){
+      os << seq[i];
+      if (i + 1 != SZ) {
+	  os << ", ";
+      }
+    }
+    os << "}";
+    return os;
+  }
     namespace __details {
 
       //! set the properties of an output stream (precision and alphabool)
