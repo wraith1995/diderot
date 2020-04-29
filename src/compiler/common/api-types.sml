@@ -51,7 +51,7 @@ structure APITypes =
 	(*end case*))
 
     fun buildAccessPattern(bTy) =
-	(*Given a type, figure out a way to access all elements of the form [n][n][n](real or tensor or int or bool or stringTy)*)
+	(*Given a type, figure out a way to access all elements of the form (real or tensor or int or bool or stringTy)[n][n][n][]*)
 	(*Returns a [(path, ty)] where the nth element contains a path to that element through the tree and the result type; ~1 indicates going through a sequence*)
 	
 	let

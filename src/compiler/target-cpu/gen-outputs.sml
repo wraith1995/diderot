@@ -461,7 +461,7 @@ structure GenOutputs : sig
 	      in
 	       (outTys, accPat, fixedSize, numOutputs, outputable)
 	      end
-	  fun getFnDispatch(env, snapshot, nAxes, ty, name, kind, num, path) =
+	  fun getFnDispatch(env, snapshot, nAxes, ty, name, kind, num, path, pathBot, fscheck) =
 	      let
 	       val (ps, CL.S_Block(stms)) =
 		   (case ty
@@ -473,11 +473,21 @@ structure GenOutputs : sig
 	      end
 	  fun genFnHelper(env, snapshot, nAxes, ty, name, kind) =
 	      let
-	       val (outTys, accPat, fixedSize, numOutputs, outputable) = preProcOutput ty
+	       val (outTys, accPaths, fixedSize, numOutputs, outputable) = preProcOutput ty
+	       val itterList = List.tabulate(List.length fixedSize, fn x => x)
 	      in
-	       if numOutputs  = 1 andalso outputable
-	       then getFnDispatch(env, snapshot, nAxes, ty, name, kind, 0, [])
-	       else raise Fail "not impl yet"
+	       if numOutputs  = 1 andalso outputable (*dispatch to old code to avoid screwing it up*)
+	       then getFnDispatch(env, snapshot, nAxes, ty, name, kind, 0, [], NONE, NONE)
+	       else
+		let
+		 val foldList = ListPair.zip(ListPair.zip(ListPair.zip (outTys, accPaths), fixedSize), itterList)
+		 fun ouptutFolder ((((outTy, (acc, accTy)), fs), num), (params, block)) =
+		     let val (params', block') = getFnDispatch(env, snapshot, nAxes, outTy, name, kind, 0, acc, SOME(accTy), SOME(fs))
+		     in (params@params', CL.mkBlock([block, block'])) end
+			  
+		in
+		 List.foldr ouptutFolder ([], CL.mkBlock([])) foldList
+		end
 	      end
 
 		
