@@ -718,7 +718,7 @@ structure GenTysAndOps : sig
 		     val name = CodeGenUtil.tupleName(Ty.TupleTy(tys))
 		     val members = List.tabulate(List.length tys, fn x =>
 								     let
-								      val nty = trType TypeToCxx.NSDiderot env (List.nth(tys, x))
+								      val nty = trType TypeToCxx.NSProgram env (List.nth(tys, x))
 								      val nname = "t_"^(Int.toString x)
 								     in
 								      CL.D_Var([], nty, [], nname, NONE)
@@ -739,7 +739,7 @@ structure GenTysAndOps : sig
 		     val params = List.tabulate (List.length tys,
 						 fn idx =>
 						    CL.PARAM([],
-							     trType TypeToCxx.NSDiderot env (List.nth(tys, idx)), "p_" ^ (Int.toString idx)
+							     trType TypeToCxx.NSProgram env (List.nth(tys, idx)), "p_" ^ (Int.toString idx)
 						))
 		     val inits = List.tabulate (List.length tys, fn idx =>
 								    let
@@ -748,7 +748,7 @@ structure GenTysAndOps : sig
 								    in CL.E_Apply(v,[vp]) end)
 						
 		     val constr =  CL.D_Constr(["inline"], [CL.SC_Type(CL.T_Named name)], name, params, SOME(inits, CL.mkBlock([])))
-		     val defaultConstr =  CL.D_Constr(["inline"], [CL.SC_Type(CL.T_Named name)], name, [], NONE)
+		     val defaultConstr =  CL.D_Constr([], [CL.SC_Type(CL.T_Named name)], name, [], NONE)
 
 					      (*tuple parse*)
 					      

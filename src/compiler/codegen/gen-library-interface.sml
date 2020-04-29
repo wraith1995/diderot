@@ -172,16 +172,31 @@ structure GenLibraryInterface : sig
                   descDcl @ getDcl @ setDcl
                 end
         (* create a decl for an output variable *)
-          fun mkGetDecl snapshot {ty = Ty.SeqTy(_, NONE), name, kind} = [
-                  CL.D_Proto(
-                    [], Env.boolTy env, (if snapshot then snapshotGet else outputGet)(spec, name),
-                    [CL.PARAM([], worldPtrTy, "wrld"), CL.PARAM([], nrrdPtrTy, "lengths"), CL.PARAM([], nrrdPtrTy, "data")])
-                ]
-            | mkGetDecl snapshot {name, ...} = [
-                  CL.D_Proto(
-                    [], Env.boolTy env, (if snapshot then snapshotGet else outputGet)(spec, name),
-                    [CL.PARAM([], worldPtrTy, "wrld"), CL.PARAM([], nrrdPtrTy, "data")])
-                ]
+          (* fun mkGetDecl snapshot {ty = Ty.SeqTy(_, NONE), name, kind} = [ *)
+          (*         CL.D_Proto( *)
+          (*           [], Env.boolTy env, (if snapshot then snapshotGet else outputGet)(spec, name), *)
+          (*           [CL.PARAM([], worldPtrTy, "wrld"), CL.PARAM([], nrrdPtrTy, "lengths"), CL.PARAM([], nrrdPtrTy, "data")]) *)
+          (*       ] *)
+	  fun mkGetDecl snapshot {name,ty, kind} =let
+	   val outputTys = (case Ty.toOutputAbleType ty
+			    of Ty.TupleTy(tys) => tys
+			     | a => [a]
+			   (*end case*))
+	   fun outputParamsFold ((ty, n), params) =
+	       (case ty
+		 of Ty.SeqTy(_, NONE) => params@[CL.PARAM([], nrrdPtrTy, "lengths_" ^ (Int.toString n)),
+						 CL.PARAM([], nrrdPtrTy, "data_" ^ (Int.toString n))]
+		  | _ => params@[CL.PARAM([], nrrdPtrTy, "data_" ^ (Int.toString n))]
+	       (*end case*))
+			    
+	   val params = List.foldr outputParamsFold [] (List.tabulate(List.length outputTys, fn x=> (List.nth(outputTys,x), x)))
+	  in
+	   [
+             CL.D_Proto(
+              [], Env.boolTy env, (if snapshot then snapshotGet else outputGet)(spec, name),
+              [CL.PARAM([], worldPtrTy, "wrld")]@params)
+           ]
+	  end
           val outS = openOut baseName
           val placeholders =
                 ("H_FILE", Out.filename outS) ::

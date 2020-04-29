@@ -15,7 +15,7 @@ strand dumb(int i)
   output real r = 2.0;
   output tensor[3][2][] fum = {};
   
-  output (int, int) g = (2,2);
+  output (int[2], int) g = ({2,3},2);
   update{
     print(fum[0][0]);
     print(d •( d ));
