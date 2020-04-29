@@ -13,8 +13,11 @@ strand dumb(int i)
   output tensor[dim][3]dd = {zeros[dim], zeros[dim], zeros[dim]};
   output int[3] ugg = {1,2,3};
   output real r = 2.0;
-  //  output (int, int) g = (2,2);
+  output tensor[3][2][] fum = {};
+  
+  output (int, int) g = (2,2);
   update{
+    print(fum[0][0]);
     print(d •( d ));
     print(dd);
     print((2,3,4)[1]);

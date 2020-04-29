@@ -229,7 +229,7 @@ structure TreeToCxx : sig
                *)
             | (Op.TensorRef shp, [a]) => CL.mkCons(RN.tensorRefTy shp, [a])
             | (Op.Select(Ty.TupleTy tys, i), [a]) =>
-              CL.mkSelect(a, "t_" ^ Int.toString i)
+              CL.mkSelect(a, "t_" ^ Int.toString i) 
 	    | (Op.Tuple(tys), xs) => let
 	     val name = CodeGenUtil.tupleName(TreeTypes.TupleTy(tys))
 	    in
