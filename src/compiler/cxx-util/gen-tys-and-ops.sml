@@ -1181,7 +1181,6 @@ structure GenTysAndOps : sig
 				    altFin
 				   end
 				  else fin
-n
                       in
                        extra
                       end

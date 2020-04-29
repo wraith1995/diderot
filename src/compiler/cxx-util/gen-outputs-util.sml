@@ -39,7 +39,7 @@ structure GenOutputsUtil : sig
     type output_info = OutputUtil.output_info
 
   (* code fragment to allocate nrrd data and check for errors *)
-    val maybeAlloc : CodeGenEnv.t * CLang.exp * CLang.var * int -> CLang.stm
+    val maybeAlloc : CodeGenEnv.t * CLang.exp * CLang.var * int * int -> CLang.stm
 
   (* generate code to register command-line options for redirecting the output in standalone
    * executables.  This function returns a list consisting of the global C variables that hold
@@ -68,10 +68,10 @@ structure GenOutputsUtil : sig
 
   (* variables in the generated code *)
     val wrldV = CL.mkVar "wrld"
-    val sizesV = CL.mkVar "sizes"
-    val nDataV = CL.mkVar "nData"
-    val nLengthsV = CL.mkVar "nLengths"
-    val NRRD = CL.mkVar "NRRD"
+    val sizesV = fn x => CL.mkVar ("sizes_" ^ (Int.toString x))
+    val nDataV = fn x => CL.mkVar ("nData_" ^  (Int.toString x))
+    val nLengthsV = fn x => CL.mkVar ("nLengths_" ^  (Int.toString x))
+
     val msgV = CL.mkVar "msg"
 
   (* code fragment to allocate nrrd data and check for errors
@@ -82,17 +82,17 @@ structure GenOutputsUtil : sig
             return true;
         }
    *)
-    fun maybeAlloc (env, nrrdVar, nrrdType, nDims) =
+    fun maybeAlloc (env, nrrdVar, nrrdType, nDims, num) =
           CL.mkIfThen(
             CL.mkBinOp(
               CL.mkApply("nrrdMaybeAlloc_nva", [
-                  nrrdVar, CL.mkVar nrrdType, CL.mkInt(IntInf.fromInt nDims), sizesV
+                  nrrdVar, CL.mkVar nrrdType, CL.mkInt(IntInf.fromInt nDims), sizesV num
                 ]),
               CL.#!=,
               CL.mkInt 0),
           (* then *)
             CL.mkBlock[
-                CL.mkDeclInit(CL.charPtr, "msg", CL.mkApply("biffGetDone", [NRRD])),
+                CL.mkDeclInit(CL.charPtr, "msg", CL.mkApply("biffGetDone", [CL.mkVar "NRRD"])),
                 TreeToCxx.errorMsgAdd (env, msgV),
                 CL.mkCall("std::free", [msgV]),
                 CL.mkReturn(SOME(CL.mkVar "true"))
@@ -210,15 +210,15 @@ structure GenOutputsUtil : sig
           fun mkDynseqHelperArgs name = if snapshot
                 then [
                     CL.mkVar (snapstem (isMultiOutput, name)), CL.mkVar "suffix",
-                    nLengthsV, nDataV
+                    nLengthsV 0, nDataV 0
                   ]
-                else [CL.mkVar (outstem (isMultiOutput, name)), nLengthsV, nDataV]
+                else [CL.mkVar (outstem (isMultiOutput, name)), nLengthsV 0, nDataV 0]
           fun writeNrrd {name, ty, kind} = if isDyn ty
                 then [
-                    nrrdNew (nLengthsV),
-                    nrrdNew (nDataV),
+                    nrrdNew (nLengthsV 0),
+                    nrrdNew (nDataV 0),
                     CL.mkIfThenElse(
-                      CL.mkApply(outputGet(spec, name), [wrldV, nLengthsV, nDataV]),
+                      CL.mkApply(outputGet(spec, name), [wrldV, nLengthsV 0, nDataV 0]),
                     (* then *)
                         error (SOME(CL.mkStr(concat[
                             "Error getting nrrd data for '", name, "'"
@@ -230,25 +230,25 @@ structure GenOutputsUtil : sig
                         error NONE
                       (* endif *))
                     (* endif *)),
-                    nrrdNuke nLengthsV,
-                    nrrdNuke nDataV
+                    nrrdNuke (nLengthsV 0),
+                    nrrdNuke (nDataV 0)
                   ]
                 else [
-                    nrrdNew (nDataV),
+                    nrrdNew (nDataV 0),
                     CL.mkIfThenElse(
-                      CL.mkApply(outputGet(spec, name), [wrldV, nDataV]),
+                      CL.mkApply(outputGet(spec, name), [wrldV, nDataV 0]),
                     (* then *)
                         error (SOME(CL.mkStr(concat[
                             "Error getting nrrd data for '", name, "'"
                           ]))),
                     (* else *)
                       CL.mkIfThen(
-                        CL.mkApply("nrrd_save_helper", [mkOutFile name, nDataV]),
+                        CL.mkApply("nrrd_save_helper", [mkOutFile name, nDataV 0]),
                       (* then *)
                         error NONE
                       (* endif *))
                     (* endif *)),
-                    nrrdNuke nDataV
+                    nrrdNuke (nDataV 0)
                   ]
           val name = if snapshot then "write_snapshot" else "write_output"
           val params = if snapshot

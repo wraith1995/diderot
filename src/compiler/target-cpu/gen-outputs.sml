@@ -75,20 +75,18 @@ structure GenOutputs : sig
 
   (* variables in the generated code *)
     val wrldV = CL.mkVar "wrld"
-    val sizesV = CL.mkVar "sizes"
+    val sizesV = fn x => CL.mkVar ("sizes_" ^ Int.toString(x))
     val iV = CL.mkVar "ix"
     val nV = CL.mkVar "n"
     val cpV = CL.mkVar "cp"
     val ipV = CL.mkVar "ip"
     val msgV = CL.mkVar "msg"
-    val offsetV = CL.mkVar "offset"
-    val nDataV = CL.mkVar "nData"
-    val nLengthsV = CL.mkVar "nLengths"
-    val numElemsV = CL.mkVar "numElems"
-    val outSV = CL.mkVar "outS"
+    val offsetV = fn i => CL.mkVar ("offset_" ^ (Int.toString i))
+    val nDataV = fn i => CL.mkVar ("nData_"  ^ (Int.toString(i)))
+    val nLengthsV = fn i => CL.mkVar ("nLengths_" ^ (Int.toString i))
+    val numElemsV = fn i => CL.mkVar ("numElems_" ^ (Int.toString i))
     val DIDEROT_DEAD = CL.mkVar "diderot::kDead"
     val DIDEROT_STABLE = CL.mkVar "diderot::kStable"
-    val NRRD = CL.mkVar "NRRD"
 
     fun strandMeth (f, args) = CL.mkDispatch(CL.mkIndirect(wrldV, "_strands"), f, args)
 
@@ -114,7 +112,26 @@ structure GenOutputs : sig
      For a fem anything, we loop over remaining sequence dimensions and copy each 
      via a copy_to member in the target struct.
      *)
-    fun copy(dynSeq, ty, copyTarget, nElems, elemCTy) =
+    fun copy(dynSeq, ty, copyTarget, nElems, elemCTy) = 
+	    (*Go to copy function -> use loop ideas
+     if you have an acc, just modify acc var
+     if you have an a -1, do a loop over the size
+     if you have an -2, set seq, new itterant
+     Build in opposite direction*)
+    (* (*Translate an acc pattern into a way of getting a tuple: make list [a, b, [idx],...], [loop1, loop2]*) *)
+    (* fun translateAccPattern(accPattern) = *)
+    (* 	let *)
+    (* 	 val depth = ref 0 *)
+    (* 	 fun proc(x::xs) = *)
+    (* 	     if x >= 0 *)
+    (* 	     then *)
+    (* 	 val () = () *)
+    (* 	in *)
+    (* 	 (*for tuples, we do 1->2->3 *)
+    (* 	  for arrays, we add a loop function + 1->2->3[idx_i]->a->b->c*) *)
+	 
+    (* 	end *)
+
 	let
 	 val (fem, seqDims) = tyAnalysis( ty, dynSeq)
 	 fun mkLoop([], vars, copyTarget) =
@@ -177,8 +194,8 @@ structure GenOutputs : sig
 	end
 
   (* utility functions for initializing the sizes array *)
-    fun sizes i = CL.mkSubscript(sizesV, mkInt i)
-    fun setSizes (i, v) = CL.mkAssign(sizes i, v)
+    fun sizes j i = CL.mkSubscript(sizesV j, mkInt i)
+    fun setSizes j (i, v) = CL.mkAssign(sizes j i, v)
 
   (* get the number of alive or stable strands strands *)
     fun numStrandsExp snapshot = strandMeth (if snapshot then "num_alive" else "num_stable", [])
@@ -233,8 +250,13 @@ structure GenOutputs : sig
    *    allocate nrrd for nData
    *    copy data from strands to nrrd
    *)
-    fun genDynOutput (env, snapshot, nAxes, ty, name, kind) = let
-          val spec = Env.target env
+    fun genDynOutput (env, snapshot, nAxes, ty, name, kind, num) = let
+     val numElemsV = numElemsV num
+     val offsetV = offsetV num
+     val nLengthsV = nLengthsV num
+     val nDataV = nDataV num
+     val spec = Env.target env
+     val setSizes = setSizes num
           val (elemCTy, nrrdType, axisKind, nElems) = OutputUtil.infoOf (env, ty)
           val stateVar = stateVar spec kind
           val (nAxes, domAxisKind) = (case nAxes
@@ -255,17 +277,17 @@ structure GenOutputs : sig
                 ] end
         (* generate code to allocate the nLengths nrrd *)
           val lengthsNrrd = let
-                val dimSizes = setSizes(0, CL.mkInt 2)  (* nLengths is 2-element vector *)
+                val dimSizes = setSizes (0, CL.mkInt 2)  (* nLengths is 2-element vector *)
                 in
                   CL.mkComment["allocate nLengths nrrd"] ::
                   (if #isGrid spec
                     then dimSizes ::
                       List.tabulate (nAxes, fn i =>
-                        setSizes(i+1, CL.mkSubscript(CL.mkIndirect(wrldV, "_size"), mkInt(nAxes-i-1)))) @
-                      [U.maybeAlloc (env, nLengthsV, Nrrd.tyToEnum Nrrd.TypeInt, nAxes+1)]
+                        setSizes (i+1, CL.mkSubscript(CL.mkIndirect(wrldV, "_size"), mkInt(nAxes-i-1)))) @
+                      [U.maybeAlloc (env, nLengthsV, Nrrd.tyToEnum Nrrd.TypeInt, nAxes+1, num)]
                     else [
-                        dimSizes, setSizes(1, numStrandsExp snapshot),
-                        U.maybeAlloc (env, nLengthsV, Nrrd.tyToEnum Nrrd.TypeInt, 2)
+                        dimSizes, setSizes (1, numStrandsExp snapshot),
+                        U.maybeAlloc (env, nLengthsV, Nrrd.tyToEnum Nrrd.TypeInt, 2, num)
                       ])
                 end
         (* code to check for no data to output (i.e., all of the output sequences are empty) *)
@@ -283,13 +305,13 @@ structure GenOutputs : sig
                 then [ (* drop data axis for scalar data by convention *)
                     CL.mkComment["allocate nData nrrd"],
                     setSizes(0, numElemsV),
-                    U.maybeAlloc (env, nDataV, Nrrd.tyToEnum nrrdType, 1)
+                    U.maybeAlloc (env, nDataV, Nrrd.tyToEnum nrrdType, 1, num)
                   ]
                 else [
                     CL.mkComment["allocate nData nrrd"],
                     setSizes(0, mkInt nElems),
                     setSizes(1, numElemsV),
-                    U.maybeAlloc (env, nDataV, Nrrd.tyToEnum nrrdType, 2)
+                    U.maybeAlloc (env, nDataV, Nrrd.tyToEnum nrrdType, 2, num)
                   ]
         (* generate the nLengths copy code *)
           val copyLengths = let
@@ -339,7 +361,8 @@ structure GenOutputs : sig
                 copyLengths @
                 copyData @
                 [CL.mkReturn(SOME(CL.mkVar "false"))]
-          in
+    in
+     (*modify name*)
             ([CL.PARAM([], nrrdPtrTy, "nLengths"), CL.PARAM([], nrrdPtrTy, "nData")], CL.mkBlock stms)
           end
 
@@ -350,7 +373,13 @@ structure GenOutputs : sig
    *    allocate nrrd nData
    *    copy data from strands to nrrd
    *)
-    fun genFixedOutput (env, snapshot, nAxes, ty, name, kind) = let
+    fun genFixedOutput (env, snapshot, nAxes, ty, name, kind, num) = let
+     val numString = Int.toString num
+     val numElemsV = numElemsV num
+     val offsetV = offsetV num
+     val nLengthsV = nLengthsV num
+     val nDataV = nDataV num
+     val setSizes = setSizes num
           val spec = Env.target env
           val (elemCTy, nrrdType, axisKind, nElems) = OutputUtil.infoOf (env, ty)
           val stateVar = stateVar spec kind
@@ -362,7 +391,7 @@ structure GenOutputs : sig
         (* generate the sizes initialization code *)
           val initSizes = let
                 val dimSizes = let
-                      val dcl = CL.mkDecl(CL.T_Array(sizeTy, SOME(nAxes+nDataAxes)), "sizes", NONE)
+                 val dcl = CL.mkDecl(CL.T_Array(sizeTy, SOME(nAxes+nDataAxes)), "sizes" ^ "_" ^ numString, NONE)
                       in
                         if (axisKind = Nrrd.KindScalar)
                           then [dcl]
@@ -393,12 +422,13 @@ structure GenOutputs : sig
                 CL.mkComment["Compute sizes of nrrd file"] ::
                 initSizes @
                 CL.mkComment["Allocate nData nrrd"] ::
-                U.maybeAlloc (env, nDataV, Nrrd.tyToEnum  nrrdType, nAxes+nDataAxes) ::
+                U.maybeAlloc (env, nDataV, Nrrd.tyToEnum  nrrdType, nAxes+nDataAxes, num) ::
                 CL.mkComment["copy data to output nrrd"] ::
-                copyCode @
-                [CL.mkReturn(SOME(CL.mkVar "false"))]
+                copyCode
+    (*@
+      [CL.mkReturn(SOME(CL.mkVar "false"))]	*)	
           in
-            ([CL.PARAM([], nrrdPtrTy, "nData")], CL.mkBlock stms)
+            ([CL.PARAM([], nrrdPtrTy, "nData_" ^ numString)], CL.mkBlock stms)
           end
 
     (*TODO: SOA and AOS for tuple outputs.*)
@@ -418,15 +448,43 @@ structure GenOutputs : sig
                         ["extern \"C\""], CL.boolTy, [], funcName,
                         wrldParam :: params,
                         CL.prependStm(wrldCastStm, body))
-                  end
+                       end
+	  (*Step 1 goes here: we need to pre-proc outputs:
+	   name
+	   tys
+	   fixed size?
+	   outputable
+	   kind
+	   number
+	   access pattern*)
+	  fun preProcOutput({name, ty, kind}) =
+	      let
+	       val accPat : (int list * Ty.t) list = Ty.buildAccessPattern(ty)
+	       val outputableTy = Ty.toOutputAbleType(ty)
+	       val (outTys, outputable) = (case outputableTy
+					    of Ty.TupleTy(tys) => (tys, false)
+					     | _ => ([outputableTy], true)
+					  (*end case*))
+	       val fixedSize = List.map Ty.hasDynamicSize outTys
+	       val numOutputs = List.length outTys
+	      in
+	       (name, outTys, accPat, fixedSize, numOutputs, outputable, kind)
+	      end
           fun getFn snapshot {name, ty, kind} = let
                 val funcName = if snapshot
                       then GenAPI.snapshotGet(spec, name)
-                      else GenAPI.outputGet(spec, name)
+			       else GenAPI.outputGet(spec, name)
+		val info = preProcOutput {name=name, ty=ty, kind=kind}
+		(*start fix here:
+		 Step 1: check if there is this can be outputed
+		 Step 2: reform in the form that can be outputted -> List types, list access pattern, list kind
+		 step 3: check how many are dynamic -> do this optimization
+		 step 4: pass to adjusted functions. Yay!
+		 *)
                 val (params, body) = (case ty
                        of Ty.SeqTy(ty', NONE) =>
-                            genDynOutput(env, snapshot, nAxes, ty', name, kind)
-                        | _ => genFixedOutput(env, snapshot, nAxes, ty, name, kind)
+                            genDynOutput(env, snapshot, nAxes, ty', name, kind, 0)
+                        | _ => genFixedOutput(env, snapshot, nAxes, ty, name, kind, 0)
                       (* end case *))
                 in
                   mkFunc (funcName, params, body)

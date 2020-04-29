@@ -61,7 +61,8 @@ structure APITypes =
 	      then [(List.rev path, ty)]
 	      else
 	       (case ty
-		 of SeqTy(ty', _) => bap(ty', ~1 :: path)
+		 of SeqTy(ty', SOME _) => bap(ty', ~1 :: path)
+		  | SeqTy(ty', NONE) => bap(ty', ~2 :: path)
 		  | TupleTy(tys) => List.concatMap bap (List.tabulate(List.length tys, fn x => (List.nth(tys, x), x :: path)))
 		  | _ => raise Fail "Impossible"
 	       (*end case*))
@@ -85,7 +86,7 @@ structure APITypes =
       | toString (FemData data) = "FemData:" ^ (FemData.toString data)
 
     fun toOutputAbleType(ty) =
-	(*Converts types to the form Tuple([]base) so that base = base Ty ([n][n]...) ad so that base is in pre-order traversal order *)
+	(*Converts types to the form Tuple(base[]) so that base = base Ty ([n][n]...) ad so that base is in pre-order traversal order *)
 	let
 	 fun isTuple (n, TupleTy _) = true
 	   | isTuple _ = false
@@ -129,8 +130,9 @@ structure APITypes =
   (* does a type have a non-static size? *)
     fun hasDynamicSize StringTy = true
       | hasDynamicSize (ImageTy _) = true
-      | hasDynamicSize (FemData _) = true (*TODO: Clarify the use of this function for this entry.*)
+      | hasDynamicSize (FemData _) = false (*TODO: Clarify the use of this function for this entry.*)
       | hasDynamicSize (SeqTy(_, NONE)) = true
+      | hasDynamicSize (TupleTy(tys)) = (List.exists hasDynamicSize tys)
       | hasDynamicSize _ = false
 
   end
