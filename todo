@@ -65,6 +65,14 @@ T(Tuple(A, B, C)) -> Tuple(TA, TB, TC)
 
 Base types = T[n]*[]
 
+----------------------
+Do the tupleization/check base.
+Dispatch towards old system
+Dispatch includes the info about the path
+This determines the copy within the existing loop.
+
+
+
 
 
 

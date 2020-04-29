@@ -87,6 +87,7 @@ structure GenOutputs : sig
     val numElemsV = fn i => CL.mkVar ("numElems_" ^ (Int.toString i))
     val DIDEROT_DEAD = CL.mkVar "diderot::kDead"
     val DIDEROT_STABLE = CL.mkVar "diderot::kStable"
+    val varName = (fn (CL.E_Var(x)) => x)
 
     fun strandMeth (f, args) = CL.mkDispatch(CL.mkIndirect(wrldV, "_strands"), f, args)
 
@@ -296,8 +297,7 @@ structure GenOutputs : sig
                   CL.mkIfThen(
                     CL.mkBinOp(mkInt 0, CL.#==, numElemsV),
                     CL.mkBlock[
-                        CL.mkCall("nrrdEmpty", [nDataV]),
-                        CL.mkReturn(SOME(CL.mkVar "false"))
+                        CL.mkCall("nrrdEmpty", [nDataV]) (*TODO: Figure out if non-return for emtpy seqs allowed?*)
                       ])
                 ]
         (* generate code to allocate the data nrrd *)
@@ -359,11 +359,11 @@ structure GenOutputs : sig
                 checkForEmpty @
                 dataNrrd @
                 copyLengths @
-                copyData @
-                [CL.mkReturn(SOME(CL.mkVar "false"))]
+                copyData
+                
     in
      (*modify name*)
-            ([CL.PARAM([], nrrdPtrTy, "nLengths"), CL.PARAM([], nrrdPtrTy, "nData")], CL.mkBlock stms)
+            ([CL.PARAM([], nrrdPtrTy, varName nLengthsV), CL.PARAM([], nrrdPtrTy, varName nDataV)], CL.mkBlock stms)
           end
 
   (* create the body of an output function for fixed-size outputs.  The structure of the
@@ -379,6 +379,7 @@ structure GenOutputs : sig
      val offsetV = offsetV num
      val nLengthsV = nLengthsV num
      val nDataV = nDataV num
+     val sizesV = "sizes_" ^ numString
      val setSizes = setSizes num
           val spec = Env.target env
           val (elemCTy, nrrdType, axisKind, nElems) = OutputUtil.infoOf (env, ty)
@@ -391,7 +392,7 @@ structure GenOutputs : sig
         (* generate the sizes initialization code *)
           val initSizes = let
                 val dimSizes = let
-                 val dcl = CL.mkDecl(CL.T_Array(sizeTy, SOME(nAxes+nDataAxes)), "sizes" ^ "_" ^ numString, NONE)
+                 val dcl = CL.mkDecl(CL.T_Array(sizeTy, SOME(nAxes+nDataAxes)), sizesV, NONE)
                       in
                         if (axisKind = Nrrd.KindScalar)
                           then [dcl]
@@ -409,7 +410,7 @@ structure GenOutputs : sig
                 val pDecl = CL.mkDeclInit(CL.charPtr, "cp",
 					  CL.mkReinterpretCast(CL.charPtr, CL.mkIndirect(nDataV, "data")))
 		val targetVar = stateVar name
-                val copyBlk = copy(false, ty, targetVar, nElems, elemCTy)
+                val copyBlk = copy(false, ty, targetVar, nElems, elemCTy) (*fix me....*)
 
                 val mode = if #isGrid spec orelse snapshot
                       then "alive"
@@ -425,10 +426,8 @@ structure GenOutputs : sig
                 U.maybeAlloc (env, nDataV, Nrrd.tyToEnum  nrrdType, nAxes+nDataAxes, num) ::
                 CL.mkComment["copy data to output nrrd"] ::
                 copyCode
-    (*@
-      [CL.mkReturn(SOME(CL.mkVar "false"))]	*)	
           in
-            ([CL.PARAM([], nrrdPtrTy, "nData_" ^ numString)], CL.mkBlock stms)
+            ([CL.PARAM([], nrrdPtrTy, varName nDataV)], CL.mkBlock stms)
           end
 
     (*TODO: SOA and AOS for tuple outputs.*)
@@ -449,15 +448,7 @@ structure GenOutputs : sig
                         wrldParam :: params,
                         CL.prependStm(wrldCastStm, body))
                        end
-	  (*Step 1 goes here: we need to pre-proc outputs:
-	   name
-	   tys
-	   fixed size?
-	   outputable
-	   kind
-	   number
-	   access pattern*)
-	  fun preProcOutput({name, ty, kind}) =
+	  fun preProcOutput(ty) =
 	      let
 	       val accPat : (int list * Ty.t) list = Ty.buildAccessPattern(ty)
 	       val outputableTy = Ty.toOutputAbleType(ty)
@@ -468,24 +459,40 @@ structure GenOutputs : sig
 	       val fixedSize = List.map Ty.hasDynamicSize outTys
 	       val numOutputs = List.length outTys
 	      in
-	       (name, outTys, accPat, fixedSize, numOutputs, outputable, kind)
+	       (outTys, accPat, fixedSize, numOutputs, outputable)
 	      end
+	  fun getFnDispatch(env, snapshot, nAxes, ty, name, kind, num, path) =
+	      let
+	       val (ps, CL.S_Block(stms)) =
+		   (case ty
+		     of Ty.SeqTy(ty', NONE) => genDynOutput(env, snapshot, nAxes, ty', name, kind, num)
+		      | _ => genFixedOutput(env, snapshot, nAxes, ty, name, kind, num)
+		   (*end case*))
+	      in
+	       (ps, CL.S_Block(stms @ [CL.mkReturn(SOME(CL.mkVar "false"))]))
+	      end
+	  fun genFnHelper(env, snapshot, nAxes, ty, name, kind) =
+	      let
+	       val (outTys, accPat, fixedSize, numOutputs, outputable) = preProcOutput ty
+	      in
+	       if numOutputs  = 1 andalso outputable
+	       then getFnDispatch(env, snapshot, nAxes, ty, name, kind, 0, [])
+	       else raise Fail "not impl yet"
+	      end
+
+		
           fun getFn snapshot {name, ty, kind} = let
                 val funcName = if snapshot
                       then GenAPI.snapshotGet(spec, name)
 			       else GenAPI.outputGet(spec, name)
-		val info = preProcOutput {name=name, ty=ty, kind=kind}
+
 		(*start fix here:
 		 Step 1: check if there is this can be outputed
 		 Step 2: reform in the form that can be outputted -> List types, list access pattern, list kind
 		 step 3: check how many are dynamic -> do this optimization
 		 step 4: pass to adjusted functions. Yay!
 		 *)
-                val (params, body) = (case ty
-                       of Ty.SeqTy(ty', NONE) =>
-                            genDynOutput(env, snapshot, nAxes, ty', name, kind, 0)
-                        | _ => genFixedOutput(env, snapshot, nAxes, ty, name, kind, 0)
-                      (* end case *))
+                val (params, body) = genFnHelper(env, snapshot, nAxes, ty, name, kind)
                 in
                   mkFunc (funcName, params, body)
                 end
