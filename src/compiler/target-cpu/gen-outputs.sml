@@ -349,6 +349,7 @@ structure GenOutputs : sig
    *    allocate nrrd for nData
    *    copy data from strands to nrrd
    *)
+    (*TODO: needs the path and the copy, but also needs the original seq path! If we have  -1 -2 -> what do we do?*)
     fun genDynOutput (env, snapshot, nAxes, ty, name, kind, num,
 		      (elemCTy, nrrdType, axisKind, nElems)) = let
      val numString = Int.toString num

@@ -969,7 +969,7 @@ structure GenTysAndOps : sig
 
   (* generate a printing function for fixed-size sequences *)
     fun genSeqPrinter (env, elemTy, size) = let
-          val elemTy' = trType TypeToCxx.NSDiderot env elemTy
+          val elemTy' = trType TypeToCxx.NSProgram env elemTy
           val seqTy = sequenceTy (elemTy', size)
           val params = [
                   CL.PARAM([], ostreamRef, "outs"),
