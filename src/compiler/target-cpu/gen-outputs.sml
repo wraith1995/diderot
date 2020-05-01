@@ -106,67 +106,12 @@ structure GenOutputs : sig
 	in
 	 tyAnalysis'(ty, [], flag)
 	end
-					  
-    (*generates copy code for sequence:
-     For a non fem dynamic sequence, we generate copy_to.
-     For a non fem non-dynamic sequence, we generate memcopy stuff.
-     For a fem anything, we loop over remaining sequence dimensions and copy each 
-     via a copy_to member in the target struct.
-     *)
-	  	    (*Go to copy function -> use loop ideas
-     if you have an acc, just modify acc var
-     if you have an a -1, do a loop over the size
-     if you have an -2, set seq, new itterant
-     Build in opposite direction*)
-    (* (*Translate an acc pattern into a way of getting a tuple: make list [a, b, [idx],...], [loop1, loop2]*) *)
-    (* fun translateAccPattern(accPattern) = *)
-    (* 	let *)
-    (* 	 val depth = ref 0 *)
-    (* 	 fun proc(x::xs) = *)
-    (* 	     if x >= 0 *)
-    (* 	     then *)
-    (* 	 val () = () *)
-    (* 	in *)
-    (* 	 (*for tuples, we do 1->2->3 *)
-    (* 	  for arrays, we add a loop function + 1->2->3[idx_i]->a->b->c*) *)
-	 
-    (* 	end *)
-    fun copy(dynSeq, ty, copySource, nElems, elemCTy, SOME(loopinfo)) = (*accPath, accTy) = *)
-
-
+    fun copy(dynSeq, ty, copySource, nElems, elemCTy, SOME(loopinfo)) = 
 	let
-	 val (fem, seqDims) = tyAnalysis( ty, dynSeq)
-	 (*TODO: This should be cleaned up*)
+	 val (fem, seqDims) = tyAnalysis( ty, dynSeq)  (*TODO: Clean this crap up*)
 	 val _ = if fem
 		 then raise Fail "Fem and complex output types not compatible currently"
 		 else ()
-	 (*need a case for NONE*)
-	 (* fun procAccpath(a::accPath, accTy, inner, loop, loopDepth) = *)
-	 (*     if a = ~2 orelse a = ~1 *)
-	 (*     then *)
-	 (*      let *)
-	 (*       val loopDepthStr = ("idxp_" ^ (Int.toString loopDepth))  *)
-	 (*       val loopDepthVar = CL.mkVar loopDepthStr *)
-	 (*       val size = if a = ~1 then "size" else "length" *)
-	 (*       val inner' = CL.E_Subscript(inner, loopDepthVar) *)
-	 (*       val loop' = fn x => loop (CL.S_For(CL.T_Named("auto"), *)
-	 (* 					  [(loopDepthStr, CL.E_Int(IntLit.fromInt 0, CL.intTy))], *)
-	 (* 					  CL.E_BinOp(loopDepthVar, CL.#<, CL.mkDispatch(inner, "size", [])), *)
-	 (* 					  [CL.E_PostOp(loopDepthVar, CL.^++)], *)
-	 (* 				 CL.S_Block([x]))) *)
-	 (*      in *)
-	 (*       procAccpath(accPath, accTy, inner', loop', loopDepth + 1) *)
-	 (*      end *)
-	 (*     else procAccpath(accPath, accTy, CL.mkSelect(inner, "t_" ^ Int.toString a), loop, loopDepth) *)
-	 (*     | procAccpath([], accTy, inner, loop, loopDepth) = *)
-	 (*       (case (dynSeq, accTy) *)
-	 (* 	 of (true, Ty.SeqTy(_, NONE)) => loop ((CL.mkAssign(cpV, seqCopy(inner, cpV)))) *)
-	 (* 					      		  | (false, Ty.SeqTy(_, NONE)) => raise Fail "impossible happened" *)
-	 (* 	  | (false, _) => loop (CL.mkCall("memcpy", [ *)
-	 (* 					  cpV, *)
-	 (* 					  CL.mkUnOp(CL.%&, inner), *)
-	 (* 					  CL.mkBinOp(mkInt nElems, CL.#*, CL.mkSizeof elemCTy) *)
-	 (* 			       ])) *)
 	 fun buildAcc(a::accs : APITypes.acc list, base) =
 	     (case a
 	       of APITypes.TupleAcc(j) => buildAcc(accs, CL.mkSelect(base, "t_" ^ Int.toString j))
