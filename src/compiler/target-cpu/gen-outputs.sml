@@ -106,7 +106,7 @@ structure GenOutputs : sig
 	in
 	 tyAnalysis'(ty, [], flag)
 	end
-    fun copy(dynSeq, ty, copySource, nElems, elemCTy, SOME(loopinfo)) = 
+    fun copy(dynSeq, ty, copySource, nElems, elemCTy, SOME(loopinfo), dynSeqFunc) = 
 	let
 	 val (fem, seqDims) = tyAnalysis( ty, dynSeq)  (*TODO: Clean this crap up*)
 	 val _ = if fem
@@ -116,9 +116,13 @@ structure GenOutputs : sig
 	     (case a
 	       of APITypes.TupleAcc(j) => buildAcc(accs, CL.mkSelect(base, "t_" ^ Int.toString j))
 		| APITypes.FixedArrayAcc(j) => buildAcc(accs, CL.E_Subscript(base, CL.E_Int(IntLit.fromInt j, CL.intTy)))
-		| APITypes.VarArrayAcc(j, _) => buildAcc(accs, CL.E_Subscript(base, CL.mkVar ("idx_" ^ Int.toString j)))
+		| APITypes.VarArrayAcc(j, SOME _) => buildAcc(accs, CL.E_Subscript(base, CL.mkVar ("idx_" ^ Int.toString j)))
+		| APITypes.VarArrayAcc(j, NONE) => (case dynSeqFunc
+						     of NONE => buildAcc(accs, CL.E_Subscript(base, CL.mkVar ("idx_" ^ Int.toString j)))
+						      | SOME(f) => base)
 		| APITypes.BaseCopy _ => base
 	     (*end case*))
+	   | buildAcc([], base) = base
 	 fun loopMap(copySource, loop : APITypes.loops) =
 	     let
 	      val loopVar = fn x => CL.mkVar ("idx_" ^ Int.toString x)
@@ -144,6 +148,16 @@ structure GenOutputs : sig
 	 fun buildLoopFunction(loops : APITypes.loops list, copySource) =
 	     let
 	      val loopFuncs = List.map (fn x => loopMap(copySource, x)) loops
+	      val loopFuncs = (case dynSeqFunc
+				of NONE => loopFuncs
+				 | SOME _ =>
+				   let
+				    val tabed = List.tabulate(List.length loops, fn x => (x, List.nth(loops, x)))
+				    val (id, _) = Option.valOf (List.find (fn (j, Ty.From _) => true | _ => false) tabed)
+				   in
+				    List.take( loopFuncs, id) 
+				   end
+			      (*end case*))
 	      fun clId(x : CL.stm ) : CL.stm = x
 	      val loopFunc = List.foldr (fn (a,b) => a o b) clId loopFuncs
 	     in
@@ -169,13 +183,16 @@ structure GenOutputs : sig
 			      | _ => raise Fail "invalid final accesor! Base should be present"
 			    (*end class*))
 	     in
-	      loopFunc copyStm
+	      (case dynSeqFunc
+		of NONE => loopFunc copyStm
+		 | SOME f => loopFunc (f accDesc)
+	      (*end case*))
 	     end
 	in
 	 buildLoop(loopinfo, cpV, copySource)
         end
 		(*Copy for simple output types or copy for simple fem types*)
-      | copy(dynSeq, ty, copyTarget, nElems, elemCTy, NONE) = 
+      | copy(dynSeq, ty, copyTarget, nElems, elemCTy, NONE, dynSeqFunc) = 
 	let
 	 val (fem, seqDims) = tyAnalysis( ty, dynSeq)
 	 fun mkLoop([], vars, copyTarget) =
@@ -219,9 +236,9 @@ structure GenOutputs : sig
 	     end
 	 (*need a case for NONE*)
 				    
-	 fun copy(true, false) = CL.mkBlock[
+	 fun copy(true, false, NONE) = CL.mkBlock[
 	      CL.mkAssign(cpV, seqCopy(copyTarget, cpV))]
-	   | copy(false, false) =  CL.mkBlock[
+	   | copy(false, false, NONE) =  CL.mkBlock[
               CL.mkCall("memcpy", [
                         cpV,
                         CL.mkUnOp(CL.%&, copyTarget),
@@ -231,10 +248,11 @@ structure GenOutputs : sig
 					CL.+=,
 					   CL.mkBinOp(mkInt nElems, CL.#*, CL.mkSizeof elemCTy)))
              ]
-	   | copy (false, true) = mkLoop(seqDims, [], copyTarget)
-	   | copy (true, true) = mkLoop(seqDims, [], copyTarget)
+	   | copy (false, true, NONE) = mkLoop(seqDims, [], copyTarget)
+	   | copy (true, true, NONE) = mkLoop(seqDims, [], copyTarget)
+	   | copy (_, _, SOME(f)) = f copyTarget (*dumb one becomes id if copy use is needed.*)
 	in
-	 copy(dynSeq, fem)
+	 copy(dynSeq, fem, dynSeqFunc)
 	end
 
     (* utility functions for initializing the sizes array *)
@@ -296,7 +314,8 @@ structure GenOutputs : sig
    *)
     (*TODO: needs the path and the copy, but also needs the original seq path! If we have  -1 -2 -> what do we do?*)
     fun genDynOutput (env, snapshot, nAxes, ty, name, kind, num,
-		      (elemCTy, nrrdType, axisKind, nElems)) = let
+		      (elemCTy, nrrdType, axisKind, nElems),
+		      loopInfo) = let
      val numString = Int.toString num
      val numElemsV = numElemsV num
      val offsetV = offsetV num
@@ -312,15 +331,17 @@ structure GenOutputs : sig
                 (* end case *))
         (* declarations *)
           val sizesDecl = CL.mkDecl(CL.T_Array(sizeTy, SOME(nAxes+1)), sizesV, NONE)
-        (* count number of elements (and stable strands) *)
+          (* count number of elements (and stable strands) *)
+	  (* loop at each seq node*)
+	  val name = stateVar name
           val countElems = let
                 val nElemsInit = CL.mkDeclInit(CL.uint32, varName numElemsV, CL.mkInt 0)
-                val cntElems = CL.S_Exp(CL.mkAssignOp(numElemsV, CL.+=, seqLength(stateVar name)))
+                val cntElems = fn x => CL.S_Exp(CL.mkAssignOp(numElemsV, CL.+=, seqLength(x)))
                 val forLoop = forStrands (if snapshot then "alive" else "stable")
                 in [
                   CL.mkComment["count number of elements"],
                   nElemsInit,
-                  forLoop cntElems
+                  forLoop (copy(true, ty, name, nElems, elemCTy, loopInfo, SOME(cntElems)))
                 ] end
         (* generate code to allocate the nLengths nrrd *)
           val lengthsNrrd = let
@@ -364,8 +385,8 @@ structure GenOutputs : sig
                 val pInit = CL.mkDeclInit(CL.T_Ptr CL.uint32, "ip",
                       CL.mkReinterpretCast(CL.T_Ptr(CL.uint32), CL.mkIndirect(nLengthsV, "data")))
                 val offsetDecl = CL.mkDeclInit(CL.uint32, varName offsetV, CL.mkInt 0)
-                val copyBlk = CL.mkBlock[
-                        CL.mkDeclInit(CL.uint32, "n", seqLength(stateVar name)),
+                val copyBlk = fn x => CL.mkBlock[
+                        CL.mkDeclInit(CL.uint32, "n", seqLength(x)),
                         CL.mkAssign(CL.mkUnOp(CL.%*, CL.mkPostOp(ipV, CL.^++)), offsetV),
                         CL.mkAssign(CL.mkUnOp(CL.%*, CL.mkPostOp(ipV, CL.^++)), nV),
                         CL.S_Exp(CL.mkAssignOp(offsetV, CL.+=, nV))
@@ -377,15 +398,16 @@ structure GenOutputs : sig
                   CL.mkComment["initialize nLengths nrrd"] ::
                   pInit ::
                   offsetDecl ::
-                  forStrands mode copyBlk ::
+                  forStrands mode ((copy(true, ty, name, nElems, elemCTy, loopInfo, SOME(copyBlk)))) ::
                   initAxisKinds (nLengthsV, Nrrd.Kind2Vector, nAxes, domAxisKind)
                 end
           (* generate the nData copy code *)
-	  val targetVar = stateVar name
+	  val targetVar = name
           val copyData = let
                 val pInit = CL.mkDeclInit(CL.charPtr, "cp",
-                      CL.mkReinterpretCast(CL.charPtr, CL.mkIndirect(nDataV, "data")))
-                val copyStm = copy(true, ty, targetVar, nElems, elemCTy, NONE) (* CL.mkAssign(cpV, seqCopy(stateVar name, cpV)) *)
+					  CL.mkReinterpretCast(CL.charPtr, CL.mkIndirect(nDataV, "data")))
+		val copyFunc = fn x => CL.mkAssign(cpV, seqCopy(x, cpV))
+                val copyStm = copy(true, ty, targetVar, nElems, elemCTy, NONE, SOME(copyFunc))
                 val mode = if #isGrid spec
                       then "alive"
                       else if #snapshot spec
@@ -457,7 +479,7 @@ structure GenOutputs : sig
                 val pDecl = CL.mkDeclInit(CL.charPtr, "cp",
 					  CL.mkReinterpretCast(CL.charPtr, CL.mkIndirect(nDataV, "data")))
 		val targetVar = stateVar name
-                val copyBlk = copy(false, ty, targetVar, nElems, elemCTy, loopinfo) (*fix me....accPath, accTy*)
+                val copyBlk = copy(false, ty, targetVar, nElems, elemCTy, loopinfo, NONE) (*fix me....accPath, accTy*)
 
                 val mode = if #isGrid spec orelse snapshot
                       then "alive"
@@ -506,7 +528,7 @@ structure GenOutputs : sig
 	      let
 	       val (ps, CL.S_Block(stms)) =
 		   (case ty
-		     of Ty.SeqTy(ty', NONE) => genDynOutput(env, snapshot, nAxes, ty', name, kind, num, tyinfo)
+		     of Ty.SeqTy(ty', NONE) => genDynOutput(env, snapshot, nAxes, ty', name, kind, num, tyinfo, NONE)
 		      | _ => genFixedOutput(env, snapshot, nAxes, ty, name, kind, num, tyinfo, NONE)
 		   (*end case*))
 	      in
@@ -515,7 +537,7 @@ structure GenOutputs : sig
 	    | getFnDispatch (env, snapshot, nAxes, ty, name, kind, num, tyinfo, SOME(info)) = 
 			     (*, path, SOME(pathTy), SOME(fscheck), tyinfo) =*)
 			    if Ty.hasDynamicSize ty
-	      then genDynOutput(env, snapshot, nAxes, ty, name, kind, num, tyinfo) (*FIX ME*)
+	      then genDynOutput(env, snapshot, nAxes, ty, name, kind, num, tyinfo, SOME(info)) (*FIX ME*)
 	      else genFixedOutput(env, snapshot, nAxes, ty, name, kind, num, tyinfo, SOME(info))
 	  fun oldSystem(env, snapshot, nAxes, ty, name, kind) = let
 	   val elemOutTy = (case ty

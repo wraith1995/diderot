@@ -916,6 +916,7 @@ structure GenTysAndOps : sig
 			  | ty as Ty.FemData(FemData.MeshCell(_)) => femSeqTrait Ty.IntTy
 			  | ty as Ty.FemData(FemData.FuncCell(_)) => femSeqTrait Ty.IntTy
 			  | ty as Ty.FemData(FemData.MeshPos(_)) => femSeqTrait Ty.IntTy
+			  | ty as Ty.TupleTy(_) => scalarSeqTrait Ty.BoolTy
                           | ty => raise Fail("unexpected dynamic sequence of " ^ Ty.toString ty)
                         (* end case *)
                       end
