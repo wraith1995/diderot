@@ -43,6 +43,68 @@ structure APITypes =
 	   | depth'(_, ds) = List.rev ds
 	in
 	 depth'(ty, [])
+	end
+    fun toString IntTy = "int"
+      | toString BoolTy = "bool"
+      | toString (TensorTy[]) = "real"
+      | toString (TensorTy[2]) = "vec2"
+      | toString (TensorTy[3]) = "vec3"
+      | toString (TensorTy[4]) = "vec4"
+      | toString (TensorTy dd) = concat["tensor[", String.concatWithMap "," Int.toString dd, "]"]
+      | toString (TupleTy(tys)) = concat ["(", concat (List.map toString tys), ")"]
+      | toString StringTy = "string"
+      | toString (ImageTy(d, dd)) = concat[
+         "image(", Int.toString d, ")[", String.concatWithMap "," Int.toString dd, "]"
+        ]
+      | toString (SeqTy(ty, NONE)) = toString ty ^ "[]"
+      | toString (SeqTy(ty, SOME d)) = concat[toString ty, "[", Int.toString d, "]"]
+      | toString (FemData data) = "FemData:" ^ (FemData.toString data)
+
+    fun toOutputAbleTypes(ty) =
+	(*Converts types to the form Tuple(base[]) so that base = base Ty ([n][n]...) ad so that base is in pre-order traversal order *)
+	let
+	 fun isTuple (n, TupleTy _) = true
+	   | isTuple _ = false
+	 (*inefficient but simple:
+	  *First, flatten a nested tupple i.e Tuple(..., Tuple, ...)
+	  *Second, traverse tuple to analyze next level
+	  *If a seq type is ever found with a tuple directly inside it, switch them.
+	  *Otherwise, continue down
+	  *preverse other types, except fem types wher we fail
+	  **By applying thes rules, we put the type in the suitable form and we maintain pre-order rules on base types as nodes (i.e if you wrote out the pre-order, took out all non-base types, the orders between the original type and toOutpuTableType would be the same.)
+	  *)
+	 fun toat(ty) =
+	     (case ty
+	       of TupleTy(tys) => (case List.find isTuple (List.tabulate(List.length tys, fn x => (x, List.nth(tys, x))))
+				    of SOME((n, TupleTy(tys'))) => let
+				    in
+				     TupleTy(List.take(tys, n) @ tys' @ List.drop(tys, n + 1))
+				    end
+				     | NONE => TupleTy(List.map toat tys)
+				  (*end case*))
+		| SeqTy(ty', r) => (case (ty', r) (*Fix me*)
+				     of (TupleTy(tys), _) => TupleTy(List.map (fn t => SeqTy(t, r)) tys)
+				       (*flip T[][5] to (T[], T[], T[], T[], T[])*)
+				       |(SeqTy(ty'', NONE), SOME(k)) => TupleTy(List.tabulate(k, fn _ => SeqTy(ty'', NONE)))
+				       | _ => SeqTy(toat ty', r)
+				   (*end case*))
+		| FemData _ => raise Fail "unexpected Fem Data"
+		| _ => ty 
+	     (*end case*))
+	 fun loop ty = let
+	  val ty' = toat ty
+	 in
+	  if (toString ty) = (toString ty')
+          (*TODO: Fix stupid lazy hack -> will fail on FEM data,
+	    	  but this will crash earlier when making access pattern *)
+	  then ty'
+	  else loop ty'
+	 end
+	in
+	 (case loop ty
+	   of TupleTy(tys) => tys
+	    | t => [t]
+	 (*end case*))
 	end	  
 		     
 
@@ -79,8 +141,8 @@ structure APITypes =
 	(*end case*))
     (*is of form T[n][n]...[]*)
     fun isSingleOutputWithFem(ty) = (case ty
-				      of SeqTy(ty', SOME(n)) => not(hasDynamicSize ty') andalso isSingleOutputWithFem ty
-				       | SeqTy(ty', NONE) => isSingleOutputWithFem ty
+				      of SeqTy(ty', SOME(n)) => not(hasDynamicSize ty') andalso isSingleOutputWithFem ty'
+				       | SeqTy(ty', NONE) => isSingleOutputWithFem ty'
 				       | TupleTy _ => false
 				       | ImageTy _ => raise Fail "ImageTy shoud not exist in output!"
 				       | _ => true)
@@ -90,8 +152,13 @@ structure APITypes =
 		  | ArraySeq of int (*Array containing a seq*)
 		  | BasePath of t * int * t (*copyable base modulo*)
     type iterate = (int * path) list (*itteration depth x access type*)
-    datatype acc = TupleAcc of int | FixedArrayAcc of int | VarArrayAcc of int * int option
+    datatype acc = TupleAcc of int | FixedArrayAcc of int | VarArrayAcc of int * int option | BaseCopy of t * int * t
     datatype loops = Fixed of int * int | From of int * acc list (*for x_int in (0..int-1) vs for x_int in something(acc list ...)*)
+    type copyOut = { loop : loops list,
+			 accs : acc list,
+			 outputTy : t,
+			 dataItteration : iterate,
+			 nrrdNum : int}
 
     (*We create an iterate, which describes how to go through the original data*)
     (*Normal form: Tuple(Seq(Seq[n]...T))*)
@@ -132,15 +199,15 @@ structure APITypes =
 	      (*end case*))
 	 fun buildAcceses(iter : iterate) =
 	     let
-	      fun bas (i, TuplePath(j)) = SOME(TupleAcc(j))
-		| bas (i, ArraySeq(j)) = SOME(FixedArrayAcc(j))
-		| bas (i, SeqArray(r)) = SOME(VarArrayAcc(i, r))
-		| bas (_, _) = NONE
+	      fun bas (i, TuplePath(j)) = (TupleAcc(j))
+		| bas (i, ArraySeq(j)) = (FixedArrayAcc(j))
+		| bas (i, SeqArray(r)) = (VarArrayAcc(i, r))
+		| bas (_, BasePath(a,b,c)) = BaseCopy(a,b,c)
 	     in
 	      List.map bas iter
 	     end
 
-	 fun buildLoop(sourceIter : iterate, sourceAccs : acc option list) =
+	 fun buildLoop(sourceIter : iterate, sourceAccs : acc list) =
 	     let
 	      (*for each itter, drop tuple, collect acc*)
 	      fun foldToLoop((iter, acc), (loop, accs)) =
@@ -148,19 +215,25 @@ structure APITypes =
 		    of ((_, TuplePath(_)), acc) => (loop, acc :: accs)
 		     | ((_, ArraySeq(j)), acc) => (loop, acc :: accs)
 		     | ((j, SeqArray(SOME(k))), acc) => ((Fixed (j,k)) :: loop, acc :: accs)
-		     | ((j, SeqArray(NONE)), acc) => ((From(j, (List.map Option.valOf) (List.rev accs))) :: loop, acc :: accs)
+		     | ((j, SeqArray(NONE)), acc) => ((From(j, (List.rev accs))) :: loop, acc :: accs)
 		     | ((_, BasePath _), _) => (loop, (List.rev accs))
 		  (*end case*))
 	      val (loo, lacc) = List.foldr foldToLoop ([],[]) (ListPair.zip(sourceIter, sourceAccs))
 					   
 	     in
-	      (List.rev loo, sourceAccs)
+	      (List.rev loo, sourceAccs, sourceIter)
 	     end
 	 val typeItteration : iterate list = convt(ty, 0)
 	 val accItteration = List.map buildAcceses typeItteration
-	 val conversions = ListPair.map buildLoop (typeItteration, accItteration)
+	 val loopAndAccAndItter = ListPair.map buildLoop (typeItteration, accItteration)
+	 val outputTypes = ListPair.zip (toOutputAbleTypes ty, List.tabulate(List.length typeItteration, fn x => x))
+	 val conversions = ListPair.map (fn (((ot, n), (lo, sa, it))) =>
+					    {loop = lo, accs = sa,
+					     outputTy = ot, dataItteration=it,
+					     nrrdNum = n})
+					(outputTypes, loopAndAccAndItter)
 	in
-	 conversions (*loop to iterate over the API form instance, acces on the variable, how to itterate over the source*)
+	 conversions : copyOut list(*loop to iterate over the API form instance, acces on the variable, how to itterate over the source*)
 	end
 
     fun buildAccessPattern(bTy) =
@@ -182,68 +255,7 @@ structure APITypes =
     	in
     	 bap(bTy, [])
     	end
-    fun toString IntTy = "int"
-      | toString BoolTy = "bool"
-      | toString (TensorTy[]) = "real"
-      | toString (TensorTy[2]) = "vec2"
-      | toString (TensorTy[3]) = "vec3"
-      | toString (TensorTy[4]) = "vec4"
-      | toString (TensorTy dd) = concat["tensor[", String.concatWithMap "," Int.toString dd, "]"]
-      | toString (TupleTy(tys)) = concat ["(", concat (List.map toString tys), ")"]
-      | toString StringTy = "string"
-      | toString (ImageTy(d, dd)) = concat[
-         "image(", Int.toString d, ")[", String.concatWithMap "," Int.toString dd, "]"
-        ]
-      | toString (SeqTy(ty, NONE)) = toString ty ^ "[]"
-      | toString (SeqTy(ty, SOME d)) = concat[toString ty, "[", Int.toString d, "]"]
-      | toString (FemData data) = "FemData:" ^ (FemData.toString data)
 
-    fun toOutputAbleTypes(ty) =
-	(*Converts types to the form Tuple(base[]) so that base = base Ty ([n][n]...) ad so that base is in pre-order traversal order *)
-	let
-	 fun isTuple (n, TupleTy _) = true
-	   | isTuple _ = false
-	 (*inefficient but simple:
-	  *First, flatten a nested tupple i.e Tuple(..., Tuple, ...)
-	  *Second, traverse tuple to analyze next level
-	  *If a seq type is ever found with a tuple directly inside it, switch them.
-	  *Otherwise, continue down
-	  *preverse other types, except fem types wher we fail
-	 **By applying thes rules, we put the type in the suitable form and we maintain pre-order rules on base types as nodes (i.e if you wrote out the pre-order, took out all non-base types, the orders between the original type and toOutpuTableType would be the same.)
-	 *)
-	 fun toat(ty) =
-	      (case ty
-		of TupleTy(tys) => (case List.find isTuple (List.tabulate(List.length tys, fn x => (x, List.nth(tys, x))))
-				     of SOME((n, TupleTy(tys'))) => let
-				     in
-				      TupleTy(List.take(tys, n) @ tys' @ List.drop(tys, n + 1))
-				     end
-				      | NONE => TupleTy(List.map toat tys)
-				   (*end case*))
-		 | SeqTy(ty', r) => (case (ty', r) (*Fix me*)
-				      of (TupleTy(tys), _) => TupleTy(List.map (fn t => SeqTy(t, r)) tys)
-				       (*flip T[][5] to (T[], T[], T[], T[], T[])*)
-				       |(SeqTy(ty'', NONE), SOME(k)) => TupleTy(List.tabulate(k, fn _ => SeqTy(ty'', NONE)))
-				       | _ => SeqTy(toat ty', r)
-				    (*end case*))
-		| FemData _ => raise Fail "unexpected Fem Data"
-		| _ => ty 
-	      (*end case*))
-	 fun loop ty = let
-	  val ty' = toat ty
-	 in
-	  if (toString ty) = (toString ty')
-          (*TODO: Fix stupid lazy hack -> will fail on FEM data,
-	    	  but this will crash earlier when making access pattern *)
-	  then ty'
-	  else loop ty'
-	 end
-	in
-	 (case loop ty
-	   of TupleTy(tys) => tys
-	    | t => [t]
-	 (*end case*))
-	end
 
 
 

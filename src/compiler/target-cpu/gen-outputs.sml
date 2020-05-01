@@ -113,8 +113,7 @@ structure GenOutputs : sig
      For a fem anything, we loop over remaining sequence dimensions and copy each 
      via a copy_to member in the target struct.
      *)
-    fun copyP(dynSeq, ty, copyTarget, nElems, elemCTy, accPath, accTy) = 
-	    (*Go to copy function -> use loop ideas
+	  	    (*Go to copy function -> use loop ideas
      if you have an acc, just modify acc var
      if you have an a -1, do a loop over the size
      if you have an -2, set seq, new itterant
@@ -132,104 +131,106 @@ structure GenOutputs : sig
     (* 	  for arrays, we add a loop function + 1->2->3[idx_i]->a->b->c*) *)
 	 
     (* 	end *)
+    fun copy(dynSeq, ty, copySource, nElems, elemCTy, SOME(loopinfo)) = (*accPath, accTy) = *)
+
 
 	let
 	 val (fem, seqDims) = tyAnalysis( ty, dynSeq)
-	 fun mkLoop([], vars, copyTarget) =
-	     let
-	      val vars' = List.rev vars
-	      val acc = List.foldr (fn (x,y) => CL.E_Subscript(y, CL.mkVar x)) copyTarget vars'
-	     in
-	      
-	     CL.mkBlock([
-				     CL.mkExpStm(CL.mkApply("copy_to", [acc, cpV])),
-				     CL.mkExpStm(CL.mkAssignOp(cpV,
-							       CL.+=,
-								  CL.mkBinOp(mkInt nElems, CL.#*, CL.mkSizeof elemCTy)))
-		       ])
-	     end
-	   | mkLoop(SOME(x)::xs, vars, copyTarget) =
-	     let
-	      val n = List.length (SOME(x)::xs)
-	      val var = "ix"^(Int.toString n)
-	      val rest = mkLoop(xs, var::vars, copyTarget)
-	     in
-	      CL.mkFor(CL.intTy, [(var, CL.E_Int(IntLit.fromInt 0, CL.intTy))],
-		       CL.E_BinOp(CL.E_Var(var), CL.#<, CL.E_Int(IntLit.fromInt x, CL.intTy)),
-		       [CL.E_PostOp(CL.E_Var(var), CL.^++)],
-		       rest
-		      )
-	     end
-	   | mkLoop(NONE::xs, vars, copyTarget) =
-	     let
-	      val n = List.length (NONE::xs)
-	      val var = "ix"^(Int.toString n)
-	      val copyTarget' = "seqVar"^(Int.toString n)
-	      val rest = mkLoop(xs, [], CL.E_Subscript(copyTarget, CL.mkVar var))
-	     in
-	      CL.mkFor(CL.intTy, [(var, CL.E_Int(IntLit.fromInt 0, CL.intTy))],
-		       CL.E_BinOp(CL.E_Var(var), CL.#<, CL.mkDispatch(copyTarget, "length", [])),
-		       [CL.E_PostOp(CL.E_Var(var), CL.^++)],
-		       CL.S_Block(
-		       [rest]
-		      ))
-	     end
+	 (*TODO: This should be cleaned up*)
+	 val _ = if fem
+		 then raise Fail "Fem and complex output types not compatible currently"
+		 else ()
 	 (*need a case for NONE*)
-	 fun procAccpath(a::accPath, accTy, inner, loop, loopDepth) =
-	     if a = ~2 orelse a = ~1
-	     then
-	      let
-	       val loopDepthStr = ("idxp_" ^ (Int.toString loopDepth)) 
-	       val loopDepthVar = CL.mkVar loopDepthStr
-	       val size = if a = ~1 then "size" else "length"
-	       val inner' = CL.E_Subscript(inner, loopDepthVar)
-	       val loop' = fn x => loop (CL.S_For(CL.T_Named("auto"),
-						  [(loopDepthStr, CL.E_Int(IntLit.fromInt 0, CL.intTy))],
-						  CL.E_BinOp(loopDepthVar, CL.#<, CL.mkDispatch(inner, "size", [])),
-						  [CL.E_PostOp(loopDepthVar, CL.^++)],
-					 CL.S_Block([x])))
+	 (* fun procAccpath(a::accPath, accTy, inner, loop, loopDepth) = *)
+	 (*     if a = ~2 orelse a = ~1 *)
+	 (*     then *)
+	 (*      let *)
+	 (*       val loopDepthStr = ("idxp_" ^ (Int.toString loopDepth))  *)
+	 (*       val loopDepthVar = CL.mkVar loopDepthStr *)
+	 (*       val size = if a = ~1 then "size" else "length" *)
+	 (*       val inner' = CL.E_Subscript(inner, loopDepthVar) *)
+	 (*       val loop' = fn x => loop (CL.S_For(CL.T_Named("auto"), *)
+	 (* 					  [(loopDepthStr, CL.E_Int(IntLit.fromInt 0, CL.intTy))], *)
+	 (* 					  CL.E_BinOp(loopDepthVar, CL.#<, CL.mkDispatch(inner, "size", [])), *)
+	 (* 					  [CL.E_PostOp(loopDepthVar, CL.^++)], *)
+	 (* 				 CL.S_Block([x]))) *)
+	 (*      in *)
+	 (*       procAccpath(accPath, accTy, inner', loop', loopDepth + 1) *)
+	 (*      end *)
+	 (*     else procAccpath(accPath, accTy, CL.mkSelect(inner, "t_" ^ Int.toString a), loop, loopDepth) *)
+	 (*     | procAccpath([], accTy, inner, loop, loopDepth) = *)
+	 (*       (case (dynSeq, accTy) *)
+	 (* 	 of (true, Ty.SeqTy(_, NONE)) => loop ((CL.mkAssign(cpV, seqCopy(inner, cpV)))) *)
+	 (* 					      		  | (false, Ty.SeqTy(_, NONE)) => raise Fail "impossible happened" *)
+	 (* 	  | (false, _) => loop (CL.mkCall("memcpy", [ *)
+	 (* 					  cpV, *)
+	 (* 					  CL.mkUnOp(CL.%&, inner), *)
+	 (* 					  CL.mkBinOp(mkInt nElems, CL.#*, CL.mkSizeof elemCTy) *)
+	 (* 			       ])) *)
+	 fun buildAcc(a::accs : APITypes.acc list, base) =
+	     (case a
+	       of APITypes.TupleAcc(j) => buildAcc(accs, CL.mkSelect(base, "t_" ^ Int.toString j))
+		| APITypes.FixedArrayAcc(j) => buildAcc(accs, CL.E_Subscript(base, CL.E_Int(IntLit.fromInt j, CL.intTy)))
+		| APITypes.VarArrayAcc(j, _) => buildAcc(accs, CL.E_Subscript(base, CL.mkVar ("idx_" ^ Int.toString j)))
+		| APITypes.BaseCopy _ => base
+	     (*end case*))
+	 fun loopMap(copySource, loop : APITypes.loops) =
+	     let
+	      val loopVar = fn x => CL.mkVar ("idx_" ^ Int.toString x)
+	      val getStr = fn (CL.E_Var(s)) => s
 	      in
-	       procAccpath(accPath, accTy, inner', loop', loopDepth + 1)
-	      end
-	     else procAccpath(accPath, accTy, CL.mkSelect(inner, "t_" ^ Int.toString a), loop, loopDepth)
-	     | procAccpath([], accTy, inner, loop, loopDepth) =
-	       (case (dynSeq, accTy)
-		 of (true, Ty.SeqTy(_, NONE)) => loop ((CL.mkAssign(cpV, seqCopy(inner, cpV))))
-						      		  | (false, Ty.SeqTy(_, NONE)) => raise Fail "impossible happened"
-		  | (false, _) => loop (CL.mkCall("memcpy", [
-						  cpV,
-						  CL.mkUnOp(CL.%&, inner),
-						  CL.mkBinOp(mkInt nElems, CL.#*, CL.mkSizeof elemCTy)
-				       ]))
-
-	       (*end case*))
-		(*loop is a function that takes x into the loop,*)
-	      (* CL.S_Block([ *)
-	      (* 		     (*for (size_t i=0; i < size; i++ )*) *)
-	      (* 		     (**) *)
-	      (* 		    ]) *)
-	 
-
-	      
-	       
-	 fun copy(true, false) = CL.mkBlock[
-	      CL.mkAssign(cpV, seqCopy(copyTarget, cpV))]
-	   | copy(false, false) =  CL.mkBlock[
-              CL.mkCall("memcpy", [
-                        cpV,
-                        CL.mkUnOp(CL.%&, copyTarget),
-                        CL.mkBinOp(mkInt nElems, CL.#*, CL.mkSizeof elemCTy)
-                       ]),
-              CL.mkExpStm(CL.mkAssignOp(cpV,
-					CL.+=,
-					   CL.mkBinOp(mkInt nElems, CL.#*, CL.mkSizeof elemCTy)))
-             ]
-	   | copy (false, true) = procAccpath(accPath, accTy, copyTarget, fn x => x, 0)
-	   | copy (true,true) = procAccpath(accPath, accTy, copyTarget, fn x => x, 0)
+	     (case loop
+	       of APITypes.Fixed(i, j) => (fn x => CL.S_For(CL.T_Named("auto"),
+						   [((getStr o loopVar) i, mkInt 0)],
+						   CL.E_BinOp(loopVar i, CL.#<, mkInt j),
+						   [CL.E_PostOp(loopVar i, CL.^++)],
+						   CL.S_Block([x])))
+		| APITypes.From(i, accs) =>
+		  let val acc = buildAcc(accs, copySource)
+		  in (fn x => CL.S_For(CL.T_Named("auto"),
+				       [((getStr o loopVar) i, mkInt 0)],
+				       CL.E_BinOp(loopVar i, CL.#<, CL.mkDispatch(acc, "length", [])),
+				       [CL.E_PostOp(loopVar i, CL.^++)],
+				       CL.S_Block([x])))
+		  end
+		     
+	     (*end case*))
+	     end
+	 fun buildLoopFunction(loops : APITypes.loops list, copySource) =
+	     let
+	      val loopFuncs = List.map (fn x => loopMap(copySource, x)) loops
+	      fun clId(x : CL.stm ) : CL.stm = x
+	      val loopFunc = List.foldr (fn (a,b) => a o b) clId loopFuncs
+	     in
+	      loopFunc
+	     end
+	 fun buildLoop(loopInfo : APITypes.copyOut, copyTarget, copySource) =
+	     let
+	      val accDesc = buildAcc(#accs loopInfo, copySource)
+	      val loopFunc = buildLoopFunction(#loop loopInfo, copySource)
+	      val copyStm = (case List.last (#accs loopInfo)
+			      of APITypes.BaseCopy(baseTy, baseSize, valueTy) =>
+				 CL.S_Block[
+				  CL.mkCall("memcpy",
+					    [
+					      copyTarget,
+					      CL.mkUnOp(CL.%&, accDesc),
+					      CL.mkBinOp(mkInt baseSize,CL.#*, CL.mkSizeof elemCTy)
+					   ]),
+				  CL.mkExpStm(CL.mkAssignOp(copyTarget,
+							    CL.+=,
+							       CL.mkBinOp(mkInt nElems, CL.#*, CL.mkSizeof elemCTy)))
+				 ]
+			      | _ => raise Fail "invalid final accesor! Base should be present"
+			    (*end class*))
+	     in
+	      loopFunc copyStm
+	     end
 	in
-	 copy(dynSeq, fem)
-	end
-    fun copy(dynSeq, ty, copyTarget, nElems, elemCTy) = 
+	 buildLoop(loopinfo, cpV, copySource)
+        end
+		(*Copy for simple output types or copy for simple fem types*)
+      | copy(dynSeq, ty, copyTarget, nElems, elemCTy, NONE) = 
 	let
 	 val (fem, seqDims) = tyAnalysis( ty, dynSeq)
 	 fun mkLoop([], vars, copyTarget) =
@@ -286,7 +287,7 @@ structure GenOutputs : sig
 					   CL.mkBinOp(mkInt nElems, CL.#*, CL.mkSizeof elemCTy)))
              ]
 	   | copy (false, true) = mkLoop(seqDims, [], copyTarget)
-	   | copy (true,true) = mkLoop(seqDims, [], copyTarget)
+	   | copy (true, true) = mkLoop(seqDims, [], copyTarget)
 	in
 	 copy(dynSeq, fem)
 	end
@@ -439,7 +440,7 @@ structure GenOutputs : sig
           val copyData = let
                 val pInit = CL.mkDeclInit(CL.charPtr, "cp",
                       CL.mkReinterpretCast(CL.charPtr, CL.mkIndirect(nDataV, "data")))
-                val copyStm = copy(true, ty, targetVar, nElems, elemCTy) (* CL.mkAssign(cpV, seqCopy(stateVar name, cpV)) *)
+                val copyStm = copy(true, ty, targetVar, nElems, elemCTy, NONE) (* CL.mkAssign(cpV, seqCopy(stateVar name, cpV)) *)
                 val mode = if #isGrid spec
                       then "alive"
                       else if #snapshot spec
@@ -475,7 +476,7 @@ structure GenOutputs : sig
    *)
     fun genFixedOutput (env, snapshot, nAxes, ty, name, kind, num,
 			(elemCTy, nrrdType, axisKind, nElems),
-			accPath, accTy) = let
+			loopinfo) = let
      val numString = Int.toString num
      val numElemsV = numElemsV num
      val offsetV = offsetV num
@@ -511,7 +512,7 @@ structure GenOutputs : sig
                 val pDecl = CL.mkDeclInit(CL.charPtr, "cp",
 					  CL.mkReinterpretCast(CL.charPtr, CL.mkIndirect(nDataV, "data")))
 		val targetVar = stateVar name
-                val copyBlk = copyP(false, ty, targetVar, nElems, elemCTy, accPath, accTy) (*fix me....*)
+                val copyBlk = copy(false, ty, targetVar, nElems, elemCTy, loopinfo) (*fix me....accPath, accTy*)
 
                 val mode = if #isGrid spec orelse snapshot
                       then "alive"
@@ -548,40 +549,36 @@ structure GenOutputs : sig
                         wrldParam :: params,
                         CL.prependStm(wrldCastStm, body))
                        end
+	  (*TODO: This is needlessly complicated*)
 	  fun preProcOutput(ty) =
 	      let
-	       val (loopsInfo) = Ty.buildOuputputConversionRoutine(ty)
-	       val outputableTys = Ty.toOutputAbleTypes(ty)
-	       val (outTys, outputable) = (case outputableTys
-					    of [outputableTy] => ([outputableTy], true)
-					     | _ => (outputableTys, false)
-					  (*end case*))
-	       val fixedSize = List.map Ty.hasDynamicSize outTys
-	       val numOutputs = List.length outTys
+	       val loopsInfo = Ty.buildOuputputConversionRoutine(ty)
+	       val numOutputs = List.length loopsInfo
 	      in
-	       (outTys, loopsInfo, fixedSize, numOutputs, outputable)
+	       (loopsInfo, numOutputs)
 	      end
-	  fun getFnDispatch(env, snapshot, nAxes, ty, name, kind, num, path, NONE, NONE, tyinfo) =
+	  fun getFnDispatch(env, snapshot, nAxes, ty, name, kind, num, tyinfo, NONE) =
 	      let
 	       val (ps, CL.S_Block(stms)) =
 		   (case ty
 		     of Ty.SeqTy(ty', NONE) => genDynOutput(env, snapshot, nAxes, ty', name, kind, num, tyinfo)
-		      | _ => genFixedOutput(env, snapshot, nAxes, ty, name, kind, num, tyinfo, [], ty)
+		      | _ => genFixedOutput(env, snapshot, nAxes, ty, name, kind, num, tyinfo, NONE)
 		   (*end case*))
 	      in
 	       (ps, CL.S_Block(stms @ [CL.mkReturn(SOME(CL.mkVar "false"))]))
 	      end
-	    | getFnDispatch (env, snapshot, nAxes, ty, name, kind, num, path, SOME(pathTy), SOME(fscheck), tyinfo) =
-	      if Ty.hasDynamicSize ty
+	    | getFnDispatch (env, snapshot, nAxes, ty, name, kind, num, tyinfo, SOME(info)) = 
+			     (*, path, SOME(pathTy), SOME(fscheck), tyinfo) =*)
+			    if Ty.hasDynamicSize ty
 	      then genDynOutput(env, snapshot, nAxes, ty, name, kind, num, tyinfo) (*FIX ME*)
-	      else genFixedOutput(env, snapshot, nAxes, ty, name, kind, num, tyinfo, path, pathTy)
+	      else genFixedOutput(env, snapshot, nAxes, ty, name, kind, num, tyinfo, SOME(info))
 	  fun oldSystem(env, snapshot, nAxes, ty, name, kind) = let
 	   val elemOutTy = (case ty
 			     of (Ty.SeqTy(s, NONE)) => s
 			      | s => s)
 	   val tyinfo = OutputUtil.infoOf (env, elemOutTy)
 	  in
-	   getFnDispatch(env, snapshot, nAxes, ty, name, kind, 0, [], NONE, NONE, tyinfo)
+	   getFnDispatch(env, snapshot, nAxes, ty, name, kind, 0, tyinfo, NONE)
 	  end
 
 	  fun genFnHelper(env, snapshot, nAxes, ty, name, kind) =
@@ -589,39 +586,35 @@ structure GenOutputs : sig
 	      then oldSystem(env, snapshot, nAxes, ty, name, kind)
 	      else
 	       let
-		val (outTys, loopInfo, fixedSize, numOutputs, outputable) = preProcOutput ty
+		val (loopInfos, numOutputs) : APITypes.copyOut list * int = preProcOutput ty
 	       in
-		if numOutputs  = 1 andalso outputable
-		then oldSystem(env, snapshot, nAxes, List.nth(outTys, 0), name, kind)
+		if numOutputs  = 1
+		then oldSystem(env, snapshot, nAxes, #outputTy (List.nth(loopInfos, 0)), name, kind)
 		else
 		 let
 		  
-		  val itterList = List.tabulate(List.length fixedSize, fn x => x)
-		  val foldList = ListPair.zip(ListPair.zip(ListPair.zip (outTys, loopInfo), fixedSize), itterList)
-		  fun ouptutFolder ((((outTy, (acc, accTy)), fs), num), (params, block)) =
-		      let val tyCopyInfo = OutputUtil.infoOf (env, (case accTy
+		  (* val itterList = List.tabulate(List.length loopInfo, fn x => x) *)
+		  (* val foldList = ListPair.zip(ListPair.zip(ListPair.zip (outTys, loopInfo), fixedSize), itterList) *)
+		  fun ouptutFolder (loopinfo : APITypes.copyOut, (params, block)) =
+		      let
+		       val outTy = #outputTy loopinfo
+		       val num = #nrrdNum loopinfo
+		       val tyCopyInfo = OutputUtil.infoOf (env, (case outTy
 								     of Ty.SeqTy(s, NONE) => s
-								      | _ => accTy))
-			  val (params', block') = getFnDispatch(env, snapshot, nAxes, outTy, name, kind, num, acc,
-								SOME(accTy), SOME(fs), tyCopyInfo)
+								      | _ => outTy))
+		       val (params', block') = getFnDispatch(env, snapshot, nAxes, outTy, name, kind, num, tyCopyInfo, SOME(loopinfo))
+								
 							       (* val (elemCTy, nrrdType, axisKind, nElems) =  *)
 		      in (params@params', CL.mkBlock([block, block'])) end
 			
 		 in
-		  List.foldr ouptutFolder ([], CL.mkBlock([])) foldList
+		  List.foldr ouptutFolder ([], CL.mkBlock([])) loopInfos
 		 end
 	       end
           fun getFn snapshot {name, ty, kind} = let
                 val funcName = if snapshot
                       then GenAPI.snapshotGet(spec, name)
 			       else GenAPI.outputGet(spec, name)
-
-		(*start fix here:
-		 Step 1: check if there is this can be outputed
-		 Step 2: reform in the form that can be outputted -> List types, list access pattern, list kind
-		 step 3: check how many are dynamic -> do this optimization
-		 step 4: pass to adjusted functions. Yay!
-		 *)
                 val (params, body) = genFnHelper(env, snapshot, nAxes, ty, name, kind)
                 in
                   mkFunc (funcName, params, body)
