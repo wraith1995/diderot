@@ -393,9 +393,8 @@ IndexToCell(i, mesh)
 
 
 PLan:
-fix toOutputAbleType to account for finite seqs of []! (easy -> if you have an infite, same, but if you have a finite, check for [] and tuple!!!!!!!!!!!!!!!!!!!!)
 fix fem/fix output to use this and nlenfths stuff (before lunch)
-fix inputs too
+fix inputs too, but we require more infustructure
 Marissa, Gordon, Saman
 Other thanks
 Walk and book

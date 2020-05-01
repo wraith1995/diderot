@@ -71,12 +71,19 @@ structure APITypes =
 	   | BoolTy => true
 	   | TensorTy _ => true
 	   | StringTy => true
-	   | ImageTy(_, _) => raise Fail "ImageTy should not be considered in output"
-	   | FemData _ => raise Fail "FemData should not be considered in output"
+	   | ImageTy(_, _) => raise Fail "ImageTy should not be considered in output!"
+	   | FemData _ => raise Fail "FemData should not be considered in tuple involved output"
 	   | SeqTy(ty', SOME(n)) => isOutputAble ty' andalso not(hasDynamicSize ty') (*[][6] needs to be [6][]*)
 	   | SeqTy(ty', NONE) => isOutputAble ty'
 	   | TupleTy _ => false 
 	(*end case*))
+    (*is of form T[n][n]...[]*)
+    fun isSingleOutputWithFem(ty) = (case ty
+				      of SeqTy(ty', SOME(n)) => not(hasDynamicSize ty') andalso isSingleOutputWithFem ty
+				       | SeqTy(ty', NONE) => isSingleOutputWithFem ty
+				       | TupleTy _ => false
+				       | ImageTy _ => raise Fail "ImageTy shoud not exist in output!"
+				       | _ => true)
 
     datatype path = TuplePath of int (*Tuple*)
 		  | SeqArray of int option (*Seq or Array containing things*)
@@ -94,7 +101,7 @@ structure APITypes =
     (*Picture:Base [n]Tuples[n]Tuple [] Tuples [n] Tuples  *)
     (*So the part outside the [], we have to make these fixed nrrds; the tuples parts inside also have to be listed. The Base[n] comes a copy!*)
 
-    fun buildConversionRoutine(ty) =
+    fun buildOuputputConversionRoutine(ty) =
 	let
 	 fun convt(ty, itterDepth) =
 	     if isBase ty
@@ -147,7 +154,7 @@ structure APITypes =
 	      val (loo, lacc) = List.foldr foldToLoop ([],[]) (ListPair.zip(sourceIter, sourceAccs))
 					   
 	     in
-	      (List.rev loo, sourceAccs, sourceIter)
+	      (List.rev loo, sourceAccs)
 	     end
 	 val typeItteration : iterate list = convt(ty, 0)
 	 val accItteration = List.map buildAcceses typeItteration

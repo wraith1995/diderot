@@ -550,7 +550,7 @@ structure GenOutputs : sig
                        end
 	  fun preProcOutput(ty) =
 	      let
-	       val accPat : (int list * Ty.t) list = Ty.buildAccessPattern(ty)
+	       val (loopsInfo) = Ty.buildOuputputConversionRoutine(ty)
 	       val outputableTys = Ty.toOutputAbleTypes(ty)
 	       val (outTys, outputable) = (case outputableTys
 					    of [outputableTy] => ([outputableTy], true)
@@ -559,7 +559,7 @@ structure GenOutputs : sig
 	       val fixedSize = List.map Ty.hasDynamicSize outTys
 	       val numOutputs = List.length outTys
 	      in
-	       (outTys, accPat, fixedSize, numOutputs, outputable)
+	       (outTys, loopsInfo, fixedSize, numOutputs, outputable)
 	      end
 	  fun getFnDispatch(env, snapshot, nAxes, ty, name, kind, num, path, NONE, NONE, tyinfo) =
 	      let
@@ -575,40 +575,42 @@ structure GenOutputs : sig
 	      if Ty.hasDynamicSize ty
 	      then genDynOutput(env, snapshot, nAxes, ty, name, kind, num, tyinfo) (*FIX ME*)
 	      else genFixedOutput(env, snapshot, nAxes, ty, name, kind, num, tyinfo, path, pathTy)
+	  fun oldSystem(env, snapshot, nAxes, ty, name, kind) = let
+	   val elemOutTy = (case ty
+			     of (Ty.SeqTy(s, NONE)) => s
+			      | s => s)
+	   val tyinfo = OutputUtil.infoOf (env, elemOutTy)
+	  in
+	   getFnDispatch(env, snapshot, nAxes, ty, name, kind, 0, [], NONE, NONE, tyinfo)
+	  end
 
 	  fun genFnHelper(env, snapshot, nAxes, ty, name, kind) =
-	      (*TODO: refactor for FEM*)
-	      let
-	       val (outTys, accPaths, fixedSize, numOutputs, outputable) = preProcOutput ty
-	       val itterList = List.tabulate(List.length fixedSize, fn x => x)
-	      in
-	       if numOutputs  = 1 andalso outputable (*dispatch to old code to avoid screwing it up*)
-	       then let
-		val elemOutTy = (case outTys
-				  of [(Ty.SeqTy(s, NONE))] => s
-				   | [(s)] => s)
-		val tyinfo = OutputUtil.infoOf (env, elemOutTy)
-		    in
-		     getFnDispatch(env, snapshot, nAxes, ty, name, kind, 0, [], NONE, NONE, tyinfo)
-		    end
-	       else
-		let
-		 val foldList = ListPair.zip(ListPair.zip(ListPair.zip (outTys, accPaths), fixedSize), itterList)
-		 fun ouptutFolder ((((outTy, (acc, accTy)), fs), num), (params, block)) =
-		     let val tyCopyInfo = OutputUtil.infoOf (env, (case accTy
-								    of Ty.SeqTy(s, NONE) => s
-								     | _ => accTy))
-			 val (params', block') = getFnDispatch(env, snapshot, nAxes, outTy, name, kind, num, acc,
-							       SOME(accTy), SOME(fs), tyCopyInfo)
-                         (* val (elemCTy, nrrdType, axisKind, nElems) =  *)
-		     in (params@params', CL.mkBlock([block, block'])) end
-			  
-		in
-		 List.foldr ouptutFolder ([], CL.mkBlock([])) foldList
-		end
-	      end
-
-		
+	      if Ty.isSingleOutputWithFem(ty)
+	      then oldSystem(env, snapshot, nAxes, ty, name, kind)
+	      else
+	       let
+		val (outTys, loopInfo, fixedSize, numOutputs, outputable) = preProcOutput ty
+	       in
+		if numOutputs  = 1 andalso outputable
+		then oldSystem(env, snapshot, nAxes, List.nth(outTys, 0), name, kind)
+		else
+		 let
+		  
+		  val itterList = List.tabulate(List.length fixedSize, fn x => x)
+		  val foldList = ListPair.zip(ListPair.zip(ListPair.zip (outTys, loopInfo), fixedSize), itterList)
+		  fun ouptutFolder ((((outTy, (acc, accTy)), fs), num), (params, block)) =
+		      let val tyCopyInfo = OutputUtil.infoOf (env, (case accTy
+								     of Ty.SeqTy(s, NONE) => s
+								      | _ => accTy))
+			  val (params', block') = getFnDispatch(env, snapshot, nAxes, outTy, name, kind, num, acc,
+								SOME(accTy), SOME(fs), tyCopyInfo)
+							       (* val (elemCTy, nrrdType, axisKind, nElems) =  *)
+		      in (params@params', CL.mkBlock([block, block'])) end
+			
+		 in
+		  List.foldr ouptutFolder ([], CL.mkBlock([])) foldList
+		 end
+	       end
           fun getFn snapshot {name, ty, kind} = let
                 val funcName = if snapshot
                       then GenAPI.snapshotGet(spec, name)
