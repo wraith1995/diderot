@@ -169,15 +169,23 @@ structure GenOutputs : sig
 	     let
 	      val accDesc = buildAcc(#accs loopInfo, copySource)
 	      val loopFunc = buildLoopFunction(#loop loopInfo, copySource)
+	      val transferStm = if nElems <> 1 (*Warning: might not be the best test...*)
+				then
+				 CL.mkCall("memcpy",
+					    [
+					      copyTarget,
+					      CL.mkUnOp(CL.%&, CL.E_Grp(accDesc)),
+					      CL.mkBinOp(mkInt nElems, CL.#*, CL.mkSizeof elemCTy)
+					  ])
+				else
+				 CL.S_Exp(
+				  CL.E_AssignOp(CL.E_UnOp(CL.%*, CL.E_Grp(CL.E_Cast(CL.T_Ptr(elemCTy), copyTarget))),
+						CL.$=, accDesc)
+				 )
 	      val copyStm = (case List.last (#accs loopInfo)
 			      of APITypes.BaseCopy(baseTy, baseSize, valueTy) =>
 				 CL.S_Block[
-				  CL.mkCall("memcpy",
-					    [
-					      copyTarget,
-					      CL.mkUnOp(CL.%&, accDesc),
-					      CL.mkBinOp(mkInt baseSize,CL.#*, CL.mkSizeof elemCTy)
-					   ]),
+				  transferStm,
 				  CL.mkExpStm(CL.mkAssignOp(copyTarget,
 							    CL.+=,
 							       CL.mkBinOp(mkInt nElems, CL.#*, CL.mkSizeof elemCTy)))
@@ -243,7 +251,7 @@ structure GenOutputs : sig
 	   | copy(false, false, NONE) =  CL.mkBlock[
               CL.mkCall("memcpy", [
                         cpV,
-                        CL.mkUnOp(CL.%&, copyTarget),
+                        CL.mkUnOp(CL.%&, CL.E_Grp(copyTarget)),
                         CL.mkBinOp(mkInt nElems, CL.#*, CL.mkSizeof elemCTy)
                        ]),
               CL.mkExpStm(CL.mkAssignOp(cpV,
@@ -409,7 +417,7 @@ structure GenOutputs : sig
                 val pInit = CL.mkDeclInit(CL.charPtr, "cp",
 					  CL.mkReinterpretCast(CL.charPtr, CL.mkIndirect(nDataV, "data")))
 		val copyFunc = fn x => CL.mkAssign(cpV, seqCopy(x, cpV))
-                val copyStm = copy(true, ty, targetVar, nElems, elemCTy, NONE, NONE)
+                val copyStm = copy(true, ty, targetVar, nElems, elemCTy, loopInfo, NONE)
                 val mode = if #isGrid spec
                       then "alive"
                       else if #snapshot spec

@@ -212,13 +212,13 @@ structure APITypes =
 	      (*for each itter, drop tuple, collect acc*)
 	      fun foldToLoop((iter, acc), (loop, accs)) =
 		  (case (iter, acc)
-		    of ((_, TuplePath(_)), acc) => (loop, acc :: accs)
-		     | ((_, ArraySeq(j)), acc) => (loop, acc :: accs)
-		     | ((j, SeqArray(SOME(k))), acc) => ((Fixed (j,k)) :: loop, acc :: accs)
-		     | ((j, SeqArray(NONE)), acc) => ((From(j, (List.rev accs))) :: loop, acc :: accs)
+		    of ((_, TuplePath(_)), a) => (loop, a :: accs)
+		     | ((_, ArraySeq(j)), a) => (loop, a :: accs)
+		     | ((j, SeqArray(SOME(k))), a) => ((Fixed (j,k)) :: loop, a :: accs)
+		     | ((j, SeqArray(NONE)), a) => ((From(j, (List.rev accs))) :: loop, a :: accs)
 		     | ((_, BasePath _), _) => (loop, (List.rev accs))
 		  (*end case*))
-	      val (loo, lacc) = List.foldr foldToLoop ([],[]) (ListPair.zip(sourceIter, sourceAccs))
+	      val (loo, lacc) = List.foldr foldToLoop ([],[]) (List.rev(ListPair.zip(sourceIter, sourceAccs)))
 					   
 	     in
 	      (List.rev loo, sourceAccs, sourceIter)
