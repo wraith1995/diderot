@@ -236,29 +236,5 @@ structure APITypes =
 	 conversions : copyOut list(*loop to iterate over the API form instance, acces on the variable, how to itterate over the source*)
 	end
 
-    fun buildAccessPattern(bTy) =
-    	(*Given a type, figure out a way to access all elements of the form (real or tensor or int or bool or stringTy)[n][n][n][]*)
-    	(*Returns a [(path, ty)] where the nth element contains a path to that element through the tree and the result type; ~1 indicates going through a sequence*)
-	
-    	let
-    	(*basically a sort of pre-order traversal*)
-    	 fun bap(ty, path) =
-    	      if isOutputAble ty
-    	      then [(List.rev path, ty)]
-    	      else
-    	       (case ty
-    		 of SeqTy(ty', SOME _) => bap(ty', ~1 :: path)
-    		  | SeqTy(ty', NONE) => bap(ty', ~2 :: path)
-    		  | TupleTy(tys) => List.concatMap bap (List.tabulate(List.length tys, fn x => (List.nth(tys, x), x :: path)))
-    		  | _ => raise Fail "Impossible"
-    	       (*end case*))
-    	in
-    	 bap(bTy, [])
-    	end
-
-
-
-
-
 
   end
