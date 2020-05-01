@@ -51,7 +51,7 @@ structure TypeToCxx : sig
           val progNS = #namespace(Env.target env)
           fun diderotQ s = (case ns
                  of NSDiderot => CL.T_Named s
-                  | _ => CL.T_Named("diderot::" ^ s)
+                  | _ => CL.T_Named("Diderot::" ^ s)
                 (* end case *))
           fun diderotTQ (s, args) = (case ns
                  of NSDiderot => CL.T_Template(s, args)
@@ -70,7 +70,7 @@ structure TypeToCxx : sig
                 | (Ty.TensorTy []) => Env.realTy env
                 | (Ty.TensorTy dd) => programQ(RN.tensorStruct dd)
                 | (Ty.TensorRefTy dd) => programQ(RN.tensorRefStruct dd)
-                | (Ty.TupleTy tys) => CL.T_Named(CodeGenUtil.tupleName(Ty.TupleTy(tys)))
+                | (Ty.TupleTy tys) => programQ((CodeGenUtil.tupleName(Ty.TupleTy(tys))))
                 | (Ty.SeqTy(ty, NONE)) => diderotTQ("dynseq", [tr ty])
                 | (Ty.SeqTy(ty, SOME n)) =>
                     diderotTQ("array", [tr ty, CL.T_Named(Int.toString n)])

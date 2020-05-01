@@ -893,6 +893,10 @@ structure GenTysAndOps : sig
                                 argTy = argTy, baseTy = ty, elemTy = argTy, nValsPerElem = 1
                               },
 						     dcls)
+                      fun tupleScalarSeqT ty = trait ({
+                                argTy = argTy, baseTy = ty, elemTy = argTy, nValsPerElem = 1
+                              },
+						     dcls)						    
 
 		      fun femSeqTrait ty = trait ({argTy = argTy,
 						baseTy = ty,
@@ -916,7 +920,7 @@ structure GenTysAndOps : sig
 			  | ty as Ty.FemData(FemData.MeshCell(_)) => femSeqTrait Ty.IntTy
 			  | ty as Ty.FemData(FemData.FuncCell(_)) => femSeqTrait Ty.IntTy
 			  | ty as Ty.FemData(FemData.MeshPos(_)) => femSeqTrait Ty.IntTy
-			  | ty as Ty.TupleTy(_) => scalarSeqTrait Ty.BoolTy
+			  | ty as Ty.TupleTy(_) => scalarSeqTrait Ty.IntTy
                           | ty => raise Fail("unexpected dynamic sequence of " ^ Ty.toString ty)
                         (* end case *)
                       end

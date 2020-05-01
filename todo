@@ -393,7 +393,7 @@ IndexToCell(i, mesh)
 
 
 PLan:
-fix fem/fix output to use this and nlenfths stuff (before lunch)
+fix fem dynoutput bug -. most likely in process of symbolic rep and fix returnx
 fix inputs too, but we require more infustructure
 Marissa, Gordon, Saman
 Other thanks
