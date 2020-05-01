@@ -178,10 +178,7 @@ structure GenLibraryInterface : sig
           (*           [CL.PARAM([], worldPtrTy, "wrld"), CL.PARAM([], nrrdPtrTy, "lengths"), CL.PARAM([], nrrdPtrTy, "data")]) *)
           (*       ] *)
 	  fun mkGetDecl snapshot {name,ty, kind} =let
-	   val outputTys = (case Ty.toOutputAbleType ty
-			    of Ty.TupleTy(tys) => tys
-			     | a => [a]
-			   (*end case*))
+	   val outputTys = Ty.toOutputAbleTypes ty
 	   fun outputParamsFold ((ty, n), params) =
 	       (case ty
 		 of Ty.SeqTy(_, NONE) => params@[CL.PARAM([], nrrdPtrTy, "lengths_" ^ (Int.toString n)),

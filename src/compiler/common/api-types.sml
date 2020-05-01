@@ -60,7 +60,6 @@ structure APITypes =
 	   | bs (StringTy) = (1, StringTy)
 	   | bs (SeqTy(ty', SOME(n))) = let val (size, ty'') = bs ty' in (n * size, ty'') end
 	   | bs _ = raise Fail "nonbase ty has no base spec"
-
 	in
 	 bs ty
 	end
@@ -154,28 +153,28 @@ structure APITypes =
 	 val accItteration = List.map buildAcceses typeItteration
 	 val conversions = ListPair.map buildLoop (typeItteration, accItteration)
 	in
-	 conversions
+	 conversions (*loop to iterate over the API form instance, acces on the variable, how to itterate over the source*)
 	end
 
-    (* fun buildAccessPattern(bTy) = *)
-    (* 	(*Given a type, figure out a way to access all elements of the form (real or tensor or int or bool or stringTy)[n][n][n][]*) *)
-    (* 	(*Returns a [(path, ty)] where the nth element contains a path to that element through the tree and the result type; ~1 indicates going through a sequence*) *)
+    fun buildAccessPattern(bTy) =
+    	(*Given a type, figure out a way to access all elements of the form (real or tensor or int or bool or stringTy)[n][n][n][]*)
+    	(*Returns a [(path, ty)] where the nth element contains a path to that element through the tree and the result type; ~1 indicates going through a sequence*)
 	
-    (* 	let *)
-    (* 	(*basically a sort of pre-order traversal*) *)
-    (* 	 fun bap(ty, path) = *)
-    (* 	      if isOutputAble ty *)
-    (* 	      then [(List.rev path, ty)] *)
-    (* 	      else *)
-    (* 	       (case ty *)
-    (* 		 of SeqTy(ty', SOME _) => bap(ty', ~1 :: path) *)
-    (* 		  | SeqTy(ty', NONE) => bap(ty', ~2 :: path) *)
-    (* 		  | TupleTy(tys) => List.concatMap bap (List.tabulate(List.length tys, fn x => (List.nth(tys, x), x :: path))) *)
-    (* 		  | _ => raise Fail "Impossible" *)
-    (* 	       (*end case*)) *)
-    (* 	in *)
-    (* 	 bap(bTy, []) *)
-    (* 	end *)
+    	let
+    	(*basically a sort of pre-order traversal*)
+    	 fun bap(ty, path) =
+    	      if isOutputAble ty
+    	      then [(List.rev path, ty)]
+    	      else
+    	       (case ty
+    		 of SeqTy(ty', SOME _) => bap(ty', ~1 :: path)
+    		  | SeqTy(ty', NONE) => bap(ty', ~2 :: path)
+    		  | TupleTy(tys) => List.concatMap bap (List.tabulate(List.length tys, fn x => (List.nth(tys, x), x :: path)))
+    		  | _ => raise Fail "Impossible"
+    	       (*end case*))
+    	in
+    	 bap(bTy, [])
+    	end
     fun toString IntTy = "int"
       | toString BoolTy = "bool"
       | toString (TensorTy[]) = "real"
@@ -192,7 +191,7 @@ structure APITypes =
       | toString (SeqTy(ty, SOME d)) = concat[toString ty, "[", Int.toString d, "]"]
       | toString (FemData data) = "FemData:" ^ (FemData.toString data)
 
-    fun toOutputAbleType(ty) =
+    fun toOutputAbleTypes(ty) =
 	(*Converts types to the form Tuple(base[]) so that base = base Ty ([n][n]...) ad so that base is in pre-order traversal order *)
 	let
 	 fun isTuple (n, TupleTy _) = true
@@ -214,10 +213,12 @@ structure APITypes =
 				     end
 				      | NONE => TupleTy(List.map toat tys)
 				   (*end case*))
-		 | SeqTy(ty', r) => (case ty' (*Fix me*)
-				     of TupleTy(tys) => TupleTy(List.map (fn t => SeqTy(t, r)) tys)
-				      | _ => SeqTy(toat ty', r)
-				   (*end case*))
+		 | SeqTy(ty', r) => (case (ty', r) (*Fix me*)
+				      of (TupleTy(tys), _) => TupleTy(List.map (fn t => SeqTy(t, r)) tys)
+				       (*flip T[][5] to (T[], T[], T[], T[], T[])*)
+				       |(SeqTy(ty'', NONE), SOME(k)) => TupleTy(List.tabulate(k, fn _ => SeqTy(ty'', NONE)))
+				       | _ => SeqTy(toat ty', r)
+				    (*end case*))
 		| FemData _ => raise Fail "unexpected Fem Data"
 		| _ => ty 
 	      (*end case*))
@@ -231,7 +232,10 @@ structure APITypes =
 	  else loop ty'
 	 end
 	in
-	 loop ty
+	 (case loop ty
+	   of TupleTy(tys) => tys
+	    | t => [t]
+	 (*end case*))
 	end
 
 

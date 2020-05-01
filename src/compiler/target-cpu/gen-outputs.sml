@@ -531,7 +531,6 @@ structure GenOutputs : sig
             ([CL.PARAM([], nrrdPtrTy, varName nDataV)], CL.mkBlock stms)
           end
 
-    (*TODO: SOA and AOS for tuple outputs.*)
     fun gen (env, nAxes, outputs) = let
           val spec = Env.target env
           val mkFunc = if (#exec spec)
@@ -552,10 +551,10 @@ structure GenOutputs : sig
 	  fun preProcOutput(ty) =
 	      let
 	       val accPat : (int list * Ty.t) list = Ty.buildAccessPattern(ty)
-	       val outputableTy = Ty.toOutputAbleType(ty)
-	       val (outTys, outputable) = (case outputableTy
-					    of Ty.TupleTy(tys) => (tys, false)
-					     | _ => ([outputableTy], true)
+	       val outputableTys = Ty.toOutputAbleTypes(ty)
+	       val (outTys, outputable) = (case outputableTys
+					    of [outputableTy] => ([outputableTy], true)
+					     | _ => (outputableTys, false)
 					  (*end case*))
 	       val fixedSize = List.map Ty.hasDynamicSize outTys
 	       val numOutputs = List.length outTys

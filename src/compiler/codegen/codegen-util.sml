@@ -37,13 +37,19 @@ structure CodeGenUtil : sig
                 stms : TreeIR.stm list,
                 newStm : Atom.atom * TreeIR.exp list
               }
-          }
+        }
+					     (* val copyToOut : TreeTypes.t -> build this copier, do the plummbing*)
+					     (* val copyToIn*)
+	  end = struct
 
-  end = struct
 
     structure IR = TreeIR
     structure CL = CLang
     structure Env = CodeGenEnv
+    structure Ty = APITypes
+
+
+
 
   (* generate new variables *)
     local
