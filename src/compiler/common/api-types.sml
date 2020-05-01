@@ -24,19 +24,48 @@ structure APITypes =
 
     val realTy = TensorTy[]
 
+  (* does a type have a non-static size? *)
+    fun hasDynamicSize StringTy = true
+      | hasDynamicSize (ImageTy _) = true
+      | hasDynamicSize (FemData _) = false (*TODO: Clarify the use of this function for this entry.*)
+      | hasDynamicSize (SeqTy(_, NONE)) = true
+      | hasDynamicSize (TupleTy(tys)) = (List.exists hasDynamicSize tys)
+      | hasDynamicSize _ = false
+			 
     fun hasFem (SeqTy(ty,_)) = hasFem ty
       | hasFem (FemData(_)) = true
       | hasFem (TupleTy(tys)) = not (List.all (not o hasFem) tys)
       | hasFem _ = false
-    fun depth ty =
-	      let
-	       fun depth'(SeqTy(ty, SOME(s)), ds) = depth'(ty, s::ds)
-		 | depth'(_, ds) = List.rev ds
-	      in
-	       depth'(ty, [])
-	      end
-    (*NOTE: IN A JUST WORLD, THESE WOULD NOT BE HERE.*)
 
+    fun depth ty =
+	let
+	 fun depth'(SeqTy(ty, SOME(s)), ds) = depth'(ty, s::ds)
+	   | depth'(_, ds) = List.rev ds
+	in
+	 depth'(ty, [])
+	end	  
+		     
+
+    fun isBase(IntTy) = true
+      | isBase (BoolTy) = true
+      | isBase (TensorTy _) = true
+      | isBase (StringTy) = true
+      | isBase (SeqTy(ty', SOME(n))) = isBase ty'
+      | isBase _ = false
+    fun baseSpec ty =
+	let
+	 fun bs (IntTy) = (1, IntTy)
+	   | bs (BoolTy) = (1, BoolTy)
+	   | bs (TensorTy(s)) = (List.foldr op* 1 s, TensorTy[1])
+	   | bs (StringTy) = (1, StringTy)
+	   | bs (SeqTy(ty', SOME(n))) = let val (size, ty'') = bs ty' in (n * size, ty'') end
+	   | bs _ = raise Fail "nonbase ty has no base spec"
+
+	in
+	 bs ty
+	end
+
+		 
     fun isOutputAble(ty) =
 	(case ty
 	  of IntTy => true
@@ -45,30 +74,108 @@ structure APITypes =
 	   | StringTy => true
 	   | ImageTy(_, _) => raise Fail "ImageTy should not be considered in output"
 	   | FemData _ => raise Fail "FemData should not be considered in output"
-	   | SeqTy(ty', SOME(n)) => isOutputAble ty'
+	   | SeqTy(ty', SOME(n)) => isOutputAble ty' andalso not(hasDynamicSize ty') (*[][6] needs to be [6][]*)
 	   | SeqTy(ty', NONE) => isOutputAble ty'
 	   | TupleTy _ => false 
 	(*end case*))
 
-    fun buildAccessPattern(bTy) =
-	(*Given a type, figure out a way to access all elements of the form (real or tensor or int or bool or stringTy)[n][n][n][]*)
-	(*Returns a [(path, ty)] where the nth element contains a path to that element through the tree and the result type; ~1 indicates going through a sequence*)
-	
+    datatype path = TuplePath of int (*Tuple*)
+		  | SeqArray of int option (*Seq or Array containing things*)
+		  | ArraySeq of int (*Array containing a seq*)
+		  | BasePath of t * int * t (*copyable base modulo*)
+    type iterate = (int * path) list (*itteration depth x access type*)
+    datatype acc = TupleAcc of int | FixedArrayAcc of int | VarArrayAcc of int * int option
+    datatype loops = Fixed of int * int | From of int * acc list (*for x_int in (0..int-1) vs for x_int in something(acc list ...)*)
+
+    (*We create an iterate, which describes how to go through the original data*)
+    (*Normal form: Tuple(Seq(Seq[n]...T))*)
+    (*We can build an access pattern: Translate is fairly obvious.*)
+    (*We can build the loop (var, range) where range is either fixed int or an access list*)
+    (*We can use base to do the copy*)
+    (*Picture:Base [n]Tuples[n]Tuple [] Tuples [n] Tuples  *)
+    (*So the part outside the [], we have to make these fixed nrrds; the tuples parts inside also have to be listed. The Base[n] comes a copy!*)
+
+    fun buildConversionRoutine(ty) =
 	let
-	(*basically a sort of pre-order traversal*)
-	 fun bap(ty, path) =
-	      if isOutputAble ty
-	      then [(List.rev path, ty)]
-	      else
-	       (case ty
-		 of SeqTy(ty', SOME _) => bap(ty', ~1 :: path)
-		  | SeqTy(ty', NONE) => bap(ty', ~2 :: path)
-		  | TupleTy(tys) => List.concatMap bap (List.tabulate(List.length tys, fn x => (List.nth(tys, x), x :: path)))
-		  | _ => raise Fail "Impossible"
-	       (*end case*))
+	 fun convt(ty, itterDepth) =
+	     if isBase ty
+	     then let val (baseSize, valueTy) = baseSpec(ty)
+		  in
+		   [[(~1, BasePath(ty, baseSize, valueTy))]] : iterate list
+		  end
+	     else
+	      (case (ty)
+		of SeqTy(ty', SOME(n)) => if hasDynamicSize ty'
+					  then let
+					   val extraMap =  (fn i =>  ArraySeq i)
+					   val rest : iterate list = convt(ty', itterDepth + 1)
+					   val conversions : (int * iterate list) list = (List.tabulate(n, fn i => (i, rest)))
+					   val mapFunc = (fn (i,x) =>  List.map (fn j => (itterDepth, extraMap(i)) :: j) x)
+					   val ret : iterate list = List.concatMap mapFunc conversions
+					  in ret end
+					  else let val next = convt(ty', itterDepth + 1)
+		 			       in List.map (fn x => (itterDepth, SeqArray(SOME(n))) :: x) next end
+		 | SeqTy(ty', NONE) => let val next = convt(ty', itterDepth + 1)
+		 		       in List.map (fn x => (itterDepth, SeqArray(NONE)) :: x) next end
+					 
+		 | TupleTy(tys) => let val nexts : iterate list list = List.map (fn t => convt(t, itterDepth)) tys
+				       val nexts' : (int * iterate list) list =
+					   List.tabulate(List.length(tys), fn x => (x, List.nth(nexts, x)))
+		 		   in List.concatMap (fn (i,x) => List.map (fn j => (~1, TuplePath(i)) :: j)  x) nexts' end
+		 | _ => raise Fail "impossible ill formed output type"
+	      (*end case*))
+	 fun buildAcceses(iter : iterate) =
+	     let
+	      fun bas (i, TuplePath(j)) = SOME(TupleAcc(j))
+		| bas (i, ArraySeq(j)) = SOME(FixedArrayAcc(j))
+		| bas (i, SeqArray(r)) = SOME(VarArrayAcc(i, r))
+		| bas (_, _) = NONE
+	     in
+	      List.map bas iter
+	     end
+
+	 fun buildLoop(sourceIter : iterate, sourceAccs : acc option list) =
+	     let
+	      (*for each itter, drop tuple, collect acc*)
+	      fun foldToLoop((iter, acc), (loop, accs)) =
+		  (case (iter, acc)
+		    of ((_, TuplePath(_)), acc) => (loop, acc :: accs)
+		     | ((_, ArraySeq(j)), acc) => (loop, acc :: accs)
+		     | ((j, SeqArray(SOME(k))), acc) => ((Fixed (j,k)) :: loop, acc :: accs)
+		     | ((j, SeqArray(NONE)), acc) => ((From(j, (List.map Option.valOf) (List.rev accs))) :: loop, acc :: accs)
+		     | ((_, BasePath _), _) => (loop, (List.rev accs))
+		  (*end case*))
+	      val (loo, lacc) = List.foldr foldToLoop ([],[]) (ListPair.zip(sourceIter, sourceAccs))
+					   
+	     in
+	      (List.rev loo, sourceAccs, sourceIter)
+	     end
+	 val typeItteration : iterate list = convt(ty, 0)
+	 val accItteration = List.map buildAcceses typeItteration
+	 val conversions = ListPair.map buildLoop (typeItteration, accItteration)
 	in
-	 bap(bTy, [])
+	 conversions
 	end
+
+    (* fun buildAccessPattern(bTy) = *)
+    (* 	(*Given a type, figure out a way to access all elements of the form (real or tensor or int or bool or stringTy)[n][n][n][]*) *)
+    (* 	(*Returns a [(path, ty)] where the nth element contains a path to that element through the tree and the result type; ~1 indicates going through a sequence*) *)
+	
+    (* 	let *)
+    (* 	(*basically a sort of pre-order traversal*) *)
+    (* 	 fun bap(ty, path) = *)
+    (* 	      if isOutputAble ty *)
+    (* 	      then [(List.rev path, ty)] *)
+    (* 	      else *)
+    (* 	       (case ty *)
+    (* 		 of SeqTy(ty', SOME _) => bap(ty', ~1 :: path) *)
+    (* 		  | SeqTy(ty', NONE) => bap(ty', ~2 :: path) *)
+    (* 		  | TupleTy(tys) => List.concatMap bap (List.tabulate(List.length tys, fn x => (List.nth(tys, x), x :: path))) *)
+    (* 		  | _ => raise Fail "Impossible" *)
+    (* 	       (*end case*)) *)
+    (* 	in *)
+    (* 	 bap(bTy, []) *)
+    (* 	end *)
     fun toString IntTy = "int"
       | toString BoolTy = "bool"
       | toString (TensorTy[]) = "real"
@@ -107,7 +214,7 @@ structure APITypes =
 				     end
 				      | NONE => TupleTy(List.map toat tys)
 				   (*end case*))
-		 | SeqTy(ty', r) => (case ty'
+		 | SeqTy(ty', r) => (case ty' (*Fix me*)
 				     of TupleTy(tys) => TupleTy(List.map (fn t => SeqTy(t, r)) tys)
 				      | _ => SeqTy(toat ty', r)
 				   (*end case*))
@@ -117,7 +224,9 @@ structure APITypes =
 	 fun loop ty = let
 	  val ty' = toat ty
 	 in
-	  if (toString ty) = (toString ty') (*TODO: Fix stupid lazy hack -> will fail on FEM data, but this will crash earlier when making access pattern*)
+	  if (toString ty) = (toString ty')
+          (*TODO: Fix stupid lazy hack -> will fail on FEM data,
+	    	  but this will crash earlier when making access pattern *)
 	  then ty'
 	  else loop ty'
 	 end
@@ -127,12 +236,6 @@ structure APITypes =
 
 
 
-  (* does a type have a non-static size? *)
-    fun hasDynamicSize StringTy = true
-      | hasDynamicSize (ImageTy _) = true
-      | hasDynamicSize (FemData _) = false (*TODO: Clarify the use of this function for this entry.*)
-      | hasDynamicSize (SeqTy(_, NONE)) = true
-      | hasDynamicSize (TupleTy(tys)) = (List.exists hasDynamicSize tys)
-      | hasDynamicSize _ = false
+
 
   end

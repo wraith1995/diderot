@@ -181,7 +181,6 @@ structure GenOutputs : sig
 	      let
 	       val loopDepthStr = ("idxp_" ^ (Int.toString loopDepth)) 
 	       val loopDepthVar = CL.mkVar loopDepthStr
-	       (* val declareLoopVar = CL.mkDeclInit(CL.int32, loopDepthVar, CL.E_Int(IntLit.fromInt 0, CL.intTy)) *)
 	       val size = if a = ~1 then "size" else "length"
 	       val inner' = CL.E_Subscript(inner, loopDepthVar)
 	       val loop' = fn x => loop (CL.S_For(CL.T_Named("auto"),
