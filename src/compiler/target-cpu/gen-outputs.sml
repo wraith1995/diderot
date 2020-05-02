@@ -135,9 +135,7 @@ structure GenOutputs : sig
 						   [CL.E_PostOp(loopVar i, CL.^++)],
 						   CL.S_Block([x])))
 		| APITypes.From(i, accs) =>
-		  let val _ = print("ummm\n")
-		      val acc = buildAcc(accs, copySource)
-		      val _ = print("umm1\n")
+		  let val acc = buildAcc(accs, copySource)
 		  in (fn x => CL.S_For(CL.T_Named("auto"),
 				       [((getStr o loopVar) i, mkInt 0)],
 				       CL.E_BinOp(loopVar i, CL.#<, CL.mkDispatch(acc, "length", [])),

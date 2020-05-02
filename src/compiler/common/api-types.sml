@@ -146,21 +146,33 @@ structure APITypes =
 				       | TupleTy _ => false
 				       | ImageTy _ => raise Fail "ImageTy shoud not exist in output!"
 				       | _ => true)
-
+    (*for both inputs and outputs*)
     datatype path = TuplePath of int (*Tuple*)
-		  | SeqArray of int option (*Seq or Array containing things*)
+		  | SeqArray of int option (*Seq or Array containing things other than a seq*)
 		  | ArraySeq of int (*Array containing a seq*)
 		  | BasePath of t * int * t (*copyable base modulo*)
     type iterate = (int * path) list (*itteration depth x access type*)
     datatype acc = TupleAcc of int | FixedArrayAcc of int | VarArrayAcc of int * int option | BaseCopy of t * int * t
     datatype loops = Fixed of int * int | From of int * acc list (*for x_int in (0..int-1) vs for x_int in something(acc list ...)*)
+    (*for outputs:*)
     type copyOut = { loop : loops list,
-			 accs : acc list,
-			 outputTy : t,
-			 dataItteration : iterate,
-			 nrrdNum : int}
+		     accs : acc list,
+		     outputTy : t,
+		     dataItteration : iterate,
+		     nrrdNum : int}
 
-		     
+    (*for inputs:*)
+    datatype inputType = BaseInput of acc list * int
+		       | NrrdSeqInput of acc list * int * acc list * (t * int * t)
+    type inputJoins = (acc list * int list)
+    type copyIn = {
+     inputs : inputType list,
+     joins : inputJoins
+    }
+    (*NrrdSeqInput - path how to go through the original type:
+     The first part before the seq describes how index into the dest
+     the seq part then tells us we want to load
+     the rest of the part tells you where to set info from the load*)
 
     (*We create an iterate, which describes how to go through the original data*)
     (*Normal form: Tuple(Seq(Seq[n]...T))*)
@@ -170,61 +182,83 @@ structure APITypes =
     (*Picture:Base [n]Tuples[n]Tuple [] Tuples [n] Tuples  *)
     (*So the part outside the [], we have to make these fixed nrrds; the tuples parts inside also have to be listed. The Base[n] comes a copy!*)
 
+    local
+     fun convt(ty, itterDepth) =
+	 if isBase ty
+	 then let val (baseSize, valueTy) = baseSpec(ty)
+	      in
+	       [[(~1, BasePath(ty, baseSize, valueTy))]] : iterate list
+	      end
+	 else
+	  (case (ty)
+	    of SeqTy(ty', SOME(n)) => if hasDynamicSize ty'
+				      then let
+				       val extraMap =  (fn i =>  ArraySeq i)
+				       val rest : iterate list = convt(ty', itterDepth + 1)
+				       val conversions : (int * iterate list) list = (List.tabulate(n, fn i => (i, rest)))
+				       val mapFunc = (fn (i,x) =>  List.map (fn j => (itterDepth, extraMap(i)) :: j) x)
+				       val ret : iterate list = List.concatMap mapFunc conversions
+				      in ret end
+				      else let val next = convt(ty', itterDepth + 1)
+		 			   in List.map (fn x => (itterDepth, SeqArray(SOME(n))) :: x) next end
+	     | SeqTy(ty', NONE) => let val next = convt(ty', itterDepth + 1)
+		 		   in List.map (fn x => (itterDepth, SeqArray(NONE)) :: x) next end
+				     
+	     | TupleTy(tys) => let val nexts : iterate list list = List.map (fn t => convt(t, itterDepth)) tys
+				   val nexts' : (int * iterate list) list =
+				       List.tabulate(List.length(tys), fn x => (x, List.nth(nexts, x)))
+		 	       in List.concatMap (fn (i,x) => List.map (fn j => (~1, TuplePath(i)) :: j)  x) nexts' end
+	     | _ => raise Fail "impossible ill formed output type"
+	  (*end case*))
+     fun buildAcceses(iter : iterate) =
+	 let
+	  fun bas (i, TuplePath(j)) = (TupleAcc(j))
+	    | bas (i, ArraySeq(j)) = (FixedArrayAcc(j))
+	    | bas (i, SeqArray(r)) = (VarArrayAcc(i, r))
+	    | bas (_, BasePath(a,b,c)) = BaseCopy(a,b,c)
+	 in
+	  List.map bas iter
+	 end
+
+     fun buildLoop(sourceIter : iterate, sourceAccs : acc list) =
+	 let
+	  (*for each itter, drop tuple, collect acc*)
+	  fun foldToLoop((iter, acc), (loop, accs)) =
+	      (case (iter, acc)
+		of ((_, TuplePath(_)), a) => (loop, a :: accs)
+		 | ((_, ArraySeq(j)), a) => (loop, a :: accs)
+		 | ((j, SeqArray(SOME(k))), a) => ((Fixed (j,k)) :: loop, a :: accs)
+		 | ((j, SeqArray(NONE)), a) => ((From(j, (List.rev accs))) :: loop, a :: accs)
+		 | ((_, BasePath _), _) => (loop, (List.rev accs))
+	      (*end case*))
+	  val (loo, lacc) = List.foldr foldToLoop ([],[]) (List.rev(ListPair.zip(sourceIter, sourceAccs)))
+				       
+	 in
+	  (List.rev loo, sourceAccs, sourceIter)
+	 end
+     fun scanPath (_, TuplePath(_)) = false
+       | scanPath (_, SeqArray(NONE)) = true
+       | scanPath (_, SeqArray(SOME(_))) = false
+       | scanPath (_, ArraySeq(_)) = false
+       | scanPath (_, BasePath(_)) = false
+
+     fun categorizeInput(idx : int, iterate : iterate) =
+	 (case (List.find (fn (a,b) => scanPath b) (List.tabulate(List.length iterate, fn x => (x, List.nth(iterate, x)))))
+	   of NONE => BaseInput(buildAcceses iterate, idx)
+	    | SOME((k, (i, p))) =>
+	      let
+	       val toSeq = buildAcceses (List.take(iterate, k))
+	       val seqSave = List.rev(List.drop(List.rev(buildAcceses (List.drop(iterate, k+1))), 1))
+	       val BaseCopy(r) = (List.last(buildAcceses iterate))
+	      in
+	       NrrdSeqInput(toSeq, idx, seqSave, r)
+	      end
+	 (*end case*))
+
+	   
+    in
     fun buildOuputputConversionRoutine(ty) =
 	let
-	 fun convt(ty, itterDepth) =
-	     if isBase ty
-	     then let val (baseSize, valueTy) = baseSpec(ty)
-		  in
-		   [[(~1, BasePath(ty, baseSize, valueTy))]] : iterate list
-		  end
-	     else
-	      (case (ty)
-		of SeqTy(ty', SOME(n)) => if hasDynamicSize ty'
-					  then let
-					   val extraMap =  (fn i =>  ArraySeq i)
-					   val rest : iterate list = convt(ty', itterDepth + 1)
-					   val conversions : (int * iterate list) list = (List.tabulate(n, fn i => (i, rest)))
-					   val mapFunc = (fn (i,x) =>  List.map (fn j => (itterDepth, extraMap(i)) :: j) x)
-					   val ret : iterate list = List.concatMap mapFunc conversions
-					  in ret end
-					  else let val next = convt(ty', itterDepth + 1)
-		 			       in List.map (fn x => (itterDepth, SeqArray(SOME(n))) :: x) next end
-		 | SeqTy(ty', NONE) => let val next = convt(ty', itterDepth + 1)
-		 		       in List.map (fn x => (itterDepth, SeqArray(NONE)) :: x) next end
-					 
-		 | TupleTy(tys) => let val nexts : iterate list list = List.map (fn t => convt(t, itterDepth)) tys
-				       val nexts' : (int * iterate list) list =
-					   List.tabulate(List.length(tys), fn x => (x, List.nth(nexts, x)))
-		 		   in List.concatMap (fn (i,x) => List.map (fn j => (~1, TuplePath(i)) :: j)  x) nexts' end
-		 | _ => raise Fail "impossible ill formed output type"
-	      (*end case*))
-	 fun buildAcceses(iter : iterate) =
-	     let
-	      fun bas (i, TuplePath(j)) = (TupleAcc(j))
-		| bas (i, ArraySeq(j)) = (FixedArrayAcc(j))
-		| bas (i, SeqArray(r)) = (VarArrayAcc(i, r))
-		| bas (_, BasePath(a,b,c)) = BaseCopy(a,b,c)
-	     in
-	      List.map bas iter
-	     end
-
-	 fun buildLoop(sourceIter : iterate, sourceAccs : acc list) =
-	     let
-	      (*for each itter, drop tuple, collect acc*)
-	      fun foldToLoop((iter, acc), (loop, accs)) =
-		  (case (iter, acc)
-		    of ((_, TuplePath(_)), a) => (loop, a :: accs)
-		     | ((_, ArraySeq(j)), a) => (loop, a :: accs)
-		     | ((j, SeqArray(SOME(k))), a) => ((Fixed (j,k)) :: loop, a :: accs)
-		     | ((j, SeqArray(NONE)), a) => ((From(j, (List.rev accs))) :: loop, a :: accs)
-		     | ((_, BasePath _), _) => (loop, (List.rev accs))
-		  (*end case*))
-	      val (loo, lacc) = List.foldr foldToLoop ([],[]) (List.rev(ListPair.zip(sourceIter, sourceAccs)))
-					   
-	     in
-	      (List.rev loo, sourceAccs, sourceIter)
-	     end
 	 val typeItteration : iterate list = convt(ty, 0)
 	 val accItteration = List.map buildAcceses typeItteration
 	 val loopAndAccAndItter = ListPair.map buildLoop (typeItteration, accItteration)
@@ -237,6 +271,6 @@ structure APITypes =
 	in
 	 conversions : copyOut list(*loop to iterate over the API form instance, acces on the variable, how to itterate over the source*)
 	end
-
+    end
 
   end
