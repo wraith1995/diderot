@@ -162,12 +162,12 @@ structure APITypes =
 		     nrrdNum : int}
 
     (*for inputs:*)
-    datatype inputType = BaseInput of acc list * int
+    datatype inputType = BaseInput of acc list * int (*might want type here...*)
 		       | NrrdSeqInput of acc list * int * acc list * (t * int * t)
     type inputJoins = (acc list * int list)
     type copyIn = {
      inputs : inputType list,
-     joins : inputJoins
+     joins : inputJoins list
     }
     (*NrrdSeqInput - path how to go through the original type:
      The first part before the seq describes how index into the dest
@@ -254,6 +254,40 @@ structure APITypes =
 	       NrrdSeqInput(toSeq, idx, seqSave, r)
 	      end
 	 (*end case*))
+     fun accPrefixEq(TupleAcc(j), TupleAcc(k)) = j=k
+       | accPrefixEq (FixedArrayAcc(j), FixedArrayAcc(k)) = j=k
+       | accPrefixEq (VarArrayAcc(a,SOME(b)), VarArrayAcc(c,SOME(d))) = a=c andalso b=d
+       | accPrefixEq (VarArrayAcc(a,NONE), _) = raise Fail "accPrefix can't contain []"
+       | accPrefixEq (_, VarArrayAcc(a,NONE)) = raise Fail "accPrefix can't contain []"
+       | accPrefixEq (BaseCopy _, _) = raise Fail "accPrefix can't contain base"
+       | accPrefixEq (_, BaseCopy _) = raise Fail "accPrefix can't contain base"
+       | accPrefixEq _ = false
+
+     fun equalLoad (BaseInput(_), _) = false
+       | equalLoad (_, BaseInput(_)) = false
+       | equalLoad (NrrdSeqInput(a, _, _ , _), NrrdSeqInput(b, _, _, _)) =
+	 (List.length(a) = List.length(b))
+	 andalso (ListPair.all (accPrefixEq) (a,b))
+     fun buildJoins(ins : inputType list) =
+	 let
+	  (*with current list, *)
+	  fun joinRecurse(BaseInput(_)::ilist, joins) = joinRecurse(ilist, joins)
+	    | joinRecurse ((i as NrrdSeqInput(prefix, id, _, _))::ilist, joins) =
+	      let
+	       val detect = fn x => equalLoad(i,x)
+	       val same = List.filter detect ilist
+	       val diff = List.filter (not o detect) ilist
+	       val newJoin = (prefix, id :: (List.map (fn NrrdSeqInput(_, id', _, _ ) => id') same))
+
+	      in
+	       joinRecurse(diff, newJoin :: joins)
+	      end
+	    | joinRecurse ([], joins) = List.rev joins
+	 in
+	  joinRecurse(ins, [])
+	 end
+		   
+
 
 	   
     in
