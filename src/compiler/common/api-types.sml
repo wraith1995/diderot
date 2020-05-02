@@ -305,6 +305,15 @@ structure APITypes =
 	in
 	 conversions : copyOut list(*loop to iterate over the API form instance, acces on the variable, how to itterate over the source*)
 	end
+    fun buildInputConversionRoutine(ty :t) : copyIn =
+	let
+	 val typeItteration : iterate list = convt(ty, 0)
+	 val tabs = List.tabulate(List.length typeItteration, fn x => x)
+	 val inputs = ListPair.map categorizeInput (tabs, typeItteration)
+	 val joins = buildJoins(inputs)
+	in
+	 {inputs = inputs, joins = joins}
+	end
     end
 
   end
