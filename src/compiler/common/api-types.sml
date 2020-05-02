@@ -160,6 +160,8 @@ structure APITypes =
 			 dataItteration : iterate,
 			 nrrdNum : int}
 
+		     
+
     (*We create an iterate, which describes how to go through the original data*)
     (*Normal form: Tuple(Seq(Seq[n]...T))*)
     (*We can build an access pattern: Translate is fairly obvious.*)

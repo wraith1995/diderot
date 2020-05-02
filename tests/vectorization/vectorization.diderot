@@ -12,6 +12,7 @@ strand dumb(int i)
   output tensor[dim] d = zeros[dim];
   output tensor[dim][3]dd = {zeros[dim], zeros[dim], zeros[dim]};
   output (int, int)[] smelly = {(1,2)};
+  output (int[], int)[2] poop = {({}, 1), ({}, 2)};
   output int[3] ugg = {1,2,3};
   output real r = 2.0;
   output tensor[3][2][] fum = {};
