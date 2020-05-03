@@ -175,7 +175,7 @@ structure APITypes =
      diderotInputTy : t,
      inputTys : t list,
      inputs : inputType list,
-     joins : inputJoin list
+     joins : (inputJoin * t) list
      
 
     }
@@ -291,23 +291,23 @@ structure APITypes =
        | equalLoad (NrrdSeqInput(a, _, _ , _), NrrdSeqInput(b, _, _, _)) =
 	 (List.length(a) = List.length(b))
 	 andalso (ListPair.all (accPrefixEq) (a,b))
-     fun buildJoins(ins : inputType list) =
+     fun buildJoins(ins : inputType list, tyList) =
 	 let
 	  (*with current list, *)
-	  fun joinRecurse(BaseInput(_)::ilist, joins) = joinRecurse(ilist, joins)
-	    | joinRecurse ((i as NrrdSeqInput(prefix, id, _, _))::ilist, joins) =
+	  fun joinRecurse(BaseInput(_)::ilist, joins, t::tl) = joinRecurse(ilist, joins, tl)
+	    | joinRecurse ((i as NrrdSeqInput(prefix, id, _, _))::ilist, joins, t::tl) =
 	      let
 	       val detect = fn x => equalLoad(i,x)
 	       val same = List.filter detect ilist
 	       val diff = List.filter (not o detect) ilist
-	       val newJoin = (prefix, id :: (List.map (fn NrrdSeqInput(_, id', _, _ ) => id') same), i::same)
+	       val newJoin = ((prefix, id :: (List.map (fn NrrdSeqInput(_, id', _, _ ) => id') same), i::same), t)
 
 	      in
-	       joinRecurse(diff, newJoin :: joins)
+	       joinRecurse(diff, newJoin :: joins, tl)
 	      end
-	    | joinRecurse ([], joins) = List.rev joins
+	    | joinRecurse ([], joins, []) = List.rev joins
 	 in
-	  joinRecurse(ins, [])
+	  joinRecurse(ins, [], tyList)
 	 end
 		   
 
@@ -333,8 +333,9 @@ structure APITypes =
 	 val typeItteration : iterate list = convt(ty, 0)
 	 val tabs = List.tabulate(List.length typeItteration, fn x => x)
 	 val inputs = ListPair.map categorizeInput (tabs, typeItteration)
-	 val joins = buildJoins(inputs)
 	 val inputTys = toOutputAbleTypes ty
+	 val joins = buildJoins(inputs, inputTys)
+
 	 val _ = if List.length inputTys <> List.length typeItteration
 		 then raise Fail "error in conversion for inputs"
 		 else ()

@@ -207,6 +207,7 @@ the tensor type is represented as float[9] (or double[9]), so we could use somet
 	   ***)
 
 	  (*Helper function copied from gen-outputs.sml - need common helpers - IN and OUT too sepearte*)
+	  local
 	  fun buildAcc(a::accs : APITypes.acc list, base) =
 	      (case a
 		of APITypes.TupleAcc(j) => buildAcc(accs, CL.mkSelect(base, "t_" ^ Int.toString j))
@@ -232,28 +233,6 @@ the tensor type is represented as float[9] (or double[9]), so we could use somet
 		 | APITypes.VarArrayAcc(j, NONE) => raise Fail "infinite loops not found in normal to regular output type; these occur once and at join nodes"
 	      (*end case*))
 
-	  (* fun buildLoop(accs : APITypes.acc list, base) = *)
-	  (*     let *)
-	  (*      fun builder(b :: bccs : APITypes.acc list, loop, base) = *)
-	  (* 	   (case b *)
-	  (* 	     of APITypes.VarArrayAcc(j, SOME k) => (*do loop, itterate through diderotTy-> the right order is given by the acc!*) *)
-	  (* 	   (*end case*)) *)
-	  (* 	 | builder ([], loop, base) = loop base *)
-	  (*     in *)
-	  (*      builder(accs, (fn x => x), base) *)
-	  (*     end *)
-	  fun useOldSystem(info : Ty.copyIn) : bool =
-	      let
-	       val ty = (#diderotInputTy info)
-	       val hasFem = Ty.hasFem ty
-				      (*TODO: more complicated logic to pick out Seq{non-base fem} -> should be removed, but want to keep tests*)
-				      (*This is wrong. Issue of tuples is rather unclear. (a,b,c)[n] -> (a[n], b[n], c[n]) for inputs...*)
-	      in
-	      (List.length (#inputs info) = 1
-	       andalso List.length (#inputTys info) = 1)
-	      orelse hasFem
-	      end
-
 	  fun makeParams(minfo : Ty.copyIn) =
 	      let
 	       val inputs  : Ty.inputType list = #inputs minfo
@@ -265,9 +244,9 @@ the tensor type is represented as float[9] (or double[9]), so we could use somet
 	       ListPair.map doit (inputTys, inputs)
 	      end
 		
-	  fun makeSetStm(env, accs, ty, var, srcVar) = 
+	  fun makeSetStm(accs, ty, dstVar, srcVar) = 
 	      let
-	       val dstStatement = buildAcc(accs, global var)
+	       val dstStatement = buildAcc(accs, dstVar)
 	       val srcStatement = buildAcc(accs, srcVar)
 	       val copyStm = U.copyToCxx {env=env, ty=ty, dst= dstStatement, src = srcStatement}
 	       val loopStm = buildAccOuterLoop(accs, copyStm)
@@ -275,13 +254,13 @@ the tensor type is represented as float[9] (or double[9]), so we could use somet
 	       loopStm
 	      end
 
-	  fun makeSetStms(env, var, info : Ty.copyIn) = let
+	  fun getNonJoinSets(env, var, info : Ty.copyIn) = let
 	   fun doSet(Ty.BaseInput(accs, id, (ty, baseSize, valueTy)) :: ins) = 
 	       let
 		val rest = doSet(ins)
 		val srcVar = CL.mkVar ("v_" ^ (Int.toString id))
 	       in
-		makeSetStm(env, accs, ty, var, srcVar) :: rest
+		makeSetStm(accs, ty, global var, srcVar) :: rest
 	       end
 	     | doSet (_::ins) = doSet(ins)
 	  in
@@ -295,12 +274,12 @@ the tensor type is represented as float[9] (or double[9]), so we could use somet
 	       val _ = if List.length nrrds = 0
 		       then raise Fail "impossible"
 		       else ()
-	       fun trType ty = TyoC.trQType(env, TyoC.NSTopLevel, TreeTypes.fromAPI ty)
+	       fun trTypeInternal ty = TyoC.trQType(env, TyoC.NSTopLevel, TreeTypes.fromAPI ty)
 	       fun loadVar(id) = CL.mkVar ("load_" ^ (Int.toString id))
 	       fun sizeVar(id) = CL.mkVar ("size_" ^ (Int.toString id))
 	       fun doLoad(ty, id) =
 		   let
-		    val tempTy = trType (Ty.SeqTy(ty, NONE))
+		    val tempTy = trTypeInternal (Ty.SeqTy(ty, NONE))
 		    val decl = CL.S_Decl([], tempTy, "load_" ^ (Int.toString id),NONE)
 		    val load = ToC.loadNrrd(loadVar id, CL.mkVar ("v_" ^ (Int.toString id)), NONE)
 		    val sizeDcl = CL.S_Decl([], CL.autoTy, ("size_" ^ (Int.toString id)),
@@ -308,7 +287,8 @@ the tensor type is represented as float[9] (or double[9]), so we could use somet
 		   in
 		    [decl, load, sizeDcl]
 		   end
-	       val loads =  raise Fail "umm" (*do Loads*)
+	       val loads = List.concatMap (fn (Ty.NrrdSeqInput(_, id, _, (ty, _, _))) => doLoad(ty, id)) nrrdSeqInputs
+		     
 	       fun equalitySizes(n1::n2::a) = CL.E_BinOp(CL.E_BinOp(sizeVar n1, CL.#==, sizeVar n2), CL.#&&, equalitySizes(n2::a))
 		 | equalitySizes ([_]) = CL.mkBool(true)
 						  
@@ -318,28 +298,50 @@ the tensor type is represented as float[9] (or double[9]), so we could use somet
 
 	       val firstNrrd = List.nth(nrrds, 0)
 	       val getTargetSeq = buildAcc(joinAddr, global var)
-	       val allocateTarget = CL.S_Exp(CL.E_AssignOp(getTargetSeq, CL.$=, CL.E_Cons(trType inSeqTy, [sizeVar firstNrrd])))
+	       val allocateTarget = CL.S_Exp(CL.E_AssignOp(getTargetSeq, CL.$=, CL.E_Cons(trTypeInternal inSeqTy, [sizeVar firstNrrd])))
 
-
-	      (*  fun copy(NrrdSeqInput(_,n, seqAddr, (ty, size, baseTy))::ns) = *)
-	      (* 	   let *)
-	      (* 	    val itterVar *)
-	      (* 	    val loop = fn x => *)
-	      (* 	    val innerItter *)
-	      (* 	    val *)
-			  
-	      (* 	   in *)
-		    
-	      (* 	   end *)
-	      (* 	 | copy (_::ns) = copy(ns) *)
-	      (* 	     (*copy stm*) *)
-	      (* 	     (*return stm*) *)
-	      (* in *)
-	      (*  loads @ [checkLength,allocateTarget] *)
-	       (* end *)
+	       val loopVarStr = "join"
+	       val loopVar = CL.mkVar loopVarStr
+	       val subScriptLoopFunc = fn x => CL.mkSubscript(x, loopVar)
+	       val forLoopFunc = (fn x => CL.S_For(CL.T_Named("auto"),
+						   [(loopVarStr, mkInt 0)],
+						   CL.E_BinOp(loopVar, CL.#<, sizeVar firstNrrd),
+						   [CL.E_PostOp(loopVar, CL.^++)],
+						   CL.S_Block([x])))
+	       fun buildInternalSet(Ty.NrrdSeqInput(_, nrrd, rest, (copyTy, size, baseCopyTy))) =
+		   makeSetStm(rest, copyTy, subScriptLoopFunc getTargetSeq, subScriptLoopFunc (loadVar nrrd))
+	       val internalSets = List.map buildInternalSet nrrdSeqInputs
+	       val joinCopyLoop = forLoopFunc (CL.S_Block(internalSets))
 	      in
-	       ()
+	       CL.S_Block(loads@checkLength@[allocateTarget]@[joinCopyLoop])
 	      end
+	  in
+	  fun useOldSystem(info : Ty.copyIn) : bool =
+	      (*TODO: more complicated logic to pick out Seq{non-base fem} -> should be removed, but want to keep tests*)
+	      (*This is wrong. Issue of tuples is rather unclear. (a,b,c)[n] -> (a[n], b[n], c[n]) for inputs...*)
+	      let
+	       val ty = (#diderotInputTy info)
+	       val hasFem = Ty.hasFem ty
+				      
+	      in
+	       (List.length (#inputs info) = 1
+		andalso List.length (#inputTys info) = 1)
+	       orelse hasFem
+	      end
+	  fun generateNewSystem(env, var, name, info : Ty.copyIn) =
+	      let
+	       (*Create sig; build internals via both functions;*)
+	       val ty = #diderotInputTy info
+	       val joinsOnly = #joins info
+	       val jointStms = List.map(fn (ijoin, inSeqTy) => makeJoinStm(env, var, ijoin, inSeqTy)) joinsOnly
+	       val setStms = getNonJoinSets(env, var, info)
+	       val body = CL.S_Block(setStms@jointStms@[CL.mkReturn(SOME(CL.mkBool false))])
+	      in
+	       cFunc(CL.boolTy, GenAPI.inputSet(spec, name),
+		     wrldParam::makeParams(info), body)
+			    
+	      end
+	  end
 
         (* create decls for an input variable *)
           fun mkInputDecls (Inp.INP{var, name, ty, desc, init}) = let
