@@ -335,7 +335,7 @@ the tensor type is represented as float[9] (or double[9]), so we could use somet
 	       val joinsOnly = #joins info
 	       val jointStms = List.map(fn (ijoin, inSeqTy) => makeJoinStm(env, var, ijoin, inSeqTy)) joinsOnly
 	       val setStms = getNonJoinSets(env, var, info)
-	       val body = CL.S_Block(setStms@jointStms@[CL.mkReturn(SOME(CL.mkBool false))])
+	       val body = CL.S_Block(setStms@jointStms@[CL.mkAssign(U.defined var, CL.mkBool true), CL.mkReturn(SOME(CL.mkBool false))])
 	      in
 	       cFunc(CL.boolTy, GenAPI.inputSet(spec, name),
 		     wrldParam::makeParams(info), body)
