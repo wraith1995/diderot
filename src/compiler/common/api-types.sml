@@ -37,6 +37,10 @@ structure APITypes =
       | hasFem (TupleTy(tys)) = not (List.all (not o hasFem) tys)
       | hasFem _ = false
 
+    fun hasTupleEsq (SeqTy(ty, SOME(n))) = hasDynamicSize ty orelse hasTupleEsq ty (*has tuple or [][n]*)
+      | hasTupleEsq (SeqTy(ty, NONE)) = hasTupleEsq ty
+      | hasTupleEsq (TupleTy(tys)) = true
+      | hasTupleEsq _ =  false
 
 
     fun depth ty =

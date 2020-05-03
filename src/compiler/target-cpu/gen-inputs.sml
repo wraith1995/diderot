@@ -316,18 +316,8 @@ the tensor type is represented as float[9] (or double[9]), so we could use somet
 	       CL.S_Block(loads@checkLength@[allocateTarget]@[joinCopyLoop])
 	      end
 	  in
-	  fun useOldSystem(info : Ty.copyIn) : bool =
-	      (*TODO: more complicated logic to pick out Seq{non-base fem} -> should be removed, but want to keep tests*)
-	      (*This is wrong. Issue of tuples is rather unclear. (a,b,c)[n] -> (a[n], b[n], c[n]) for inputs...*)
-	      let
-	       val ty = (#diderotInputTy info)
-	       val hasFem = Ty.hasFem ty
-				      
-	      in
-	       (List.length (#inputs info) = 1
-		andalso List.length (#inputTys info) = 1)
-	       orelse hasFem
-	      end
+	  fun useOldSystem(ty) : bool =
+	      Ty.hasFem ty orelse not(Ty.hasTupleEsq ty)
 	  fun generateNewSystem(env, var, name, info : Ty.copyIn) =
 	      let
 	       (*Create sig; build internals via both functions;*)
@@ -344,9 +334,8 @@ the tensor type is represented as float[9] (or double[9]), so we could use somet
 	  end
 
         (* create decls for an input variable *)
-          fun mkInputDecls (Inp.INP{var, name, ty, desc, init}) = let
-	   val inputTyinfo : Ty.copyIn = Ty.buildInputConversionRoutine(ty)
-              (* create a description declaration for the input variable *)
+          fun mkInputDeclsOld (Inp.INP{var, name, ty, desc, init}) = let
+	   (* create a description declaration for the input variable *)
                 val descDcl = (case desc
                        of SOME desc => [
                               CL.mkVarInitDcl(CL.T_Ptr(CL.T_Named "const char"),
@@ -548,7 +537,27 @@ the tensor type is represented as float[9] (or double[9]), so we could use somet
                       (* end case *))
                 in
                   (descDcl @ getDcl @ setDcl)
-                end
+          end
+	  fun mkInputDeclsNew(Inp.INP{var, name, ty, desc, init}) =
+	      let
+	       val inputTyinfo : Ty.copyIn = Ty.buildInputConversionRoutine(ty)
+	       val getDcl = [generateNewSystem(env, var, name, inputTyinfo)]
+	       val descDcl = (case desc
+			       of SOME desc => [
+				CL.mkVarInitDcl(CL.T_Ptr(CL.T_Named "const char"),
+						GenAPI.inputDesc(spec, name),
+						CL.I_Exp(CL.mkStr desc))
+                               ]
+				| NONE => []
+			     (* end case *))
+	      in
+	       descDcl @ getDcl
+	      end
+	  fun mkInputDecls(inp as Inp.INP{var, name, ty, desc, init}) =
+	      if useOldSystem ty
+	      then mkInputDeclsOld inp
+	      else mkInputDeclsNew inp
+	      
           val extras = genCheckInputs (env, inputs) :: extras
           in
             List.foldr (fn (input, dcls) => mkInputDecls input @ dcls) extras inputs
