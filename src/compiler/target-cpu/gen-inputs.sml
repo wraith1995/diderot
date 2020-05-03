@@ -221,7 +221,7 @@ the tensor type is represented as float[9] (or double[9]), so we could use somet
 	  fun buildAccOut(a::accs : APITypes.acc list, base) =
 	      (case a
 		of APITypes.TupleAcc(j) => buildAccOut(accs, base)
-		 | APITypes.FixedArrayAcc(j) => buildAccOut(accs, CL.E_Subscript(base, CL.E_Int(IntLit.fromInt j, CL.intTy)))
+		 | APITypes.FixedArrayAcc(j) => buildAccOut(accs, base)
 		 | APITypes.VarArrayAcc(j, SOME _) => buildAccOut(accs, CL.E_Subscript(base, CL.mkVar ("idx_" ^ Int.toString j)))
 		 | APITypes.VarArrayAcc(j, NONE) => raise Fail "infinite loops not found in normal to regular output type"
 		 | APITypes.BaseCopy _ => base
