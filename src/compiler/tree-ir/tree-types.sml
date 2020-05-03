@@ -79,6 +79,7 @@ structure TreeTypes =
       | fromAPI (APITypes.StringTy) = StringTy
       | fromAPI (APITypes.FemData(data)) = FemData(data)
       | fromAPI (APITypes.SeqTy(ty, opt)) = SeqTy(fromAPI ty, opt)
+      | fromAPI (APITypes.TupleTy(tys)) = TupleTy(List.map fromAPI tys)
       | fromAPI (APITypes.ImageTy _) = raise Fail "impossible"
 
     (* (*FIXME: VecTys and TensorRefTy*) *)

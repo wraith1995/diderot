@@ -37,6 +37,8 @@ structure APITypes =
       | hasFem (TupleTy(tys)) = not (List.all (not o hasFem) tys)
       | hasFem _ = false
 
+
+
     fun depth ty =
 	let
 	 fun depth'(SeqTy(ty, SOME(s)), ds) = depth'(ty, s::ds)
@@ -162,12 +164,17 @@ structure APITypes =
 		     nrrdNum : int}
 
     (*for inputs:*)
-    datatype inputType = BaseInput of acc list * int (*might want type here...*)
+    datatype inputType = BaseInput of acc list * int * (t * int * t)(*might want type here...*)
 		       | NrrdSeqInput of acc list * int * acc list * (t * int * t)
-    type inputJoins = (acc list * int list)
+    type inputJoin = (acc list * int list * inputType list)
+    (* datatype inputNrrds = BaseInput of acc list * int * (t * int * t) | Join of inputJoin *)
     type copyIn = {
+     diderotInputTy : t,
+     inputTys : t list,
      inputs : inputType list,
-     joins : inputJoins list
+     joins : inputJoin list
+     
+
     }
     (*NrrdSeqInput - path how to go through the original type:
      The first part before the seq describes how index into the dest
@@ -200,6 +207,7 @@ structure APITypes =
 				       val ret : iterate list = List.concatMap mapFunc conversions
 				      in ret end
 				      else let val next = convt(ty', itterDepth + 1)
+
 		 			   in List.map (fn x => (itterDepth, SeqArray(SOME(n))) :: x) next end
 	     | SeqTy(ty', NONE) => let val next = convt(ty', itterDepth + 1)
 		 		   in List.map (fn x => (itterDepth, SeqArray(NONE)) :: x) next end
@@ -213,7 +221,7 @@ structure APITypes =
      fun buildAcceses(iter : iterate) =
 	 let
 	  fun bas (i, TuplePath(j)) = (TupleAcc(j))
-	    | bas (i, ArraySeq(j)) = (FixedArrayAcc(j))
+	    | bas (i, ArraySeq(j)) = (FixedArrayAcc(j)) 
 	    | bas (i, SeqArray(r)) = (VarArrayAcc(i, r))
 	    | bas (_, BasePath(a,b,c)) = BaseCopy(a,b,c)
 	 in
@@ -244,7 +252,7 @@ structure APITypes =
 
      fun categorizeInput(idx : int, iterate : iterate) =
 	 (case (List.find (fn (a,b) => scanPath b) (List.tabulate(List.length iterate, fn x => (x, List.nth(iterate, x)))))
-	   of NONE => BaseInput(buildAcceses iterate, idx)
+	   of NONE => let val BaseCopy(r) = (List.last(buildAcceses iterate)) in BaseInput(buildAcceses iterate, idx, r) end
 	    | SOME((k, (i, p))) =>
 	      let
 	       val toSeq = buildAcceses (List.take(iterate, k))
@@ -277,7 +285,7 @@ structure APITypes =
 	       val detect = fn x => equalLoad(i,x)
 	       val same = List.filter detect ilist
 	       val diff = List.filter (not o detect) ilist
-	       val newJoin = (prefix, id :: (List.map (fn NrrdSeqInput(_, id', _, _ ) => id') same))
+	       val newJoin = (prefix, id :: (List.map (fn NrrdSeqInput(_, id', _, _ ) => id') same), i::same)
 
 	      in
 	       joinRecurse(diff, newJoin :: joins)
@@ -311,8 +319,12 @@ structure APITypes =
 	 val tabs = List.tabulate(List.length typeItteration, fn x => x)
 	 val inputs = ListPair.map categorizeInput (tabs, typeItteration)
 	 val joins = buildJoins(inputs)
+	 val inputTys = toOutputAbleTypes ty
+	 val _ = if List.length inputTys <> List.length typeItteration
+		 then raise Fail "error in conversion for inputs"
+		 else ()
 	in
-	 {inputs = inputs, joins = joins}
+	 {diderotInputTy = ty, inputTys=inputTys, inputs = inputs, joins = joins}
 	end
     end
 

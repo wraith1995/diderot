@@ -48,6 +48,7 @@ structure GenInputs : sig
     structure CL = CLang
     structure RN = CxxNames
     structure ToC = TreeToCxx
+    structure TyoC = TypeToCxx
     structure U = GenInputsUtil
     structure Env = CodeGenEnv
     structure GenAPI = GenLibraryInterface
@@ -190,9 +191,132 @@ the tensor type is represented as float[9] (or double[9]), so we could use somet
         (* the C++ world pointer type *)
           val worldPtrTy = RN.worldPtrTy
           val wrldCastStm = CL.mkDeclInit(worldPtrTy, "wrld",
-                CL.mkReinterpretCast(worldPtrTy, CL.mkVar "cWrld"))
+					  CL.mkReinterpretCast(worldPtrTy, CL.mkVar "cWrld"))
+
+	  (*build functions for more complex sets/detect them -> avoid sets/dispatch to old gets*)
+	  (*build helper functions to do elemental sets, nrrd loads, nrrd joins, loops to save*)
+
+	  (*helper function for dispatch*)
+	  (*dispatch*)
+	  (*in ours:
+	   **generate params -> easy (but reofmr the outputs please)
+	   ** do all sets
+	   ** do all loads
+	   ** itterate over smallest to load appropriately (at each join, you get loop ->inside loop copy/set -> acc on global dest and basic raw input) -> yay
+	   **done
+	   ***)
+
+	  (*Helper function copied from gen-outputs.sml - need common helpers - IN and OUT too sepearte*)
+	  fun buildAcc(a::accs : APITypes.acc list, base) =
+	      (case a
+		of APITypes.TupleAcc(j) => buildAcc(accs, CL.mkSelect(base, "t_" ^ Int.toString j))
+		 (*Comes from ArraySeq -> this is [][n] -> in this case we have a nin from each one*)
+
+		 | APITypes.FixedArrayAcc(j) => buildAcc(accs, CL.E_Subscript(base, CL.E_Int(IntLit.fromInt j, CL.intTy)))
+		 (*Comes from a seq[n] being lifted*)
+		 (* | APITypes.VarArrayAcc(j, SOME _) => buildAcc(accs, CL.E_Subscript(base, CL.mkVar ("idx_" ^ Int.toString j))) *)
+		 (* | APITypes.VarArrayAcc(j, NONE) => buildAcc(accs, CL.E_Subscript(base, CL.mkVar ("idx_" ^ Int.toString j))) *)
+						    
+		 | APITypes.BaseCopy _ => base
+		 | _ => raise Fail "Error: non fixed accessor appears outside [] or in systemwithout []"
+								  
+	      (*end case*))
+	    | buildAcc([], base) = base
+
+
+	  fun useOldSystem(info : Ty.copyIn) : bool =
+	      let
+	       val ty = (#diderotInputTy info)
+	       val hasFem = Ty.hasFem ty
+				      (*TODO: more complicated logic to pick out Seq{non-base fem} -> should be removed, but want to keep tests*)
+				      (*This is wrong. Issue of tuples is rather unclear. (a,b,c)[n] -> (a[n], b[n], c[n]) for inputs...*)
+	      in
+	      (List.length (#inputs info) = 1
+	       andalso List.length (#inputTys info) = 1)
+	      orelse hasFem
+	      end
+
+	  fun makeParams(minfo : Ty.copyIn) =
+	      let
+	       val inputs  : Ty.inputType list = #inputs minfo
+	       val inputTys : Ty.t list = #inputTys minfo
+	       (*TODO: Fix this stupidity*)
+	       fun doit(ty, Ty.BaseInput(_, id, _)) = CL.PARAM([], trType(env, ty), "v_" ^ (Int.toString id))
+		 | doit(ty, Ty.NrrdSeqInput(_, id, _, _)) = CL.PARAM([], trType(env, ty), "v_" ^ (Int.toString id))
+	      in
+	       ListPair.map doit (inputTys, inputs)
+	      end
+
+	  fun makeSetStms(env, var, info : Ty.copyIn) = let
+	   fun doSet(Ty.BaseInput(accs, id, (ty, baseSize, valueTy)) :: ins) = 
+		    let
+		     val rest = doSet(ins)
+		     val srcStatement = buildAcc(accs, global var) (*This doesn't quite work without the loops? (T1,T2)[6] vs (T1[6], T2[6])*)
+		     val stm = U.copyToCxx {env=env, ty=ty, dst= srcStatement,src = CL.mkVar ("v_" ^ (Int.toString id))}
+		    in
+		     stm :: doSet(ins)
+		    end
+	     | doSet (_::ins) = doSet(ins)
+	  in
+	   doSet(#inputs info)
+	  end
+
+	  (*generate join -> load all nrrds, find lengths, check length, itterate and do the copy over*)
+
+	  fun makeJoinStm(env, var, (joinAddr, nrrds, nrrdSeqInputs) : Ty.inputJoin, inSeqTy) =
+	      let
+	       val _ = if List.length nrrds = 0
+		       then raise Fail "impossible"
+		       else ()
+	       fun trType ty = TyoC.trQType(env, TyoC.NSTopLevel, TreeTypes.fromAPI ty)
+	       fun loadVar(id) = CL.mkVar ("load_" ^ (Int.toString id))
+	       fun sizeVar(id) = CL.mkVar ("size_" ^ (Int.toString id))
+	       fun doLoad(ty, id) =
+		   let
+		    val tempTy = trType (Ty.SeqTy(ty, NONE))
+		    val decl = CL.S_Decl([], tempTy, "load_" ^ (Int.toString id),NONE)
+		    val load = ToC.loadNrrd(loadVar id, CL.mkVar ("v_" ^ (Int.toString id)), NONE)
+		    val sizeDcl = CL.S_Decl([], CL.autoTy, ("size_" ^ (Int.toString id)),
+					    SOME(CL.I_Exp(CL.mkDispatch(loadVar id, "length", []))))
+		   in
+		    [decl, load, sizeDcl]
+		   end
+	       val loads =  raise Fail "umm" (*do Loads*)
+	       fun equalitySizes(n1::n2::a) = CL.E_BinOp(CL.E_BinOp(sizeVar n1, CL.#==, sizeVar n2), CL.#&&, equalitySizes(n2::a))
+		 | equalitySizes ([_]) = CL.mkBool(true)
+						  
+	       val checkLength = if List.length nrrds = 1
+				 then []
+				 else [CL.mkIfThen(equalitySizes(nrrds), CL.mkReturn (SOME(CL.mkBool(true)))) ] (*TODO:check return*)
+
+	       val firstNrrd = List.nth(nrrds, 0)
+	       val getTargetSeq = buildAcc(joinAddr, global var)
+	       val allocateTarget = CL.S_Exp(CL.E_AssignOp(getTargetSeq, CL.$=, CL.E_Cons(trType inSeqTy, [sizeVar firstNrrd])))
+
+
+	      (*  fun copy(NrrdSeqInput(_,n, seqAddr, (ty, size, baseTy))::ns) = *)
+	      (* 	   let *)
+	      (* 	    val itterVar *)
+	      (* 	    val loop = fn x => *)
+	      (* 	    val innerItter *)
+	      (* 	    val *)
+			  
+	      (* 	   in *)
+		    
+	      (* 	   end *)
+	      (* 	 | copy (_::ns) = copy(ns) *)
+	      (* 	     (*copy stm*) *)
+	      (* 	     (*return stm*) *)
+	      (* in *)
+	      (*  loads @ [checkLength,allocateTarget] *)
+	       (* end *)
+	      in
+	       ()
+	      end
+
         (* create decls for an input variable *)
           fun mkInputDecls (Inp.INP{var, name, ty, desc, init}) = let
+	   val inputTyinfo : Ty.copyIn = Ty.buildInputConversionRoutine(ty)
               (* create a description declaration for the input variable *)
                 val descDcl = (case desc
                        of SOME desc => [
