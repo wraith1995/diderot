@@ -70,7 +70,18 @@ structure GenLibraryInterface : sig
 				     | FemData.MeshPos(_) => raise Fail "undecided")
             | Ty.SeqTy(ty, NONE) => raise Fail "unexpected dynamic SeqTy"
             | Ty.SeqTy(ty, SOME n) => CL.T_Array(toCType(env, ty), SOME n)
-          (* end case *))
+			    (* end case *))
+    (*copied from gen-inputs.sml -> TODO: fix code duplication between these*)
+    fun trTypeAlt (env, ty) = (case ty
+			     of Ty.IntTy => Env.intTy env
+			      | Ty.BoolTy => Env.boolTy env
+			      | Ty.TensorTy[] => Env.realTy env
+			      | Ty.TensorTy dd => CL.T_Array(Env.realTy env, SOME(List.foldl Int.* 1 dd))
+			      | Ty.StringTy => CL.constPtrTy CL.charTy
+			      | Ty.ImageTy(dim, _) => CL.T_Ptr(CL.T_Named "nrrd")
+			      | Ty.SeqTy(ty, NONE) => CL.T_Ptr(CL.T_Named "nrrd")
+			      | Ty.SeqTy(ty, SOME n) => CL.T_Array(trTypeAlt(env, ty), SOME n)
+			   (* end case *))
 
     fun mkSymbol base = let
           fun tr c = if Char.isAlpha c then Char.toUpper c
@@ -112,7 +123,7 @@ structure GenLibraryInterface : sig
                                 [], inputDesc(spec, name), NONE)
                             ]
                       (* end case *))
-                val getDcl = if Inputs.isDefault init
+                val getDcl =  if not(Ty.hasTupleEsq ty)
                       then let
                         val name = inputGet(spec, name)
                       (* convert the input type to a by-reference C type *)
@@ -144,30 +155,45 @@ structure GenLibraryInterface : sig
                           dcls
                         end
                       else []
-                val setDcl = let
-                    (* prototypes for setting an image or dynamic sequence from a nrrd *)
-                      fun loadPrototypes (params) = [
+                val setDcl =
+		    let
+		     val useOld = not(Ty.hasTupleEsq ty) orelse (Ty.hasFem ty)
+		     fun loadPrototypes (params) = [
+                      CL.D_Proto(
+                       [], Env.boolTy env, inputSetByName(spec, name),
+                       List.@([wrldParam, CL.PARAM([], stringTy, "s")], params)),
+                      CL.D_Proto(
+                       [], Env.boolTy env, inputSet(spec, name),
+                       List.@([wrldParam, CL.PARAM([], nrrdPtrTy, "nin")], params))
+                     ]
+		     (* prototypes for setting an image or dynamic sequence from a nrrd *)
+
+		    in
+		     if useOld
+		     then (case ty
+                            of Ty.ImageTy _ => loadPrototypes([])
+                             | Ty.SeqTy(elemTy, NONE) => if APITypes.hasFem elemTy
+							 then loadPrototypes([CL.PARAM([], CL.voidPtr, "data1")])
+							 else loadPrototypes([])
+									    
+                             | _ => [
                               CL.D_Proto(
-                                [], Env.boolTy env, inputSetByName(spec, name),
-                                List.@([wrldParam, CL.PARAM([], stringTy, "s")], params)),
-                              CL.D_Proto(
-                                [], Env.boolTy env, inputSet(spec, name),
-                                List.@([wrldParam, CL.PARAM([], nrrdPtrTy, "nin")], params))
-                            ]
-                      in
-                        case ty
-                         of Ty.ImageTy _ => loadPrototypes([])
-                          | Ty.SeqTy(elemTy, NONE) => if APITypes.hasFem elemTy
-						      then loadPrototypes([CL.PARAM([], CL.voidPtr, "data1")])
-						      else loadPrototypes([])
-						
-                          | _ => [
-                                CL.D_Proto(
-                                  [], Env.boolTy env, inputSet(spec, name),
-                                  [wrldParam, CL.PARAM([], toCType(env, ty), "v")])
-                              ]
-                        (* end case *)
-                      end
+                               [], Env.boolTy env, inputSet(spec, name),
+                               [wrldParam, CL.PARAM([], toCType(env, ty), "v")])
+                             ]
+                          (* end case *))
+		     else let
+			  val outTys = Ty.toOutputAbleTypes(ty)
+			  val paramCTypes = List.map (fn x => trTypeAlt(env, x)) outTys
+			  val tabs = List.tabulate(List.length outTys, fn x => x)
+			  val params = ListPair.map (fn (idx, v) => CL.PARAM([], v, "v_" ^ (Int.toString idx))) (tabs, paramCTypes)
+			 in
+			  [CL.D_Proto(
+			   [], Env.boolTy env, inputSet(spec, name),
+			   wrldParam::params
+			  )]
+			 end
+                    end
                 in
                   descDcl @ getDcl @ setDcl
                 end

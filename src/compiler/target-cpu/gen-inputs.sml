@@ -217,6 +217,17 @@ the tensor type is represented as float[9] (or double[9]), so we could use somet
 		 | APITypes.BaseCopy _ => base
 	      (*end case*))
 	    | buildAcc([], base) = base
+
+	  fun buildAccOut(a::accs : APITypes.acc list, base) =
+	      (case a
+		of APITypes.TupleAcc(j) => buildAccOut(accs, base)
+		 | APITypes.FixedArrayAcc(j) => buildAccOut(accs, CL.E_Subscript(base, CL.E_Int(IntLit.fromInt j, CL.intTy)))
+		 | APITypes.VarArrayAcc(j, SOME _) => buildAccOut(accs, CL.E_Subscript(base, CL.mkVar ("idx_" ^ Int.toString j)))
+		 | APITypes.VarArrayAcc(j, NONE) => raise Fail "infinite loops not found in normal to regular output type"
+		 | APITypes.BaseCopy _ => base
+	      (*end case*))
+	    | buildAccOut([], base) = base
+				     
 	  fun buildAccOuterLoop(a::accs : APITypes.acc list, base) =
 	      (case a
 		of APITypes.TupleAcc(j) => buildAccOuterLoop(accs, base)
@@ -231,6 +242,7 @@ the tensor type is represented as float[9] (or double[9]), so we could use somet
 								  CL.S_Block([inner]))
 						      end
 		 | APITypes.VarArrayAcc(j, NONE) => raise Fail "infinite loops not found in normal to regular output type; these occur once and at join nodes"
+		 | _ => base
 	      (*end case*))
 
 	  fun makeParams(minfo : Ty.copyIn) =
@@ -247,7 +259,7 @@ the tensor type is represented as float[9] (or double[9]), so we could use somet
 	  fun makeSetStm(accs, ty, dstVar, srcVar) = 
 	      let
 	       val dstStatement = buildAcc(accs, dstVar)
-	       val srcStatement = buildAcc(accs, srcVar)
+	       val srcStatement = buildAccOut(accs, srcVar)
 	       val copyStm = U.copyToCxx {env=env, ty=ty, dst= dstStatement, src = srcStatement}
 	       val loopStm = buildAccOuterLoop(accs, copyStm)
 	      in
@@ -263,6 +275,7 @@ the tensor type is represented as float[9] (or double[9]), so we could use somet
 		makeSetStm(accs, ty, global var, srcVar) :: rest
 	       end
 	     | doSet (_::ins) = doSet(ins)
+	     | doSet ([]) = []
 	  in
 	   doSet(#inputs info)
 	  end
@@ -313,7 +326,7 @@ the tensor type is represented as float[9] (or double[9]), so we could use somet
 	       val internalSets = List.map buildInternalSet nrrdSeqInputs
 	       val joinCopyLoop = forLoopFunc (CL.S_Block(internalSets))
 	      in
-	       CL.S_Block(loads@checkLength@[allocateTarget]@[joinCopyLoop])
+	       CL.S_Block([wrldCastStm]@loads@checkLength@[allocateTarget]@[joinCopyLoop])
 	      end
 	  in
 	  fun useOldSystem(ty) : bool =
@@ -325,7 +338,7 @@ the tensor type is represented as float[9] (or double[9]), so we could use somet
 	       val joinsOnly = #joins info
 	       val jointStms = List.map(fn (ijoin, inSeqTy) => makeJoinStm(env, var, ijoin, inSeqTy)) joinsOnly
 	       val setStms = getNonJoinSets(env, var, info)
-	       val body = CL.S_Block(setStms@jointStms@[CL.mkAssign(U.defined var, CL.mkBool true), CL.mkReturn(SOME(CL.mkBool false))])
+	       val body = CL.S_Block([wrldCastStm]@setStms@jointStms@[CL.mkAssign(U.defined var, CL.mkBool true), CL.mkReturn(SOME(CL.mkBool false))])
 	      in
 	       cFunc(CL.boolTy, GenAPI.inputSet(spec, name),
 		     wrldParam::makeParams(info), body)
