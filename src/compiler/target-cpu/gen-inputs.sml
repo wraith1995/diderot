@@ -92,7 +92,7 @@ the tensor type is represented as float[9] (or double[9]), so we could use somet
  *)
 
     val nrrdPtrTy = CL.T_Ptr(CL.T_Named "Nrrd")
-
+    fun mkInt i = CL.mkInt(IntInf.fromInt i)
   (* world pointer *)
     val wrldV = CL.mkVar "wrld"
 
@@ -210,20 +210,38 @@ the tensor type is represented as float[9] (or double[9]), so we could use somet
 	  fun buildAcc(a::accs : APITypes.acc list, base) =
 	      (case a
 		of APITypes.TupleAcc(j) => buildAcc(accs, CL.mkSelect(base, "t_" ^ Int.toString j))
-		 (*Comes from ArraySeq -> this is [][n] -> in this case we have a nin from each one*)
-
 		 | APITypes.FixedArrayAcc(j) => buildAcc(accs, CL.E_Subscript(base, CL.E_Int(IntLit.fromInt j, CL.intTy)))
-		 (*Comes from a seq[n] being lifted*)
-		 (* | APITypes.VarArrayAcc(j, SOME _) => buildAcc(accs, CL.E_Subscript(base, CL.mkVar ("idx_" ^ Int.toString j))) *)
-		 (* | APITypes.VarArrayAcc(j, NONE) => buildAcc(accs, CL.E_Subscript(base, CL.mkVar ("idx_" ^ Int.toString j))) *)
-						    
+		 | APITypes.VarArrayAcc(j, SOME _) => buildAcc(accs, CL.E_Subscript(base, CL.mkVar ("idx_" ^ Int.toString j)))
+		 | APITypes.VarArrayAcc(j, NONE) => raise Fail "infinite loops not found in normal to regular output type"
 		 | APITypes.BaseCopy _ => base
-		 | _ => raise Fail "Error: non fixed accessor appears outside [] or in systemwithout []"
-								  
 	      (*end case*))
 	    | buildAcc([], base) = base
+	  fun buildAccOuterLoop(a::accs : APITypes.acc list, base) =
+	      (case a
+		of APITypes.TupleAcc(j) => buildAccOuterLoop(accs, base)
+		 | APITypes.FixedArrayAcc(j) => buildAccOuterLoop(accs, base)
+		 | APITypes.VarArrayAcc(j, SOME n) => let val inner = buildAccOuterLoop(accs, base)
+							  val loopVarStr = "idx_" ^ Int.toString j
+							  val loopVar = CL.mkVar loopVarStr
+						      in CL.S_For(CL.T_Named("auto"),
+								  [(loopVarStr, mkInt 0)],
+								  CL.E_BinOp(loopVar, CL.#<, mkInt n),
+								  [CL.E_PostOp(loopVar, CL.^++)],
+								  CL.S_Block([inner]))
+						      end
+		 | APITypes.VarArrayAcc(j, NONE) => raise Fail "infinite loops not found in normal to regular output type; these occur once and at join nodes"
+	      (*end case*))
 
-
+	  (* fun buildLoop(accs : APITypes.acc list, base) = *)
+	  (*     let *)
+	  (*      fun builder(b :: bccs : APITypes.acc list, loop, base) = *)
+	  (* 	   (case b *)
+	  (* 	     of APITypes.VarArrayAcc(j, SOME k) => (*do loop, itterate through diderotTy-> the right order is given by the acc!*) *)
+	  (* 	   (*end case*)) *)
+	  (* 	 | builder ([], loop, base) = loop base *)
+	  (*     in *)
+	  (*      builder(accs, (fn x => x), base) *)
+	  (*     end *)
 	  fun useOldSystem(info : Ty.copyIn) : bool =
 	      let
 	       val ty = (#diderotInputTy info)
@@ -246,16 +264,25 @@ the tensor type is represented as float[9] (or double[9]), so we could use somet
 	      in
 	       ListPair.map doit (inputTys, inputs)
 	      end
+		
+	  fun makeSetStm(env, accs, ty, var, srcVar) = 
+	      let
+	       val dstStatement = buildAcc(accs, global var)
+	       val srcStatement = buildAcc(accs, srcVar)
+	       val copyStm = U.copyToCxx {env=env, ty=ty, dst= dstStatement, src = srcStatement}
+	       val loopStm = buildAccOuterLoop(accs, copyStm)
+	      in
+	       loopStm
+	      end
 
 	  fun makeSetStms(env, var, info : Ty.copyIn) = let
 	   fun doSet(Ty.BaseInput(accs, id, (ty, baseSize, valueTy)) :: ins) = 
-		    let
-		     val rest = doSet(ins)
-		     val srcStatement = buildAcc(accs, global var) (*This doesn't quite work without the loops? (T1,T2)[6] vs (T1[6], T2[6])*)
-		     val stm = U.copyToCxx {env=env, ty=ty, dst= srcStatement,src = CL.mkVar ("v_" ^ (Int.toString id))}
-		    in
-		     stm :: doSet(ins)
-		    end
+	       let
+		val rest = doSet(ins)
+		val srcVar = CL.mkVar ("v_" ^ (Int.toString id))
+	       in
+		makeSetStm(env, accs, ty, var, srcVar) :: rest
+	       end
 	     | doSet (_::ins) = doSet(ins)
 	  in
 	   doSet(#inputs info)

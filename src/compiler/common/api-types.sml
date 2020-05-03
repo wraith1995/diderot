@@ -71,9 +71,11 @@ structure APITypes =
 	  *First, flatten a nested tupple i.e Tuple(..., Tuple, ...)
 	  *Second, traverse tuple to analyze next level
 	  *If a seq type is ever found with a tuple directly inside it, switch them.
+	  *If a finite seq type is ever found with an infinite one, make an equivelant tuple of infinite ones.
 	  *Otherwise, continue down
 	  *preverse other types, except fem types wher we fail
 	  **By applying thes rules, we put the type in the suitable form and we maintain pre-order rules on base types as nodes (i.e if you wrote out the pre-order, took out all non-base types, the orders between the original type and toOutpuTableType would be the same.)
+	  **Further, the [n] inside of [] nodes stay in the same order so we can itterate through them correctly.
 	  *)
 	 fun toat(ty) =
 	     (case ty
@@ -124,8 +126,9 @@ structure APITypes =
 	   | bs (StringTy) = (1, StringTy)
 	   | bs (SeqTy(ty', SOME(n))) = let val (size, ty'') = bs ty' in (n * size, ty'') end
 	   | bs _ = raise Fail "nonbase ty has no base spec"
+	 val ret = bs ty
 	in
-	 bs ty
+	 (ret)
 	end
 
 		 
@@ -227,6 +230,18 @@ structure APITypes =
 	 in
 	  List.map bas iter
 	 end
+
+     (* fun normalizeAcc(accs : acc list) = *)
+     (* 	 let *)
+     (* 	  (*just bubble sort with a particular order? *)
+     (* 	  feels like it. Tuples at the top (die) *)
+     (* 	  SeqArray(NONE) *)
+     (* 	  ArraySeq *)
+     (* 	  Base *)
+     (* 	   *) *)
+     (* 	 in *)
+     (* 	 end *)
+		     
 
      fun buildLoop(sourceIter : iterate, sourceAccs : acc list) =
 	 let

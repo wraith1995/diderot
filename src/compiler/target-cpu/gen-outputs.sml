@@ -109,6 +109,10 @@ structure GenOutputs : sig
     fun copy(dynSeq, ty, copySource, nElems, elemCTy, SOME(loopinfo), dynSeqFunc) = 
 	let
 	 val (fem, seqDims) = tyAnalysis( ty, dynSeq)  (*TODO: Clean this crap up*)
+	 fun baseTy(accs) = (case List.last accs
+			      of Ty.BaseCopy(ty, num, elemTy) => (ty, num, elemTy)
+			       | _ => raise Fail "missing base ty")
+	 val (_, nElems, _) = baseTy (#accs loopinfo) (*replace nElemns with base info to account for outTy over esimtate whereas outTy is corresct correct for estimating sizes.*)
 	 val _ = if fem
 		 then raise Fail "Fem and complex output types not compatible currently"
 		 else ()
@@ -573,7 +577,9 @@ structure GenOutputs : sig
 		  fun ouptutFolder (loopinfo : APITypes.copyOut, (params, block)) =
 		      let
 		       val outTy = #outputTy loopinfo
+
 		       val num = #nrrdNum loopinfo
+		       (*correction: This should be the base ty!*)
 		       val tyCopyInfo = OutputUtil.infoOf (env, (case outTy
 								     of Ty.SeqTy(s, NONE) => s
 								      | _ => outTy))
