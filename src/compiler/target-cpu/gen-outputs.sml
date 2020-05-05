@@ -587,9 +587,13 @@ structure GenOutputs : sig
 								
 							       (* val (elemCTy, nrrdType, axisKind, nElems) =  *)
 		      in (params@params', CL.mkBlock([block, block'])) end
+
+		  val (retPrms, retBlock) = List.foldr ouptutFolder ([], CL.mkBlock([])) loopInfos
 			
 		 in
-		  List.foldr ouptutFolder ([], CL.mkBlock([])) loopInfos
+		  (case retBlock
+		    of CL.S_Block lst => (retPrms, CL.mkBlock (lst @[CL.mkReturn (SOME(CL.mkBool false))])))
+		  
 		 end
 	       end
           fun getFn snapshot {name, ty, kind} = let

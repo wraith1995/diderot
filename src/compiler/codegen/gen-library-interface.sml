@@ -78,8 +78,8 @@ structure GenLibraryInterface : sig
 			      | Ty.TensorTy[] => Env.realTy env
 			      | Ty.TensorTy dd => CL.T_Array(Env.realTy env, SOME(List.foldl Int.* 1 dd))
 			      | Ty.StringTy => CL.constPtrTy CL.charTy
-			      | Ty.ImageTy(dim, _) => CL.T_Ptr(CL.T_Named "nrrd")
-			      | Ty.SeqTy(ty, NONE) => CL.T_Ptr(CL.T_Named "nrrd")
+			      | Ty.ImageTy(dim, _) => CL.T_Ptr(CL.T_Named "Nrrd")
+			      | Ty.SeqTy(ty, NONE) => CL.T_Ptr(CL.T_Named "Nrrd")
 			      | Ty.SeqTy(ty, SOME n) => CL.T_Array(trTypeAlt(env, ty), SOME n)
 			   (* end case *))
 

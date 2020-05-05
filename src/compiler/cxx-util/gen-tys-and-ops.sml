@@ -841,16 +841,17 @@ structure GenTysAndOps : sig
           val realTy = Env.realTy env
           val trType = trType TypeToCxx.NSDiderot env
           fun trait ({argTy, baseTy, elemTy, nValsPerElem}, dcls) = let
-              (* the name of the teem function table for the given base type *)
+           (* the name of the teem function table for the given base type *)
+	   val loadTblTy = CL.constPtrTy(CL.T_Named "__details::load_fn_ptr<base_type>")
                 val loadTbl = (case baseTy
-                       of Ty.BoolTy => "nrrdILoad"
-                        | Ty.IntTy => "nrrdILoad"
-                        | Ty.VecTy(1, 1) => if #double(Env.target env)
-					    then "nrrdDLoad"
-					    else "nrrdFLoad"
-                        | ty => raise Fail("genSeqTrait.loadFn: unexpected type " ^ Ty.toString ty)
+                       of CL.T_Named("bool") => CL.mkVar "nrrdILoad"
+                        | (CL.T_Named "int") => CL.mkVar "nrrdILoad"
+                        | (CL.T_Named ("float")) => if #double(Env.target env)
+					    then CL.mkVar "nrrdDLoad"
+					    else CL.mkVar "nrrdFLoad"
+                        | _ => CL.E_XCast("reinterpret_cast", loadTblTy, CL.E_Var("nrrdILoad"))
                       (* end case *))
-                val loadTblTy = CL.constPtrTy(CL.T_Named "__details::load_fn_ptr<base_type>")
+
                 val seqTy = CL.T_Template("dynseq_traits", [argTy])
                 val scope = CL.SC_Type seqTy
                 in
@@ -860,7 +861,7 @@ structure GenTysAndOps : sig
                       from = NONE,
                       public = [
                           CL.D_Typedef("value_type", elemTy),
-                          CL.D_Typedef("base_type", trType baseTy),
+                          CL.D_Typedef("base_type", baseTy),
                           CL.D_Var(
                             ["static"],
                             CL.constPtrTy(CL.T_Named "__details::load_fn_ptr<base_type>"),
@@ -877,7 +878,7 @@ structure GenTysAndOps : sig
                     CL.T_Ptr(
                       CL.T_Template("__details::load_fn_ptr", [CL.T_Member(seqTy, "base_type")])),
                     [scope], "load_fn_tbl",
-                    SOME(CL.I_Exp(CL.mkVar loadTbl))) ::
+                    SOME(CL.I_Exp(loadTbl))) ::
                   dcls
                 end
           fun elemTy (Ty.SeqTy(ty, _)) = elemTy ty
@@ -893,8 +894,8 @@ structure GenTysAndOps : sig
                                 argTy = argTy, baseTy = ty, elemTy = argTy, nValsPerElem = 1
                               },
 						     dcls)
-                      fun tupleScalarSeqT ty = trait ({
-                                argTy = argTy, baseTy = ty, elemTy = argTy, nValsPerElem = 1
+                      fun tupleScalarSeq () = trait ({
+                                argTy = argTy, baseTy = argTy, elemTy = argTy, nValsPerElem = 1
                               },
 						     dcls)						    
 
@@ -907,20 +908,20 @@ structure GenTysAndOps : sig
                       in
                         case elemTy ty
                          of ty as Ty.TensorTy(shp as _::_) => trait ({
-                                  argTy = argTy, baseTy = Ty.realTy,
+                                  argTy = argTy, baseTy = (CL.T_Named "float"),
                                   elemTy = argTy,
                                   nValsPerElem = List.foldl Int.* 1 shp
                                 },
                               dcls)
-                          | ty as Ty.BoolTy => scalarSeqTrait ty
-                          | ty as Ty.IntTy => scalarSeqTrait ty
-                          | ty as Ty.VecTy(1, 1) => scalarSeqTrait ty
+                          | ty as Ty.BoolTy => scalarSeqTrait (CL.boolTy)
+                          | ty as Ty.IntTy => scalarSeqTrait (CL.intTy)
+                          | ty as Ty.VecTy(1, 1) => scalarSeqTrait (CL.T_Named "float")
 (* QUESTION: strands map to uint32_t and do not support loading; do we need a trait? *)
                           | ty as Ty.StrandIdTy _ => dcls
-			  | ty as Ty.FemData(FemData.MeshCell(_)) => femSeqTrait Ty.IntTy
-			  | ty as Ty.FemData(FemData.FuncCell(_)) => femSeqTrait Ty.IntTy
-			  | ty as Ty.FemData(FemData.MeshPos(_)) => femSeqTrait Ty.IntTy
-			  | ty as Ty.TupleTy(_) => scalarSeqTrait Ty.IntTy
+			  | ty as Ty.FemData(FemData.MeshCell(_)) => femSeqTrait CL.intTy
+			  | ty as Ty.FemData(FemData.FuncCell(_)) => femSeqTrait CL.intTy
+			  | ty as Ty.FemData(FemData.MeshPos(_)) => femSeqTrait CL.intTy
+			  | ty as Ty.TupleTy(_) => tupleScalarSeq()
                           | ty => raise Fail("unexpected dynamic sequence of " ^ Ty.toString ty)
                         (* end case *)
                       end

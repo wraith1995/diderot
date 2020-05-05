@@ -295,23 +295,45 @@ structure APITypes =
        | equalLoad (NrrdSeqInput(a, _, _ , _), NrrdSeqInput(b, _, _, _)) =
 	 (List.length(a) = List.length(b))
 	 andalso (ListPair.all (accPrefixEq) (a,b))
-     fun buildJoins(ins : inputType list, tyList) =
+     fun detectJoinTys(ty : t) =
 	 let
-	  (*with current list, *)
-	  fun joinRecurse(BaseInput(_)::ilist, joins, t::tl) = joinRecurse(ilist, joins, tl)
-	    | joinRecurse ((i as NrrdSeqInput(prefix, id, _, _))::ilist, joins, t::tl) =
+	  val joins : t list ref = ref []
+	  fun findJoinTy (IntTy) = ()
+	    | findJoinTy (BoolTy) = ()
+	    | findJoinTy (TensorTy(_)) = ()
+	    | findJoinTy (StringTy) = ()
+	    | findJoinTy (ImageTy _) = ()
+	    | findJoinTy (FemData(_)) = ()
+	    | findJoinTy (r as SeqTy(t, NONE) ) =
+	      joins := (r::(!joins))
+	    | findJoinTy (SeqTy(t, SOME n)) =
+	      List.app findJoinTy (List.tabulate(n, fn x => t))
+	    | findJoinTy (TupleTy(ts)) = List.app findJoinTy ts
+	 in
+	  (findJoinTy ty; List.rev (!joins))
+	 end
+		      
+     fun buildJoins(ins : inputType list, tyList, allJoinTys) =
+	 let
+	  val _ = if List.length ins <> List.length tyList
+		  then raise Fail "invalid args to buildJoins"
+		  else ()
+
+	  fun joinRecurse(BaseInput(_)::ilist, joins, t::tl, joinTys) = joinRecurse(ilist, joins, tl, joinTys)
+	    | joinRecurse ((i as NrrdSeqInput(prefix, id, _, _))::ilist, joins, t::tl, j::joinTys) =
 	      let
 	       val detect = fn x => equalLoad(i,x)
+	       val detectP = fn (x,y) => equalLoad(i,x)
 	       val same = List.filter detect ilist
-	       val diff = List.filter (not o detect) ilist
-	       val newJoin = ((prefix, id :: (List.map (fn NrrdSeqInput(_, id', _, _ ) => id') same), i::same), t)
+	       val (diffIns, diffTys) = ListPair.unzip(List.filter (not o detectP) (ListPair.zip(ilist, tl)))
+	       val newJoin = ((prefix, (List.map (fn NrrdSeqInput(_, id', _, _ ) => id') (i::same)), i::same), j)
 
 	      in
-	       joinRecurse(diff, newJoin :: joins, tl)
+	       joinRecurse(diffIns, newJoin :: joins, diffTys, joinTys)
 	      end
-	    | joinRecurse ([], joins, []) = List.rev joins
+	    | joinRecurse ([], joins, [], []) = List.rev joins
 	 in
-	  joinRecurse(ins, [], tyList)
+	  joinRecurse(ins, [], tyList, allJoinTys)
 	 end
 		   
 
@@ -338,11 +360,13 @@ structure APITypes =
 	 val tabs = List.tabulate(List.length typeItteration, fn x => x)
 	 val inputs = ListPair.map categorizeInput (tabs, typeItteration)
 	 val inputTys = toOutputAbleTypes ty
-	 val joins = buildJoins(inputs, inputTys)
-
 	 val _ = if List.length inputTys <> List.length typeItteration
+		    orelse List.length inputTys <> List.length inputs
 		 then raise Fail "error in conversion for inputs"
 		 else ()
+	 val allJoinTys = detectJoinTys(ty)		  
+	 val joins = buildJoins(inputs, inputTys, allJoinTys)
+
 	in
 	 {diderotInputTy = ty, inputTys=inputTys, inputs = inputs, joins = joins}
 	end

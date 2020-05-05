@@ -67,8 +67,8 @@ structure GenInputs : sig
             | Ty.TensorTy[] => Env.realTy env
             | Ty.TensorTy dd => CL.T_Array(Env.realTy env, SOME(List.foldl Int.* 1 dd))
             | Ty.StringTy => CL.constPtrTy CL.charTy
-            | Ty.ImageTy(dim, _) => CL.T_Ptr(CL.T_Named "nrrd")
-            | Ty.SeqTy(ty, NONE) => CL.T_Ptr(CL.T_Named "nrrd")
+            | Ty.ImageTy(dim, _) => CL.T_Ptr(CL.T_Named "Nrrd")
+            | Ty.SeqTy(ty, NONE) => CL.T_Ptr(CL.T_Named "Nrrd")
             | Ty.SeqTy(ty, SOME n) => CL.T_Array(trType(env, ty), SOME n)
 	    | Ty.FemData(data) => (case data
 				    of FT.MeshCell(_) => Env.intTy env
@@ -244,6 +244,7 @@ the tensor type is represented as float[9] (or double[9]), so we could use somet
 		 | APITypes.VarArrayAcc(j, NONE) => raise Fail "infinite loops not found in normal to regular output type; these occur once and at join nodes"
 		 | _ => base
 	      (*end case*))
+	    | buildAccOuterLoop([], base) = base
 
 	  fun makeParams(minfo : Ty.copyIn) =
 	      let
@@ -256,11 +257,13 @@ the tensor type is represented as float[9] (or double[9]), so we could use somet
 	       ListPair.map doit (inputTys, inputs)
 	      end
 		
-	  fun makeSetStm(accs, ty, dstVar, srcVar) = 
+	  fun makeSetStm(accs, ty, dstVar, srcVar, join) = 
 	      let
 	       val dstStatement = buildAcc(accs, dstVar)
 	       val srcStatement = buildAccOut(accs, srcVar)
-	       val copyStm = U.copyToCxx {env=env, ty=ty, dst= dstStatement, src = srcStatement}
+	       val copyStm = if join
+			     then CL.mkAssign(dstStatement, srcStatement)
+			     else U.copyToCxx {env=env, ty=ty, dst= dstStatement, src = srcStatement}
 	       val loopStm = buildAccOuterLoop(accs, copyStm)
 	      in
 	       loopStm
@@ -272,7 +275,7 @@ the tensor type is represented as float[9] (or double[9]), so we could use somet
 		val rest = doSet(ins)
 		val srcVar = CL.mkVar ("v_" ^ (Int.toString id))
 	       in
-		makeSetStm(accs, ty, global var, srcVar) :: rest
+		makeSetStm(accs, ty, global var, srcVar, false) :: rest
 	       end
 	     | doSet (_::ins) = doSet(ins)
 	     | doSet ([]) = []
@@ -284,18 +287,21 @@ the tensor type is represented as float[9] (or double[9]), so we could use somet
 
 	  fun makeJoinStm(env, var, (joinAddr, nrrds, nrrdSeqInputs) : Ty.inputJoin, inSeqTy) =
 	      let
+	       val elemTy = (case inSeqTy
+			      of Ty.SeqTy(r, _) => r)
 	       val _ = if List.length nrrds = 0
 		       then raise Fail "impossible"
 		       else ()
+
 	       fun trTypeInternal ty = TyoC.trQType(env, TyoC.NSTopLevel, TreeTypes.fromAPI ty)
 	       fun loadVar(id) = CL.mkVar ("load_" ^ (Int.toString id))
-	       fun sizeVar(id) = CL.mkVar ("size_" ^ (Int.toString id))
+	       fun sizeVar(id) = CL.mkVar ("size" ^ (Int.toString id))
 	       fun doLoad(ty, id) =
 		   let
 		    val tempTy = trTypeInternal (Ty.SeqTy(ty, NONE))
 		    val decl = CL.S_Decl([], tempTy, "load_" ^ (Int.toString id),NONE)
 		    val load = ToC.loadNrrd(loadVar id, CL.mkVar ("v_" ^ (Int.toString id)), NONE)
-		    val sizeDcl = CL.S_Decl([], CL.autoTy, ("size_" ^ (Int.toString id)),
+		    val sizeDcl = CL.S_Decl([], CL.intTy, ("size" ^ (Int.toString id)),
 					    SOME(CL.I_Exp(CL.mkDispatch(loadVar id, "length", []))))
 		   in
 		    [decl, load, sizeDcl]
@@ -307,12 +313,17 @@ the tensor type is represented as float[9] (or double[9]), so we could use somet
 						  
 	       val checkLength = if List.length nrrds = 1
 				 then []
-				 else [CL.mkIfThen(equalitySizes(nrrds), CL.mkReturn (SOME(CL.mkBool(true)))) ] (*TODO:check return*)
+				 else [CL.mkIfThen(CL.mkUnOp(CL.%!, equalitySizes(nrrds)), CL.mkReturn (SOME(CL.mkBool(true)))) ] (*TODO:check return*)
 
 	       val firstNrrd = List.nth(nrrds, 0)
 	       val getTargetSeq = buildAcc(joinAddr, global var)
 	       val allocateTarget = CL.S_Exp(CL.E_AssignOp(getTargetSeq, CL.$=, CL.E_Cons(trTypeInternal inSeqTy, [sizeVar firstNrrd])))
 
+	       val tempVector = "tempVec"
+	       val tempVectorVar = CL.mkVar tempVector
+	       val makeVector = CL.S_Decl([], CL.T_Named("auto"), tempVector,
+					  SOME(CL.I_Exp(CL.E_TApply([], "std::vector", [trTypeInternal elemTy], [sizeVar firstNrrd]))))
+					 
 	       val loopVarStr = "join"
 	       val loopVar = CL.mkVar loopVarStr
 	       val subScriptLoopFunc = fn x => CL.mkSubscript(x, loopVar)
@@ -322,11 +333,16 @@ the tensor type is represented as float[9] (or double[9]), so we could use somet
 						   [CL.E_PostOp(loopVar, CL.^++)],
 						   CL.S_Block([x])))
 	       fun buildInternalSet(Ty.NrrdSeqInput(_, nrrd, rest, (copyTy, size, baseCopyTy))) =
-		   makeSetStm(rest, copyTy, subScriptLoopFunc getTargetSeq, subScriptLoopFunc (loadVar nrrd))
+		   makeSetStm(rest, copyTy, subScriptLoopFunc tempVectorVar, subScriptLoopFunc (loadVar nrrd), true)
 	       val internalSets = List.map buildInternalSet nrrdSeqInputs
 	       val joinCopyLoop = forLoopFunc (CL.S_Block(internalSets))
+
+	       val vectorToSeq = CL.S_Exp(CL.E_AssignOp(getTargetSeq, CL.$=,
+									 CL.E_Cons(trTypeInternal inSeqTy,
+										   [sizeVar firstNrrd,
+										    CL.mkDispatch(tempVectorVar, "data", [])])))
 	      in
-	       CL.S_Block([wrldCastStm]@loads@checkLength@[allocateTarget]@[joinCopyLoop])
+	       CL.S_Block([wrldCastStm]@loads@checkLength@[makeVector]@[joinCopyLoop, vectorToSeq])
 	      end
 	  in
 	  fun useOldSystem(ty) : bool =
@@ -336,7 +352,7 @@ the tensor type is represented as float[9] (or double[9]), so we could use somet
 	       (*Create sig; build internals via both functions;*)
 	       val ty = #diderotInputTy info
 	       val joinsOnly = #joins info
-	       val jointStms = List.map(fn (ijoin, inSeqTy) => makeJoinStm(env, var, ijoin, inSeqTy)) joinsOnly
+	       val jointStms = List.map (fn (ijoin, inSeqTy) => makeJoinStm(env, var, ijoin, inSeqTy)) joinsOnly
 	       val setStms = getNonJoinSets(env, var, info)
 	       val body = CL.S_Block([wrldCastStm]@setStms@jointStms@[CL.mkAssign(U.defined var, CL.mkBool true), CL.mkReturn(SOME(CL.mkBool false))])
 	      in

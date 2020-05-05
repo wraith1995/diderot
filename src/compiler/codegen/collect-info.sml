@@ -216,16 +216,17 @@ structure CollectInfo : sig
 		fun additionSeq ty =
 		    (case ty
 		      of Ty.SeqTy(ty', s) => (case additionSeq ty'
-					       of SOME(ty'') => SOME(Ty.SeqTy(ty'', s))
-						| NONE => NONE
+					       of [] => []
+						| tys => List.map (fn x => (Ty.SeqTy(x, s))) tys
 					     (*end case*))
-		       | Ty.FemData(FemData.Mesh(_)) => SOME(Ty.SeqTy(Ty.IntTy, SOME(2)))
-		       | Ty.FemData(FemData.MeshCell(_)) => SOME(Ty.IntTy)
-		       | Ty.FemData(FemData.FuncCell(_)) => SOME(Ty.IntTy)
+		       | Ty.FemData(FemData.Mesh(_)) => [(Ty.SeqTy(Ty.IntTy, SOME(2)))]
+		       | Ty.FemData(FemData.MeshCell(_)) => [Ty.IntTy]
+		       | Ty.FemData(FemData.FuncCell(_)) => [(Ty.IntTy)]
 		       | Ty.FemData(FemData.MeshPos(mesh)) =>
 			 let val dim = FemData.meshDim mesh
-			 in SOME(Ty.TensorTy([dim*2 + 1])) end
-		       | _ => NONE
+			 in [(Ty.TensorTy([dim*2 + 1]))] end
+		       | Ty.TupleTy(tys) => tys @ (List.concatMap additionSeq tys)
+		       | ty => []
 		    (*end case*))
 
 
@@ -239,7 +240,7 @@ structure CollectInfo : sig
                         | Ty.TensorRefTy shp => insertTensorTy shp
                         | Ty.StrandIdTy _ => ()
                         | Ty.TupleTy tys => (insert ty; List.app add tys)
-                        | Ty.SeqTy(ty', _) => (insert ty; add ty'; Option.app add (additionSeq ty))
+                        | Ty.SeqTy(ty', _) => (insert ty; add ty'; List.app add (additionSeq ty))
 			| Ty.FemData(FemData.MeshPos(mesh)) =>
 			  let val dim = FemData.meshDim mesh
 			  in (add (Ty.TensorTy([dim*2 + 1])) ; insert ty) end

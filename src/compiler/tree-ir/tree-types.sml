@@ -169,7 +169,7 @@ structure TreeTypes =
       | hash (VecTy(wid, hwWid)) = 0w5 * Word.fromInt wid + 0w7 * Word.fromInt hwWid
       | hash (TensorTy dd) = List.foldl (fn (d, s) => 0w11 * Word.fromInt d + s) 0w13 dd
       | hash (TensorRefTy dd) = List.foldl (fn (d, s) => 0w13 * Word.fromInt d + s) 0w17 dd
-      | hash (TupleTy tys) = List.foldl (fn (ty, s) => hash ty + s) 0w19 tys
+      | hash (TupleTy tys) = List.foldl (fn (ty, s) => hash ty + 0w53 * s) 0w19 tys
       | hash (SeqTy(ty, NONE)) = hash ty + 0w23
       | hash (SeqTy(ty, SOME n)) = Word.fromInt n * hash ty + 0w29
       | hash (ImageTy info) = 0w37 * ImageInfo.hash info + 0w6
