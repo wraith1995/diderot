@@ -28,11 +28,22 @@ structure Util : sig
 
   end = struct
 
-    structure Ty = Types
+structure Ty = Types
+structure Lit = Literal
 
   (* build a coercion expression; for literal values, we can coerce directly *)
     fun coerceExp (Ty.T_Tensor(Ty.Shape[]), Ty.T_Int, AST.E_Lit(Literal.Int n)) =
-          AST.E_Lit(Literal.Real(RealLit.fromInt n))
+        AST.E_Lit(Literal.Real(RealLit.fromInt n))
+      | coerceExp (Ty.T_Tuple(tys1), Ty.T_Tuple(tys2), e) =
+	let (*build access up and distribute here.*)
+	 val num = List.length tys1
+	 fun doit(n, (ty1, ty2)) =
+	     if Unify.matchType(ty1, ty2) = Unify.COERCE
+	     then coerceExp(ty1, ty2, AST.E_Slice(e, [SOME(AST.E_Lit(Lit.intLit n))], ty1))
+	     else AST.E_Slice(e, [SOME(AST.E_Lit(Lit.intLit n))], ty2)
+	in
+	 AST.E_Tuple(ListPair.map doit (List.tabulate(num, fn x => x), ListPair.zip(tys1, tys2)), tys1)
+	end
       | coerceExp (ty1, ty2, e) = AST.E_Coerce{srcTy=ty2, dstTy=ty1, e=e}
 
     fun coerceType (dstTy, (e, srcTy)) = (case Unify.matchType(dstTy, srcTy)

@@ -653,11 +653,11 @@ structure CheckExpr : sig
             | PT.E_SeqComp comp => chkComprehension (env, cxt, comp)
 	    | PT.E_Tuple args => let
 	     val (args, tys) = checkList (env, cxt, args) (*Length args >= 2 b/c parser*)
-	     val badType = List.find (Bool.not o TU.isValueType) tys
+	     val badType = List.find (Bool.not o TU.isValueOrStrandType) tys
 	    in
 	     (case badType
 	       of NONE => (AST.E_Tuple(args, tys), Ty.T_Tuple(tys))
-		| SOME(ty) => err(cxt, [S "invalid element type for tuple: ", TY ty])
+		| SOME(ty) => (print(TU.toString ty); err(cxt, [S "invalid element type for tuple: ", TY ty]))
 	     (*end case*))
 	    end
             | PT.E_Cons args => let

@@ -96,8 +96,8 @@ structure CheckType : sig
 	     val tys' = List.map (fn x => check(env, cxt, x)) tys
 	     val res = Ty.T_Tuple(tys')
 	    in
-	     (case List.find (Bool.not o TU.isValueType) tys'
-	       of SOME(ty) =>  err(cxt, [S "invalid element type for tuple (non-value): ", TY ty])
+	     (case List.find (Bool.not o TU.isValueOrStrandType) tys'
+	       of SOME(ty') =>  (print("stupid;\n");err(cxt, [S "invalid element type for tuple (non-value): ", TY ty']))
 		| NONE => res
 	     (*end case*))
 	    end

@@ -224,7 +224,23 @@ structure Unify : sig
                 case unifyTypeWithCoercion(pl, ty1, ty2)
                  of EQ => COERCE
                   | result => result
-                (* end case *))
+            (* end case *))
+	    | (Ty.T_Tuple(tys1), Ty.T_Tuple(tys2)) => (
+	     if (List.length tys1 = List.length tys2)
+	     then let
+	      val attemps = ListPair.map (fn (x,y) => unifyTypeWithCoercion(pl, x, y)) (tys1, tys2)
+	      val coercisions = List.exists (fn COERCE => true | _ => false) attemps
+	      val failures = List.exists (fn FAIL => true | _ => false) attemps
+	     in
+	      if failures
+	      then FAIL
+	      else if coercisions
+	      then COERCE
+	      else EQ
+	     end
+
+	     else FAIL
+	    )
             | (Ty.T_Field{diff=k1, dim=d1, shape=s1}, Ty.T_Field{diff=k2, dim=d2, shape=s2}) =>
                 if unifyType(pl, ty1, ty2)
                   then EQ

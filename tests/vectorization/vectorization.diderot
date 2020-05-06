@@ -18,7 +18,7 @@ strand dumb(int i)
   output int[3] ugg = {1,2,3};
   output real r = 2.0;
   output tensor[3][2][] fum = {};
-  output int[] fug  = {2,3,4};
+  output (int[], int[]) fug  = ({1,2}, {1,2});
     
   output (int[2], int) g = ({2,3},2);
   update{
