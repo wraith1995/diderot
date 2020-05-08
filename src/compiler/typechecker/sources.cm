@@ -41,4 +41,5 @@ is
   type-error.sml
   unify.sml
   util.sml
+  generate-fem-ast.sml
   check-type-file.sml

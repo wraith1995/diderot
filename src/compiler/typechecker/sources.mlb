@@ -31,6 +31,7 @@ local
   check-type.sml
   check-stmt.sml
   check-params.sml
+  generate-fem-ast.sml
   check-globals.sml
   check-strand.sml
   check-var-uses.sml
