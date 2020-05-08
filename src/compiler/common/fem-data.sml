@@ -74,6 +74,7 @@ structure FemData : sig
 
 	   (* various utilities for figuring out when we can use some sort of fem data*)
 	   val validInput : femType -> bool
+	   val validMultiInput : femType -> bool
 	   val isValue : femType -> bool
 	   val baseFem : femType -> bool
 
@@ -350,8 +351,19 @@ fun hash ty =
 fun validInput ty =
     (case ty
       of RefCell(_) => false
-       | MeshPos(_) => false
        | _ => true)
+
+fun validMultiInput ty =
+    (case ty
+      of MeshPos(_) => true
+       | FuncCell(_) => true
+       | MeshCell(_) => true
+       | Mesh _ => false
+       | Space _ => false
+       | Func _ => false
+       | RefCell _ => false
+    (*end case*))
+		       
 
 fun isValue ty =
     (case ty

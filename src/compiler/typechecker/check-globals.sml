@@ -136,7 +136,8 @@ structure CheckGlobals : sig
                              | SOME e =>  (SOME(#2 (chkRHS (env, cxt, true, x', e))))
                       (* end case *))
                 in
-                (* check that input variables have valid types *)
+                 (* check that input variables have valid types *)
+		 (*For fem: note isInputFem only covers the case of bare mesh, space, func - all other cases are values.*)
                   if not(TU.isValueType ty orelse TU.isImageType ty orelse TU.isInputFemType ty)
                     then err (cxt, [S "input variable ", V x', S " has invalid type ", TY ty])
                     else ();

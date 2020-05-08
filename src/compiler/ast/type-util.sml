@@ -40,9 +40,6 @@ structure TypeUtil : sig
   (* return true if the type is T_Error *)
     val isErrorType : Types.ty -> bool
 
-    (* returns true if the type is T_Fem*)
-    val isFemType : Types.ty -> bool
-
     (* returns true if this is a fem type that we can input*)
     val isInputFemType : Types.ty -> bool
 
@@ -269,28 +266,33 @@ structure TypeUtil : sig
           (* end case *))
 
     fun isErrorType ty = (case prune ty
-           of Ty.T_Error => true
-            | _ => false
-	  (* end case *))
-
-    fun isFemType ty =
-	(case prune ty
-	  of Ty.T_Fem _ => true
-	   | _ => false
-	(* end case *))
-
-    fun isInputFemType ty =
-	(case prune ty
-	  of Ty.T_Fem(data, _) => FemData.validInput data
-	   | Ty.T_Named(_, ty') => isInputFemType ty'
-	   | Ty.T_Sequence(ty', NONE) => isInputFemType ty'
-	   | _ => false)
+			   of Ty.T_Error => true
+			    | _ => false
+			 (* end case *))
 
     fun extractFemType ty =
 	(case ty
 	  of Ty.T_Fem(v) => SOME(v)
+	   | Ty.T_Named(_, ty') => extractFemType ty'
 	   | _ => NONE
 	(* end case *))
+
+    fun femDatas ty =
+	(case prune ty
+	  of Ty.T_Sequence(ty', _) => femDatas ty'
+	   | Ty.T_Tuple(tys) => List.concatMap femDatas tys
+	   | Ty.T_Named(_, ty') => femDatas ty'
+	   | Ty.T_Fem(data) => [data]
+	   | _ => []
+	(*end case*))
+			   
+    (*mesh, func, space must be alone; all other fem types can appear wherever*)
+    fun isInputFemType ty =
+	(case prune ty
+	  of Ty.T_Fem(data, _) => FemData.validInput data
+	   | Ty.T_Named(_, ty') => isInputFemType ty'
+	   | _ => false
+	(*end case*))
 
   (* equality testing *)
     fun sameDim (Ty.DimConst d1, Ty.DimConst d2) = (d1 = d2)
