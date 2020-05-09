@@ -616,8 +616,8 @@ structure Simplify : sig
                   val indices = List.map f indices
               in
 	       (case (SimpleVar.typeOf x, indices)
-		 of (STy.T_Tensor(_), _) => (stms, S.E_Slice(x, indices, cvtTy ty))
-		 |  (STy.T_Tuple(_), [SOME(idx)]) => (stms, S.E_Project(x, idx))
+		 of  (STy.T_Tuple(_), [SOME(idx)]) => (stms, S.E_Project(x, idx))
+		   | (_, _) => (stms, S.E_Slice(x, indices, cvtTy ty))
 	       (*end case*))
               end
               | AST.E_Cond(e1, e2, e3, ty) => let
