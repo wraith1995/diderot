@@ -168,6 +168,7 @@ fun hash (NumCell, d) = 0w1 + FT.hash d
   | hash (StartCell, d) = 0w107 + FT.hash d
   | hash (PosEntryFacet, d) = 0w109 + FT.hash d
   | hash (CellData(a), d) = 0w113 + 0w127 * (Atom.hash a) + FT.hash d
+
 fun sameR ((a1,s1), (a2,s2)) = (case (a1, a2)
 				 of (SOME(a1'), SOME(a2')) => Atom.same(a1', a2')
 				  | (SOME(_), NONE) => false
@@ -232,7 +233,6 @@ fun findIndexLength (opt, data) =
     end
 
 fun findTargetShape (opt, data) =
-    
      (case (opt, data)
        of (ExtractDofs, FT.Mesh(m)) => FT.dataShapeOf data
 	| (ExtractDofsSeq, FT.Mesh(m)) => FT.dataShapeOf data

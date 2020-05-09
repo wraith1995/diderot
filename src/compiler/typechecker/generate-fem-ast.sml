@@ -29,9 +29,10 @@ datatype token = datatype TypeError.token
 fun validateFemType (cxt, env, tyName) femTyDef fileinfo =
     let
      (*TODO: parse the file and make these correct...*)
+     (*TODO : check against the file in the following.*)
      val parsedJson = CF.loadJson(fileinfo, cxt)
 
-				 (*TODO : check against the file in the following.*)
+	
 
     in
      (case (femTyDef, parsedJson)
@@ -195,8 +196,8 @@ fun makeRefCellInside(env, cxt, span, dim, refCellInfo, posVar, meshVar, insert,
 	       end
 	     | NONE => raise Fail "insert error"))
     end
-(*make parameterized newton inverse*)
-(*make meshPosSearch*)
+(*TODO: make parameterized newton inverse*)
+(*TODO: make meshPosSearch*)
 fun itterStartPos(cxt, span, refCellClass, vecTy, dim, start) =
     (case refCellClass
       of FemData.KCube(dim) => AST.E_Tensor(List.tabulate(dim, fn x => AST.E_Lit(Literal.Real(RealLit.zero false))), vecTy)
@@ -338,7 +339,9 @@ fun makeInvVar(dim) =
     then BV.fn_inv2_f
     else if dim = 3
     then BV.fn_inv3_f
-    else raise Fail "invalid dim;" (*TODO: this resgtriction should be left as I should be able to do arbitrary inverses of a matrix*)
+    else raise Fail "invalid dim;"
+(*TODO: this resgtriction should be left as I should be able to do arbitrary inverses of a matrix*)
+(*TODO: a \ operator would be nice.*)
 
 
 fun makeMeshPosSearch(env, cxt, span, refCellClass, meshData, newtonTol, newtonAttempts, contraction, killAfterTol, posExpr, meshExpr, insideFunction, start) =
@@ -510,10 +513,7 @@ fun makeMeshPosSearch(env, cxt, span, refCellClass, meshData, newtonTol, newtonA
 	       val currentlyAt = makePrinStatement("RefPos Estimate is: ", [newPosVarExpr], "\n")
 	       val newCellsVar = Var.new(Atom.atom "yayCells", span, AST.LocalVar, Ty.T_Sequence(Ty.T_Int, NONE))
 	       val newAssign = AST.S_Assign((newCellsVar, span), cellExpr)
-	       (*init cell, cellCount, n, n=0*)
-	       (*increment...*)
-	       (*Take length of sequence, itter over that * resets, do the same damn thing as above*)
-	       (*NOTE TO SELF: if this loop fails, we will probably end up using most itterations... you either get it or you don't*)
+
 	       val itterVar = Var.new(Atom.atom "cellItter", span, AST.IterVar, Ty.T_Int)
 	       val newtonItterVar = Var.new(Atom.atom "newtonItter", span, AST.IterVar, Ty.T_Int)
 	       val itter1 = (itterVar, AST.E_Var(newCellsVar, span))
@@ -533,19 +533,14 @@ fun makeMeshPosSearch(env, cxt, span, refCellClass, meshData, newtonTol, newtonA
 							  ifStm'
 			       ]))]
 		   ))
-				       (*mesh, pos, vecd, intSeq, femopt*)
-				       (*on the death of visualization*)
 	      in
 	       if cons
 	       then [newAssign, loop]
 	       else [newAssign, loop, tempAssignment', secondForLoop]
 	      end
 	 (*end case*))
-	   
 
-     (*makePrinStatement("leaving\n",[],"\n"), makePrinStatement("Bad end 2",[], "\n"),*)
      val bodyStms = loopStms@[failReturn]
-			       
      val bodyStms' = initStms@bodyStms
      val body = AST.S_Block(bodyStms')
 
@@ -593,10 +588,6 @@ fun makeNewtonInversesBody(env, cxt, span, refCellClass, meshData, newtonTol, ne
      val deltaNormTest = makePrim'(BV.gte_rr, [tolExpr', deltaNorm], [Ty.realTy, Ty.realTy], Ty.T_Bool)
      val insideTest = insideFunction([meshExpr, newPosVarExpr])
      (* val combinedTest = AST.Andalso(deltaNormTest, insideTest) (*note: we might want to combined them...... it might be better to do delta test then inside test????*) *)
-
-     (* val nans = makePrim'(BV.nan, [], [], insideVec) (*return nans to signal failure*) *)
-     (*TODO: check order*)
-     (* val FemData.Mesh(mesh) = meshData *)
      val meshPosData = FT.MeshPos(meshData)
      val meshPosTy = Ty.T_Fem(meshPosData, SOME(FemData.nameOf (FT.Mesh(meshData))))
      val makeMeshPos = AST.E_ExtractFemItemN([meshExpr, cellIntExpr, newPosVarExpr, posExpr], [meshTy, Ty.T_Int, insideVec, insideVec], meshPosTy, (FemOpt.AllBuild, meshPosData), NONE)
@@ -702,7 +693,6 @@ fun makeFemMethods (cxt, env, tyName, span) femTyDef file cellAccData femInfo =
 	  val spaceFuncBody = AST.S_Block([AST.S_Return(AST.E_ExtractFem(AST.E_Var(param,span),space'))])
 	  val spaceFun = AST.D_Func(spaceFuncVar, [param], spaceFuncBody)
 
-	  (* OH GOD THIS NEEDS TO BE CLEANED UP*)
 	  val funcArgTy = Ty.T_Named(tyName, Ty.T_Fem(femInfo))
 	  val funcCellTy = Ty.T_Fem(func, SOME(funcName))
 	  val FT.Mesh(meshData) = FT.meshOf func
@@ -717,7 +707,7 @@ fun makeFemMethods (cxt, env, tyName, span) femTyDef file cellAccData femInfo =
 
 	  val param = Var.new (Atom.atom "arg0", span, AST.FunParam, funcArgTy)
 	  val param' = Var.new (Atom.atom "arg1", span, AST.FunParam, meshCellTy)
-	  (* optional debug information could go here.*)
+	  (*TODO: optional debug information could go here.*)
 	  val funcCellBody = AST.S_Return(AST.E_LoadFem(funcCellVal,
 							SOME(AST.E_Var(param, span)),
 							SOME(AST.E_ExtractFemItem(
@@ -727,12 +717,6 @@ fun makeFemMethods (cxt, env, tyName, span) femTyDef file cellAccData femInfo =
 	  val funcCellFunc = AST.D_Func(funcCellFuncVar,
 					[param, param'],
 					funcCellBody);
-
-	  (*the whole field:*)
-	  (*fix old newton inverse*)
-	  (*we need to build the newton inverse; get all the paramters;
-			 build a compose
-	   *)
 	  local
 	   
 	   val SOME(meshTyEnv) = Env.findTypeEnv(env, meshName)
@@ -814,7 +798,7 @@ fun makeFemMethods (cxt, env, tyName, span) femTyDef file cellAccData femInfo =
 	  val numCellFun = AST.D_Func(numCellFuncVar, [param], numCellBody)
 
 
-	  (*get list of cells -> we are going to use a extract*)
+	  (*NOTE: get list of cells -> we are going to use a extract*)
 	  val cells' = Atom.atom "0cells"
 	  val cells = Atom.atom "cells"
 	  val cellType = Ty.T_Fem(FT.MeshCell(m), SOME(meshName))
@@ -829,7 +813,6 @@ fun makeFemMethods (cxt, env, tyName, span) femTyDef file cellAccData femInfo =
 			 		    AST.E_ExtractFemItem(AST.E_Var(param', span), Ty.T_Int, (FemOpt.NumCell, FT.Mesh(m)))],
 			 		   Ty.T_Sequence(Ty.T_Int, NONE)))
 	  val comp  = AST.E_Comprehension(AST.E_LoadFem(FT.MeshCell(m), SOME(AST.E_Var(param', span)), SOME(AST.E_Var(itterVar, span))), iter, cellSeqType)
-	  (*AST.E_ExtractFemItem(AST.E_Var(param', span)*)
 	  val cellsBody = AST.S_Block([AST.S_Return(comp)])
 	  val cellsFun' =  AST.D_Func(cellFuncVar', [param'], cellsBody)
 
@@ -853,9 +836,7 @@ fun makeFemMethods (cxt, env, tyName, span) femTyDef file cellAccData femInfo =
 
 
 
-	  (*meshPosMaker:*)
 	  val meshPosFuncAtom = Atom.atom FemName.meshPos
-					  
 	  val meshPos = FT.MeshPos(m)
 	  val meshPosTy = Ty.T_Fem(meshPos, SOME(meshName))
 	  val refCellData = FemData.refCell m
@@ -897,7 +878,6 @@ fun makeFemMethods (cxt, env, tyName, span) femTyDef file cellAccData femInfo =
 
 
 	  (*Equality Function:N.op_equ, N.op_neq*)
-
 	  local
 	   val cell1 = Var.new(Atom.atom "cell1", span, Var.FunParam, meshCellTy)
 	   val cell2 = Var.new(Atom.atom "cell1", span, Var.FunParam, meshCellTy)
@@ -925,13 +905,10 @@ fun makeFemMethods (cxt, env, tyName, span) femTyDef file cellAccData femInfo =
 	  val eqFuncPair = (atom1, funVar1)
 	  val nEqFuncPair = (atom2, funVar2)
 	  end
-	  (*data data: cellData*)
-
 
 
 	  local
-	   (*invalidPos*)
-	   (*invalidCell*)
+	   (*TODO: Invalid stuff*)
 	   val invalidPos = Atom.atom (FemName.invalidPos)
 	   val invalidPosTy = Ty.T_Fun([meshArgTy], meshPosTy)
 	   fun invalidPosFun([v1]) = AST.E_ExtractFemItemN([v1], [meshArgTy], meshPosTy, (FemOpt.InvalidBuild, FT.MeshPos(m)), NONE)
@@ -1013,15 +990,9 @@ fun makeMeshPos(env, cxt, span, meshData, transformVars, (_, worldPosMakerVar, _
  val hiddenFuns = results
  val methods = [(fn (x,y,z) => (x,y)) dumb]
  val constants = []
+(*TODO: FIX: THE NAMING OF FUNCTIONS*)
+(*TODO: BUILD THE TRANSFORM FUNCTION AND DERIVATIVES IN NEWTON STYLE*)
 
-		   (*OKAY: make this return the env*)
-		   (*FIX: THE NAMING OF FUNCTIONS*)
-		   (*BUILD THE TRANSFORM FUNCTION AND DERIVATIVES IN NEWTON STYLE*)
-		   (*build the meshpos functions that hang off mesh*)
-		   (*reform newton to deal with this*)
-		   (*generate meshPos cxx*)
-		   (*test them...*)
-		   (*build the final field*)
 		   
 		   
 in
