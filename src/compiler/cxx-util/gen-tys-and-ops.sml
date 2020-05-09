@@ -848,7 +848,10 @@ structure GenTysAndOps : sig
                         | (CL.T_Named "int") => CL.mkVar "nrrdILoad"
                         | (CL.T_Named ("float")) => if #double(Env.target env)
 					    then CL.mkVar "nrrdDLoad"
-					    else CL.mkVar "nrrdFLoad"
+						    else CL.mkVar "nrrdFLoad"
+                        | (CL.T_Named ("double")) => if #double(Env.target env)
+						     then CL.mkVar "nrrdDLoad"
+						     else CL.mkVar "nrrdFLoad"								  
                         | _ => CL.E_XCast("reinterpret_cast", loadTblTy, CL.E_Var("nrrdILoad"))
                       (* end case *))
 
@@ -908,7 +911,7 @@ structure GenTysAndOps : sig
                       in
                         case elemTy ty
                          of ty as Ty.TensorTy(shp as _::_) => trait ({
-                                  argTy = argTy, baseTy = (CL.T_Named "float"),
+                                  argTy = argTy, baseTy = realTy,
                                   elemTy = argTy,
                                   nValsPerElem = List.foldl Int.* 1 shp
                                 },

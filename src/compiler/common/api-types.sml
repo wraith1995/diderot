@@ -152,6 +152,7 @@ structure APITypes =
     fun isSingleOutputWithFem(ty) = (case ty
 				      of SeqTy(ty', SOME(n)) => not(hasDynamicSize ty') andalso isSingleOutputWithFem ty'
 				       | SeqTy(ty', NONE) => isSingleOutputWithFem ty'
+				       | FemData _ => true
 				       | TupleTy _ => false
 				       | ImageTy _ => raise Fail "ImageTy shoud not exist in output!"
 				       | _ => true)

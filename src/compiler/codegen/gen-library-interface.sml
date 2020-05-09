@@ -166,7 +166,8 @@ structure GenLibraryInterface : sig
                        [], Env.boolTy env, inputSet(spec, name),
                        List.@([wrldParam, CL.PARAM([], nrrdPtrTy, "nin")], params))
                      ]
-		     (* prototypes for setting an image or dynamic sequence from a nrrd *)
+						     (* prototypes for setting an image or dynamic sequence from a nrrd *)
+		     val _ = print("smesh:" ^ name ^ "\n");
 
 		    in
 		     if useOld
@@ -183,7 +184,9 @@ structure GenLibraryInterface : sig
                              ]
                           (* end case *))
 		     else let
-			  val outTys = Ty.toOutputAbleTypes(ty)
+		      val _ = print("a1\n");
+		      val outTys = Ty.toOutputAbleTypes(ty)
+		      val _ = print("a2\n");
 			  val paramCTypes = List.map (fn x => trTypeAlt(env, x)) outTys
 			  val tabs = List.tabulate(List.length outTys, fn x => x)
 			  val params = ListPair.map (fn (idx, v) => CL.PARAM([], v, "v_" ^ (Int.toString idx))) (tabs, paramCTypes)
@@ -204,7 +207,9 @@ structure GenLibraryInterface : sig
           (*           [CL.PARAM([], worldPtrTy, "wrld"), CL.PARAM([], nrrdPtrTy, "lengths"), CL.PARAM([], nrrdPtrTy, "data")]) *)
           (*       ] *)
 	  fun mkGetDecl snapshot {name,ty, kind} =let
-	   val outputTys = Ty.toOutputAbleTypes ty
+	   val outputTys = if Ty.hasFem ty
+			   then [ty]
+			   else Ty.toOutputAbleTypes ty
 	   fun outputParamsFold ((ty, n), params) =
 	       (case ty
 		 of Ty.SeqTy(_, NONE) => params@[CL.PARAM([], nrrdPtrTy, "lengths_" ^ (Int.toString n)),
