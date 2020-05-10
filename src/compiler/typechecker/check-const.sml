@@ -75,10 +75,10 @@ structure CheckConst : sig
     
 
     fun eval (cxt, true, e as AST.E_LoadNrrd _) = SOME(C.Expr e) (* top-level load is okay for input *)
-      | eval (cxt, true, e as AST.E_LoadFem(data, _, _)) = if FemData.validInput data
-						       then SOME(C.Expr e)
+      | eval (cxt, true, e as AST.E_LoadFem(data, _, _)) = if FemData.validInput data (*TODO: check args to be constants*)
+							   then SOME(C.Expr e)
 							   else (TypeError.error (cxt, [S "invalid input initialization"]) ; NONE)
-      | eval (cxt, true, e as AST.E_ExtractFemItemN(_, _, _, (FemOpt.InvalidBuild, _), NONE)) = SOME(C.Expr e) (*catch invalid meshpos -> TODO: add more fem language maybe???*)
+      | eval (cxt, true, e as AST.E_ExtractFemItemN(_, _, _, (FemOpt.InvalidBuild, _), NONE)) = SOME(C.Expr e) (*catch invalid meshpos -> TODO: add more fem language maybe???; add reference build, world build all provided mesh is constant*)
       | eval (cxt, isInput, constExp) = let
        exception EVAL
        fun err msg = (TypeError.error (cxt, msg); raise EVAL)
@@ -141,9 +141,29 @@ structure CheckConst : sig
                         | (C.Expr _, _) => C.Expr e
                         | _ => raise Fail "impossible"
                       (* end case *))
-                  | AST.E_LoadNrrd _ => if isInput
-                      then err [S "invalid input initialization"]
-                      else err [S "invalid constant expression"]
+                  | AST.E_LoadNrrd _ =>
+		    if isInput
+                    then err [S "invalid input initialization"]
+		    else err [S "invalid constant expression"]
+		  | AST.E_LoadFem(data, NONE, NONE)  =>  if isInput andalso (FemData.validInput data) then C.Expr(e)
+							 else err [S "invalid init of FEM data"]
+		  | AST.E_LoadFem(data, SOME(e'), NONE) =>
+		    (case eval' e
+		      of C.Expr r => if isInput andalso (FemData.validInput data) then C.Expr r
+				     else err [S "invalid init of FEM data"]
+		       | _ => raise Fail "impossible"
+		    (*end case*))
+		  | AST.E_LoadFem(data, SOME(e1), SOME(e2)) =>
+		    (case (eval' e1, eval' e2) (*TODO:make sure ref is impossible here?*)
+		      of (C.Expr r1, C.Expr r2) => C.Expr (AST.E_LoadFem(data, SOME(r1), SOME(r2)))
+		       | (C.Expr r1, C.Int i) => C.Expr (AST.E_LoadFem(data, SOME(r1), SOME(AST.E_Lit(Literal.Int i))))
+		       | _ => raise Fail "impossible"
+		    (*end case*))
+		  | AST.E_ExtractFemItemN([mesh], a, b, (FemOpt.InvalidBuild, c), NONE) =>
+		    (case eval' mesh
+		      of C.Expr r1 => C.Expr (AST.E_ExtractFemItemN([r1], a, b, (FemOpt.InvalidBuild, c), NONE))
+		       | _ => raise Fail "impossible"
+		    (*end case*))
                   | AST.E_Coerce{srcTy=Ty.T_Int, dstTy as Ty.T_Tensor(Ty.Shape[]), e} => (
                       case eval' e
                        of C.Int i => C.Real(RealLit.fromInt i)

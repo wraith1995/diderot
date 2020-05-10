@@ -1058,7 +1058,7 @@ structure Simplify : sig
 	      end
             | simplifyInputDcl ((x, SOME e), desc) = let
 	     (*TODO:if it has FEM, we need to do some changes*)
-	     (*-1, make sure invalid cells can be added...*)
+	     (*-1, make sure invalid cells, more poses, and specific poses, can be added... and check constant on mesh depend*)
 	     (*check if fem.*)
 	     (*First, create the new type and the type with mesh info in it: map on it twice*)
 	     (*Second, convert the constant and extract the mesh vars, resulting in an input*)
@@ -1084,7 +1084,7 @@ structure Simplify : sig
 	      end
 	     else
 	      let
-	       val (inputTy, useTy) = normalilzeFemInputTy (Typeof.expr e)
+	       val (inputTy, useTy) = TypeUtil.normalilzeFemInputTy (TypeOf.expr e)
 	       (*next hour: In  const function maybe or above - same game (build type, recurse down, bind when different), make a map function and a convert function... -> actually, maybe build it up here... doesn't work*)
 	       (*build expression for init constant init*)
 	       (*build copy expression from x' to x*)
@@ -1100,6 +1100,7 @@ structure Simplify : sig
 	       val intermediateGlobalString = "0" ^ (SimpleVar.uniqueNameOf x') ^ "_intermedateGlobal" (* use stamp to ensure the global var is actually unique*)
 	        val intermediateGlobal = SimpleVar.new (intermediateGlobalString, Var.InputVar, cvtTy useTy)
 	      in
+	       ()
 	      end
             end
           (* simplify a global declaration *)
