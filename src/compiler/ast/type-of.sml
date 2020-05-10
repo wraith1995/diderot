@@ -51,8 +51,11 @@ structure TypeOf : sig
             | AST.E_Andalso _ => Ty.T_Bool
             | AST.E_LoadNrrd(_, _, ty) => ty
             | AST.E_Coerce{dstTy, ...} => dstTy
+	    | AST.E_LoadFem(d, _, _) => Ty.T_Fem(d, NONE)
 	    | AST.E_ExtractFemItem(e,ty,_) => ty
 	    | AST.E_ExtractFemItem2(_,_,_,outTy,_) => outTy
+	    | AST.E_ExtractFemItemN(_,_,ty,_,_) => ty
+	    | AST.E_FemField(_,_,_,ty,_,_) => ty
 		 (* end case *))
 
 

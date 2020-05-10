@@ -19,7 +19,7 @@ structure ConstExpr : sig
       | Tensor of t list * Types.ty
       | Seq of t list * Types.ty
       | Tuple of t list * Types.ty
-      | Expr of AST.expr        (* for more complicated tensor-valued expressions *)
+      | Expr of AST.expr        (* for more complicated tensor-valued expressions and special inputs *)
 
   (* a property to attach to 'const' variables to track their value *)
     val define : Var.t * t -> unit
@@ -35,6 +35,7 @@ structure ConstExpr : sig
    * of the specified type.
    *)
     val fromString : Types.ty * string -> t option
+
 
   end = struct
 
@@ -230,5 +231,4 @@ structure ConstExpr : sig
               | NONE => NONE
             (* end case *)
           end
-
   end

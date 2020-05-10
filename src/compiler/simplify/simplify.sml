@@ -259,6 +259,13 @@ structure Simplify : sig
 	 setFn (x, x');
 	 x'
 	end
+    fun newVarAsGlobalWithType x ty =
+	let
+	 val x' = SimpleVar.new (Var.nameOf x, Var.GlobalVar, cvtTy ty)
+	in
+	 setFn (x, x');
+	 x'
+	end
     fun newVarWithType (x, ty) = let
           val x' = SimpleVar.new (Var.nameOf x, Var.kindOf x, ty)
           in
@@ -920,7 +927,7 @@ structure Simplify : sig
                 in
                   List.foldl simplifyConstDcl cxt const_dcls
                 end
-          fun simplifyInputDcl ((x, NONE), desc) = let
+          fun simplifyInputDcl ((x, NONE), desc) = let (*FEM type can't be present here.*)
                 val x' = cvtVar x
                 val init = (case SimpleVar.typeOf x'
                        of STy.T_Image info => (
@@ -976,7 +983,7 @@ structure Simplify : sig
                 in
                   inputs' := inp :: !inputs'
             end
-	    | simplifyInputDcl ((x, SOME(AST.E_LoadFem(data, NONE, NONE))), desc) =
+	    | simplifyInputDcl ((x, SOME(AST.E_LoadFem(data, NONE, NONE))), desc) = (*Mesh loading*)
 	      let
 	       val x' = cvtVar x
 	       val xname = Var.nameOf x
@@ -988,15 +995,13 @@ structure Simplify : sig
                     desc = desc,
                     init = Inputs.NoDefault
                    }
-			      (* get the type env and get out cell0 -> new global*)
-			      (* set a property to retrieve *)
+
 
 	       val a = setCellFn(x', makeCellVar x')
 	       val cellGlobal = getCellFn x'
-				    (*make the init in simple*)
+	       (*TODO:initing list of cells -> remove this if needed.*)
 	       val femTy = STy.T_Fem(data)
 	       val femCellTySeq = SimpleVar.typeOf cellGlobal
-	       val _ = print(STy.toString femCellTySeq)
 	       val STy.T_Sequence(cellTy, NONE) = femCellTySeq
 	       val STy.T_Fem(data') = cellTy
 	       val one = newTemp STy.T_Int
@@ -1030,7 +1035,7 @@ structure Simplify : sig
 	       globals' := cellGlobal :: !globals';
 	       globalInit := List.@(block, !globalInit)
 	      end
-	    | simplifyInputDcl ((x, SOME(AST.E_LoadFem(data, SOME(AST.E_Var((var,_))), NONE))), desc)  =
+	    | simplifyInputDcl ((x, SOME(AST.E_LoadFem(data, SOME(AST.E_Var((var,_))), NONE))), desc)  = (*init for func, space*)
 	      let
 	       (*TODO: Provide an actual unique name generator based on the current list of globals. *)
 	       val x' = newVarAsGlobal x
@@ -1052,20 +1057,52 @@ structure Simplify : sig
 	       globalInit := setupFem :: !globalInit
 	      end
             | simplifyInputDcl ((x, SOME e), desc) = let
-                val x' = cvtVar x
-                val (stms, e') = simplifyExp (cxt, e, [])
-                val inp = S.INP{
-                        var = x',
-                        name = Var.nameOf x,
-                        ty = apiTypeOf x',
-                        desc = desc,
-                        init = S.ConstExpr
-                      }
-                in
-                 inputs' := inp :: !inputs';
-                  constInit := S.S_Assign(x', e') :: (stms @ !constInit)
-                end
-        (* simplify a global declaration *)
+	     (*TODO:if it has FEM, we need to do some changes*)
+	     (*-1, make sure invalid cells can be added...*)
+	     (*check if fem.*)
+	     (*First, create the new type and the type with mesh info in it: map on it twice*)
+	     (*Second, convert the constant and extract the mesh vars, resulting in an input*)
+	     (*Third, use intermediate input and set as above...*)
+	     (*Test -> basis (to recall FemOpts)-> thing*)
+	     val x' = cvtVar x
+             val (stms, e') = simplifyExp (cxt, e, [])
+	    in
+	     if List.length (TU.femDatas (TypeOf.expr e)) = 0
+	     then
+	      let
+	       val inp = S.INP{
+                    var = x',
+                    name = Var.nameOf x,
+                    ty = apiTypeOf x',
+                    desc = desc,
+                    init = S.ConstExpr
+		   }
+
+	      in
+	       inputs' := inp :: !inputs';
+	       constInit := S.S_Assign(x', e') :: (stms @ !constInit)
+	      end
+	     else
+	      let
+	       val (inputTy, useTy) = normalilzeFemInputTy (Typeof.expr e)
+	       (*next hour: In  const function maybe or above - same game (build type, recurse down, bind when different), make a map function and a convert function... -> actually, maybe build it up here... doesn't work*)
+	       (*build expression for init constant init*)
+	       (*build copy expression from x' to x*)
+	       (*add them!*)
+	       val x' = newVarAsGlobalWithType x inputTy
+	       val inp = S.INP{
+                    var = x',
+                    name = Var.nameOf x,
+                    ty = apiTypeOf x',
+                    desc = desc,
+                    init = S.ConstExpr
+		   }
+	       val intermediateGlobalString = "0" ^ (SimpleVar.uniqueNameOf x') ^ "_intermedateGlobal" (* use stamp to ensure the global var is actually unique*)
+	        val intermediateGlobal = SimpleVar.new (intermediateGlobalString, Var.InputVar, cvtTy useTy)
+	      in
+	      end
+            end
+          (* simplify a global declaration *)
           fun simplifyGlobalDcl (AST.D_Var(x, NONE)) = globals' := cvtVar x :: !globals'
             | simplifyGlobalDcl (AST.D_Var(x, SOME e)) = let
                 val (stms, e') = simplifyExp (cxt, e, [])

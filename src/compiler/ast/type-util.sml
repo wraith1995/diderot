@@ -42,8 +42,9 @@ structure TypeUtil : sig
 
     (* returns true if this is a fem type that we can input*)
     val isInputFemType : Types.ty -> bool
-
     val extractFemType : Types.ty -> (FemData.femType * Atom.atom option) option
+    val femDatas : Types.ty -> (FemData.femType * Atom.atom option) list
+    val normalilzeFemInputTy : Types.ty -> Types.ty * Types.ty
 
   (* return the range (return type) of a function type *)
     val rngOf : Types.ty -> Types.ty
@@ -285,6 +286,41 @@ structure TypeUtil : sig
 	   | Ty.T_Fem(data) => [data]
 	   | _ => []
 	(*end case*))
+    fun p(a) = (a,a)
+    fun normalilzeFemInputTy (Ty.T_Var(_)) = raise Fail "failed type clean"
+      | normalilzeFemInputTy (t as Ty.T_Bool) = p(t)
+      | normalilzeFemInputTy (t as Ty.T_Int) = p(t)
+      | normalilzeFemInputTy (t as Ty.T_String) = p(t)
+      | normalilzeFemInputTy (t as Ty.T_Sequence(ty, opt)) = let val (l,r) = normalilzeFemInputTy(ty)
+							     in (Ty.T_Sequence(l, opt), Ty.T_Sequence(r, opt))
+							     end
+      | normalilzeFemInputTy (t as Ty.T_Tuple(tys)) = let val lrs = (List.map normalilzeFemInputTy tys)
+							  val (lefts, rights) = ListPair.unzip lrs
+						      in
+						       (Ty.T_Tuple(lefts), Ty.T_Tuple(rights))
+						      end
+      | normalilzeFemInputTy (Ty.T_Named(_, ty)) = normalilzeFemInputTy(ty)
+      | normalilzeFemInputTy (Ty.T_Kernel _) = raise Fail "invalid io type"
+      | normalilzeFemInputTy (t as Ty.T_Tensor _) = p(t)
+      | normalilzeFemInputTy (Ty.T_Image _) = raise Fail "invalid io type"
+      | normalilzeFemInputTy (Ty.T_Field _) = raise Fail "invalid io type"
+      | normalilzeFemInputTy (Ty.T_Fun _) = raise Fail "invalid io type"
+      | normalilzeFemInputTy (t as Ty.T_Error) = p(t)
+      | normalilzeFemInputTy (t as Ty.T_Fem(data, _)) =
+	(case data
+	  of FemData.Mesh _ => raise Fail "covered seperately"
+	   | FemData.Space _ => raise Fail "covered seperately"
+	   | FemData.Func _ => raise Fail "covered seperately"
+	   | FemData.RefCell _ => raise Fail "invalid io type"
+	   | FemData.MeshCell _ => (Ty.T_Int, t)
+	   | FemData.FuncCell _ => (Ty.T_Int, t)
+	   | FemData.MeshPos m =>
+	     let val ten = Ty.T_Tensor(Ty.Shape([Ty.DimConst(FemData.underlyingDim data)]))
+	     in (Ty.T_Tuple([ten, Ty.T_Int]), t)
+	     end (*TODO: Order correct with data.*)
+	(*end case*))
+						  
+
 			   
     (*mesh, func, space must be alone; all other fem types can appear wherever*)
     fun isInputFemType ty =

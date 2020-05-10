@@ -13,8 +13,11 @@ structure CheckConst : sig
    * The bool should be true if the constant is the default value for an input variable,
    * since we then allow "load" and "image".
    *)
-	   
-    val eval : ((Error.err_stream * Error.span) * bool * AST.expr) -> ConstExpr.t option
+	   val eval : ((Error.err_stream * Error.span) * bool * AST.expr) -> ConstExpr.t option
+	   val checkFemFormat : ConstExpr.t -> FemData.femType option list
+
+
+
 
   end = struct
 
@@ -74,7 +77,8 @@ structure CheckConst : sig
     fun eval (cxt, true, e as AST.E_LoadNrrd _) = SOME(C.Expr e) (* top-level load is okay for input *)
       | eval (cxt, true, e as AST.E_LoadFem(data, _, _)) = if FemData.validInput data
 						       then SOME(C.Expr e)
-						       else (TypeError.error (cxt, [S "invalid input initialization"]) ; NONE)
+							   else (TypeError.error (cxt, [S "invalid input initialization"]) ; NONE)
+      | eval (cxt, true, e as AST.E_ExtractFemItemN(_, _, _, (FemOpt.InvalidBuild, _), NONE)) = SOME(C.Expr e) (*catch invalid meshpos -> TODO: add more fem language maybe???*)
       | eval (cxt, isInput, constExp) = let
        exception EVAL
        fun err msg = (TypeError.error (cxt, msg); raise EVAL)
@@ -115,10 +119,11 @@ structure CheckConst : sig
                             end
                         | NONE => err[S "invalid constant expression"]
                       (* end case *))
-                  | AST.E_Prim(f, mvs, args, ty) =>
-                      mkPrim (f, mvs, List.map eval' args, ty)
+                  (* | AST.E_Prim(f, mvs, args, ty) => *) (*Removed because there are no avaliable binops atm*)
+                  (*     mkPrim (f, mvs, List.map eval' args, ty) *)
                   | AST.E_Tensor(es, ty) => C.Tensor(List.map eval' es, ty)
                   | AST.E_Seq(es, ty) => C.Seq(List.map eval' es, ty)
+		  | AST.E_Tuple(vals, tys) => C.Tuple(List.map eval' vals, Ty.T_Tuple(tys))
                   | AST.E_Slice(e, indices, _) => (case (eval' e, indices)
                        of (C.Tensor(vs, _), _) => raise Fail "FIXME"
                         | (C.Seq(vs, _), [SOME idx]) => (case eval' idx
@@ -150,6 +155,36 @@ structure CheckConst : sig
                 (* end case *))
           in
             SOME(eval' constExp) handle EVAL => NONE
-          end
+      end
+
+    fun checkFemFormat(e) = 
+	let
+	 val ty = C.typeOfConst e
+	 fun check (_, C.String _ ) = []
+	   | check (_, C.Bool _) = []
+	   | check (_, C.Int _) = []
+	   | check (_, C.Real _) = []
+	   | check (_, C.Tensor _) = []
+	   | check (Ty.T_Sequence(ty', SOME(Ty.DimConst(n))), const) =
+	     if (List.length (TypeUtil.femDatas ty') <> 0)
+	     then (case const
+		    of C.Seq(ts, _) => List.concat(List.tabulate(n, fn x => check(ty', List.nth(ts, x))))
+		     | _ => List.tabulate(n, fn x => NONE)
+		  (*end case*))
+	     else []
+	   | check (Ty.T_Tuple(tys), const) =
+	     if (List.length (TypeUtil.femDatas ty) <> 0)
+	     then (case const
+		    of C.Tuple(vals, _) => List.concat (ListPair.map check (tys, vals))
+		     | _ => List.tabulate(List.length tys, fn x => NONE)
+		  (*end case*))
+	     else []
+	   | check (Ty.T_Named(_, ty'), const)  = check(ty', const)
+	   | check (Ty.T_Fem(_, _), C.Expr(AST.E_LoadFem(data', _, _))) = [SOME(data')]
+	   | check (Ty.T_Fem(_, _), C.Expr (AST.E_ExtractFemItemN(_, _, Ty.T_Named(_, Ty.T_Fem(data, _)), (FemOpt.InvalidBuild, _), _))) = [SOME(data)]
+	   | check _ = [NONE] (*some error occurred somewhere???*)
+	in
+	 check(ty, e)
+	end
 
   end

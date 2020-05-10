@@ -126,15 +126,30 @@ structure CheckGlobals : sig
 			    of NONE => (case ty
 					 of Ty.T_Named(_,Ty.T_Fem(data, _)) =>
 					    (case data
-					      of FemData.Mesh(_) => (SOME(AST.E_LoadFem(data, NONE, NONE)))
-					       | FemData.RefCell(_) => NONE (*error raised later*)
+					      of FemData.Mesh(_) => (SOME(ConstExpr.Bool(false), AST.E_LoadFem(data, NONE, NONE)))
+					       | FemData.RefCell(_) => NONE (*error raised earlier*)
 					       | FemData.MeshPos(_) => NONE (*error raised later*)
 					       | _ => (femError();NONE)
 					    (*end case*))
-					  | _ => (NONE)
+					  | _ => if (List.length (TU.femDatas ty) <> 0)
+						 then (femError(); NONE)
+						 else NONE
 				       (*end case*))
-                             | SOME e =>  (SOME(#2 (chkRHS (env, cxt, true, x', e))))
-                      (* end case *))
+                             | SOME e =>  (SOME( (chkRHS (env, cxt, true, x', e))))
+			  (* end case *))
+			    (*check femDatas and go through it for loadFems*)
+		val _ = (case rhs
+			  of NONE => ()
+			   | SOME(const, _) => if (List.length (TU.femDatas ty) = 0)
+					       then ()
+					       else
+						if List.all (Option.isSome) (CheckConst.checkFemFormat(const))
+						then ()
+						else (err (cxt, [S "input variable ", V x', S " has inaccesible FEM base data required by type ", TY ty]);())
+			(*end case*))
+		val rhs = (case rhs
+			  of SOME(_, a) => SOME(a)
+			   | NONE => NONE)
                 in
                  (* check that input variables have valid types *)
 		 (*For fem: note isInputFem only covers the case of bare mesh, space, func - all other cases are values.*)

@@ -33,6 +33,10 @@ structure Util : sig
   (* return true if an AST constant expression is "small" *)
     val isSmallExp : AST.expr -> bool
 
+				   (* seperate types*)
+
+				   (*seperate consts*)
+
   end = struct
 
     structure S = Simple

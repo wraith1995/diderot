@@ -762,11 +762,20 @@ fun makeFemMethods (cxt, env, tyName, span) femTyDef file cellAccData femInfo =
 	  val result = (fieldAtom, fieldMakerFun, fieldFunTy)
 	  end
 
+	  local
+	   val invalidCellAtom = Atom.atom (FemName.invalidCell)
+	   val invalidCellTy = Ty.T_Fun([funcTy], funcCellTy)
+	   fun invalidCellFun([v1]) = AST.E_LoadFem(FT.FuncCell(f), SOME(v1), SOME(AST.E_Lit(Literal.intLit (~1))))
+	     | invalidCellFun (_) = raise Fail "typechecker error."
+
+	  in
+	  val invalidCellReplace = (invalidCellAtom, invalidCellFun, invalidCellTy)
+	  end
 
 	 in
 	  ([(funcCell, funcCellFuncVar), (spaceFunc, spaceFuncVar)],
 	   [funcCellFunc, spaceFun],
-	   [result],
+	   [result, invalidCellReplace],
 	   [])
 	 end
        | ((FT.Space(s), n), PT.T_Space(meshName)) =>
@@ -913,8 +922,15 @@ fun makeFemMethods (cxt, env, tyName, span) femTyDef file cellAccData femInfo =
 	   val invalidPosTy = Ty.T_Fun([meshArgTy], meshPosTy)
 	   fun invalidPosFun([v1]) = AST.E_ExtractFemItemN([v1], [meshArgTy], meshPosTy, (FemOpt.InvalidBuild, FT.MeshPos(m)), NONE)
 	     | invalidPosFun(_)  = raise Fail "typechecker error."
+
+	   val invalidCell = Atom.atom (FemName.invalidCell)
+	   val invalidCellTy = Ty.T_Fun([meshArgTy], meshCellTy)
+	   fun invalidCellFun([v1]) = AST.E_LoadFem(FT.MeshCell(m), SOME(v1), SOME(AST.E_Lit(Literal.intLit (~1))))
+	     | invalidCellFun (_) = raise Fail "typechecker error."
+				       
 	  in
 	  val invalidReplace = (invalidPos, invalidPosFun, invalidPosTy)
+	  val invalidCellReplace = (invalidCell, invalidCellFun, invalidCellTy)
 	  end
 
 	  
@@ -923,7 +939,7 @@ fun makeFemMethods (cxt, env, tyName, span) femTyDef file cellAccData femInfo =
 	 in
 	  ([(numCell, numCellFuncVar), (cells', cellFuncVar'), (refCellName, refCellFuncVar), (meshPosFuncAtom, meshPosFuncVar), eqFuncPair, nEqFuncPair],
 	   [numCellFun, cellsFun', cellsFun, refCellFunc, meshPosFunc, eqFunc, nEqFunc],
-	   [(cells, makeCells, cellTypeFuncTy), (meshInsideAtom, meshInsideFunc, meshInsideType), invalidReplace],
+	   [(cells, makeCells, cellTypeFuncTy), (meshInsideAtom, meshInsideFunc, meshInsideType), invalidReplace, invalidCellReplace],
 	   [eqFuncPair, nEqFuncPair])
 	 end
 
