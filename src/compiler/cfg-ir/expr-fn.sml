@@ -96,7 +96,7 @@ functor ExprFn (IR : SSA) : EXPR =
       | sameNd (MULTIOP(i1, e1), MULTIOP(i2, e2)) = (i1 = i2) andalso same(e1, e2)
       | sameNd (CONS(args1, ty1), CONS(args2, ty2)) =
           IR.Ty.same(ty1, ty2) andalso same'(args1, args2)
-      | sameNd (SEQ(args1, _), SEQ(args2, _)) = same'(args1, args2)
+      | sameNd (SEQ(args1, ty1), SEQ(args2, ty2)) = same'(args1, args2) andalso IR.Ty.same(ty1, ty2)
       | sameNd (PHI(nd1, args1), PHI(nd2, args2)) =
           IR.Node.same(nd1, nd2) andalso same'(args1, args2)
       | sameNd (EINAPP(ein1, a1), EINAPP(ein2, a2)) =

@@ -40,6 +40,56 @@ structure GenTysAndOps : sig
 
     fun trType namespace env ty = TypeToCxx.trQType(env, namespace, ty)
 
+    val ostreamRef = CL.T_Named "std::ostream&"
+
+    fun output (e, e') = CL.mkBinOp(e, CL.#<<, e')
+
+    (* generate code for the expression "e << s", where "s" is string literal *)
+    fun outString (CL.E_BinOp(e, CL.#<<, CL.E_Str s1), s2) =
+        output (e, CL.mkStr(s1 ^ String.toCString s2))
+      | outString (e, s) = output (e, CL.mkStr(String.toCString s))
+
+						   
+
+    (* generate a printing function for tensors with the given shape *)
+    fun genTensorPrinter refB shape = let
+     fun ten i = CL.mkSubscript(CL.mkSelect(CL.mkVar "ten", "_data"), mkInt i)
+     fun prefix (true, lhs) = lhs
+       | prefix (false, lhs) = outString(lhs, ",")
+     fun lp (isFirst, lhs, i, [d]) = let
+      fun lp' (_, lhs, i, 0) = (i, outString(lhs, "]"))
+        | lp' (isFirst, lhs, i, n) =
+          lp' (false, output (prefix (isFirst, lhs), ten i), i+1, n-1)
+     in
+      lp' (true, outString(lhs, "["), i, d)
+     end
+       | lp (isFirst, lhs, i, d::dd) = let
+        fun lp' (_, lhs, i, 0) = (i, outString(lhs, "]"))
+          | lp' (isFirst, lhs, i, n) = let
+           val (i, lhs) = lp (true, prefix (isFirst, lhs), i, dd)
+          in
+           lp' (false, lhs, i, n-1)
+          end
+       in
+        lp' (true, outString(lhs, "["), i, d)
+       end
+     val tenTy = if refB
+		 then RN.tensorRefTy shape
+		 else RN.tensorTy shape
+     val tenStr = if refB
+		  then "const & ten"
+		  else "const ten"
+     val params = [
+      CL.PARAM([], ostreamRef, "outs"),
+      CL.PARAM([], tenTy, tenStr)
+     ]
+     val (_, exp) = lp (true, CL.mkVar "outs", 0, shape)
+    in
+     CL.D_Func(["static"], ostreamRef, [], "operator<<", params, mkReturn exp)
+    end
+
+						   
+
     fun sequenceTy (elemTy, sz) =
           CL.T_Template("diderot::array", [elemTy, CL.T_Named(Int.toString sz)])
 
@@ -706,8 +756,9 @@ structure GenTysAndOps : sig
                                   lastDcl,
                               protected = [],
                               private = []
-                            }
-                      val fnDefs = assignDef1 :: assignDef2 :: assignDef3 :: assignDef4 :: fnDefs
+                          }
+		      val printer = genTensorPrinter false shape
+                      val fnDefs = printer :: assignDef1 :: assignDef2 :: assignDef3 :: assignDef4 :: fnDefs
                       in
                        (structDcl :: tyDcls,
 			fnDefs,
@@ -935,48 +986,7 @@ structure GenTysAndOps : sig
           end
 
     datatype operation = datatype CollectInfo.operation
-
-    val ostreamRef = CL.T_Named "std::ostream&"
-
-    fun output (e, e') = CL.mkBinOp(e, CL.#<<, e')
-
-  (* generate code for the expression "e << s", where "s" is string literal *)
-    fun outString (CL.E_BinOp(e, CL.#<<, CL.E_Str s1), s2) =
-          output (e, CL.mkStr(s1 ^ String.toCString s2))
-      | outString (e, s) = output (e, CL.mkStr(String.toCString s))
-
-  (* generate a printing function for tensors with the given shape *)
-    fun genTensorPrinter shape = let
-          fun ten i = CL.mkSubscript(CL.mkSelect(CL.mkVar "ten", "_data"), mkInt i)
-          fun prefix (true, lhs) = lhs
-            | prefix (false, lhs) = outString(lhs, ",")
-          fun lp (isFirst, lhs, i, [d]) = let
-                fun lp' (_, lhs, i, 0) = (i, outString(lhs, "]"))
-                  | lp' (isFirst, lhs, i, n) =
-                      lp' (false, output (prefix (isFirst, lhs), ten i), i+1, n-1)
-                in
-                  lp' (true, outString(lhs, "["), i, d)
-                end
-            | lp (isFirst, lhs, i, d::dd) = let
-                fun lp' (_, lhs, i, 0) = (i, outString(lhs, "]"))
-                  | lp' (isFirst, lhs, i, n) = let
-                      val (i, lhs) = lp (true, prefix (isFirst, lhs), i, dd)
-                      in
-                        lp' (false, lhs, i, n-1)
-                      end
-                in
-                  lp' (true, outString(lhs, "["), i, d)
-                end
-          val params = [
-                  CL.PARAM([], ostreamRef, "outs"),
-                  CL.PARAM([], RN.tensorRefTy shape, "const & ten")
-                ]
-          val (_, exp) = lp (true, CL.mkVar "outs", 0, shape)
-          in
-            CL.D_Func(["static"], ostreamRef, [], "operator<<", params, mkReturn exp)
-          end
-
-  (* generate a printing function for fixed-size sequences *)
+    (* generate a printing function for fixed-size sequences *)
     fun genSeqPrinter (env, elemTy, size) = let
           val elemTy' = trType TypeToCxx.NSProgram env elemTy
           val seqTy = sequenceTy (elemTy', size)
@@ -1030,7 +1040,7 @@ structure GenTysAndOps : sig
                   mkFunc(ty, name, [CL.PARAM([], ty, "v")], mkReturn (mkVec (w, pw, f')))
                 end
           val dcl = (case rator
-                 of Print(Ty.TensorRefTy shape) => genTensorPrinter shape
+                 of Print(Ty.TensorRefTy shape) => genTensorPrinter true shape
                   | Print(Ty.TupleTy tys) => CL.D_Verbatim[] (* no printer needed*)
                   | Print(Ty.SeqTy(ty, NONE)) => CL.D_Verbatim[] (* no printer needed *)
                   | Print(Ty.SeqTy(ty, SOME n)) => genSeqPrinter (env, ty, n)

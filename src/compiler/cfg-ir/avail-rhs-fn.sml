@@ -79,7 +79,7 @@ functor AvailRHSFn (
                 | (IR.OP(op1, xs), IR.OP(op2, ys)) =>
                     IR.Op.same(op1, op2) andalso ListPair.allEq IR.Var.same (xs, ys)
                 | (IR.CONS(xs, _), IR.CONS(ys, _)) => ListPair.allEq IR.Var.same (xs, ys)
-                | (IR.SEQ(xs, _), IR.SEQ(ys, _)) => ListPair.allEq IR.Var.same (xs, ys)
+                | (IR.SEQ(xs, ty1), IR.SEQ(ys, ty2)) => IR.Ty.same(ty1, ty2) andalso ListPair.allEq IR.Var.same (xs, ys)
                 | (IR.EINAPP(ein1, xs), IR.EINAPP(ein2, ys)) =>
                     EinUtil.same(ein1, ein2) andalso ListPair.allEq IR.Var.same (xs, ys)
                 | (IR.APPLY(f, xs), IR.APPLY(g, ys)) =>
