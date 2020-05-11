@@ -128,7 +128,6 @@ structure CheckGlobals : sig
 					    (case data
 					      of FemData.Mesh(_) => (SOME(ConstExpr.Bool(false), AST.E_LoadFem(data, NONE, NONE)))
 					       | FemData.RefCell(_) => NONE (*error raised earlier*)
-					       | FemData.MeshPos(_) => NONE (*error raised later*)
 					       | _ => (femError();NONE)
 					    (*end case*))
 					  | _ => if (List.length (TU.femDatas ty) <> 0)

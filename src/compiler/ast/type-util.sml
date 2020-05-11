@@ -44,6 +44,7 @@ structure TypeUtil : sig
     val isInputFemType : Types.ty -> bool
     val extractFemType : Types.ty -> (FemData.femType * Atom.atom option) option
     val femDatas : Types.ty -> (FemData.femType * Atom.atom option) list
+    val hasFem : Types.ty -> bool
     val normalilzeFemInputTy : Types.ty -> Types.ty * Types.ty
 
   (* return the range (return type) of a function type *)
@@ -286,6 +287,13 @@ structure TypeUtil : sig
 	   | Ty.T_Fem(data) => [data]
 	   | _ => []
 	(*end case*))
+    fun hasFem ty =
+	(case prune ty
+	  of Ty.T_Sequence(ty', _) => hasFem ty'
+	   | Ty.T_Tuple tys => List.exists hasFem tys
+	   | Ty.T_Named(_, ty') => hasFem ty'
+	   | Ty.T_Fem(data) => true
+	   | _ => false)
     fun p(a) = (a,a)
     fun normalilzeFemInputTy (Ty.T_Var(_)) = raise Fail "failed type clean"
       | normalilzeFemInputTy (t as Ty.T_Bool) = p(t)

@@ -1064,12 +1064,14 @@ structure Simplify : sig
 	     (*Second, convert the constant and extract the mesh vars, resulting in an input*)
 	     (*Third, use intermediate input and set as above...*)
 	     (*Test -> basis (to recall FemOpts)-> thing*)
-	     val x' = cvtVar x
-             val (stms, e') = simplifyExp (cxt, e, [])
+
+             
 	    in
 	     if List.length (TU.femDatas (TypeOf.expr e)) = 0
 	     then
 	      let
+	       val x' = cvtVar x
+	       val (stms, e') = simplifyExp (cxt, e, [])
 	       val inp = S.INP{
                     var = x',
                     name = Var.nameOf x,
@@ -1084,23 +1086,32 @@ structure Simplify : sig
 	      end
 	     else
 	      let
+	       (*Note worried about seq conversions!*)
+
 	       val (inputTy, useTy) = TypeUtil.normalilzeFemInputTy (TypeOf.expr e)
-	       (*next hour: In  const function maybe or above - same game (build type, recurse down, bind when different), make a map function and a convert function... -> actually, maybe build it up here... doesn't work*)
-	       (*build expression for init constant init*)
-	       (*build copy expression from x' to x*)
-	       (*add them!*)
 	       val x' = newVarAsGlobalWithType x inputTy
+	       val (constFemDataInits : AST.expr list, constInitExpr) = Util.deFemInput(e, useTy)
+	       val (stms, e') = simplifyExp (cxt, constInitExpr, [])
+	       val intermediateGlobalString = "0" ^ (SimpleVar.uniqueNameOf x') ^ "_intermedateGlobal"
+	       val intermediateGlobalAst = Var.new(Atom.atom intermediateGlobalString, Var.locationOf x, Var.InputVar, inputTy)
+	       val intermediateGlobal = cvtVar intermediateGlobalAst
+	       (*Problem: we are building this wrong -> we should be using this intermediate global!*)
+	       val madeFem = Util.reFem(x, constFemDataInits, inputTy, useTy)
+	       val (makeInputStms, inputVar) = simplifyExp (cxt, madeFem, [])
+
 	       val inp = S.INP{
-                    var = x',
+                    var = intermediateGlobal,
                     name = Var.nameOf x,
-                    ty = apiTypeOf x',
+                    ty = apiTypeOf intermediateGlobal,
                     desc = desc,
                     init = S.ConstExpr
 		   }
-	       val intermediateGlobalString = "0" ^ (SimpleVar.uniqueNameOf x') ^ "_intermedateGlobal" (* use stamp to ensure the global var is actually unique*)
-	        val intermediateGlobal = SimpleVar.new (intermediateGlobalString, Var.InputVar, cvtTy useTy)
+	       val setupFem = S.S_Assign(x', inputVar)
 	      in
-	       ()
+	       globals' := x' :: !globals';
+	       inputs' := inp :: !inputs';
+	       constInit := S.S_Assign(x', e') :: (stms @ !constInit);
+	       globalInit := setupFem :: (makeInputStms @ !globalInit)
 	      end
             end
           (* simplify a global declaration *)

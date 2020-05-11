@@ -33,6 +33,10 @@ structure Util : sig
   (* return true if an AST constant expression is "small" *)
     val isSmallExp : AST.expr -> bool
 
+    val deFemInput : AST.expr * Types.ty -> AST.expr list * AST.expr
+    val reFem: Var.t * AST.expr list * Types.ty * Types.ty -> AST.expr
+							 
+
 				   (* seperate types*)
 
 				   (*seperate consts*)
@@ -44,6 +48,8 @@ structure Util : sig
     structure L = Literal
     structure R = RealLit
     structure VMap = SimpleVar.Map
+    structure TU = TypeUtil
+    structure Ty = Types
 
     datatype reduction = MEAN | VARIANCE | RED of Reductions.t
 
@@ -292,5 +298,98 @@ structure Util : sig
     fun isSmallExp (AST.E_Lit _) = true
       | isSmallExp (AST.E_Tensor(exps, _)) = (List.length exps <= 4)
       | isSmallExp _ = false
+
+			 
+
+    fun deFemInput(e, originTy) =
+	let
+	 val datas = ref []
+	 fun doit (e, Ty.T_Bool, false) = e
+	   | doit (e, Ty.T_Int, false) = e
+	   | doit (e, Ty.T_String, false) = e
+	   | doit (e, Ty.T_Sequence(ty, r), false) = e
+	   | doit (e, Ty.T_Tensor _, false) = e
+	   | doit (AST.E_Seq(vs, t), Ty.T_Sequence(ty, r), true) =
+	     (AST.E_Seq(List.map (fn x => doit(x, ty, true)) vs, #1 (TypeUtil.normalilzeFemInputTy(t))))
+	   | doit (e, Ty.T_Tuple(tys), false) = e
+	   | doit (AST.E_Tuple(vals, tys'), t as Ty.T_Tuple(tys), true) =
+	     let val Ty.T_Tuple(newtys) = #1 (TypeUtil.normalilzeFemInputTy(t)) in 
+	      AST.E_Tuple(ListPair.map (fn (x,y) => doit(x, y, TU.hasFem y)) (vals, tys), newtys)
+	     end
+	   | doit (e, Ty.T_Named(_, ty), b) = doit(e, ty, b)
+	   | doit (AST.E_LoadFem(data, SOME(femDep), NONE), Ty.T_Fem(data', _), true) = raise Fail "impossible: non-value fem in value input!"
+	   | doit (AST.E_LoadFem(data, SOME(femDep), SOME(v)), Ty.T_Fem(data', _), true) =
+	     (datas := (femDep :: !datas); v)
+	   | doit (AST.E_ExtractFemItemN([mesh], _, _, (FemOpt.InvalidBuild, _), _), Ty.T_Fem(data', _), true) =
+	     (datas := mesh :: !datas; AST.E_Lit (Literal.intLit (~1)))
+	   | doit (AST.E_Coerce {srcTy, dstTy, e}, _, b) =
+	     let
+	      val srcTy' = #1 (TypeUtil.normalilzeFemInputTy(srcTy))
+	      val dstTy' = #1 (TypeUtil.normalilzeFemInputTy(dstTy))
+	     in
+	      AST.E_Coerce {srcTy=srcTy', dstTy=dstTy', e=doit(e, dstTy, b)}
+	     end
+	in
+	 (!datas, doit(e, originTy, TU.hasFem originTy))
+	end
+
+    fun reFem(srcVar, datas, inputTy, targetTy) =
+	let
+	 val fems = ref (List.rev datas) (*TODO: Unclear this is correct choice.*)
+	 val span = Var.locationOf srcVar
+	 fun getVar() = (case !fems
+			  of [] => raise Fail "impossible"
+			   | f::fms => (fems := fms; f))
+	 fun doit (e, _, _, false) = e
+	   | doit (e, Ty.T_Sequence(ty, _), t as Ty.T_Sequence(ty', NONE), true) =
+	     let
+	      (*create itter var, *)
+	      val itVar = Var.new(Atom.atom "0_itter", span, Var.IterVar, ty)
+	      val iter = (itVar, e)
+	      val cleaned = doit(AST.E_Var((itVar, span)), ty, ty', true)
+	     in
+	      AST.E_Comprehension(cleaned, iter, t)
+	     end
+	       (*tuple, invidual selection rules, named*)
+	   | doit (e, Ty.T_Sequence(ty, SOME _), t as Ty.T_Sequence(ty', SOME(k)), true) =
+	     let
+	      val Ty.DimConst(r) = k
+	      val slicef = fn idx => doit(AST.E_Slice(e, [SOME(AST.E_Lit(Literal.intLit idx))], ty), ty, ty', true)
+	     in
+	      AST.E_Seq(List.tabulate(r, slicef), t)
+	     end
+	   | doit (e, Ty.T_Tuple(tys), t as Ty.T_Tuple(tys'), true) =
+	     let
+	      val k = List.length tys
+	      val slicef = fn idx => doit(AST.E_Slice(e, [SOME(AST.E_Lit(Literal.intLit idx))], List.nth(tys, idx)),
+					  List.nth(tys, idx),
+					  List.nth(tys', idx),
+					  TU.hasFem (List.nth(tys', idx)))
+	     in
+	      AST.E_Tuple(List.tabulate(k, slicef), tys')
+	     end
+	   | doit(e, Ty.T_Int, Ty.T_Fem(data as FemData.MeshCell(m), name), true) =
+	     let
+	      val femDep = getVar()
+	     in
+	      AST.E_LoadFem(data, SOME(femDep), SOME(e))
+	     end
+	   | doit (e, Ty.T_Int, Ty.T_Fem(data as FemData.FuncCell(f), name), true) =
+	     let
+	      val femDep = getVar()
+	     in
+	      AST.E_LoadFem(data, SOME(femDep), SOME(e))
+	     end
+	   | doit (e, Ty.T_Tuple _, t as Ty.T_Fem(data as FemData.MeshPos(m), name), true) =
+	     (*TODO: assumption tuple is only possible is dangerous*)
+	     let
+	      val femDep = getVar()
+	     in
+	      AST.E_ExtractFemItemN([femDep], [TypeOf.expr femDep], t, (FemOpt.InvalidBuild, data), NONE)
+	     end
+	in
+	 doit(AST.E_Var(srcVar, span), inputTy, targetTy, TU.hasFem targetTy)
+	end
+
 
   end
