@@ -1089,14 +1089,14 @@ structure Simplify : sig
 	       (*Note worried about seq conversions!*)
 
 	       val (inputTy, useTy) = TypeUtil.normalilzeFemInputTy (TypeOf.expr e)
-	       val x' = newVarAsGlobalWithType x inputTy
+	       val x' = newVarAsGlobalWithType x useTy
 	       val (constFemDataInits : AST.expr list, constInitExpr) = Util.deFemInput(e, useTy)
 	       val (stms, e') = simplifyExp (cxt, constInitExpr, [])
 	       val intermediateGlobalString = "0" ^ (SimpleVar.uniqueNameOf x') ^ "_intermedateGlobal"
 	       val intermediateGlobalAst = Var.new(Atom.atom intermediateGlobalString, Var.locationOf x, Var.InputVar, inputTy)
 	       val intermediateGlobal = cvtVar intermediateGlobalAst
 	       (*Problem: we are building this wrong -> we should be using this intermediate global!*)
-	       val madeFem = Util.reFem(x, constFemDataInits, inputTy, useTy)
+	       val madeFem = Util.reFem(intermediateGlobalAst, constFemDataInits, inputTy, useTy)
 	       val (makeInputStms, inputVar) = simplifyExp (cxt, madeFem, [])
 
 	       val inp = S.INP{
@@ -1110,7 +1110,7 @@ structure Simplify : sig
 	      in
 	       globals' := x' :: !globals';
 	       inputs' := inp :: !inputs';
-	       constInit := S.S_Assign(x', e') :: (stms @ !constInit);
+	       constInit := S.S_Assign(intermediateGlobal, e') :: (stms @ !constInit);
 	       globalInit := setupFem :: (makeInputStms @ !globalInit)
 	      end
             end

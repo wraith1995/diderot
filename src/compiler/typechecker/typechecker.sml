@@ -80,7 +80,7 @@ structure Typechecker : sig
                     then err "new"
                     else ()
                 end
-              else ();
+            else ();
             (prog, gEnv)
           end
 

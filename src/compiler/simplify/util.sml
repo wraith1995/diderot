@@ -321,7 +321,13 @@ structure Util : sig
 	   | doit (AST.E_LoadFem(data, SOME(femDep), SOME(v)), Ty.T_Fem(data', _), true) =
 	     (datas := (femDep :: !datas); v)
 	   | doit (AST.E_ExtractFemItemN([mesh], _, _, (FemOpt.InvalidBuild, _), _), Ty.T_Fem(data', _), true) =
-	     (datas := mesh :: !datas; AST.E_Lit (Literal.intLit (~1)))
+
+	     let val dim = FemData.underlyingDim data'
+		 val nan = AST.E_Tensor(List.tabulate(dim, fn x => AST.E_Lit(Literal.Real(RealLit.nan))), Ty.vecTy dim)
+		 val int = AST.E_Lit(Literal.intLit (~1))
+		 val ret = AST.E_Tuple([nan, int], [Ty.vecTy dim, Ty.T_Int])
+	     in (datas := mesh :: !datas; ret)
+	     end
 	   | doit (AST.E_Coerce {srcTy, dstTy, e}, _, b) =
 	     let
 	      val srcTy' = #1 (TypeUtil.normalilzeFemInputTy(srcTy))
@@ -329,12 +335,15 @@ structure Util : sig
 	     in
 	      AST.E_Coerce {srcTy=srcTy', dstTy=dstTy', e=doit(e, dstTy, b)}
 	     end
+	 val ret = doit(e, originTy, TU.hasFem originTy)
 	in
-	 (!datas, doit(e, originTy, TU.hasFem originTy))
+	 (!datas, ret)
 	end
 
     fun reFem(srcVar, datas, inputTy, targetTy) =
 	let
+	 val _ = print(Int.toString (List.length datas ))
+	 val _ = print("fems\n");
 	 val fems = ref (List.rev datas) (*TODO: Unclear this is correct choice.*)
 	 val span = Var.locationOf srcVar
 	 fun getVar() = (case !fems

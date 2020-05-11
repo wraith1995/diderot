@@ -91,10 +91,15 @@ structure CheckConst : sig
           fun eval' e = (case e
                  of AST.E_Var(x, span) => (case C.valueOf x
                        of SOME v => v
-                        | NONE => err [
-                              S "reference to non-constant variable ", V x,
-                              S " in constant expression"
-                            ]
+                        | NONE => (case (Var.kindOf x, Var.monoTypeOf x)
+				    of (Var.InputVar, Types.T_Named(_, Ty.T_Fem(_))) => C.Expr(AST.E_Var(x, span))
+				     | (Var.InputVar, Types.T_Fem(_)) => C.Expr(AST.E_Var(x, span))
+				     | _ => err [
+					    S "reference to non-constant variable ", V x,
+					    S " in constant expression"
+					   ]
+				  (*end case*))
+					  
                       (* end case *))
                   | AST.E_Lit(L.String s) => C.String s
                   | AST.E_Lit(L.Bool b) => C.Bool b
@@ -202,6 +207,7 @@ structure CheckConst : sig
 	   | check (Ty.T_Named(_, ty'), const)  = check(ty', const)
 	   | check (Ty.T_Fem(_, _), C.Expr(AST.E_LoadFem(data', _, _))) = [SOME(data')]
 	   | check (Ty.T_Fem(_, _), C.Expr (AST.E_ExtractFemItemN(_, _, Ty.T_Named(_, Ty.T_Fem(data, _)), (FemOpt.InvalidBuild, _), _))) = [SOME(data)]
+	   | check (Ty.T_Fem(_, _), C.Expr (AST.E_ExtractFemItemN(_, _,  Ty.T_Fem(data, _), (FemOpt.InvalidBuild, _), _))) = [SOME(data)]
 	   | check _ = [NONE] (*some error occurred somewhere???*)
 	in
 	 check(ty, e)
