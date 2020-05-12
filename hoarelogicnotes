@@ -1,0 +1,101 @@
+Plan:
+1. Build a language for describing potential mesh,space, funcs dependencies for globals and the strand array.
+
+Something like:
+*if condition then mesha else meshb
+*(mesh a or mesh b)
+*mesh a
+
+Somthing like:
+tpl->a->b = ...
+tpl->a->c = ...
+a[i] = ... for any i
+
+QUESTION:
+---How could we go from "or" or "if condition" to a single one.
+Answers:
+--the condition could be trivial/determine by the constants.
+--the condition could be split in time or abstracted over a function or extended
+
+e.g.
+if condition
+m = mesh a
+else
+m = mesh b
+
+f == ...
+
+Then we could do
+if condition
+m = mesh a
+f==
+else
+m = mesh b
+f==
+end
+
+--The or statement will emerge in time. Could the function be split in time?
+--Well, for a global variable, we could call different strand functions
+
+--For strand variables? if the condition is consitent in someway, we can do this.
+--Is an or actually possible?
+--What about shared state via sphere, in global.
+
+Mote: I am starting to reconsider doing this in simple as the non-ssa part is getting to me...
+
+
+---------
+Step 2:
+Build a transformed simple that only represents transfer and storage of FEM Info
+Mesh, space, func -- pure things and globals
+position, cells
+Things that depend on them (tuples with specific mappings)
+Sequences represents as blocks
+**Only statements are statements that use and produce fem data along with control flow.
+
+-------
+Step 3: Analysis pass
+
+Skip constants
+!Figure out initial inputs (only func, space, mesh!)
+!Figure out global/global inits (possible conditions, but things like a = mesh1, a = mesh2 -> a only have mesh2; for loops (only at end))
+!Functions (treat as inlined with information given as it currently is)
+!Look at strand array initialization and record function setups
+!Figure out initial strand array (strand state is where OR HAPPENS!!!!!!!! or other array concepts - (also see loops!!))
+!symoblically run into we hit a fixed point. Since there are finitely many mesh, func, space, we should hit one quickly
+
+!symoblic rules:
+!!Run a strand:
+--State vars changing introduces an or
+--local vars are easy as pure SSA
+--sphere means we read from state var
+--reductions are tricky - we ask about itterators maybe
+!!Run stabalization:
+--Same as above
+!!Run the global update:
+---Modifiy globals
+---we have blank updates
+---we have conditional updates
+---we have an or introduced by potential loops or uncertainy or reading from states that have ors
+
+--If anything has changed, run again.
+
+!Funcions (look at inlined versions again)
+
+Stage 4:
+Do translations:
+--mark single ones to be changed into globals
+--if any ors, we create an array
+--mark larger ones to be changed into tuples: data, int
+--global fems that change turn into indecies that loop in.
+--Translate FemOpts
+
+
+---------
+Consider related work:
+Hoare logic
+Process eperation logic?
+BSP and formal verificaiton: https://www.researchgate.net/publication/279263833_BSP-Why_un_outil_pour_la_verification_deductive_de_programmes_BSP_machine-checked_semantics_and_application_to_distributed_state-space_algorithms
+
+
+Note: need more clear algo!
