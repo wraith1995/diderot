@@ -1,0 +1,40 @@
+face(r(t)) - r(t)  = face(r(t)_x, r(t)_y) -
+
+
+Reference space -> face Reference space -> world space
+
+
+reference space face (plane) -> referensce space -> space
+
+
+--intersect bounding box
+face(x, y) - r(t) = 0
+
+T(face_1(x,y)) - r(t)
+
+
+face_1(x,y) and t and inside(face(x,y)) = true
+
+edge_1(x) ... Yessss...Okay
+
+Project to edge 
+
+Well... 3 by 3 inverses or 2 by 2 invereses
+
+Tuple should be 3 -> should include face...
+
+
+Problem of Cutting off face(x,y) -> if outside, check intersecting planes for distance -> check intersecting edges and clamp to closets
+Face bounding box.
+
+Compute in Firedrake...yes...lagrange to bspline-
+
+
+Get face id, Get face bounding box, face(x,y)->ref map, T, DT^-1, DT, classmethod
+
+
+
+run netwon
+correct x,y to be in facet
+check if done
+Return

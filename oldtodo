@@ -1,0 +1,288 @@
+Old notes:
+Overall things to do:
+
+-Fix precdence of select (pure parsing fixing)
+
+-Consider |_ operator - (compose but don't compute derivative -- we want to fix issue with TT^-1 canceling - we want deriatives of it - but we sometimes want the derivative component and then to stop counting it - maybe G = F \circ T^-1 -> H = DD(G) \circ T -> use the derivatives of T^-1 but not the comp - take derivatives of H now doesn't add more derivatives of T^-1 )
+
+-Consier lazy computation with respect to POS -do we or do we not cache world position -- locally, we do, but how much - careful rewrites.
+--especially in places that take a world pos 
+
+-Consider basic tuples
+--Consider tuple scalarization
+---strands
+---inputs
+---outputs
+---sequences - AOS vs. SOA
+--Consider FEM to tuple prior to scalarizatoin
+---Combine with type item specaliztiation so that globals are lifted.
+---Combine with turning into scalars to get rid of unneded arguments
+---Etc
+---Extract loading fix--loading should allow both specifications
+---Consider compltely getting rid of fem stuff
+
+-Sequence short cutting (global cells list and stuff -> allow function instead of sequence?)
+
+-consider checking equality in SSA
+
+-Consider parsing basis structure and checking basis equality checking
+
+-Consider affine variables and type checking of them:
+--affine keyword
+--transform at SSA level
+--type checking works as long as inverses are not passed through (unless inverse is affine on a cell level, but short cutting can help with this.)
+
+-Consider instruction level/thread level cache for:
+--cells
+--Dofs (defeat out of order stuff)
+
+-Better bounding box access -> cell level bounding box? 
+-better error checking for cell/insider
+
+-Better geometry of reference
+--simplization
+--distance function
+--zero functions
+--indicators
+
+-Dump list of functions
+
+-Chiw's expression stuff
+
+====================
+
+-Tuple/elegance/pos as scalars - (steps: tuples on surface down all the way, functor for scalarization; after simple, translate fem to tuples + add pos overload, fix out pos TT^-1, T^-1T - cell issue - well - we have a cell and pos argument - so we trace back both of them, globalization of mesh, function space, etc |_ ,)
+
+EIN transformations:
+(mesh, int, vec) -> (tensor, vec)
+(func, int, vec) -> (tensor, vec)
+(mesh, int, vec) -> (tensor, vec)
+(func, space, mesh, int, vec) -> (tensor, tensor, vec)
+(func, space, mesh, vec) -> (tensor, tensor, vec)
+
+
+
+
+
+
+
+
+
+John stays home on Tuesday -> just focus on work
+10 hours of work blocked off
+
+
+
+
+
+
+Ongoing issue:
+-allow translation of DOF in two ways.
+-Pointer issue of when things should be pointers
+-Loading in NRRDS
+-Loading of files, constants, etc
+-Inserting of strings
+-Use of that libindex
+-CheckIR
+-Email Kirby
+-Misuse of degree vs spaceDim -> ops
+---USE AST THING TO PARSE CONSTANTS??? - NO BECAUSE JSON
+Continue MeshCell: Transformsm
+
+-1.
+0. Pointer issues - globals and internals are values - we need maps
+1. Equality testing of all of these things
+2. Load in via nrrd
+3. Loading of files
+4. Inserting of strings
+5. Check High -> need to make opts more useful 
+Email Kirby with functionality
+
+Next steps:
+Add ooptiona indexMap', vertMap to msh -> Later for verticies
+Figure out transformDofs dimensions again
+Deploy transformDofs as opt Dofs -> translates into getIndicies (seq) and get vals (tensor)
+
+Transate:
+Clarify FemOpt -> kind of like EIN almost
+High (Big selectors)
+Mid (Index/Other)
+Low (scalars)
+tree
+
+
+Get Mesh
+Get Index
+Grab Indecies
+Grab Tensors 
+
+To do it:
+add removal of () in select
+Select continuations from hadown env -> insert code from new env
+NOT EINMK op, but rather use Ops -> loadIndex -> for vertMap if not there, just be done
+Push towards full meshCell functionarl:
+
+immediate: transformDofs, isValid (think about layout of data for transformDofs)
+Next: verticies, isInside (require the loaded file)
+Next: transform, invTransform
+
+Data:
+natural iso -> properties we put on our functors -> so what does \alpha actually do -> equivelance in the category of functors: all maps that I want in the past can be rebuilt. There exist G' so that I can go backwards -> I can use alpha to build that G
+
+We ought to be able to invert:
+--with truly right software, you just pick categories and generate maps between them
+--or auto-check methods between them
+
+------
+Final: meshPos stuff after meshPos
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1. Pass by value vs. by reference - deal with the pointer issues - everything should be passed by reference here probably.
+2. Write these methods with proper C++ isms.
+----------HERE WE ARE
+4. Deal with cell issues and formalize it
+5. Think about it accordance with meshPos
+6. Implement cell stuff -> espcially transform and inverse transform
+7. IMplement meshPos after thinking and figure out details about that
+8. Implement finding MeshPos
+9. Implement the global field
+10. Mop Up.
+11. Implement cell meta data
+---Constants need to be in this
+1. Select for just values -> function(method) resolution.
+
+
+
+
+
+
+Today:
+---make functions in the ast? Nah. Probably not.
+-Add mesh select from space.
+-Add Type of
+-Add mesh numCell
+-Fix select - remember select also needs to do fields and well fields -- need to update type env fr fields?
+1. Clean up error messages and provide more information in them
+2. Clean up the documentation
+3. Determine if clean AST is needed.
+4. Fix the for loop issues.
+5. Load constants via files and use them
+6. Determine any default constants.
+7. Make sure named types can't occupy names of old types?
+8. Make fields possible arguments to functions
+9. Deal with inputs of named types
+--Next step is to do cells -> cellToIndex and IndexToCell as well ass -> unique global var.
+--> Here numCell can be used implictly -> need to add LoadFemThing -> expand in like mid to low to index shit.
+
+So cells are pairings of femdata and ints ->
+How do we deal with this?
+(Mesh, int) -> int
+int * int is also an option.
+
+This gives a few optoins.
+Reflection:
+cells are effectively indicies that are given meaning on a mesh:
+look in simplify: first we preprocess and look at our various cell sequences
+
+Given a cell variable, can it uniquely be traced back to one mesh at all times? Then we can replace it with an index.
+CellToIndex(cell)
+IndexToCell(i, mesh)
+
+
+
+
+
+
+
+
+
+
+PLan:
+test outputs more/analyze the revs in this one.
+fix inputs too, but we require more infustructure:
+
+**disallow odd views -> base tuples/arrays are fine, but otherwise fuck it. Build assign operator, maybe
+**API build a write out system:
+**Inputs do a check for any non-inputable/non-normal form.
+**dispatch to a new system where we do copy and nin...
+
+***Build the same path system of conversions!
+***Base at top level can do a direct assignment
+****This is pretty straightforwad for Saturday morning?
+-------
+
+Output Strings
+Input Tree
+
+*Sequences of itterations describing how I can go through the standard type to produce the nth nrrd of a ty
+
+
+-------------
+Normal form itterations, diderot form
+Go through the diderot form -> ask fixed; if you encounter a loop, load each base entity
+
+-We can just do this from the normal form
+
+--For each normal form that has no [], we just do the set (given nth nrrd, path can be found via accessors)
+-For each one that has a [], we do the load and itterate over the approprate input set to set things
+--The issue is the [] in this has not allocated - we can do that with an
+
+Startegey:
+*Go through each acc and determine if it is a Base Input or a seq Input
+*From these, we can either do a bunch of sets for the former or do loads to temp vars
+*With the loads in place, it is only a matter of making a loop to save each one to the actual thing, but where you need
+*for the loads, for each one, we first allocate max() for each actual [] (we need a mapping from loads to actual [])
+*then, for each load, we can go through the appropriate copy space
+
+Given accs (description of how to go through the Diderot ty and the joins vs regular inputs)
+For base type (no join)
+*We first itterate through each acc, build the appropriate access to the original diderot type
+*Then we itterate through it to build the appropriate loop on top of this
+*At the base, we can do a copy: diderotTy[idx]->a = aIn[idx] (how do we know what indexes to apply to aIn -> T[n][n][n][]!!!!)
+
+For base with a join:
+*We first itterate through each acc, build the appropriate access to the original diderot type
+*We build the appropirate length for the involved inputs and allocate the destiation at the []
+*Then we complete the access to the original after the []
+*At the base, we do a copy -> the issue is again we
+
+(SOLUTION: COMPUTE THE ORDER-> given the original, we track the movement of an access to put in the right form: T[]R -> Tuple(J[n][]) -> every [n] in R and every Tuple in J leads to a movement -> given acc, we do the needed swaps -> and track index....)
+
+
+---Remove parser and type restrictions (simply no nested []), but arrays of them are fine.
+---By name adding? I doubt it.
+Also remove c++ warnings/Check C++ (sizeOf (float [3]))
+Then we parse/type restrictions
+Then we do some testing.
+Then we do input/output cleaning for these via nice conversions in simple/type optimization.
+Then we do scalrization later down
+Then we do caching.
+Thinking about basis structure
+Position smoothing
+Variable fields and | _ operators
+Affine, interval, bspline interpolation
+
+---Some writing for all of this: background, math, and design (basics and compsability: position, overload general fields; diff changes;intervals and affines ),
+

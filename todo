@@ -1,97 +1,72 @@
-====================
-Tuples:
-internal looks fine.
-External:
--Input, starting inputs, outputs
---base: do not thing, but generate void * function
---seq issue - AOS vs AOS - what about starting inputs -> don't allow for now -> solution would be check AOS vs. SOA
-
---inputs:
-Do copy... but where
-gen-inputs-util - this is where default ones are allowed - *IGNORE*
-gen-library-interface - where funcs are delcared (First)
-gen-inputs - actual functions 
-gen-outputs - actual functions
-
-Plan:
-input:
-*base type: list of things and void *
-*[n][n][n][]T where T can be anything -> [n][n][n]Tuples[n]base[] -> require [n][n][n]Tuple[n][n] args of seqs
-
-Output:
-another issue that must be solved:
-dyn vs image inputs
-image: simple -> SOA vs AOS
-dyn: simple again if there isn't a size issue, but probably isn't
-base type:needs to be pulled through that
-
-
-output first:
-
---fixed size--- [][n][n]Tuple....
-
-Tuple([][n][n]...T1, [][n][n]...T2, [][n][n]...Tn)
-
-If T1 contains a tuple,
-Tuple( Tuple(T11, T12, T13, ...), ... )
-
-Tuple([]T11, []t12, []t13, ....)
-
-So what does this mean for the tranformation
-
-We have a tree and we are pushing [] down... we need the index or the struct address....
-
-Tuple structure -> pass info about how to acess (path on graph -> list -> -> -> )
-
-Check Tuple([], [], []) -> can't have []
-
-Algo:
-*Take structure where Tuple is not top level and [] is not bottom level
-*
-
-Transpose
-Merge
-
-Step 0:
-
-!Build array of leaf nodes and how to access them : List 
-
-Step 1:
-While Check that tuple is top and no leaf tuples
-
-step 2:
-*Find first tuple middle nodes and transpose up
-T(Tuple(A, B, C)) -> Tuple(TA, TB, TC)
-
-Base types = T[n]*[]
-
-----------------------
-Do the tupleization/check base.
-Dispatch towards old system
-Dispatch includes the info about the path
-This determines the copy within the existing loop.
-
-
-
-
-
-
-we have a copy lopo
-
-snapshot:
-???
-
-
-
-
-====================
-Precdence fixing:
--select should be a deepest level
---Atomic Expr should feature .selec - remove from suffix
+New:
+=================
+Fix IO:
+**IO Pos - Tuple forgets about facet data
+=================
+FemOpts are in disarray and need docs:
+**Go through and document their use and locations
+**Clean up
+==================
+Basis access needed:
+**Translate and document here.
+===================
+Top level requires some new operators:
+**Check on face, edge, vertex
+**Swap
+**Robus intersection
+**Provide class methods for T, DT, DT^-1, etc with noinline propery
+**Provide bounding box for facet, global intersect spat, local global inersect spat -- defaults could be provided - see spattodo
+**Allow use of class methods in above
+**Document json
+=======================
+Top level require smartter wrapping:
+**Alwalys have an inline able function unpack and unwrap for base functions
+==========================
+Hoare logic:
+**Translate all fem opts and fem data besides base to baser operations - make easier to do checks for the field
+** See other file
+**Should accomplish full fem scalariziation modulo big types
+==========================
+Accomodate field language
+--inverse optimizations
+--force inverse optimization
+--Allow position evaluation
+--make inside use correct diagnostic (valid, meshpos, etc)
+--Order inside with above
+===========================
+Affine, interval, bspline (see below)
+========================
+Tuple:
+**invetigate ref tuple for input passing
+**simplifly interface
+**Add general scalirzation optimizations
+**Check snapshots
+**Parsing
+========================
+Caches:
+-Consider instruction level/thread level cache for:
+--cells
+--Dofs (defeat out of order stuff)
+--certain situations to override the cache?
+===========================
+Basis function structure parsing and Basis SSA check.
+--e.g. oplus, otimes, +.
 ====================
 Sphere bug:
 curent _pos rewrite doesn't commute with sphere(a,b)
 (Or at least it doesn't if another sphere isn't there too)
+====================
+Merge in Chiw branch for field funcs
+=====================
+BIG FEM IO FIX
+================
+
+
+OLD
+====================
+Precdence fixing:
+-select should be a deepest level
+--Atomic Expr should feature .selec - remove from suffix
 ====================
 Equality checking bug:
 Is the SSA thing really working? I have some doubts...
@@ -109,50 +84,26 @@ Delayed evaluation and composition with functions:
 --if you have |_ -> replace and then kill derivative after applying the ones around htis.
 --so if I have P(D) (P(D)(F\ circ T^-1) |_{ T}) -> we stop replacing the derivative of P(D)
 --General allow functions in the field language
-==================
+Better TT^-1 cancelling (relates highly to the above.)
+--Capture TT^-1 and opposite - cancel them
+--Done at simple-ir -> sometimes replace with no derivative version if there is a derivative being taken. (See above)
+--Idea: cancel out these, but still allow world space and regular space derivatives.
+--add potential cell/mesh checks (See other section)
 AD LIKE Related to above: Look at Chiw and think about functions in the field language vs. fields in the function language.
 -Merge in Chiw's branch
 -allow functions to have specified derivatives (field valued or maybe not)
 -allows recovery
 -Maybe look at exposing ImgToWorld/ImgCell/Positions on images.
 =========================
-Better TT^-1 cancelling (relates highly to the above.)
---Capture TT^-1 and opposite - cancel them
---Done at simple-ir -> sometimes replace with no derivative version if there is a derivative being taken. (See above)
---Idea: cancel out these, but still allow world space and regular space derivatives.
---add potential cell/mesh checks (See other section)
-==========================
-Basic Tuples
---simple enough
---inputs/outputs are messy
----post is a fine solution
----multiple in/out for tuple arg
----teem is unclear about this
-=========================
-Tuple + Scalarize
---where to put scalarize (see below)
---how to deal with AOS vs. SOA
---how to deal with strand vars, outputs, inputs
 ==========================
 Tuple + FEM + Type one item
 --When this should occur in relation to pos semantics
 --When this should occur in relation to other optimizations
 e--scalarization relation
 =========================
-Sequence lazynesss
---If I build a sequence, but only access once -> just grab result?
-=========================
 Pos lazyness/caching
 --local rewrites to make CSE more likely/to continue to grab global results
 --a sort of sub-typing maybe
-========================
-Caches:
--Consider instruction level/thread level cache for:
---cells
---Dofs (defeat out of order stuff)
---certain situations to override the cache?
-===========================
-Basis function structure parsing and Basis SSA check.
 ===========================
 Better Geometry and Bound box access:
 -Would be useful to access bounding box at high level
@@ -171,231 +122,3 @@ Affine SSA transformation
 --Policy settomg
 --function cooperation/insertion into field language
 =============================
-Old notes:
-Overall things to do:
-
--Fix precdence of select (pure parsing fixing)
-
--Consider |_ operator - (compose but don't compute derivative -- we want to fix issue with TT^-1 canceling - we want deriatives of it - but we sometimes want the derivative component and then to stop counting it - maybe G = F \circ T^-1 -> H = DD(G) \circ T -> use the derivatives of T^-1 but not the comp - take derivatives of H now doesn't add more derivatives of T^-1 )
-
--Consier lazy computation with respect to POS -do we or do we not cache world position -- locally, we do, but how much - careful rewrites.
---especially in places that take a world pos 
-
--Consider basic tuples
---Consider tuple scalarization
----strands
----inputs
----outputs
----sequences - AOS vs. SOA
---Consider FEM to tuple prior to scalarizatoin
----Combine with type item specaliztiation so that globals are lifted.
----Combine with turning into scalars to get rid of unneded arguments
----Etc
----Extract loading fix--loading should allow both specifications
----Consider compltely getting rid of fem stuff
-
--Sequence short cutting (global cells list and stuff -> allow function instead of sequence?)
-
--consider checking equality in SSA
-
--Consider parsing basis structure and checking basis equality checking
-
--Consider affine variables and type checking of them:
---affine keyword
---transform at SSA level
---type checking works as long as inverses are not passed through (unless inverse is affine on a cell level, but short cutting can help with this.)
-
--Consider instruction level/thread level cache for:
---cells
---Dofs (defeat out of order stuff)
-
--Better bounding box access -> cell level bounding box? 
--better error checking for cell/insider
-
--Better geometry of reference
---simplization
---distance function
---zero functions
---indicators
-
--Dump list of functions
-
--Chiw's expression stuff
-
-====================
-
--Tuple/elegance/pos as scalars - (steps: tuples on surface down all the way, functor for scalarization; after simple, translate fem to tuples + add pos overload, fix out pos TT^-1, T^-1T - cell issue - well - we have a cell and pos argument - so we trace back both of them, globalization of mesh, function space, etc |_ ,)
-
-EIN transformations:
-(mesh, int, vec) -> (tensor, vec)
-(func, int, vec) -> (tensor, vec)
-(mesh, int, vec) -> (tensor, vec)
-(func, space, mesh, int, vec) -> (tensor, tensor, vec)
-(func, space, mesh, vec) -> (tensor, tensor, vec)
-
-
-
-
-
-
-
-
-
-John stays home on Tuesday -> just focus on work
-10 hours of work blocked off
-
-
-
-
-
-
-Ongoing issue:
--allow translation of DOF in two ways.
--Pointer issue of when things should be pointers
--Loading in NRRDS
--Loading of files, constants, etc
--Inserting of strings
--Use of that libindex
--CheckIR
--Email Kirby
--Misuse of degree vs spaceDim -> ops
----USE AST THING TO PARSE CONSTANTS??? - NO BECAUSE JSON
-Continue MeshCell: Transformsm
-
--1.
-0. Pointer issues - globals and internals are values - we need maps
-1. Equality testing of all of these things
-2. Load in via nrrd
-3. Loading of files
-4. Inserting of strings
-5. Check High -> need to make opts more useful 
-Email Kirby with functionality
-
-Next steps:
-Add ooptiona indexMap', vertMap to msh -> Later for verticies
-Figure out transformDofs dimensions again
-Deploy transformDofs as opt Dofs -> translates into getIndicies (seq) and get vals (tensor)
-
-Transate:
-Clarify FemOpt -> kind of like EIN almost
-High (Big selectors)
-Mid (Index/Other)
-Low (scalars)
-tree
-
-
-Get Mesh
-Get Index
-Grab Indecies
-Grab Tensors 
-
-To do it:
-add removal of () in select
-Select continuations from hadown env -> insert code from new env
-NOT EINMK op, but rather use Ops -> loadIndex -> for vertMap if not there, just be done
-Push towards full meshCell functionarl:
-
-immediate: transformDofs, isValid (think about layout of data for transformDofs)
-Next: verticies, isInside (require the loaded file)
-Next: transform, invTransform
-
-Data:
-natural iso -> properties we put on our functors -> so what does \alpha actually do -> equivelance in the category of functors: all maps that I want in the past can be rebuilt. There exist G' so that I can go backwards -> I can use alpha to build that G
-
-We ought to be able to invert:
---with truly right software, you just pick categories and generate maps between them
---or auto-check methods between them
-
-------
-Final: meshPos stuff after meshPos
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1. Pass by value vs. by reference - deal with the pointer issues - everything should be passed by reference here probably.
-2. Write these methods with proper C++ isms.
-----------HERE WE ARE
-4. Deal with cell issues and formalize it
-5. Think about it accordance with meshPos
-6. Implement cell stuff -> espcially transform and inverse transform
-7. IMplement meshPos after thinking and figure out details about that
-8. Implement finding MeshPos
-9. Implement the global field
-10. Mop Up.
-11. Implement cell meta data
----Constants need to be in this
-1. Select for just values -> function(method) resolution.
-
-
-
-
-
-
-Today:
----make functions in the ast? Nah. Probably not.
--Add mesh select from space.
--Add Type of
--Add mesh numCell
--Fix select - remember select also needs to do fields and well fields -- need to update type env fr fields?
-1. Clean up error messages and provide more information in them
-2. Clean up the documentation
-3. Determine if clean AST is needed.
-4. Fix the for loop issues.
-5. Load constants via files and use them
-6. Determine any default constants.
-7. Make sure named types can't occupy names of old types?
-8. Make fields possible arguments to functions
-9. Deal with inputs of named types
---Next step is to do cells -> cellToIndex and IndexToCell as well ass -> unique global var.
---> Here numCell can be used implictly -> need to add LoadFemThing -> expand in like mid to low to index shit.
-
-So cells are pairings of femdata and ints ->
-How do we deal with this?
-(Mesh, int) -> int
-int * int is also an option.
-
-This gives a few optoins.
-Reflection:
-cells are effectively indicies that are given meaning on a mesh:
-look in simplify: first we preprocess and look at our various cell sequences
-
-Given a cell variable, can it uniquely be traced back to one mesh at all times? Then we can replace it with an index.
-CellToIndex(cell)
-IndexToCell(i, mesh)
-
-
-
-
-
-
-
-
-
-
-PLan:
-fix fem dynoutput bug -. most likely in process of symbolic rep and fix returnx
-fix inputs too, but we require more infustructure
-Marissa, Gordon, Saman
-Other thanks
-Walk and book
-Aliyah, Barlie, Bam, and Bike
