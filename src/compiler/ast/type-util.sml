@@ -324,7 +324,7 @@ structure TypeUtil : sig
 	   | FemData.FuncCell _ => (Ty.T_Int, t)
 	   | FemData.MeshPos m =>
 	     let val ten = Ty.T_Tensor(Ty.Shape([Ty.DimConst(FemData.underlyingDim data)]))
-	     in (Ty.T_Tuple([ten, Ty.T_Int]), t)
+	     in (Ty.T_Tuple([ten, Ty.T_Int, Ty.T_Int]), t)
 	     end (*TODO: Order correct with data.*)
 	(*end case*))
 						  

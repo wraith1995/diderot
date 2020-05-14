@@ -1057,14 +1057,6 @@ structure Simplify : sig
 	       globalInit := setupFem :: !globalInit
 	      end
             | simplifyInputDcl ((x, SOME e), desc) = let
-	     (*TODO:if it has FEM, we need to do some changes*)
-	     (*-1, make sure invalid cells, more poses, and specific poses, can be added... and check constant on mesh depend*)
-	     (*check if fem.*)
-	     (*First, create the new type and the type with mesh info in it: map on it twice*)
-	     (*Second, convert the constant and extract the mesh vars, resulting in an input*)
-	     (*Third, use intermediate input and set as above...*)
-	     (*Test -> basis (to recall FemOpts)-> thing*)
-
              
 	    in
 	     if List.length (TU.femDatas (TypeOf.expr e)) = 0
@@ -1086,8 +1078,6 @@ structure Simplify : sig
 	      end
 	     else
 	      let
-	       (*Note worried about seq conversions!*)
-
 	       val (inputTy, useTy) = TypeUtil.normalilzeFemInputTy (TypeOf.expr e)
 	       val x' = newVarAsGlobalWithType x useTy
 	       val (constFemDataInits : AST.expr list, constInitExpr) = Util.deFemInput(e, useTy)

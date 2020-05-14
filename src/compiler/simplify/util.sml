@@ -325,7 +325,7 @@ structure Util : sig
 	     let val dim = FemData.underlyingDim data'
 		 val nan = AST.E_Tensor(List.tabulate(dim, fn x => AST.E_Lit(Literal.Real(RealLit.nan))), Ty.vecTy dim)
 		 val int = AST.E_Lit(Literal.intLit (~1))
-		 val ret = AST.E_Tuple([nan, int], [Ty.vecTy dim, Ty.T_Int])
+		 val ret = AST.E_Tuple([nan, int, int], [Ty.vecTy dim, Ty.T_Int, Ty.T_Int])
 	     in (datas := mesh :: !datas; ret)
 	     end
 	   | doit (AST.E_Coerce {srcTy, dstTy, e}, _, b) =
@@ -342,8 +342,6 @@ structure Util : sig
 
     fun reFem(srcVar, datas, inputTy, targetTy) =
 	let
-	 val _ = print(Int.toString (List.length datas ))
-	 val _ = print("fems\n");
 	 val fems = ref (List.rev datas) (*TODO: Unclear this is correct choice.*)
 	 val span = Var.locationOf srcVar
 	 fun getVar() = (case !fems
