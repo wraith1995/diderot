@@ -8,18 +8,14 @@ FemOpts are in disarray and need docs:
 **Notice above: enable vectorization too.
 **Notice: Valid should die - clean up Pos builds
 **Notice: CellData stays
+
+Exact:Dofs issue as above
+Exact:Valid
+Exact:All builds - investigate though
+
 ==================
 Basis access needed:
 **Translate and document here.
-===================
-Top level requires some new operators:
-**Check on face, edge, vertex
-**Swap
-**Robus intersection
-**Provide class methods for T, DT, DT^-1, etc with noinline propery
-**Provide bounding box for facet, global intersect spat, local global inersect spat -- defaults could be provided - see spattodo
-**Allow use of class methods in above
-**Document json
 =======================
 Top level require smartter wrapping:
 **Alwalys have an inline able function unpack and unwrap for base functions
@@ -28,6 +24,19 @@ Hoare logic:
 **Translate all fem opts and fem data besides base to baser operations - make easier to do checks for the field
 ** See other file
 **Should accomplish full fem scalariziation modulo big types
+
+(BY TOMORROOW)
+===================
+Top level requires some new operators:
+**Check on face, edge, vertex detector
+**Swap
+**Robus intersection detector
+**Provide class methods for T, DT, DT^-1, etc with noinline propery
+**Provide bounding box for facet, global intersect spat, local global inersect spat -- defaults could be provided - see spattodo
+**Allow use of class methods in above
+**Document json/c copy -> if nrrd added could add more
+**Reorganization of common inserts (NearbyCell, InsideInsert)
+(SUNDAY JOB???)
 ==========================
 Accomodate field language
 --inverse optimizations
