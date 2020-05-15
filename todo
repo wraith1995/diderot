@@ -1,11 +1,13 @@
 New:
 =================
-Fix IO:
-**IO Pos - Tuple forgets about facet data
-=================
 FemOpts are in disarray and need docs:
 **Go through and document their use and locations
 **Clean up
+**Notice: DUMB Seq vs. tensor debate again. Needs to be cleaned up, but recall why T vs T^-1 represented
+**Notice above: ^ Needs cleaning: should be ExtractDofs -> ExtractDofsSeq, ExtractIndecies - ExtractDof, ExtractIndex
+**Notice above: enable vectorization too.
+**Notice: Valid should die - clean up Pos builds
+**Notice: CellData stays
 ==================
 Basis access needed:
 **Translate and document here.

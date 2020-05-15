@@ -279,40 +279,7 @@ fun dnT(env, cxt, span, mesh, m) =
      val (_, firstFun, _) = List.nth(results, 0)
      val buildWorldPosFunTy = Ty.T_Fun([meshPosTy],meshPosTy)
      val meshPosParam = Var.new(Atom.atom"pos", span, AST.FunParam, meshPosTy)
-     val atomWorldPosName = FemData.functionNameMake (meshPosData) "build_world_pos"
-     val buildWordPosFunVar = Var.new(atomWorldPosName, span, AST.FunVar, buildWorldPosFunTy)
 
-     val buildNewPos = AST.E_ExtractFemItemN(
-	  [AST.E_Var(meshPosParam, span),
-	   AST.E_Apply(
-	    (firstFun, span),
-	    [AST.E_ExtractFemItem(AST.E_Var(meshPosParam, span),
-				  dimT,
-				  (FemOpt.RefPos, meshPosData)),
-	     AST.E_ExtractFemItem(AST.E_Var(meshPosParam, span),
-				  Ty.T_Int,
-				  (FemOpt.CellIndex, meshPosData)),
-	     AST.E_ExtractFem(AST.E_Var(meshPosParam, span),mesh)], dimT)],
-	  [meshPosTy, dimT],
-	  meshPosTy,
-	  (FemOpt.NewWorld, meshPosData),
-	  NONE)
-     val body = AST.S_Block([
-			    AST.S_IfThenElse(
-			     AST.E_ExtractFemItem(AST.E_Var(meshPosParam, span),
-						  Ty.T_Bool,
-						  (FemOpt.WorldTest, meshPosData)),
-			     AST.S_Block([
-					 AST.S_Return(buildNewPos)
-					]),
-			     AST.S_Block([
-					 AST.S_Return(AST.E_Var(meshPosParam,span))
-			    ]))
-					    
-			   ])
-
-     val meshPosWorldFunc = AST.D_Func(buildWordPosFunVar, [meshPosParam], body)
-     val specialResult = (atomWorldPosName, buildWordPosFunVar, meshPosWorldFunc)
 
 
      val dumbWordPos = Ty.T_Fun([meshPosTy], dimT)
@@ -332,7 +299,7 @@ fun dnT(env, cxt, span, mesh, m) =
      val dumbSpecialResult = (dumWorldPosOutSideName, dumbWorldPosFunVar, dumbFun)
 			       
     in
-     (specialResult,dumbSpecialResult, results)
+     (dumbSpecialResult, results)
     end
 fun makeInvVar(dim) =
     if dim = 2
@@ -969,7 +936,7 @@ fun makeGeometryFuncsWrap(env, cxt, span, meshData, geometry, inverseInfo, forwa
      else {ref = ([],[],[]), pos = ([],[],[]), cell = ([],[],[])}
     end
 
-fun makeMeshPos(env, cxt, span, meshData, transformVars, (_, worldPosMakerVar, _), dumb, extraFuns, extraReplace) = let
+fun makeMeshPos(env, cxt, span, meshData, transformVars, dumb, extraFuns, extraReplace) = let
  val results = []
  val meshName = FT.nameOf meshData
  val FT.Mesh(mesh) = meshData
@@ -999,9 +966,6 @@ fun makeMeshPos(env, cxt, span, meshData, transformVars, (_, worldPosMakerVar, _
 
  fun refPos([v]) = AST.E_ExtractFemItem(v, vecTy, femOpt FO.RefPos) (*go for it*)
  val results = makeFunctionRegistration(FemName.refPos, [meshPosTy], vecTy, refPos)::results
-
- (* fun worldPos([v]) = AST.E_ExtractFemItemN([v], [meshPosTy], vecTy, femOpt (FO.WorldPos(SOME(Var.atomNameOf worldPosMakerVar), NONE)), SOME(worldPosMakerVar,span)) (*needs elaboration in simple*) *)
- (* val results = makeFunctionRegistration(FemName.worldPos, [meshPosTy], vecTy, worldPos)::results *)
 
  val hiddenFuns = results
  val methods = [(fn (x,y,z) => (x,y)) dumb]
@@ -1196,10 +1160,9 @@ fun makeDescendentFemTypes (cxt, tyName, span) geometry cellAccData (env, femTyp
 	   val cellMethods = [(hiddenFuncAtom, hiddenFuncVar)]
 	   (* TODO: The naming in this area of the compiler is really inconsistent*)
 
-	   val (worldMeshPos, dumb, dnTFuncs) = dnT(env, cxt, span, FT.Mesh(m),  3) (*maybe more?*)
+	   val (dumb, dnTFuncs) = dnT(env, cxt, span, FT.Mesh(m),  3) (*maybe more?*)
 	   val vars = List.map (fn (x,y,z) => y) dnTFuncs
 	   val dTFuncDcls = List.map (fn (x,y,z) => z) dnTFuncs
-	   val worldMeshPosDef = (fn (x,y,z) => z) worldMeshPos
 	   val dumbDef = (fn (x,y,z) => z) dumb
 	   val refCellTransformFuncs = [(refCellInside, makeRefCellInsideFunc, refCellInsideTy)] (*pass to geometry.....yay!*)
 	   val geometryInfo = makeGeometryFuncsWrap(env, cxt, span, meshData, geometry, invTransformSpec, transformSpec, makeRefCellInsideFunc)
@@ -1238,10 +1201,10 @@ fun makeDescendentFemTypes (cxt, tyName, span) geometry cellAccData (env, femTyp
 	   (*get the appropraite transform vars*)
 	   val (posActualFuncI , posActualFuncDcls, posReplaceFunc) = #pos geometryInfo
 
-	   val env''' = makeMeshPos(env, cxt, span, FT.Mesh(m), vars, worldMeshPos, dumb, posActualFuncI, posReplaceFunc)
+	   val env''' = makeMeshPos(env, cxt, span, FT.Mesh(m), vars, dumb, posActualFuncI, posReplaceFunc)
 				   
 	  in
-	   (env''', extraCellFuncDcls@posActualFuncDcls@refActualFuncDcls@(dumbDef::worldMeshPosDef::newtonFunc::dTFuncDcls))
+	   (env''', extraCellFuncDcls@posActualFuncDcls@refActualFuncDcls@(dumbDef::newtonFunc::dTFuncDcls))
 	  end
 	| FT.Func(f) =>
 	  let

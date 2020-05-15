@@ -200,14 +200,7 @@ structure MidToLow : sig
 		in
 		 assign (DstOp.ExtractFemItemN(tys', outTy', opt', stamp', name', paramTys',  fTy'))
 		end
-		  
-		(* let *)
-		(*  val [dataArg, indexArg] = args' (* it should alwalys be 2*) *)
-		(* in *)
-	      	(* (case opt *)
-	      	(*   of (FemOpt.ExtractDofs, _) => FemToLow.indexedDataLowering(y, opt, dataArg, indexArg) *)
-	      	(* (* end case *)) *)
-		(* end *)
+
               | rator => raise Fail("bogus operator " ^ SrcOp.toString rator)
             (* end case *)
           end

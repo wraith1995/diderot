@@ -15,12 +15,12 @@ structure FemOpt : sig
 			      | ExtractIndices |  ExtractDofsSeq
 			      | NumCell  | ExtractIndex | ExtractDof (* primitize all*)
 			      | StartCell
-			      | CellIndex | PromoteCell (* primitize, cells*)
+			      | CellIndex (* primitize, cells*)
 			      (*mesh pos operations:*)
 			      | Valid | RefPos | WorldPos of Atom.atom option * Stamp.t option | UWorldPos
 			      | RefBuild | WorldBuild of Atom.atom option * Stamp.t option | AllBuild
 			      | NewWorld
-			      | InvalidBuild | WorldTest | NearbyCellQuery of Atom.atom
+			      | InvalidBuild | NearbyCellQuery of Atom.atom
 			      | InvalidBuildBoundary | CellConnectivity | CellFaceCell
 			      | InsideInsert of Atom.atom | PosEntryFacet
 			      | CellData of Atom.atom
@@ -45,7 +45,7 @@ structure FemOpt : sig
 			
 	   val fieldString : femField -> string
 
-	   datatype stages = AST | SIMPLE | HIGH | MID | LOW | TREE | CXX
+	   datatype stages = PST | AST | SIMPLE | HIGH | MID | LOW | TREE | CXX
 	   (*Range of allowed stages*)
 	   val stageRange : femOption -> stages * stages
 
@@ -56,11 +56,11 @@ datatype femOpts = Cells | RefCell
 		 | ExtractDofs
 		 | ExtractIndices |  ExtractDofsSeq
 		 | NumCell  | StartCell | ExtractIndex | ExtractDof (* primitize all*)
-		 | CellIndex | PromoteCell (* primitize, cells*)
+		 | CellIndex (* primitize, cells*)
 		 (*mesh pos operations:*)
 		 | Valid | RefPos | WorldPos of Atom.atom option * Stamp.t option | UWorldPos (*function to do Transform*)
 		 | RefBuild | WorldBuild of Atom.atom option * Stamp.t option | AllBuild | NewWorld (*function to do inverse, but not needed*)
-		 | InvalidBuild | InvalidBuildBoundary | WorldTest (*internal use only*)
+		 | InvalidBuild | InvalidBuildBoundary  (*internal use only*)
 		 | NearbyCellQuery of Atom.atom
 		 | CellConnectivity | CellFaceCell
 		 | InsideInsert of Atom.atom | PosEntryFacet
@@ -93,7 +93,6 @@ fun toStringOpt v =
        | ExtractDof => "ExtractDof"
        | ExtractIndices => "ExtractIndices"
        | ExtractDofsSeq => "ExtractDofsSeq"
-       | PromoteCell => "PromoteCell"
        | RefCell => "RefCell"
        | Valid => "Valid"
        | RefPos => "RefPos"
@@ -103,7 +102,6 @@ fun toStringOpt v =
        | InvalidBuild => "InvalidBuild"
        | InvalidBuildBoundary => "InvalidBuildBoundary"
        | AllBuild => "AllBuild"
-       | WorldTest => "WorldTest"
        | UWorldPos => "UWorldPos"
        | NewWorld => "NewWorld"
        | NearbyCellQuery(a) => "NearbyCell(File="^(Atom.toString a)^")"
@@ -127,7 +125,6 @@ fun arity (NumCell) = 1
   | arity (ExtractDofsSeq) = 2
   | arity (ExtractIndex) = 2
   | arity (ExtractDof) = 2
-  | arity (PromoteCell) = 2
   | arity (RefCell) = 1
   | arity (Valid) = 1
   | arity (RefPos) = 1
@@ -136,7 +133,6 @@ fun arity (NumCell) = 1
   | arity (WorldBuild _) = 2
   | arity (InvalidBuild) = 1
   | arity (InvalidBuildBoundary) = 2
-  | arity (WorldTest) = 1
   | arity (UWorldPos) = 1
   | arity (AllBuild) = 4
   | arity (NewWorld) = 2
@@ -156,7 +152,6 @@ fun hash (NumCell, d) = 0w1 + FT.hash d
   | hash (ExtractDofs, d) = 0w11 + FT.hash d
   | hash (ExtractIndices, d) = 0w13 + FT.hash d
   | hash (ExtractDofsSeq, d) = 0w17 + FT.hash d
-  | hash (PromoteCell, d) = 0w19 + FT.hash d
   | hash (RefCell, d) = 0w23 + FT.hash d
   | hash (Valid, d) =  0w29 + FT.hash d
   | hash (RefPos, d) = 0w31 + FT.hash d
@@ -164,7 +159,6 @@ fun hash (NumCell, d) = 0w1 + FT.hash d
   | hash (InvalidBuild, d) = 0w53 + FT.hash d
   | hash (WorldBuild r, d) = 0w41 + FT.hash d + 0w43 * (mapAS Atom.hash Stamp.hash 0w47 r)
   | hash (WorldPos r, d) = 0w53 + FT.hash d + 0w59 * (mapAS Atom.hash Stamp.hash 0w61 r)
-  | hash (WorldTest, d) = 0w67 + FT.hash d
   | hash (UWorldPos, d) = 0w71 + FT.hash d
   | hash (AllBuild, d) = 0w73 + FT.hash d
   | hash (NewWorld, d) = 0w79 + FT.hash d
@@ -197,13 +191,11 @@ fun same ((v1, d1),(v2, d2)) = FT.same(d1,d2) andalso
        | (ExtractIndices, ExtractIndices) => true
        | (ExtractDof, ExtractDof) => true
        | (ExtractDofsSeq,ExtractDofsSeq) => true
-       | (PromoteCell, PromoteCell) => true
        | (RefCell,RefCell) => true
        | (Valid, Valid) => true
        | (RefPos, RefPos) => true
        | (RefBuild, RefBuild) => true
        | (InvalidBuild, InvalidBuild) => true
-       | (WorldTest, WorldTest) => true
        | (WorldBuild r1, WorldBuild r2) => sameR(r1, r2)
        | (WorldPos r1, WorldPos r2) => sameR(r1, r2)
        | (UWorldPos, UWorldPos) => true
@@ -271,9 +263,14 @@ fun lowerDataOpt (v,d) = (case v
 			 (* end case *))
 
 
-datatype stages = AST | SIMPLE | HIGH | MID | LOW | TREE | CXX
+datatype stages = PST | AST | SIMPLE | HIGH | MID | LOW | TREE | CXX
 							     
-fun stageRange (Cells, _) = (AST, SIMPLE)
+fun stageRange (Cells, _) = (PST, SIMPLE)
+  | stageRange (RefCell, _) = (PST, AST)
+  | stageRange (NumCell, _) = (PST, CXX)
+  | stageRange (StartCell, _) = (AST, CXX)
+  | stageRange (CellIndex, _) = (AST, CXX)
+  | stageRange (CellData _, _) = (AST, CXX)
   | stageRange _ = raise Fail "NYI"
       
 end
