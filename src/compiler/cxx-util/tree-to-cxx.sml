@@ -316,7 +316,6 @@ structure TreeToCxx : sig
 	      (* end case*))
 	    | (Op.ExtractFemItem(ty, (FemOpt.NumCell, _)), [a]) => CL.E_Select(a, "numCells")
 	    | (Op.ExtractFemItem(ty, (FemOpt.StartCell, _)), [a]) => CL.E_Int(IntLit.fromInt 0, CL.intTy)
-	    | (Op.ExtractFemItem(ty, (FemOpt.Cells, _)), [a]) => CL.E_Select(a, "cells")
 	    | (Op.ExtractFemItem(ty, (FemOpt.CellIndex, _)), [a]) => CL.E_Select(a, "cell")
 	    | (Op.ExtractFemItem(ty, (FemOpt.Valid, _)), [a]) => CL.E_Select(a, "valid")
 	    | (Op.ExtractFemItem(ty, (FemOpt.RefPos, _)), [a]) => (CL.E_Select(a, "refPos"))

@@ -26,6 +26,8 @@ structure FemOpt : sig
 			      | CellData of Atom.atom
 
 	   type femOption = femOpts * FemData.femType
+
+	   
 					    
 	   val same : femOption * femOption -> bool
 	   val hash : femOption -> word
@@ -42,6 +44,12 @@ structure FemOpt : sig
 	   datatype femField =  Transform | RefField | InvTransform
 			
 	   val fieldString : femField -> string
+
+	   datatype stages = AST | SIMPLE | HIGH | MID | LOW | TREE | CXX
+	   (*Range of allowed stages*)
+	   val stageRange : femOption -> stages * stages
+
+					   
 									     
 	  end = struct
 datatype femOpts = Cells | RefCell
@@ -263,5 +271,9 @@ fun lowerDataOpt (v,d) = (case v
 			 (* end case *))
 
 
+datatype stages = AST | SIMPLE | HIGH | MID | LOW | TREE | CXX
+							     
+fun stageRange (Cells, _) = (AST, SIMPLE)
+  | stageRange _ = raise Fail "NYI"
       
 end
