@@ -10,19 +10,26 @@
 
 
 structure FemOpt : sig
-	   datatype femOpts = Cells | RefCell
-			      | ExtractDofs 
-			      | ExtractIndices |  ExtractDofsSeq 
-			      | NumCell  | ExtractIndex | ExtractDof 
-			      | StartCell
-			      | CellIndex
-			      (*mesh pos operations:*)
-			      | RefPos 
-			      | RefBuild | AllBuild (*takes mesh,cell, pos - takes everything and optional facet*)
-			      | InvalidBuild | NearbyCellQuery of Atom.atom (*takes just mesh - invalid*)
-			      | InvalidBuildBoundary  | CellFaceCell (*takes mesh, refposition, tensor- invalid*)
-			      | InsideInsert of Atom.atom | PosEntryFacet (*clarify*)
-			      | CellData of Atom.atom (*clarify*)
+	   datatype femOpts = Cells | RefCell | NumCell | StartCell (* Globals for mesh *)
+			      (* dof extraction: *)
+			      | ExtractDofs (* AST-HIGH level dof extraction *)
+			      | ExtractIndices |  ExtractDofsSeq  (* mid dof extraction *)
+			      | ExtractIndex | ExtractDof  (* low and onwards dof extraction*)
+			      (*other extractors for cells and pos:*)
+			      | CellIndex (* get the index of cell or pos*)
+			      | CellData of Atom.atom (* get a particular bit of data attached to a cell*)
+			      | NearbyCellQuery of Atom.atom (* geom data structure querry *)
+			      | RefPos (* get the ref pos of a pos *)
+			      | PosEntryFacet (* gets the facet from a ref pos*)
+			      (* pos constructors: *)
+			      | RefBuild (* takes mesh, cell, ref pos *)
+			      | AllBuild (* takes mesh,cell, ref pos, world pos, optional facet *)
+			      | InvalidBuild (* takes just mesh - invalid *)
+			      | InvalidBuildBoundary (* takes just the mesh, refpos at intersection, and facet - invalid*)
+			      | CellFaceCell (* given cell, facet -> cell, facet next door*)
+			      (* the inside test and other inserts:*)
+			      | InsideInsert of Atom.atom 
+			       (*clarify*)
 
 	   type femOption = femOpts * FemData.femType
 
@@ -48,23 +55,29 @@ structure FemOpt : sig
 	   (*Range of allowed stages*)
 	   val stageRange : femOption -> stages * stages
 
-					   
-									     
+						    
+						    
 	  end = struct
-datatype femOpts = Cells | RefCell
-		 | ExtractDofs
-		 | ExtractIndices |  ExtractDofsSeq
-		 | NumCell  | StartCell | ExtractIndex | ExtractDof (* primitize all*)
-		 | CellIndex (* primitize, cells*)
-		 (*mesh pos operations:*)
-		 | RefPos
-		 | RefBuild | AllBuild 
-		 | InvalidBuild | InvalidBuildBoundary  (*internal use only*)
-		 | NearbyCellQuery of Atom.atom
-		 | CellFaceCell
-		 | InsideInsert of Atom.atom | PosEntryFacet
-		 | CellData of Atom.atom
-
+datatype femOpts = Cells | RefCell | NumCell | StartCell (* Globals for mesh *)
+		   (* dof extraction: *)
+		   | ExtractDofs (* AST-HIGH level dof extraction *)
+		   | ExtractIndices |  ExtractDofsSeq  (* mid dof extraction *)
+		   | ExtractIndex | ExtractDof  (* low and onwards dof extraction*)
+		   (*other extractors for cells and pos:*)
+		   | CellIndex (* get the index of cell or pos*)
+		   | CellData of Atom.atom (* get a particular bit of data attached to a cell*)
+		   | NearbyCellQuery of Atom.atom (* geom data structure querry *)
+		   | RefPos (* get the ref pos of a pos *)
+		   | PosEntryFacet (* gets the facet from a ref pos*)
+		   (* pos constructors: *)
+		   | RefBuild (* takes mesh, cell, ref pos *)
+		   | AllBuild (* takes mesh,cell, ref pos, world pos, optional facet *)
+		   | InvalidBuild (* takes just mesh - invalid *)
+		   | InvalidBuildBoundary (* takes just the mesh, refpos at intersection, and facet - invalid*)
+		   | CellFaceCell (* given cell, facet -> cell, facet next door*)
+		   (* the inside test and other inserts:*)
+		   | InsideInsert of Atom.atom 
+(*clarify*)
 		     
 datatype femField =  Transform | RefField | InvTransform 
 
