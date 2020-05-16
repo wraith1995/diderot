@@ -69,9 +69,8 @@ structure FemOptSplit : sig
 	 val (_, data) = opt
 	 val (dataSource, indexSource) = (dataArg, indexSrcVar) 
 	 val len = FO.findIndexLength indexingOpt
-	 val shapeRest = FO.findTargetShape dataGetOpt
-	 val resultShape = shapeRest (* missing len here - what are the meaning of these things?*)
-	 (*Factor this out to determine types via another function*)
+	 val resultShape = FO.findTargetShape dataGetOpt
+
 	 val (indexTy, indexLoad) = indexArrayLoad(avail, len, indexingOpt, indexSource, indexVar)
 	 val result = dofLoad(avail, resultShape, dataGetOpt, dataSource, indexLoad, indexTy)
 	in
@@ -85,12 +84,10 @@ structure FemOptSplit : sig
 	 val (_, data) = opt
 	 val (dataSource, indexSource) = findSources(avail, dataArg, data)
 	 val len = FO.findIndexLength indexingOpt
-	 val shapeRest = FO.findTargetShape dataGetOpt
-	 val resultShape = shapeRest (* missing len here - what are the meaning of these things?*)
-	 (*Factor this out to determine types via another function*)
+	 val resultShape = FO.findTargetShape dataGetOpt
+					      
 	 val (indexTy, indexLoad) = indexArrayLoad(avail, len, indexingOpt, indexSource, indexVar)
 	 val result = dofLoad(avail, resultShape, dataGetOpt, dataSource, indexLoad, indexTy)
-
 	in
 	 AvailRHS.addAssignToList (avail, (lhs, IR.VAR result));
 	 List.rev (AvailRHS.getAssignments avail)

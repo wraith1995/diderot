@@ -196,6 +196,7 @@ structure Simplify : sig
 				 val refPosTemp = newTemp newTensor;
 				 val meshTemp = newTemp meshTy;
 				 val cellTemp = newTemp STy.T_Int
+				 val negOneTemp = newTemp STy.T_Int
 				 val boolTemp = newTemp STy.T_Bool
 				 val assignTemp = newTemp newTensor
 				 val startAssign = S.S_Var(assignTemp, NONE)
@@ -207,7 +208,10 @@ structure Simplify : sig
 				 val getMesh = S.S_Assign(meshTemp, S.E_ExtractFem(x', meshHolder))
 				 val fieldAssign = S.S_Assign(fieldTemp, S.E_FemField(meshTemp, meshTemp, SOME(cellTemp), fieldTy, FemOpt.Transform, NONE))
 				 val getRefCell = S.S_Assign(refPosTemp, S.E_ExtractFemItem(x', newTensor, (FemOpt.RefPos, ms)))
-				 val getValid = S.S_Assign(boolTemp, S.E_ExtractFemItem(x', STy.T_Bool, (FemOpt.Valid, ms)))
+				 val negOneAsssign = S.S_Assign(negOneTemp, S.E_Lit(Literal.intLit (~1)))
+				 val getValid = S.S_Assign(boolTemp, S.E_Prim(BV.neq_ii, [STy.TY(STy.T_Bool), STy.TY(STy.T_Bool)], [cellTemp, negOneTemp], STy.T_Bool))
+
+							   (* S.E_ExtractFemItem(x', STy.T_Bool, (FemOpt.Valid, ms))) *)
 							  
 				 val inf = S.E_Lit(Literal.Real(RealLit.posInf))
 				 val infinityInits = List.tabulate(dim, fn x =>
@@ -234,7 +238,7 @@ structure Simplify : sig
 
 				in
 				 (* SOME([fin, fieldAssign, getRefCell, getMesh, getCell]) *)
-				 SOME([actualFin, ifStm, getValid]@inits@[startAssign])
+				 SOME([actualFin, ifStm, getValid]@inits@[startAssign, negOneAsssign])
 				end
 			   (*end case*))
 			     

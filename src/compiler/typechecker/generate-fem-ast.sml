@@ -833,7 +833,13 @@ fun makeFemMethods (cxt, env, tyName, span) femTyDef file cellAccData femInfo =
 
 	  val meshInsideAtom = Atom.atom FemName.isInsideMesh
 	  val meshInsideType = Ty.T_Fun([cellType], Ty.T_Bool)
-	  fun meshInsideFunc([v1, v2]) = AST.E_ExtractFemItem(AST.E_Apply((meshPosFuncVar, span), [v1, v2], Ty.T_Bool), Ty.T_Bool, (FemOpt.Valid,meshPos))
+	  fun meshInsideFunc([v1, v2]) =
+	      let
+	       val temp1 = AST.E_Apply((meshPosFuncVar, span), [v1, v2], meshPosTy)
+	       val ret = makePrim'(BV.neq_ii, [AST.E_ExtractFemItem(temp1, Ty.T_Int,  (FO.CellIndex, meshPos)), AST.E_Lit(Literal.intLit (~1))], [Ty.T_Int, Ty.T_Int], Ty.T_Bool)
+	      in
+	       ret
+	      end
 	    | meshInsideFunc (_) = raise Fail "impossible type checker error"
 
 
@@ -952,7 +958,7 @@ fun makeMeshPos(env, cxt, span, meshData, transformVars, dumb, extraFuns, extraR
 
  fun femOpt opt = (opt, meshPosData)
 
- fun valid([v]) = AST.E_ExtractFemItem(v, Ty.T_Bool, femOpt FO.Valid) (*go for it*)
+ fun valid([v]) = makePrim'(BV.neq_ii, [AST.E_ExtractFemItem(v, Ty.T_Int, femOpt FO.CellIndex), AST.E_Lit(Literal.Real(RealLit.m_one))], [Ty.T_Int, Ty.T_Int], Ty.T_Bool)
  val results = makeFunctionRegistration(FemName.valid, [meshPosTy], Ty.T_Bool, valid)::results
 
  fun cell([v]) =
@@ -1115,7 +1121,7 @@ fun makeDescendentFemTypes (cxt, tyName, span) geometry cellAccData (env, femTyp
 	    fun makeInsideCell([v1,v2]) =
 		let
 		 val getPos = AST.E_Apply((hiddenFuncVar,span), [v2, AST.E_ExtractFemItem(v1, Ty.T_Int, (FemOpt.CellIndex, cellData)), AST.E_ExtractFem(v1, meshData)], posTy)
-		 val getValid = AST.E_ExtractFemItem(getPos, Ty.T_Bool, (FemOpt.Valid, posData))
+		 val getValid = makePrim'(BV.neq_ii, [AST.E_ExtractFemItem(getPos, Ty.T_Int, (FemOpt.CellIndex, posData)), AST.E_Lit(Literal.Real(RealLit.m_one))], [Ty.T_Int, Ty.T_Int], Ty.T_Bool)
 		in
 		 getValid
 		end
@@ -1232,11 +1238,13 @@ fun makeDescendentFemTypes (cxt, tyName, span) geometry cellAccData (env, femTyp
 					 of [v] =>
 					    let
 					     val getFunc = AST.E_ExtractFem(v, femType)
-					     val getSpace = AST.E_ExtractFem(getFunc,space)
+					     (* val getSpace = AST.E_ExtractFem(getFunc,space) *)
 					     (*might want to extract it now.*)
 					     val getCellInt= AST.E_ExtractFemItem(v, Ty.T_Int, (FemOpt.CellIndex, funcCellData))
-					     val getIndexi = AST.E_ExtractFemItem2(getSpace, (getCellInt), Ty.T_Int, dofIndexSeq, (FemOpt.ExtractIndices, space))
-					     val getTensor = AST.E_ExtractFemItem2(getFunc, (getIndexi), dofIndexSeq, funcDofsTy, (FemOpt.ExtractDofsSeq, femType))
+					     (* val getIndexi = AST.E_ExtractFemItem2(getSpace, (getCellInt), Ty.T_Int, dofIndexSeq, (FemOpt.ExtractIndices, space)) *)
+										 (* val getTensor = AST.E_ExtractFemItem2(getFunc, (getIndexi), dofIndexSeq, funcDofsTy, (FemOpt.ExtractDofsSeq, femType)) *)
+					     val getTensor = AST.E_ExtractFemItem2(getFunc, (getCellInt), Ty.T_Int, funcDofsTy, (FemOpt.ExtractDofs, femType))
+										  
 					    in
 					     getTensor
 					    end

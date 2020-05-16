@@ -11,13 +11,13 @@
 
 structure FemOpt : sig
 	   datatype femOpts = Cells | RefCell
-			      | ExtractDofs
-			      | ExtractIndices |  ExtractDofsSeq
-			      | NumCell  | ExtractIndex | ExtractDof (* primitize all*)
+			      | ExtractDofs (*PST->High*)
+			      | ExtractIndices |  ExtractDofsSeq (*Mid*)
+			      | NumCell  | ExtractIndex | ExtractDof (* LOW->*)
 			      | StartCell
 			      | CellIndex (* primitize, cells*)
 			      (*mesh pos operations:*)
-			      | Valid | RefPos | WorldPos of Atom.atom option * Stamp.t option | UWorldPos
+			      | RefPos | WorldPos of Atom.atom option * Stamp.t option | UWorldPos
 			      | RefBuild | WorldBuild of Atom.atom option * Stamp.t option | AllBuild
 			      | NewWorld
 			      | InvalidBuild | NearbyCellQuery of Atom.atom
@@ -58,7 +58,7 @@ datatype femOpts = Cells | RefCell
 		 | NumCell  | StartCell | ExtractIndex | ExtractDof (* primitize all*)
 		 | CellIndex (* primitize, cells*)
 		 (*mesh pos operations:*)
-		 | Valid | RefPos | WorldPos of Atom.atom option * Stamp.t option | UWorldPos (*function to do Transform*)
+		 | RefPos | WorldPos of Atom.atom option * Stamp.t option | UWorldPos (*function to do Transform*)
 		 | RefBuild | WorldBuild of Atom.atom option * Stamp.t option | AllBuild | NewWorld (*function to do inverse, but not needed*)
 		 | InvalidBuild | InvalidBuildBoundary  (*internal use only*)
 		 | NearbyCellQuery of Atom.atom
@@ -94,7 +94,6 @@ fun toStringOpt v =
        | ExtractIndices => "ExtractIndices"
        | ExtractDofsSeq => "ExtractDofsSeq"
        | RefCell => "RefCell"
-       | Valid => "Valid"
        | RefPos => "RefPos"
        | WorldPos r => "WorldPos(" ^ (mapAS Atom.toString Stamp.toString "NONE" r) ^ ")"
        | RefBuild => "RefBuild"
@@ -126,7 +125,6 @@ fun arity (NumCell) = 1
   | arity (ExtractIndex) = 2
   | arity (ExtractDof) = 2
   | arity (RefCell) = 1
-  | arity (Valid) = 1
   | arity (RefPos) = 1
   | arity (WorldPos _) = 1
   | arity (RefBuild) = 3
@@ -153,7 +151,6 @@ fun hash (NumCell, d) = 0w1 + FT.hash d
   | hash (ExtractIndices, d) = 0w13 + FT.hash d
   | hash (ExtractDofsSeq, d) = 0w17 + FT.hash d
   | hash (RefCell, d) = 0w23 + FT.hash d
-  | hash (Valid, d) =  0w29 + FT.hash d
   | hash (RefPos, d) = 0w31 + FT.hash d
   | hash (RefBuild, d) = 0w37 + FT.hash d
   | hash (InvalidBuild, d) = 0w53 + FT.hash d
@@ -192,7 +189,6 @@ fun same ((v1, d1),(v2, d2)) = FT.same(d1,d2) andalso
        | (ExtractDof, ExtractDof) => true
        | (ExtractDofsSeq,ExtractDofsSeq) => true
        | (RefCell,RefCell) => true
-       | (Valid, Valid) => true
        | (RefPos, RefPos) => true
        | (RefBuild, RefBuild) => true
        | (InvalidBuild, InvalidBuild) => true
@@ -271,6 +267,12 @@ fun stageRange (Cells, _) = (PST, SIMPLE)
   | stageRange (StartCell, _) = (AST, CXX)
   | stageRange (CellIndex, _) = (AST, CXX)
   | stageRange (CellData _, _) = (AST, CXX)
+  | stageRange (ExtractDofs, _) = (PST, HIGH)
+  (*That these two exist at MID is a bit confusing for cache optimization*)
+  | stageRange (ExtractIndices, _) = (MID, MID)
+  | stageRange (ExtractDofsSeq, _) = (MID, MID)
+  | stageRange (ExtractIndex, _) = (LOW, CXX)
+  | stageRange (ExtractDof, _) = (LOW, CXX)
   | stageRange _ = raise Fail "NYI"
       
 end
