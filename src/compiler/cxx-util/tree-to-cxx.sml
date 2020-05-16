@@ -318,7 +318,7 @@ structure TreeToCxx : sig
 	    | (Op.ExtractFemItem(ty, (FemOpt.StartCell, _)), [a]) => CL.E_Int(IntLit.fromInt 0, CL.intTy)
 	    | (Op.ExtractFemItem(ty, (FemOpt.CellIndex, _)), [a]) => CL.E_Select(a, "cell")
 	    | (Op.ExtractFemItem(ty, (FemOpt.RefPos, _)), [a]) => (CL.E_Select(a, "refPos"))
-	    | (Op.ExtractFemItem(ty, (FemOpt.UWorldPos, _)), [a]) => (CL.E_Select(a, "worldPos"))
+	    (* Gentle reminder of missing optimization: | (Op.ExtractFemItem(ty, (FemOpt.UWorldPos, _)), [a]) => (CL.E_Select(a, "worldPos")) *)
 	    | (Op.ExtractFemItem(ty, (FemOpt.PosEntryFacet, _)), [a]) => (CL.E_Select(a, "face"))
 	    | (Op.ExtractFemItem2(ty,ty', (FemOpt.ExtractDof, _)), [a,b]) =>
 	      (case ty'

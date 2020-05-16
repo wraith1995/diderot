@@ -17,7 +17,7 @@ structure FemOpt : sig
 			      | StartCell
 			      | CellIndex (* primitize, cells*)
 			      (*mesh pos operations:*)
-			      | RefPos | WorldPos of Atom.atom option * Stamp.t option | UWorldPos
+			      | RefPos 
 			      | RefBuild | WorldBuild of Atom.atom option * Stamp.t option | AllBuild
 			      | NewWorld
 			      | InvalidBuild | NearbyCellQuery of Atom.atom
@@ -58,7 +58,7 @@ datatype femOpts = Cells | RefCell
 		 | NumCell  | StartCell | ExtractIndex | ExtractDof (* primitize all*)
 		 | CellIndex (* primitize, cells*)
 		 (*mesh pos operations:*)
-		 | RefPos | WorldPos of Atom.atom option * Stamp.t option | UWorldPos (*function to do Transform*)
+		 | RefPos
 		 | RefBuild | WorldBuild of Atom.atom option * Stamp.t option | AllBuild | NewWorld (*function to do inverse, but not needed*)
 		 | InvalidBuild | InvalidBuildBoundary  (*internal use only*)
 		 | NearbyCellQuery of Atom.atom
@@ -95,13 +95,11 @@ fun toStringOpt v =
        | ExtractDofsSeq => "ExtractDofsSeq"
        | RefCell => "RefCell"
        | RefPos => "RefPos"
-       | WorldPos r => "WorldPos(" ^ (mapAS Atom.toString Stamp.toString "NONE" r) ^ ")"
        | RefBuild => "RefBuild"
        | WorldBuild r => "WorldBuild(" ^ ((mapAS Atom.toString Stamp.toString "Error") r) ^ ")"
        | InvalidBuild => "InvalidBuild"
        | InvalidBuildBoundary => "InvalidBuildBoundary"
        | AllBuild => "AllBuild"
-       | UWorldPos => "UWorldPos"
        | NewWorld => "NewWorld"
        | NearbyCellQuery(a) => "NearbyCell(File="^(Atom.toString a)^")"
        | CellConnectivity => "CellConnectivity"
@@ -126,12 +124,10 @@ fun arity (NumCell) = 1
   | arity (ExtractDof) = 2
   | arity (RefCell) = 1
   | arity (RefPos) = 1
-  | arity (WorldPos _) = 1
   | arity (RefBuild) = 3
   | arity (WorldBuild _) = 2
   | arity (InvalidBuild) = 1
   | arity (InvalidBuildBoundary) = 2
-  | arity (UWorldPos) = 1
   | arity (AllBuild) = 4
   | arity (NewWorld) = 2
   | arity (NearbyCellQuery(_)) = 2
@@ -155,8 +151,6 @@ fun hash (NumCell, d) = 0w1 + FT.hash d
   | hash (RefBuild, d) = 0w37 + FT.hash d
   | hash (InvalidBuild, d) = 0w53 + FT.hash d
   | hash (WorldBuild r, d) = 0w41 + FT.hash d + 0w43 * (mapAS Atom.hash Stamp.hash 0w47 r)
-  | hash (WorldPos r, d) = 0w53 + FT.hash d + 0w59 * (mapAS Atom.hash Stamp.hash 0w61 r)
-  | hash (UWorldPos, d) = 0w71 + FT.hash d
   | hash (AllBuild, d) = 0w73 + FT.hash d
   | hash (NewWorld, d) = 0w79 + FT.hash d
   | hash (NearbyCellQuery(a), d) = 0w83 + (Atom.hash a) * 0w89 + FT.hash d
@@ -193,8 +187,6 @@ fun same ((v1, d1),(v2, d2)) = FT.same(d1,d2) andalso
        | (RefBuild, RefBuild) => true
        | (InvalidBuild, InvalidBuild) => true
        | (WorldBuild r1, WorldBuild r2) => sameR(r1, r2)
-       | (WorldPos r1, WorldPos r2) => sameR(r1, r2)
-       | (UWorldPos, UWorldPos) => true
        | (AllBuild, AllBuild) => true
        | (NewWorld, NewWorld) => true
        | (NearbyCellQuery(a1), NearbyCellQuery(a2)) => Atom.same(a1, a2)
@@ -273,6 +265,7 @@ fun stageRange (Cells, _) = (PST, SIMPLE)
   | stageRange (ExtractDofsSeq, _) = (MID, MID)
   | stageRange (ExtractIndex, _) = (LOW, CXX)
   | stageRange (ExtractDof, _) = (LOW, CXX)
+  | stageRange (RefPos, _) = (PST, CXX)
   | stageRange _ = raise Fail "NYI"
       
 end
