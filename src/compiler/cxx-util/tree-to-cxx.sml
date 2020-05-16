@@ -390,7 +390,7 @@ structure TreeToCxx : sig
 		    in
 		     result
 		    end
-		  | ((FemOpt.InvalidBuildBoundary, FT.MeshPos(m)), [mesh, tensor]) => CL.mkApply("invalidBuild", [mesh, tensor])
+		  | ((FemOpt.InvalidBuildBoundary, FT.MeshPos(m)), [mesh, tensor, facet]) => CL.mkApply("invalidBuild", [mesh, tensor])
 		  | ((FemOpt.RefBuild, FT.Mesh(m)), [mesh, cell, refTensor]) => CL.mkApply("refBuild", [mesh, cell, refTensor])
 		  | ((FemOpt.RefBuild, FT.Mesh(m)), [mesh, cell, refTensor, facet]) => CL.mkApply("refBuild", [mesh, cell, refTensor, facet])
 		  | ((FemOpt.InsideInsert(_), fem as FT.Mesh(m)), [mesh, x, r]) =>

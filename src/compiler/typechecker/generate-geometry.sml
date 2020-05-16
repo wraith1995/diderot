@@ -753,7 +753,7 @@ fun newtonLoopBlock(normal, dScalar, refPosExp, dPosExp, maxN, eps, t) =
 		     of SOME(pr) => AST.S_Block([pr, AST.S_Return(solveBody)])
 		      | NONE => AST.S_Block([AST.S_Return(solveBody)])
 		    (*end case*))
-      val boundaryMeshPos = AST.E_ExtractFemItemN([meshExp, newVec], [meshTy, vecTy], posTy, (FemOpt.InvalidBuildBoundary, posData), NONE)
+      val boundaryMeshPos = AST.E_ExtractFemItemN([meshExp, newVec, srcFacet], [meshTy, vecTy, Ty.T_Int], posTy, (FemOpt.InvalidBuildBoundary, posData), NONE)
       val failReturnMesh = AST.S_Return(boundaryMeshPos)
       val condition = makePrim'(BV.neq_ii, [AST.E_Lit(Literal.intLit (~1)), newCell], [Ty.T_Int, Ty.T_Int], Ty.T_Bool)
       val stm = AST.S_IfThenElse(condition, return, failReturnMesh);
