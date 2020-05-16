@@ -18,8 +18,7 @@ structure FemOpt : sig
 			      | CellIndex (* primitize, cells*)
 			      (*mesh pos operations:*)
 			      | RefPos 
-			      | RefBuild | WorldBuild of Atom.atom option * Stamp.t option | AllBuild
-			      | NewWorld
+			      | RefBuild | AllBuild
 			      | InvalidBuild | NearbyCellQuery of Atom.atom
 			      | InvalidBuildBoundary | CellConnectivity | CellFaceCell
 			      | InsideInsert of Atom.atom | PosEntryFacet
@@ -59,7 +58,7 @@ datatype femOpts = Cells | RefCell
 		 | CellIndex (* primitize, cells*)
 		 (*mesh pos operations:*)
 		 | RefPos
-		 | RefBuild | WorldBuild of Atom.atom option * Stamp.t option | AllBuild | NewWorld (*function to do inverse, but not needed*)
+		 | RefBuild | AllBuild 
 		 | InvalidBuild | InvalidBuildBoundary  (*internal use only*)
 		 | NearbyCellQuery of Atom.atom
 		 | CellConnectivity | CellFaceCell
@@ -96,11 +95,9 @@ fun toStringOpt v =
        | RefCell => "RefCell"
        | RefPos => "RefPos"
        | RefBuild => "RefBuild"
-       | WorldBuild r => "WorldBuild(" ^ ((mapAS Atom.toString Stamp.toString "Error") r) ^ ")"
        | InvalidBuild => "InvalidBuild"
        | InvalidBuildBoundary => "InvalidBuildBoundary"
        | AllBuild => "AllBuild"
-       | NewWorld => "NewWorld"
        | NearbyCellQuery(a) => "NearbyCell(File="^(Atom.toString a)^")"
        | CellConnectivity => "CellConnectivity"
        | CellFaceCell => "CellFaceCell"
@@ -125,11 +122,9 @@ fun arity (NumCell) = 1
   | arity (RefCell) = 1
   | arity (RefPos) = 1
   | arity (RefBuild) = 3
-  | arity (WorldBuild _) = 2
   | arity (InvalidBuild) = 1
   | arity (InvalidBuildBoundary) = 2
   | arity (AllBuild) = 4
-  | arity (NewWorld) = 2
   | arity (NearbyCellQuery(_)) = 2
   | arity (CellConnectivity) = 2
   | arity (CellFaceCell) = 3
@@ -150,9 +145,7 @@ fun hash (NumCell, d) = 0w1 + FT.hash d
   | hash (RefPos, d) = 0w31 + FT.hash d
   | hash (RefBuild, d) = 0w37 + FT.hash d
   | hash (InvalidBuild, d) = 0w53 + FT.hash d
-  | hash (WorldBuild r, d) = 0w41 + FT.hash d + 0w43 * (mapAS Atom.hash Stamp.hash 0w47 r)
   | hash (AllBuild, d) = 0w73 + FT.hash d
-  | hash (NewWorld, d) = 0w79 + FT.hash d
   | hash (NearbyCellQuery(a), d) = 0w83 + (Atom.hash a) * 0w89 + FT.hash d
   | hash (CellConnectivity, d) = 0w89 + FT.hash d
   | hash (InvalidBuildBoundary, d) = 0w97 + FT.hash d
@@ -186,9 +179,7 @@ fun same ((v1, d1),(v2, d2)) = FT.same(d1,d2) andalso
        | (RefPos, RefPos) => true
        | (RefBuild, RefBuild) => true
        | (InvalidBuild, InvalidBuild) => true
-       | (WorldBuild r1, WorldBuild r2) => sameR(r1, r2)
        | (AllBuild, AllBuild) => true
-       | (NewWorld, NewWorld) => true
        | (NearbyCellQuery(a1), NearbyCellQuery(a2)) => Atom.same(a1, a2)
        | (CellConnectivity, CellConnectivity) => true
        | (InvalidBuildBoundary,InvalidBuildBoundary) => true
