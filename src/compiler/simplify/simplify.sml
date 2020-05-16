@@ -209,7 +209,7 @@ structure Simplify : sig
 				 val fieldAssign = S.S_Assign(fieldTemp, S.E_FemField(meshTemp, meshTemp, SOME(cellTemp), fieldTy, FemOpt.Transform, NONE))
 				 val getRefCell = S.S_Assign(refPosTemp, S.E_ExtractFemItem(x', newTensor, (FemOpt.RefPos, ms)))
 				 val negOneAsssign = S.S_Assign(negOneTemp, S.E_Lit(Literal.intLit (~1)))
-				 val getValid = S.S_Assign(boolTemp, S.E_Prim(BV.neq_ii, [STy.TY(STy.T_Bool), STy.TY(STy.T_Bool)], [cellTemp, negOneTemp], STy.T_Bool))
+				 val getValid = S.S_Assign(boolTemp, S.E_Prim(BV.neq_ii, [], [cellTemp, negOneTemp], STy.T_Bool))
 
 							   (* S.E_ExtractFemItem(x', STy.T_Bool, (FemOpt.Valid, ms))) *)
 							  
@@ -226,7 +226,7 @@ structure Simplify : sig
 
 
 				 val ifStm = S.S_IfThenElse(boolTemp,
-							    S.Block{props = PropList.newHolder(), code =  [getCell, getRefCell, getMesh, fieldAssign, worldPos]},
+							    S.Block{props = PropList.newHolder(), code =  [getRefCell, getMesh, fieldAssign, worldPos]},
 							    S.Block{props = PropList.newHolder(), code =  [badAssign]})
 				 val actualFin = S.S_Assign(x'', S.E_Var(assignTemp))
 
@@ -238,7 +238,7 @@ structure Simplify : sig
 
 				in
 				 (* SOME([fin, fieldAssign, getRefCell, getMesh, getCell]) *)
-				 SOME([actualFin, ifStm, getValid]@inits@[startAssign, negOneAsssign])
+				 SOME([actualFin, ifStm, getValid]@inits@[getCell, startAssign, negOneAsssign])
 				end
 			   (*end case*))
 			     
