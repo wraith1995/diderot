@@ -33,6 +33,8 @@ structure TypeEnv : sig
 
 	   (* Finds a give constant in a type env*)
 	   val findConstant : t * Atom.atom -> ConstExpr.t option
+
+	   val printEnv : t -> unit
 end =  struct
 
 
@@ -67,6 +69,32 @@ end =  struct
     fun findConstant (TE{constants, ...}, name) = ATbl.find constants name
     fun findHiddenVar (TE{vars, ...}, name) = ATbl.find vars name
 					
-			 
+    fun printEnv (TE{name, def, methods, vars, constants}) =
+	let
+	 fun pMethod(atom, v) =
+	     let
+	      val name = Var.nameOf v
+	      val t = Var.monoTypeOf v
+	      val pt = TypeUtil.toString t
+	     in
+	      print("method " ^ name ^ " : " ^ pt ^ "\n")
+	     end
+	 fun pVar(atom, (f, t)) =
+	     let
+	      val name = Atom.toString atom
+	      val pt = TypeUtil.toString t
+	     in
+	      print("var " ^ name ^ " : " ^ pt ^ "\n")
+	     end
+	in
+	 (print("============\n");
+	  print("TE="^(Atom.toString name) ^ "\n");
+	  print("methods:\n");
+	  ATbl.appi pMethod methods;
+	  print("vars:\n");
+	  ATbl.appi pVar vars;
+	  print("============\n"))
+
+	end
 			
 end

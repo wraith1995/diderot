@@ -130,6 +130,10 @@ structure Env : sig
     val hasProp : t * Properties.t -> bool
     val properties : t -> Properties.t list
 
+
+    (* Util for self analysis *)
+    val printEnv : t -> unit
+
   end = struct
 
     structure GE = GlobalEnv
@@ -369,5 +373,9 @@ structure Env : sig
     fun recordProp (E{gEnv, ...}, p) = GE.recordProp (gEnv, p)
     fun hasProp (E{gEnv, ...}, p) = GE.hasProp (gEnv, p)
     fun properties (E{gEnv, ...}) = GE.properties gEnv
+
+    fun printEnv(E{gEnv, vEnv, ...}) = GE.printEnv(gEnv)
+
+	 
 
   end

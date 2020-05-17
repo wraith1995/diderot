@@ -760,7 +760,6 @@ structure CheckExpr : sig
 								  | NONE => ( (err (cxt, [S"The type named", A (TypeEnv.findName env),
 										     S " does not have a member named",
 										     A(field)])); NONE))) tyEnv
-	       val _ = print("Called on this crud:"^ (Atom.toString field) ^"\n");
 			    
 	      in
 	       (case method (*I think that any aditional typechecking here is redundant*)
@@ -789,15 +788,21 @@ structure CheckExpr : sig
 							    of SOME(args) => (AST.E_Apply(useVar(cxt, f), [e'], rng), rng)
 							     | NONE => raise Fail "IS THIS ACTUALlY POSSIBLE???"
 							  (*end case*))
-		 | checkFunApp _ = ((err (cxt, [S"Application of function ", A (field), S ", a member of the type ", A(name), S "requires arguments"]));bogusExpTy)
+		 | checkFunApp _ = ((err (cxt, [S"Application of function ",
+						A (field), S ", a member of the type ",
+						A(name), S "requires arguments"]));bogusExpTy)
 
-	       fun checkFunApp'(f, Ty.T_Fun([dom], rng)) = (case Unify.matchArgs([dom], [e'], [namedTy])
-							    of SOME(args) => (f [e'], rng)
-							     | NONE => ((err (cxt, [S"Application of function ", A (field), S ", a member of the type ", A(name),
-										    S "requires argument of type ", TY(dom), S" but got an argument of type", TY(namedTy), S"!"]));bogusExpTy)
-							  (*end case*))
-		 | checkFunApp' _ = ((err (cxt, [S"Application of function ", A (field), S ", a member of the type ", A(name), S "requires arguments"]));bogusExpTy)
-			    
+	       fun checkFunApp'(f, Ty.T_Fun([dom], rng)) =
+		   (case Unify.matchArgs([dom], [e'], [namedTy])
+		     of SOME(args) => (f [e'], rng)
+		      | NONE => ((err (cxt, [S"Application of function ", A (field), S ", a member of the type ", A(name),
+					     S "requires argument of type ", TY(dom), S" but got an argument of type",
+					     TY(namedTy), S"!"]));bogusExpTy)
+		   (*end case*))
+		 | checkFunApp' _ = ((err (cxt, [S"Application of function ", A (field),
+						 S ", a member of the type ", A(name),
+						 S "requires arguments"]));bogusExpTy)
+				      
 					    
 	      in
 	       (case (tyEnv, const, method, func)

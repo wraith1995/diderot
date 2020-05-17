@@ -60,6 +60,8 @@ structure GlobalEnv : sig
 
     val cleanEnv : t -> t
 
+    val printEnv : t -> unit
+
   end = struct
 
     structure ATbl = AtomTable
@@ -165,5 +167,58 @@ structure GlobalEnv : sig
 	 tEnv = tEnv,
 	 props = props
 	}
+	  
 
-  end
+    fun printEnv (GE{fEnv, vEnv, tEnv, ...}) =
+	let
+	 (* todo: refactor*)
+	 fun printF(atom, UserFun(v)) =
+	     let
+	      val name = Atom.toString atom
+	      val t = Var.monoTypeOf v
+	      val pt = TypeUtil.toString t
+	     in
+	      print("usefun " ^ name ^ " : " ^ pt ^ "\n")
+	     end
+	   | printF (atom, PrimFun(vs)) =
+	     let
+	      val name = Atom.toString atom
+	      (* val tStr = TypeUtil.toString o Var.monoTypeOf  *)
+	     in
+	      List.app (fn v => print("primfun " ^ name ^ " : " ^ "fixme" ^ "\n" )) vs
+	     end
+	   | printF (atom, OverloadUserFun(vs)) =
+	     let
+	      val name = Atom.toString atom
+	      val tStr = TypeUtil.toString o Var.monoTypeOf 
+	     in
+	      List.app (fn v => print("oUserFun " ^ name ^ " : " ^ (tStr v) ^ "\n")) vs
+	     end
+	 fun printV(atom, v) =
+	     let
+	      val name = Atom.toString atom
+	      val tStr = TypeUtil.toString o Var.monoTypeOf 
+	     in
+	      print("var " ^ name ^ " : " ^ (tStr v) ^ "\n")
+	     end
+	 fun printT(atom, t) = TE.printEnv(t)
+	in
+	 (print("Printing Env\n");
+	  print("====================\n");
+	  print("Printing Env vars\n");
+	  print("====================\n");
+	  ATbl.appi printV vEnv;
+	  print("====================\n");
+	  print("Printing Env funs\n");
+	  print("====================\n");
+	  ATbl.appi printF fEnv;
+	  print("====================\n");
+	  print("Printing Env tys\n");
+	  print("====================\n");
+	  ATbl.appi printT tEnv;
+	  print("====================\n");
+	  print("====================\n"))
+	end
+	  
+
+end

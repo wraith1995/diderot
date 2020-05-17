@@ -1,0 +1,54 @@
+Printing Env tys
+====================
+============
+TE=mesh_t
+methods:
+(Obvious) method findPos : (mesh_t( using FemType: Mesh with type var:NONE) * vec3) -> FemType: MeshPos with type var:mesh_t
+(Killed in simple) method cells : mesh_t( using FemType: Mesh with type var:NONE) -> FemType: MeshCell with type var:mesh_t[]
+(CONCERNING -- all refCell uses are vars - killed via a simple contract) method refcell : mesh_t( using FemType: Mesh with type var:NONE) -> FemType: RefCell with type var:mesh_t
+(Eliminate but bad) method == : (FemType: MeshCell with type var:mesh_t * FemType: MeshCell with type var:mesh_t) -> bool
+(Eliminate but bad) method != : (FemType: MeshCell with type var:mesh_t * FemType: MeshCell with type var:mesh_t) -> bool
+============
+============
+============
+TE=cell(mesh_t)
+methods:
+(EASY because unfiform) method _mesh_t_newtonInverse : (vec3 * int * FemType: Mesh with type var:NONE) -> FemType: MeshPos with type var:mesh_t
+vars: (all gone away and just use the refCell ones -- Need a rule on inserts but fine)
+var enter : (FemType: MeshCell with type var:mesh_t * vec3 * vec3) -> real
+var meshPos : (FemType: MeshCell with type var:mesh_t * vec3) -> FemType: MeshPos with type var:mesh_t
+var enterPos : (FemType: MeshCell with type var:mesh_t * vec3 * vec3) -> FemType: MeshPos with type var:mesh_t
+var isInside : (FemType: MeshCell with type var:mesh_t * vec3) -> bool
+var isValid : FemType: MeshCell with type var:mesh_t -> bool
+============
+============
+TE=pos(mesh_t)
+vars:
+var refPos : FemType: MeshPos with type var:mesh_t -> vec3
+(clear)var mc : FemType: MeshPos with type var:mesh_t -> FemType: MeshCell with type var:mesh_t
+var exit : (FemType: MeshPos with type var:mesh_t * vec3) -> real
+var isValid : FemType: MeshPos with type var:mesh_t -> bool
+(Should be okay - just uses refCell) var exitPos : (FemType: MeshPos with type var:mesh_t * vec3) -> FemType: MeshPos with type var:mesh_t
+============
+============
+TE=refCell(mesh_t)
+methods:
+(Skip)method $nextCell : (int * int * FemType: Mesh with type var:NONE) -> int[2]
+method _exit : (vec3 * vec3 * int) -> vec2
+(clear) method $exitPos : (FemType: Mesh with type var:NONE * int * vec3 * vec3 * real[2]) -> FemType: MeshPos with type var:mesh_t
+method _enter : (vec3 * vec3) -> vec2
+vars:
+============
+====================
+====================
+Conclusions:
+only methods are:
+-refCell intersection routesines that use a mesh and are Obvious
+-cell newton inverse that uses a mesh and is obvious
+-findPos - fine
+-cells - killed
+-equality - dies
+-RefCell - dies, but careful
+-numCell - dies
+-domain, space - dies
+-worldPos - dies

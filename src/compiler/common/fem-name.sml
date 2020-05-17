@@ -47,6 +47,8 @@ val funcDofs = "dofs"
 val refField = "refField"
 val trf = "transformedRefField";
 val field = "F";
+val funcCell = "funCell"
+val space = "space"
 
 (*meshPos:*)
 val cell = "mc"

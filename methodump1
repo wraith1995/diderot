@@ -1,0 +1,80 @@
+Printing Env tys
+====================
+============
+TE=mesh_t
+methods:
+method numCell : mesh_t( using FemType: Mesh with type var:NONE) -> int
+method findPos : (mesh_t( using FemType: Mesh with type var:NONE) * vec3) -> FemType: MeshPos with type var:mesh_t
+method cells : mesh_t( using FemType: Mesh with type var:NONE) -> FemType: MeshCell with type var:mesh_t[]
+method refcell : mesh_t( using FemType: Mesh with type var:NONE) -> FemType: RefCell with type var:mesh_t
+method == : (FemType: MeshCell with type var:mesh_t * FemType: MeshCell with type var:mesh_t) -> bool
+method != : (FemType: MeshCell with type var:mesh_t * FemType: MeshCell with type var:mesh_t) -> bool
+vars:
+var cells : mesh_t( using FemType: Mesh with type var:NONE) -> FemType: MeshCell with type var:mesh_t[]
+var invalidCell : mesh_t( using FemType: Mesh with type var:NONE) -> FemType: MeshCell with type var:mesh_t
+var isInside : FemType: MeshCell with type var:mesh_t -> bool
+var invalidPos : mesh_t( using FemType: Mesh with type var:NONE) -> FemType: MeshPos with type var:mesh_t
+============
+============
+TE=fns_t
+methods:
+method domain : fns_t( using FemType: Space with type var:mesh_t) -> mesh_t( using FemType: Mesh with type var:mesh_t)
+vars:
+============
+============
+TE=cell(mesh_t)
+methods:
+method _mesh_t_newtonInverse : (vec3 * int * FemType: Mesh with type var:NONE) -> FemType: MeshPos with type var:mesh_t
+vars:
+var transform : FemType: MeshCell with type var:mesh_t -> field(3)[3]
+var enter : (FemType: MeshCell with type var:mesh_t * vec3 * vec3) -> real
+var meshPos : (FemType: MeshCell with type var:mesh_t * vec3) -> FemType: MeshPos with type var:mesh_t
+var enterPos : (FemType: MeshCell with type var:mesh_t * vec3 * vec3) -> FemType: MeshPos with type var:mesh_t
+var isInside : (FemType: MeshCell with type var:mesh_t * vec3) -> bool
+var inverseTransform : FemType: MeshCell with type var:mesh_t -> field(3)[3]
+var transformDofs : FemType: MeshCell with type var:mesh_t -> tensor[20,3]
+var isValid : FemType: MeshCell with type var:mesh_t -> bool
+============
+============
+TE=cell(func_t)
+methods:
+vars:
+var refField : FemType: FuncCell with type var:func_t -> field(3)[]
+var dofs : FemType: FuncCell with type var:func_t -> tensor[84]
+var transformedRefField : FemType: FuncCell with type var:func_t -> field(3)[]
+============
+============
+TE=pos(mesh_t)
+methods:
+method worldPos : FemType: MeshPos with type var:mesh_t -> vec3
+vars:
+var refPos : FemType: MeshPos with type var:mesh_t -> vec3
+var mc : FemType: MeshPos with type var:mesh_t -> FemType: MeshCell with type var:mesh_t
+var exit : (FemType: MeshPos with type var:mesh_t * vec3) -> real
+var isValid : FemType: MeshPos with type var:mesh_t -> bool
+var exitPos : (FemType: MeshPos with type var:mesh_t * vec3) -> FemType: MeshPos with type var:mesh_t
+============
+============
+TE=refCell(mesh_t)
+methods:
+method $nextCell : (int * int * FemType: Mesh with type var:NONE) -> int[2]
+method _exit : (vec3 * vec3 * int) -> vec2
+method $exitPos : (FemType: Mesh with type var:NONE * int * vec3 * vec3 * real[2]) -> FemType: MeshPos with type var:mesh_t
+method _enter : (vec3 * vec3) -> vec2
+vars:
+var enter : (FemType: RefCell with type var:mesh_t * vec3 * vec3) -> real
+var isInside : (FemType: RefCell with type var:mesh_t * vec3) -> bool
+var exit : (FemType: RefCell with type var:mesh_t * FemType: MeshPos with type var:mesh_t * vec3) -> real
+var exitPos : (FemType: RefCell with type var:mesh_t * FemType: MeshPos with type var:mesh_t * vec3) -> FemType: MeshPos with type var:mesh_t
+============
+============
+TE=func_t
+methods:
+method funcCell : (func_t( using FemType: FemFunc with type var:fns_t) * FemType: MeshCell with type var:mesh_t) -> FemType: FuncCell with type var:func_t
+method space : func_t( using FemType: FemFunc with type var:fns_t) -> fns_t( using FemType: Space with type var:mesh_t)
+vars:
+var F : func_t( using FemType: FemFunc with type var:fns_t) -> field(3)[]
+var invalidCell : func_t( using FemType: FemFunc with type var:fns_t) -> FemType: FuncCell with type var:func_t
+============
+====================
+====================

@@ -234,7 +234,7 @@ fun nameOf data =
 
 fun envNameOf data = 
  (case data
-   of MeshCell(Mesh'{name, ...}) => Atom.atom ("call("^(Atom.toString name)^")")
+   of MeshCell(Mesh'{name, ...}) => Atom.atom ("cell("^(Atom.toString name)^")")
     | FuncCell(Func'{name, ...}) => Atom.atom ("cell("^(Atom.toString name)^")")
     | MeshPos(Mesh'{name, ...}) => Atom.atom ("pos(" ^(Atom.toString name)^")")
     | RefCell(Mesh'{name,...}) =>  Atom.atom ("refCell(" ^(Atom.toString name)^")")

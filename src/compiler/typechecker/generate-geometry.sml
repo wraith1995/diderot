@@ -606,7 +606,7 @@ fun newtonLoopBlock(normal, dScalar, refPosExp, dPosExp, maxN, eps, t) =
   (*      AST.E_Apply((nextCellFuncVar, span), [facetIdExpr, cellExpr, meshExp], Ty.T_Sequence(Ty.T_Int, SOME(Ty.DimConst 2))) *)
   (*     end *)
 
-  val nextCellAtom4 = Atom.atom "nextCell4"
+  val nextCellAtom4 = Atom.atom "$nextCell"
   val nextCellTy4 = Ty.T_Fun([Ty.T_Int, Ty.T_Int, meshTy], Ty.T_Sequence(Ty.T_Int, SOME(Ty.DimConst 2)))
   val nextCellFuncVar4 = Var.new (nextCellAtom4, span, AST.FunVar, nextCellTy4)
   val functionBody4 = faceConnectivityToCellFact(meshExp, cellExp, facetIntExp)

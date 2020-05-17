@@ -1,31 +1,50 @@
 New:
+Concerns: refCell
+Concerns: functions and cleaned methods
+
+ideal: functions have a globals, args -> ret
+---we don't care  if ret doesn't have fem and no args
+---if just args and globals, we compute inside as a function of those
+---if there are no globals, we just go through with assumptions (mesh a, mesh b... )
+---If there are globals that have fem, we pretend the globals are arguments too
+---Fixed mesh -- variable -- unificatoin type checker like thing -- possible call site modification
+Lesson: doable as far as I know -- let's just try and prove later...
+
+!!!!!!!!!!!!!!!!!!!!!!!
+Extra: vectorization in basis eval, basis field, Build a global basis registry to speed up compile time, fix damn fem names
+main:
+Target 1: Refine inline functions/dump and fix them all to help Hoare logic
+Target 2: Hoare logic and translation
+Target 2.1: Downstream translation consquences:
+**Make Mid using Extractdofs until an optimization stage to replace
+!!CHECK DOWNSTREAM IF CHANGING IN SIMPLE!!**Use this to avoid some of the downstream consquences and to do caching (when we get space and so forth)
+**Make sure caching works with this too
+
+!CHECK!**Notice: T vs T^-1 should occur in high-opt though. Any other field replace menetn
+!CHECK!What?**Notice: DUMB Seq vs. tensor debate again. Needs to be cleaned up, but recall why T vs T^-1 represented
+!???!! What does the T vs T^-1 coop with Chiw's stuff
+!!!!!!!!!!!!!!!!!!!!!!!!!
+Onwards: field language
 =================
-FemOpts are in disarray and need docs:
-**Go through and document their use and locations
-**Clean up
-**Notice: DUMB Seq vs. tensor debate again. Needs to be cleaned up, but recall why T vs T^-1 represented
-**Notice above: ^ Needs cleaning: should be ExtractDofs -> ExtractDofsSeq, ExtractIndecies - ExtractDof, ExtractIndex
-**Notice above: enable vectorization too.
-**Notice: Valid should die - clean up Pos builds
-**Notice: CellData stays
-
-Exact:Dofs issue as above
-Exact:Valid
-Exact:All builds - investigate though
-
-==================
-Basis access needed:
-**Translate and document here.
+FemOpts are in disarray (PROBABLY FIXED - stageRange would be nice as an exhausitve function)
 =======================
 Top level require smartter wrapping:
 **Alwalys have an inline able function unpack and unwrap for base functions
+**Is this still needed for Hoare logic phase?
+**Why though? Because ensures translation is easier
+**Maybe dump the basis...
 ==========================
 Hoare logic:
 **Translate all fem opts and fem data besides base to baser operations - make easier to do checks for the field
 ** See other file
 **Should accomplish full fem scalariziation modulo big types
-
+**Needs to be aware that probe does this later down. You need extract fem maps.
+**Wnat to use this on POS too.
+**I think field optimization should occur in high-opt
+**Should this occur too?
+**Want to remove all non base acceses but we generate more in mid, etc - fix this.
 (BY TOMORROOW)
+
 ===================
 Top level requires some new operators:
 **Check on face, edge, vertex detector
@@ -36,6 +55,10 @@ Top level requires some new operators:
 **Allow use of class methods in above
 **Document json/c copy -> if nrrd added could add more
 **Reorganization of common inserts (NearbyCell, InsideInsert)
+**Equality checkers for all items (do)
+**Tuple for exit pos (low)
+**Fix affine newton inverse (HIGh)
+**Make tuples here instead
 (SUNDAY JOB???)
 ==========================
 Accomodate field language
@@ -44,13 +67,14 @@ Accomodate field language
 --Allow position evaluation
 --make inside use correct diagnostic (valid, meshpos, etc)
 --Order inside with above
+--border control
 ===========================
 Affine, interval, bspline (see below)
 ========================
 Tuple:
 **invetigate ref tuple for input passing
 **simplifly interface
-**Add general scalirzation optimizations
+!!!**Add general scalirzation optimizations
 **Check snapshots
 **Parsing
 ========================
@@ -67,7 +91,7 @@ Sphere bug:
 curent _pos rewrite doesn't commute with sphere(a,b)
 (Or at least it doesn't if another sphere isn't there too)
 ====================
-Merge in Chiw branch for field funcs
+Merge in Chiw branch for field funcs 
 =====================
 BIG FEM IO FIX
 ================

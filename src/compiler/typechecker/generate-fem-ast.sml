@@ -640,7 +640,7 @@ fun makeFemMethods (cxt, env, tyName, span) femTyDef file cellAccData femInfo =
 	 let
 	  val funcName = FT.nameOf func
 
-	  val spaceFunc = Atom.atom "space"
+	  val spaceFunc = Atom.atom (FemName.space)
 	  val space' = FT.spaceOf(FT.Func(f))
 	  val spaceName = FT.nameOf space'
 	  val funcTy' = Ty.T_Fem(func, SOME(spaceName))
@@ -668,7 +668,7 @@ fun makeFemMethods (cxt, env, tyName, span) femTyDef file cellAccData femInfo =
 	  val meshCellTy = Ty.T_Fem(meshCell, SOME(meshName))
 	  val funcCellTy = Ty.T_Fem(funcCellVal, SOME(funcName))
 				   
-	  val funcCell = Atom.atom "funcCell"
+	  val funcCell = Atom.atom (FemName.funcCell)
 	  val funcCellType = Ty.T_Fun([funcArgTy, meshCellTy], funcCellTy)
 	  val funcCellFuncVar = Var.new (funcCell, span, AST.FunVar, funcCellType)
 
@@ -1060,7 +1060,7 @@ fun makeDescendentFemTypes (cxt, tyName, span) geometry cellAccData (env, femTyp
 					    (* end case*))
 
 	   fun mkVar (var) = AST.E_Var(var,span)
-	   val (newtonResult) = let (*TODO: USE let a lot here too refactor this code... god this code is ugly*)
+	   val (newtonResult) = let 
 	    val hiddenFuncAtom = (FT.functionNameMake femType (FemName.hiddenNewtonInverse)) (*TODO: inconsistent scheme for hiding this...*)
 
 
