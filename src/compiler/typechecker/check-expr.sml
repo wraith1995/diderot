@@ -13,6 +13,7 @@ structure CheckExpr : sig
   (* type check an expression *)
     val check : Env.t * Env.context * ParseTree.expr -> (AST.expr * Types.ty)
 
+
   (* type check a list of expressions *)
     val checkList : Env.t * Env.context * ParseTree.expr list -> (AST.expr list * Types.ty list)
 
@@ -126,8 +127,9 @@ structure CheckExpr : sig
                 ])
           (* end case *))
 
-  (* check the type of an expression *)
-    fun check (env, cxt, e) = (case e
+    (* check the type of an expression *)
+    fun check (env, cxt, e) =
+	(case e
            of PT.E_Mark m => check (E.withEnvAndContext (env, cxt, m))
             | PT.E_Cond(e1, cond, e2) => let
                 val eTy1 = check (env, cxt, e1)
@@ -283,7 +285,11 @@ structure CheckExpr : sig
 		    end
 		fun checkFemConstruction cxt loadFem rngTy domTy args argTys=
 		    (case Unify.matchArgs (domTy, args, argTys)
-		      of SOME(args) => (AST.E_LoadFem(loadFem), rngTy)
+		      of SOME(args) => (case (Env.currentScope env, FemData.baseFem (#1 loadFem))
+					 of (Env.InputScope, true) => (AST.E_LoadFem(loadFem), rngTy)
+					  | (_, false) => (AST.E_LoadFem(loadFem), rngTy)
+					  | (_, true) => err(cxt, [S "cannot construct base FEM data outside of input init!"])
+				       (*end case*))
 		       | NONE => err(cxt, [
 				     S "type error in application of fem creator ",
 				     S "  expected: ", TYS domTy, S "\n",
@@ -710,7 +716,7 @@ structure CheckExpr : sig
                     | _ => err(cxt, [S "Invalid argument type for tensor construction"])
                   (* end case *)
                 end
-          (* end case *))
+        (* end case *))
 
   (* typecheck and the prune the result *)
     and checkAndPrune (env, cxt, e) = let

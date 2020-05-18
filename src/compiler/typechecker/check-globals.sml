@@ -55,7 +55,9 @@ structure CheckGlobals : sig
    * (v, e), where v is the constant value and e is the AST version of the rhs.
    *)
     fun chkRHS (env, cxt, isInput, x', e) = let
-          val (e', ty') = CheckExpr.check (env, cxt, e)
+     val (e', ty') = if isInput
+		     then CheckExpr.check (Env.inputScope env, cxt, e)
+		     else CheckExpr.check (env, cxt, e)
           val v = (case CheckConst.eval (cxt, isInput, e')
                  of SOME v => v
                   | NONE => ConstExpr.Expr e' (* error has already been reported *)
@@ -161,7 +163,7 @@ structure CheckGlobals : sig
                   (INPUT((x', rhs), optDesc), E.insertGlobal(env, cxt, x, x'))
                 end
             | PT.GD_Var varDcl => let
-                val (x, x', optDefn) = CheckStmt.checkVarDecl (env, cxt, Var.GlobalVar, varDcl)
+             val (x, x', optDefn) = CheckStmt.checkVarDecl (env, cxt, Var.GlobalVar, varDcl)
                 in
                   E.checkForRedef (env, cxt, x);
                   E.recordProp (env, Properties.HasGlobals);

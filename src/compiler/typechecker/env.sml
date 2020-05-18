@@ -22,6 +22,7 @@ structure Env : sig
 
     datatype scope
       = GlobalScope                             (* global declarations *)
+      | InputScope
       | FunctionScope of Types.ty * Atom.atom   (* inside a function definition *)
       | StrandScope of Atom.atom                (* inside a strand definition *)
       | MethodScope of Atom.atom * StrandUtil.method_name
@@ -54,6 +55,8 @@ structure Env : sig
 
   (* start a new function scope *)
     val functionScope : t * Types.ty * Atom.atom -> t
+    (* start a new input scope*)
+    val inputScope : t -> t
   (* start a new strand scope *)
     val strandScope : t * Atom.atom -> t
   (* start a new strand-method scope *)
@@ -144,6 +147,7 @@ structure Env : sig
 
     datatype scope
       = GlobalScope                             (* global declarations *)
+      | InputScope                              (* input global specifically *)
       | FunctionScope of Ty.ty * Atom.atom      (* inside a function definition *)
       | StrandScope of Atom.atom                (* inside a strand definition *)
       | MethodScope of Atom.atom * StrandUtil.method_name
@@ -154,6 +158,7 @@ structure Env : sig
       | UpdateScope                             (* inside global update *)
 
     fun scopeToString GlobalScope = "global scope"
+      | scopeToString (InputScope) = "input scope"
       | scopeToString (FunctionScope(_, f)) = "function " ^ Atom.toString f
       | scopeToString (StrandScope s)= "strand " ^ Atom.toString s
       | scopeToString (MethodScope(s, m)) = concat[
@@ -189,7 +194,8 @@ structure Env : sig
     fun functionScope (E{gEnv, ...}, ty, f) = E{
             scope=FunctionScope(ty, f), inLoop=false, bindings=AtomMap.empty,
             gEnv=gEnv, vEnv=AMap.empty
-          }
+        }
+    fun inputScope (E{scope, inLoop, bindings, gEnv, vEnv} : t) = E{scope=InputScope, bindings = bindings, inLoop=inLoop, gEnv=gEnv, vEnv=vEnv}
     fun strandScope (E{gEnv, ...}, strand) = E{
             scope=StrandScope strand, inLoop=false, bindings=AtomMap.empty,
             gEnv=gEnv, vEnv=AMap.empty
@@ -241,7 +247,11 @@ structure Env : sig
     fun inGlobalInit (E{scope=InitScope, ...}) = true
       | inGlobalInit _ = false
 
+    fun inInputScope (E{scope=InputScope, ...}) = true
+      | inInputScope _ = false
+
     fun inGlobalBlock (E{scope=StartScope, ...}) = true
+      | inGlobalBlock (E{scope=InputScope, ...}) = true
       | inGlobalBlock (E{scope=UpdateScope, ...}) = true
       | inGlobalBlock _ = false
 
