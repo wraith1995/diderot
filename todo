@@ -1,19 +1,8 @@
 New:
-Concerns: refCell
-Concerns: functions and cleaned methods
-
-ideal: functions have a globals, args -> ret
----we don't care  if ret doesn't have fem and no args
----if just args and globals, we compute inside as a function of those
----if there are no globals, we just go through with assumptions (mesh a, mesh b... )
----If there are globals that have fem, we pretend the globals are arguments too
----Fixed mesh -- variable -- unificatoin type checker like thing -- possible call site modification
-Lesson: doable as far as I know -- let's just try and prove later...
-
 !!!!!!!!!!!!!!!!!!!!!!!
 Extra: vectorization in basis eval, basis field, Build a global basis registry to speed up compile time, fix damn fem names
 main:
-Target 1: Refine inline functions/dump and fix them all to help Hoare logic
+Target 1: Refine inline functions/dump and fix them all to help Hoare logic (mostly okay - replacements might be a bit annoying, but fine)
 Target 2: Hoare logic and translation
 Target 2.1: Downstream translation consquences:
 **Make Mid using Extractdofs until an optimization stage to replace
@@ -21,18 +10,24 @@ Target 2.1: Downstream translation consquences:
 **Make sure caching works with this too
 
 !CHECK!**Notice: T vs T^-1 should occur in high-opt though. Any other field replace menetn
-!CHECK!What?**Notice: DUMB Seq vs. tensor debate again. Needs to be cleaned up, but recall why T vs T^-1 represented
 !???!! What does the T vs T^-1 coop with Chiw's stuff
 !!!!!!!!!!!!!!!!!!!!!!!!!
-Onwards: field language
-=================
-FemOpts are in disarray (PROBABLY FIXED - stageRange would be nice as an exhausitve function)
+Plan: do hoare and downstream (plan in morning, implement it later)
+Plan: build inverse optimization
+Plan: field language and extra high level
+Plan: Basis field and other fixes (basis registry): class, bounding boxes, enter global, enter global curved, intersection curved, on facet, facet access, edge, vertex, other geometry
+--Week
+Plan: affine
+--week
+
+Onwards: field language and clean up high level
 =======================
 Top level require smartter wrapping:
 **Alwalys have an inline able function unpack and unwrap for base functions
 **Is this still needed for Hoare logic phase?
 **Why though? Because ensures translation is easier
 **Maybe dump the basis...
+**CONCLUSION:Dump of basis INDICATES OKAy, but what if it needs to be translated
 ==========================
 Hoare logic:
 **Translate all fem opts and fem data besides base to baser operations - make easier to do checks for the field
@@ -67,7 +62,7 @@ Accomodate field language
 --Allow position evaluation
 --make inside use correct diagnostic (valid, meshpos, etc)
 --Order inside with above
---border control
+--border control (error)
 ===========================
 Affine, interval, bspline (see below)
 ========================
