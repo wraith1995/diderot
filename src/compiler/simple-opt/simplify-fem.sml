@@ -91,9 +91,8 @@ return to Strands until Fixed
 		     | Seq of femPres (* must be homogenous i.e no partitioning on an array*)
 
 
-  fun merge(a1 : femPres, a2 : femPres) =
+  fun merge(a1 : femPres, a2 : femPres, change : bool ref) =
       let
-       val change : bool ref  = ref false
        fun changed v = (change := true; v)
        fun merge'(t1,t2) = (case (t1, t2)
 		   of (Base(f1, SOME(v1)), Base(f2, SOME(v2))) => if FemData.same(f1, f2)
@@ -118,9 +117,10 @@ return to Strands until Fixed
 		    | _ => raise Fail "impossible: merging incompatible femPress - must of come from different types"
 		 (*end case*))
       in
-       (merge'(a1, a2), !change)
+       (merge'(a1, a2))
       end
 
+  fun merge'(a1, a2) = (merge(a1, a2, ref false))
 
   fun tyToFemPres (Ty.T_Bool) = NOTHING
     | tyToFemPres (Ty.T_Int) = NOTHING
@@ -139,10 +139,17 @@ return to Strands until Fixed
    val {clrFn, getFn, peekFn, setFn} = V.newProp(fn v => tyToFemPres(V.typeOf(v)))
   in
   fun updateFemPres(v : V.t, p : femPres) = (case peekFn(v)
-					      of SOME(p') => (let val (p'', change) = merge(p, p')
-							      in setFn(v, p''); change end)
+					      of SOME(p') => (let val change = ref false
+								  val p'' = merge(p, p', change)
+							      in setFn(v, p''); !change end)
 					       | NONE => (setFn(v, p); true)
 					    (*end case*))
+  fun updateFemPresRef(v : V.t, p : femPres, changed) = (case peekFn(v)
+					      of SOME(p') => (let val p'' = merge(p, p', changed)
+							      in setFn(v, p'') end)
+					       | NONE => (setFn(v, p); changed := true)
+					    (*end case*))
+					      
   fun setInput(v : V.t) =
       (case V.kindOf v
 	of Var.InputVar => (case tyToFemPres(V.typeOf(v))
@@ -151,11 +158,14 @@ return to Strands until Fixed
 			   (*end case*))
 	 | _ => raise Fail "invalid use of setInput"
       (*end case*))
+
+  fun checkExistence msg v = (case peekFn v
+			       of NONE => raise Fail (msg ^ " var not defined")
+				| SOME _ => ()
+			     (*end case*))
+
+  val getFemPres = getFn
   end
-
-  type callSite =  V.t list  (* structure for idying a call site *)
-  (* think about functions...*)
-
 
 
   datatype input_init = datatype Inputs.input_init
@@ -179,6 +189,51 @@ return to Strands until Fixed
       end
 
 
+  (*Write expressions/statements with - trickies are function calls, for each - recall if/thenelse handled by property nature -> for each, a block needs to consider uniformly -> not really because itter comes from somewhere - either a sequence or a thing
+  In an assign - basic outline is peet at expressions -> reason based on type of expression what the fempres is -> continue on.
+  Step:
+  make merge better ergonomics
+  
+  
+   *)
+
+
+  type callSite =  V.t list  (* structure for idying a call site *)
+  (* think about functions...*)
+
+  fun expToFemPres(exp : S.exp) : femPres  =
+      let
+       val _ = ()
+      in
+       NOTHING
+      end
+
+  fun procStatement(stm : S.stmt, changed : bool ref,
+		    ret : callSite option,
+		    news : (Atom.atom * V.t list) list ref) =
+      let
+       fun doit (S.S_Var(v, NONE)) = () (*ignore but we should check for problems here*)
+	 | doit (S.S_Var(v, SOME(e))) = updateFemPresRef(v, expToFemPres(e), changed)
+	 | doit (S.S_Assign(v, e)) = updateFemPresRef(v, expToFemPres(e), changed) (*QUESTION: should we check existence?*)
+	 | doit (S.S_IfThenElse(v, b1, b2)) = (checkExistence "condition" v; doBlock(b1); doBlock(b2))
+	 | doit (S.S_New(a,vs)) = news := (a, vs) :: !news
+	 | doit (S.S_Foreach(itter, src, blk)) = (checkExistence "itter" itter;
+						  checkExistence "itterSrc" src;
+						  doBlock(blk))
+	 | doit (S.S_KillAll) = ()
+	 | doit (S.S_Continue) = ()
+	 | doit (S.S_Die) = ()
+	 | doit (S.S_Stabilize) = ()
+	 | doit (S.S_Return(v)) = (case ret
+				 of NONE => ()
+				  | SOME(site) => raise Fail "use call site")
+	 | doit (S.S_Print(vs)) = List.app (checkExistence "print") vs
+	 | doit (S.S_MapReduce(maps)) = raise Fail "mapreduce"
+       and doBlock(S.Block{code, ...}) = List.app doit code
+      in
+       doit(stm)
+      end
+		   
 
 	
 
