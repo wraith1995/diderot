@@ -9,8 +9,8 @@
  *)
 
 structure FemData : sig
-	   datatype refCellType = KSimplex of int | KCube of int | Other of int
-	   val fromStr : string * int -> refCellType option
+	   datatype refCellType = KSimplex of int | KCube of int | Other of int * RealLit.t list list
+	   val fromStr : string * int * RealLit.t list list -> refCellType option
 	   datatype refCell = RefCellData of {ty : refCellType,
 					      eps : RealLit.t,
 					      insideInsert : string option,
@@ -88,20 +88,24 @@ structure FemData : sig
 	  end = struct
 
 structure BD = BasisData
-datatype refCellType = KSimplex of int | KCube of int | Other of int
-fun fromStr(str,dim) = if str = "simplex"
+datatype refCellType = KSimplex of int | KCube of int | Other of int * RealLit.t list list
+fun fromStr(str,dim, verts) = if str = "simplex"
 		       then SOME(KSimplex(dim))
 		       else if str = "cube"
 		       then SOME(KCube(dim))
 		       else if str = "other"
-		       then SOME(Other(dim))
+		       then SOME(Other(dim, verts))
 		       else NONE
 			      
 datatype refCell = RefCellData of {ty : refCellType,
 				   eps : RealLit.t,
 				   insideInsert : string option,
 				   newtonControl :
-				   {contraction : bool, itters: int, newtonTol : RealLit.t, killAfterTol : bool, start : RealLit.t list option}, numFaces : int}
+				   {contraction : bool,
+				    itters: int, newtonTol : RealLit.t,
+				    killAfterTol : bool,
+				    start : RealLit.t list option},
+				   numFaces : int}
 
 fun getCellType(RefCellData{ty,...}) = ty
 fun getCellEps(RefCellData{eps,...}) = eps
@@ -124,7 +128,9 @@ fun sameRefCell(a,b) = RealLit.same(getCellEps(a), getCellEps(b)) andalso
 		       (case (getCellType a, getCellType b)
 			 of (KSimplex(d1), KSimplex(d2)) => d1=d2
 			  | (KCube(d1), KCube(d2)) => d1=d2
-			  | (Other(d1), Other(d2)) => d1=d2
+			  | (Other(d1, verts1), Other(d2, verts2)) => d1=d2
+								      andalso
+								      (ListPair.all (fn x => ListPair.all RealLit.same x) (verts1, verts2))
 			  | _ => false
 		       (*end case*))
 		       andalso getInsideInsert(a)=getInsideInsert(b)
@@ -132,7 +138,7 @@ fun hashRefCell(a) = 0w3 * RealLit.hash(getCellEps(a)) +
 		     0w5 * (case (getCellType a)
 			     of KSimplex(d1) => 0w3*(Word.fromInt d1)
 			      | KCube(d2) => 0w5*(Word.fromInt d2)
-			      | Other(d2) => 0w7*(Word.fromInt d2)
+			      | Other(d2, verts) => 0w7*(Word.fromInt d2) + 0w11 * (List.foldl (fn (x,y) => RealLit.hash x + 0w13 * y) 0w0 (List.concat verts))
 			   (*end case*)) +
 		     0w7 * hashRefCellInfo(getInsideInsert(a))
 (*refcells are `simplex, gen triangle, quad, *)

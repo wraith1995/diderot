@@ -72,6 +72,8 @@ return to Strands until Fixed
  (*Questions we need to ask: what are they, what is the dependent val and how do we convert it to an array for the global*)
  (*Map from type -> vals, map from vals -> dependent vals*)
 
+(*details: reductions (boring as just going inside) - functions - lots of inling.*)
+
 
 
 		 

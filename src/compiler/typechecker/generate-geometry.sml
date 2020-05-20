@@ -948,9 +948,8 @@ fun newtonLoopBlock(normal, dScalar, refPosExp, dPosExp, maxN, eps, t) =
  		      else raise Fail "dim <> 2 and dim <> 3"
       val dTransformVal = makePrim'(BV.op_Dotimes, [transformField], [invTransformFieldTy], dTransformFieldTy)
       val invertedField = makePrim'(invertVar, [dTransformVal], [dTransformFieldTy], dTransformFieldTy)
-      (* val refPos = AST.E_ExtractFemItem(posExp, vecTy, (FemOpt.RefPos, meshData)) *)
+
       val probe = makePrim'(BV.op_probe, [invertedField, zeroExp], [dTransformFieldTy, vecTy], matTy)
-      (* val (invA, _) = makeInvTransformFunc([cellExp], zeroExp) *)
       val newDpos = makePrim'(BV.op_inner_tt, [probe, vecExp], [matTy, vecTy], vecTy)
 
 			     
@@ -971,11 +970,6 @@ fun newtonLoopBlock(normal, dScalar, refPosExp, dPosExp, maxN, eps, t) =
  in
  val posExitPosResult = (posExitName, posExitFun, posExitTy)
  end
- (* call the above, send to per cell newton with a wider epsilon control? -- go back to meshCell and that refCell epsilon...*)
- (*other option is to: transform to reference small steps....*)
- (* 0.00001 -> get a new pos out via previous method...*)
- (*My schedule: deal with maps later if we need them - we probably don't for the moment.*)
-
  
  val refActualFuncs = [hiddenExitFuncResult, hiddenEnterFuncResult, cellFunc4, refPosExitFunc]
  val (refActualFuncsInfo, refActualFuncDcls) = ListPair.unzip refActualFuncs

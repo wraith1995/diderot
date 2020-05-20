@@ -183,7 +183,7 @@ fun makeRefCellInside(env, cxt, span, dim, refCellInfo, posVar, meshVar, insert,
 	  in
 	   endTest
 	  end
-	| FemData.Other(_) =>
+	| FemData.Other(_, _) =>
 	  (case insert
 	    of SOME(file) =>
 	       let
@@ -209,7 +209,7 @@ fun itterStartPos(cxt, span, refCellClass, vecTy, dim, start) =
 	 in
 	  AST.E_Tensor(List.tabulate(dim, fn x => AST.E_Lit(Literal.Real(third))), vecTy)
 	 end
-       | FemData.Other(dim) => (case start
+       | FemData.Other(dim, _) => (case start
 				       (*todo: check length*)
 				 of SOME(s) => AST.E_Tensor((List.map (fn x => AST.E_Lit(Literal.Real(x))) s),
 							    Ty.T_Tensor(Ty.Shape([Ty.DimConst dim])))

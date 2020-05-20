@@ -13,19 +13,19 @@ structure CheckTypeFile  : sig
 				       | LineParam of (real list * real list * (real list * real)) list
 				       (*b-a, a, |b-a|*)
 				       | PlaneParam of (real * real list) list * real list list list list (*d, normal, matrix of matrices*)
-	   
+										      
 	   val loadJson : string *  Env.context -> JSON.value option
 	   val matchType : string -> (Types.ty * int list * int list) option
 	   val parseConstant : Env.t * Env.context * Atom.atom * Types.ty option *  JSON.value  -> constant
 	   val parseConstants : Env.t * Env.context * Atom.atom * JSON.value -> constant list
-												      
+											 
 	   val parseMesh : Env.t * Env.context * Atom.atom * JSON.value -> (FemData.femType option * constant list * dimensionalObjects list * (Atom.atom * Types.ty *  FemData.cellDataType ) list)
-												
+									     
            val parseSpace : Env.t * Env.context * Atom.atom * int list * int list * FemData.mesh * JSON.value -> FemData.femType option * constant list
-																	  (* basis function shape, range shape*)
+	   (* basis function shape, range shape*)
 	   val parseFunc : Env.t * Env.context * Atom.atom * int list option * FemData.space * JSON.value -> FemData.femType option * constant list
-															       (*function space shape*)
-															       
+	   (*function space shape*)
+																	       
 	   val realToRealLit : real -> RealLit.t								    
 
 
@@ -88,7 +88,7 @@ fun tryTensor string =
 	   then SOME([],next)
 	   else SOME(ints, next)
 	  end
-	 
+	    
 	| NONE => NONE
 		  handle exn => NONE
      (* end case *))
@@ -195,7 +195,7 @@ fun realToRealLit x =
       val rest = (case Substring.getc rest
 		   of SOME(#".", _) => Substring.triml 1 rest (* remove "." if it exists*)
 		    | _ => rest
-		  (* end case*))
+		 (* end case*))
       val (frac, rest) = Substring.splitl Char.isDigit rest
       val exp = if Substring.isEmpty rest
 		then 0
@@ -203,7 +203,7 @@ fun realToRealLit x =
                  val rest = Substring.triml 1 rest (* remove "e" or "E" *)
 		in
                  #1(valOf(IntInf.scan StringCvt.DEC Substring.getc rest))
-		 (* handle exn => (print("Error with real:"^(Real.toString x)^"\n");raise exn) *)
+		   (* handle exn => (print("Error with real:"^(Real.toString x)^"\n");raise exn) *)
 		end
      in
       (RealLit.real{
@@ -214,7 +214,7 @@ fun realToRealLit x =
       }) 
      end
 		       
-     
+		       
 
     in
      mkReal (Substring.extract (preProc(Real.toString x), 0, NONE))
@@ -230,7 +230,7 @@ fun optionRealLit x = oE ( realToRealLit o JU.asNumber) x
 fun optionRealLitList x = oE ( JU.arrayMap (realToRealLit o JU.asNumber)) x
 fun optionBool x = oE (JU.asBool) x
 fun optionString x = oE (JU.asString) x
-					     
+			
 val bogusExp = AST.E_Lit(L.Int 0)
 val bogusExpTy = (Ty.T_Error, bogusExp)
 fun mkConstExpr cxt expr = Option.valOf (CheckConst.eval(cxt, false, expr))
@@ -256,7 +256,7 @@ fun extractShapeConst cxt (ty, cexpr, name) =
       of ConstExpr.Seq(seq, Ty.T_Sequence(Ty.T_Int,_)) =>
 	 (print("Good shape!");(SOME(List.map (Option.valOf o (fn x => extractIntConst cxt (Ty.T_Int, x, ""))) seq)))
        | _ => (print("Bad shape!");NONE))
-		   
+      
 
 fun loadJson(fileName, cxt) = SOME(JP.parseFile fileName)
 			      handle exn =>
@@ -273,7 +273,7 @@ fun typeEquality(ty, ty') =
 
 
 
-		
+      
 (* todo: this function needs to be refactored to provide better errors *)
 fun parseConstant(env, cxt, tyName, optionalSpecTy, json) =
     let
@@ -319,26 +319,26 @@ fun parseConstants(env, cxt, tyName, json) =
     let
      val findField = JU.findField json
      val constants = findField "constants"
-     
+			       
     in
      (case constants
        of SOME(a) =>  JU.arrayMap (fn x => parseConstant(env, cxt, tyName, NONE, x) ) a
 	| NONE => (err (cxt, [S ", In the definition of", A tyName, S "there is no constants object"
-				     ]) ;[])
-				      (* end case *))
+		       ]) ;[])
+     (* end case *))
 
     end
 fun findField x y = (JU.findField y x) handle exn => NONE
 fun optionList list = SOME(List.map Option.valOf list) handle exn => NONE
 fun optionTuple (x,y) = SOME((Option.valOf x, Option.valOf y)) handle exn => NONE
-							   
+									       
 fun constantExists(name, ty) =
     let
      fun finder (ty', expr, name') = name = name' andalso
 				     (case ty
 				       of  NONE => true
-					| SOME(ty'') => typeEquality(ty'', ty'))
-	 
+					 | SOME(ty'') => typeEquality(ty'', ty'))
+				       
     in
      List.find finder
 
@@ -349,7 +349,7 @@ if object:
 -> if no var, replace it with dim
 -> for each one, look for a coeff list and parse according to global
 -> if there is one, override it.
-*)
+ *)
 fun parseScalarBasis(env, cxt, tyName, json, dim, degree, spaceDim) =
     let
      fun maker(x : real Array.array ) : BD.t =  Option.valOf (BD.makeBasisFunc(x, dim, degree))
@@ -359,7 +359,7 @@ fun parseScalarBasis(env, cxt, tyName, json, dim, degree, spaceDim) =
       val array = ArrayNd.fromList(JU.arrayMap f x)
      in SOME(BasisDataArray.makeUniform(array, dim))  end
 			  handle exn => NONE
-			    
+					  
 
      fun parseAsObject(x : JSON.value, dim, degree) =
 	 let
@@ -375,7 +375,7 @@ fun parseScalarBasis(env, cxt, tyName, json, dim, degree, spaceDim) =
 	  (case polys
 	    of SOME(ps) => SOME(ps, vars', dim', degree')
 	     | _ => NONE)
-	 
+	    
 	 end
 	 handle exn =>  NONE
      fun parseObjectPoly(x : JSON.value, dim, degree) =
@@ -408,23 +408,23 @@ fun parseScalarBasis(env, cxt, tyName, json, dim, degree, spaceDim) =
 	  SOME(polys) handle exn => NONE
 	 end
 	 handle exn => NONE
-	   
+			 
 
      (*parse array first*)
      (*parse object*)
      (*for each poly, parse array and then object*)
- 
+			 
      fun parseBasis(x, dim, degree) = 
 	 (case arrayVersion x
 	   of SOME(basis) => SOME(basis) (* yuck*)
 	    | NONE =>
 	      ((case parseAsObject(x, dim, degree)
-		of NONE => (print("umm!!!!!!!!!!!!!!!!!\n"); NONE)
-		 | SOME(polys, vars, dim', degree') =>
-		   (case parsePolys(polys, dim', degree')
-		     of SOME(basis) => SOME(BasisDataArray.makeVarSubset(basis,vars))
-		      | NONE => (print("umm!!!!!!!!!!!!!!!!!\n"); NONE)))))
-	      
+		 of NONE => (print("umm!!!!!!!!!!!!!!!!!\n"); NONE)
+		  | SOME(polys, vars, dim', degree') =>
+		    (case parsePolys(polys, dim', degree')
+		      of SOME(basis) => SOME(BasisDataArray.makeVarSubset(basis,vars))
+		       | NONE => (print("umm!!!!!!!!!!!!!!!!!\n"); NONE)))))
+	   
 
 	   
      val leftOver = ArrayNd.fromList (List.tabulate(1, (fn _ => BD.empty(dim, degree))))
@@ -435,8 +435,8 @@ fun parseScalarBasis(env, cxt, tyName, json, dim, degree, spaceDim) =
     in
      Option.valOf (parseBasis(json, dim, degree))
      handle exn => (err (cxt, [S"Unable to parse polynomial basis for type ", A tyName, S".",
-			S"An exception occured in the parsing:",S (exnMessage(exn)), S"."]);
-     		   error)
+			       S"An exception occured in the parsing:",S (exnMessage(exn)), S"."]);
+     		    error)
     end
 (* I don't like this.... maybe turn it into specs and process this.*)
 
@@ -459,12 +459,12 @@ fun errIfNo(env, cxt, field1, field2, tyName) json =
        | SOME(json') => (case findField field1 json'
 			  of SOME(a) => SOME(a)
 			   | NONE => (TypeError.error(cxt,
-							[S "Expected field, ", S(field1),
-							 S", in parsing of another field, ", S(field2),
-							 S", in the pasing of type", A(tyName), S"."]);
+						      [S "Expected field, ", S(field1),
+						       S", in parsing of another field, ", S(field2),
+						       S", in the pasing of type", A(tyName), S"."]);
 				      NONE)
 			(*end case*))
-     (*end case*))       
+    (*end case*))       
 
 
 (*NOTE: this is only needed because there is no RealLit.t or Rational.t arithemtic...*)
@@ -544,381 +544,339 @@ fun buildTansform(pl1 : real list list, pl2 : real list list) =
      val [b13,b23,b33] = q3
      val [b14,b24,b34] = q4
      val det = (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
-        a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
-        a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
-        a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34)
+		a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
+		a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
+		a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34)
      val _ = print("det is:"^(Real.toString det)^"\n")
      val _ = print("Our inverting matrix is"^ printRealListList([[a11, a12, a13, a14], [a21, a22, a23, a24], [a31, a32, a33, a34], [1.0,1.0,1.0,1.0]])^"\n")
 
 
      val result  = [[((~(a23*a32) + a24*a32 + a22*a33 - a24*a33 - a22*a34 + a23*a34)*b11)/
-      (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
-        a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
-        a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
-        a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
-     ((a23*a31 - a24*a31 - a21*a33 + a24*a33 + a21*a34 - a23*a34)*b12)/
-      (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
-        a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
-        a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
-        a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
-     ((~(a22*a31) + a24*a31 + a21*a32 - a24*a32 - a21*a34 + a22*a34)*b13)/
-      (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
-        a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
-        a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
-        a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
-     ((a22*a31 - a23*a31 - a21*a32 + a23*a32 + a21*a33 - a22*a33)*b14)/
-      (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
-        a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
-        a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
-        a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34),
-    ((a13*a32 - a14*a32 - a12*a33 + a14*a33 + a12*a34 - a13*a34)*b11)/
-      (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
-        a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
-        a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
-        a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
-     ((~(a13*a31) + a14*a31 + a11*a33 - a14*a33 - a11*a34 + a13*a34)*b12)/
-      (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
-        a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
-        a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
-        a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
-     ((a12*a31 - a14*a31 - a11*a32 + a14*a32 + a11*a34 - a12*a34)*b13)/
-      (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
-        a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
-        a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
-        a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
-     ((~(a12*a31) + a13*a31 + a11*a32 - a13*a32 - a11*a33 + a12*a33)*b14)/
-      (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
-        a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
-        a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
-        a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34),
-    ((~(a13*a22) + a14*a22 + a12*a23 - a14*a23 - a12*a24 + a13*a24)*b11)/
-      (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
-        a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
-        a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
-        a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
-     ((a13*a21 - a14*a21 - a11*a23 + a14*a23 + a11*a24 - a13*a24)*b12)/
-      (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
-        a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
-        a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
-        a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
-     ((~(a12*a21) + a14*a21 + a11*a22 - a14*a22 - a11*a24 + a12*a24)*b13)/
-      (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
-        a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
-        a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
-        a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
-     ((a12*a21 - a13*a21 - a11*a22 + a13*a22 + a11*a23 - a12*a23)*b14)/
-      (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
-        a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
-        a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
-        a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34),
-    ((a14*a23*a32 - a13*a24*a32 - a14*a22*a33 + a12*a24*a33 + a13*a22*a34 - a12*a23*a34)*b11)/
-      (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
-        a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
-        a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
-        a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
-     ((~(a14*a23*a31) + a13*a24*a31 + a14*a21*a33 - a11*a24*a33 - a13*a21*a34 + a11*a23*a34)*
-        b12)/(~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + 
-        a13*a24*a31 + a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - 
-        a13*a24*a32 - a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + 
-        a12*a24*a33 + a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - 
-        a12*a23*a34) + ((a14*a22*a31 - a12*a24*a31 - a14*a21*a32 + a11*a24*a32 + a12*a21*a34 - 
-          a11*a22*a34)*b13)/
-      (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
-        a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
-        a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
-        a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
-     ((~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33)*
-        b14)/(~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + 
-        a13*a24*a31 + a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - 
-        a13*a24*a32 - a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + 
-        a12*a24*a33 + a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - 
-        a12*a23*a34)],[((~(a23*a32) + a24*a32 + a22*a33 - a24*a33 - a22*a34 + a23*a34)*b21)/
-      (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
-        a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
-        a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
-        a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
-     ((a23*a31 - a24*a31 - a21*a33 + a24*a33 + a21*a34 - a23*a34)*b22)/
-      (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
-        a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
-        a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
-        a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
-     ((~(a22*a31) + a24*a31 + a21*a32 - a24*a32 - a21*a34 + a22*a34)*b23)/
-      (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
-        a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
-        a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
-        a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
-     ((a22*a31 - a23*a31 - a21*a32 + a23*a32 + a21*a33 - a22*a33)*b24)/
-      (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
-        a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
-        a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
-        a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34),
-    ((a13*a32 - a14*a32 - a12*a33 + a14*a33 + a12*a34 - a13*a34)*b21)/
-      (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
-        a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
-        a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
-        a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
-     ((~(a13*a31) + a14*a31 + a11*a33 - a14*a33 - a11*a34 + a13*a34)*b22)/
-      (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
-        a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
-        a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
-        a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
-     ((a12*a31 - a14*a31 - a11*a32 + a14*a32 + a11*a34 - a12*a34)*b23)/
-      (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
-        a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
-        a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
-        a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
-     ((~(a12*a31) + a13*a31 + a11*a32 - a13*a32 - a11*a33 + a12*a33)*b24)/
-      (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
-        a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
-        a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
-        a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34),
-    ((~(a13*a22) + a14*a22 + a12*a23 - a14*a23 - a12*a24 + a13*a24)*b21)/
-      (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
-        a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
-        a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
-        a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
-     ((a13*a21 - a14*a21 - a11*a23 + a14*a23 + a11*a24 - a13*a24)*b22)/
-      (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
-        a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
-        a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
-        a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
-     ((~(a12*a21) + a14*a21 + a11*a22 - a14*a22 - a11*a24 + a12*a24)*b23)/
-      (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
-        a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
-        a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
-        a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
-     ((a12*a21 - a13*a21 - a11*a22 + a13*a22 + a11*a23 - a12*a23)*b24)/
-      (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
-        a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
-        a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
-        a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34),
-    ((a14*a23*a32 - a13*a24*a32 - a14*a22*a33 + a12*a24*a33 + a13*a22*a34 - a12*a23*a34)*b21)/
-      (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
-        a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
-        a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
-        a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
-     ((~(a14*a23*a31) + a13*a24*a31 + a14*a21*a33 - a11*a24*a33 - a13*a21*a34 + a11*a23*a34)*
-        b22)/(~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + 
-        a13*a24*a31 + a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - 
-        a13*a24*a32 - a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + 
-        a12*a24*a33 + a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - 
-        a12*a23*a34) + ((a14*a22*a31 - a12*a24*a31 - a14*a21*a32 + a11*a24*a32 + a12*a21*a34 - 
-          a11*a22*a34)*b23)/
-      (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
-        a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
-        a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
-        a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
-     ((~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33)*
-        b24)/(~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + 
-        a13*a24*a31 + a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - 
-        a13*a24*a32 - a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + 
-        a12*a24*a33 + a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - 
-        a12*a23*a34)],[((~(a23*a32) + a24*a32 + a22*a33 - a24*a33 - a22*a34 + a23*a34)*b31)/
-      (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
-        a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
-        a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
-        a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
-     ((a23*a31 - a24*a31 - a21*a33 + a24*a33 + a21*a34 - a23*a34)*b32)/
-      (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
-        a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
-        a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
-        a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
-     ((~(a22*a31) + a24*a31 + a21*a32 - a24*a32 - a21*a34 + a22*a34)*b33)/
-      (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
-        a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
-        a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
-        a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
-     ((a22*a31 - a23*a31 - a21*a32 + a23*a32 + a21*a33 - a22*a33)*b34)/
-      (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
-        a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
-        a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
-        a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34),
-    ((a13*a32 - a14*a32 - a12*a33 + a14*a33 + a12*a34 - a13*a34)*b31)/
-      (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
-        a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
-        a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
-        a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
-     ((~(a13*a31) + a14*a31 + a11*a33 - a14*a33 - a11*a34 + a13*a34)*b32)/
-      (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
-        a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
-        a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
-        a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
-     ((a12*a31 - a14*a31 - a11*a32 + a14*a32 + a11*a34 - a12*a34)*b33)/
-      (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
-        a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
-        a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
-        a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
-     ((~(a12*a31) + a13*a31 + a11*a32 - a13*a32 - a11*a33 + a12*a33)*b34)/
-      (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
-        a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
-        a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
-        a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34),
-    ((~(a13*a22) + a14*a22 + a12*a23 - a14*a23 - a12*a24 + a13*a24)*b31)/
-      (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
-        a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
-        a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
-        a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
-     ((a13*a21 - a14*a21 - a11*a23 + a14*a23 + a11*a24 - a13*a24)*b32)/
-      (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
-        a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
-        a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
-        a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
-     ((~(a12*a21) + a14*a21 + a11*a22 - a14*a22 - a11*a24 + a12*a24)*b33)/
-      (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
-        a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
-        a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
-        a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
-     ((a12*a21 - a13*a21 - a11*a22 + a13*a22 + a11*a23 - a12*a23)*b34)/
-      (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
-        a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
-        a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
-        a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34),
-    ((a14*a23*a32 - a13*a24*a32 - a14*a22*a33 + a12*a24*a33 + a13*a22*a34 - a12*a23*a34)*b31)/
-      (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
-        a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
-        a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
-        a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
-     ((~(a14*a23*a31) + a13*a24*a31 + a14*a21*a33 - a11*a24*a33 - a13*a21*a34 + a11*a23*a34)*
-        b32)/(~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + 
-        a13*a24*a31 + a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - 
-        a13*a24*a32 - a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + 
-        a12*a24*a33 + a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - 
-        a12*a23*a34) + ((a14*a22*a31 - a12*a24*a31 - a14*a21*a32 + a11*a24*a32 + a12*a21*a34 - 
-          a11*a22*a34)*b33)/
-      (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
-        a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
-        a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
-        a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
-     ((~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33)*
-        b34)/(~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + 
-        a13*a24*a31 + a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - 
-        a13*a24*a32 - a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + 
-        a12*a24*a33 + a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - 
-        a12*a23*a34)],[(a22*a31 - a23*a31 - a21*a32 + a23*a32 + a21*a33 - a22*a33)/
-      (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
-        a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
-        a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
-        a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
-     (~(a22*a31) + a24*a31 + a21*a32 - a24*a32 - a21*a34 + a22*a34)/
-      (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
-        a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
-        a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
-        a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
-     (a23*a31 - a24*a31 - a21*a33 + a24*a33 + a21*a34 - a23*a34)/
-      (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
-        a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
-        a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
-        a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
-     (~(a23*a32) + a24*a32 + a22*a33 - a24*a33 - a22*a34 + a23*a34)/
-      (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
-        a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
-        a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
-        a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34),
-    (~(a12*a31) + a13*a31 + a11*a32 - a13*a32 - a11*a33 + a12*a33)/
-      (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
-        a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
-        a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
-        a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
-     (a12*a31 - a14*a31 - a11*a32 + a14*a32 + a11*a34 - a12*a34)/
-      (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
-        a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
-        a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
-        a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
-     (a13*a32 - a14*a32 - a12*a33 + a14*a33 + a12*a34 - a13*a34)/
-      (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
-        a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
-        a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
-        a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
-     (~(a13*a31) + a14*a31 + a11*a33 - a14*a33 - a11*a34 + a13*a34)/
-      (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
-        a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
-        a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
-        a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34),
-    (a12*a21 - a13*a21 - a11*a22 + a13*a22 + a11*a23 - a12*a23)/
-      (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
-        a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
-        a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
-        a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
-     (~(a12*a21) + a14*a21 + a11*a22 - a14*a22 - a11*a24 + a12*a24)/
-      (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
-        a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
-        a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
-        a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
-     (a13*a21 - a14*a21 - a11*a23 + a14*a23 + a11*a24 - a13*a24)/
-      (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
-        a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
-        a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
-        a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
-     (~(a13*a22) + a14*a22 + a12*a23 - a14*a23 - a12*a24 + a13*a24)/
-      (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
-        a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
-        a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
-        a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34),
-    (~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33)/
-      (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
-        a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
-        a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
-        a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
-     (a14*a22*a31 - a12*a24*a31 - a14*a21*a32 + a11*a24*a32 + a12*a21*a34 - a11*a22*a34)/
-      (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
-        a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
-        a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
-        a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
-     (~(a14*a23*a31) + a13*a24*a31 + a14*a21*a33 - a11*a24*a33 - a13*a21*a34 + a11*a23*a34)/
-      (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
-        a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
-        a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
-        a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
-     (a14*a23*a32 - a13*a24*a32 - a14*a22*a33 + a12*a24*a33 + a13*a22*a34 - a12*a23*a34)/
-      (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
-        a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
-        a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
-        a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34)]]
-
-   (*   val result = [[((~(a23*a32) + a22*a33)*b11)/(~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33) +  *)
-   (*   ((a23*a31 - a21*a33)*b12)/(~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33) +  *)
-   (*   ((~(a22*a31) + a21*a32)*b13)/(~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33), *)
-   (*  ((a13*a32 - a12*a33)*b11)/(~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33) +  *)
-   (*   ((~(a13*a31) + a11*a33)*b12)/(~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33) +  *)
-   (*   ((a12*a31 - a11*a32)*b13)/(~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33), *)
-   (*  ((~(a13*a22) + a12*a23)*b11)/(~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33) +  *)
-   (*   ((a13*a21 - a11*a23)*b12)/(~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33) +  *)
-   (*   ((~(a12*a21) + a11*a22)*b13)/(~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33), *)
-   (*  ((a14*a23*a32 - a13*a24*a32 - a14*a22*a33 + a12*a24*a33 + a13*a22*a34 - a12*a23*a34)*b11)/(~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33) +  *)
-   (*   ((~(a14*a23*a31) + a13*a24*a31 + a14*a21*a33 - a11*a24*a33 - a13*a21*a34 + a11*a23*a34)*b12)/(~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33) +  *)
-   (*   ((a14*a22*a31 - a12*a24*a31 - a14*a21*a32 + a11*a24*a32 + a12*a21*a34 - a11*a22*a34)*b13)/(~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33) + b14], *)
-   (* [((~(a23*a32) + a22*a33)*b21)/(~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33) +  *)
-   (*   ((a23*a31 - a21*a33)*b22)/(~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33) +  *)
-   (*   ((~(a22*a31) + a21*a32)*b23)/(~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33), *)
-   (*  ((a13*a32 - a12*a33)*b21)/(~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33) +  *)
-   (*   ((~(a13*a31) + a11*a33)*b22)/(~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33) +  *)
-   (*   ((a12*a31 - a11*a32)*b23)/(~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33), *)
-   (*  ((~(a13*a22) + a12*a23)*b21)/(~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33) +  *)
-   (*   ((a13*a21 - a11*a23)*b22)/(~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33) +  *)
-   (*   ((~(a12*a21) + a11*a22)*b23)/(~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33), *)
-   (*  ((a14*a23*a32 - a13*a24*a32 - a14*a22*a33 + a12*a24*a33 + a13*a22*a34 - a12*a23*a34)*b21)/(~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33) +  *)
-   (*   ((~(a14*a23*a31) + a13*a24*a31 + a14*a21*a33 - a11*a24*a33 - a13*a21*a34 + a11*a23*a34)*b22)/(~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33) +  *)
-   (*   ((a14*a22*a31 - a12*a24*a31 - a14*a21*a32 + a11*a24*a32 + a12*a21*a34 - a11*a22*a34)*b23)/(~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33) + b24], *)
-   (* [((~(a23*a32) + a22*a33)*b31)/(~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33) +  *)
-   (*   ((a23*a31 - a21*a33)*b32)/(~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33) +  *)
-   (*   ((~(a22*a31) + a21*a32)*b33)/(~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33), *)
-   (*  ((a13*a32 - a12*a33)*b31)/(~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33) +  *)
-   (*   ((~(a13*a31) + a11*a33)*b32)/(~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33) +  *)
-   (*   ((a12*a31 - a11*a32)*b33)/(~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33), *)
-   (*  ((~(a13*a22) + a12*a23)*b31)/(~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33) +  *)
-   (*   ((a13*a21 - a11*a23)*b32)/(~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33) +  *)
-   (*   ((~(a12*a21) + a11*a22)*b33)/(~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33), *)
-   (*  ((a14*a23*a32 - a13*a24*a32 - a14*a22*a33 + a12*a24*a33 + a13*a22*a34 - a12*a23*a34)*b31)/(~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33) +  *)
-   (*   ((~(a14*a23*a31) + a13*a24*a31 + a14*a21*a33 - a11*a24*a33 - a13*a21*a34 + a11*a23*a34)*b32)/(~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33) +  *)
-   (*   ((a14*a22*a31 - a12*a24*a31 - a14*a21*a32 + a11*a24*a32 + a12*a21*a34 - a11*a22*a34)*b33)/(~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33) + b34],[0.0,0.0,0.0,1.0]] *)
+		     (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
+		      a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
+		      a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
+		      a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
+		     ((a23*a31 - a24*a31 - a21*a33 + a24*a33 + a21*a34 - a23*a34)*b12)/
+		     (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
+		      a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
+		      a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
+		      a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
+		     ((~(a22*a31) + a24*a31 + a21*a32 - a24*a32 - a21*a34 + a22*a34)*b13)/
+		     (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
+		      a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
+		      a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
+		      a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
+		     ((a22*a31 - a23*a31 - a21*a32 + a23*a32 + a21*a33 - a22*a33)*b14)/
+		     (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
+		      a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
+		      a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
+		      a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34),
+		     ((a13*a32 - a14*a32 - a12*a33 + a14*a33 + a12*a34 - a13*a34)*b11)/
+		     (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
+		      a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
+		      a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
+		      a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
+		     ((~(a13*a31) + a14*a31 + a11*a33 - a14*a33 - a11*a34 + a13*a34)*b12)/
+		     (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
+		      a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
+		      a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
+		      a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
+		     ((a12*a31 - a14*a31 - a11*a32 + a14*a32 + a11*a34 - a12*a34)*b13)/
+		     (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
+		      a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
+		      a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
+		      a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
+		     ((~(a12*a31) + a13*a31 + a11*a32 - a13*a32 - a11*a33 + a12*a33)*b14)/
+		     (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
+		      a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
+		      a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
+		      a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34),
+		     ((~(a13*a22) + a14*a22 + a12*a23 - a14*a23 - a12*a24 + a13*a24)*b11)/
+		     (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
+		      a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
+		      a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
+		      a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
+		     ((a13*a21 - a14*a21 - a11*a23 + a14*a23 + a11*a24 - a13*a24)*b12)/
+		     (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
+		      a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
+		      a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
+		      a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
+		     ((~(a12*a21) + a14*a21 + a11*a22 - a14*a22 - a11*a24 + a12*a24)*b13)/
+		     (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
+		      a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
+		      a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
+		      a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
+		     ((a12*a21 - a13*a21 - a11*a22 + a13*a22 + a11*a23 - a12*a23)*b14)/
+		     (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
+		      a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
+		      a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
+		      a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34),
+		     ((a14*a23*a32 - a13*a24*a32 - a14*a22*a33 + a12*a24*a33 + a13*a22*a34 - a12*a23*a34)*b11)/
+		     (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
+		      a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
+		      a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
+		      a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
+		     ((~(a14*a23*a31) + a13*a24*a31 + a14*a21*a33 - a11*a24*a33 - a13*a21*a34 + a11*a23*a34)*
+		      b12)/(~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + 
+			    a13*a24*a31 + a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - 
+			    a13*a24*a32 - a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + 
+			    a12*a24*a33 + a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - 
+			    a12*a23*a34) + ((a14*a22*a31 - a12*a24*a31 - a14*a21*a32 + a11*a24*a32 + a12*a21*a34 - 
+					     a11*a22*a34)*b13)/
+					   (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
+					    a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
+					    a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
+					    a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
+		     ((~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33)*
+		      b14)/(~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + 
+			    a13*a24*a31 + a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - 
+			    a13*a24*a32 - a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + 
+			    a12*a24*a33 + a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - 
+			    a12*a23*a34)],[((~(a23*a32) + a24*a32 + a22*a33 - a24*a33 - a22*a34 + a23*a34)*b21)/
+					   (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
+					    a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
+					    a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
+					    a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
+					   ((a23*a31 - a24*a31 - a21*a33 + a24*a33 + a21*a34 - a23*a34)*b22)/
+					   (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
+					    a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
+					    a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
+					    a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
+					   ((~(a22*a31) + a24*a31 + a21*a32 - a24*a32 - a21*a34 + a22*a34)*b23)/
+					   (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
+					    a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
+					    a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
+					    a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
+					   ((a22*a31 - a23*a31 - a21*a32 + a23*a32 + a21*a33 - a22*a33)*b24)/
+					   (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
+					    a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
+					    a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
+					    a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34),
+					   ((a13*a32 - a14*a32 - a12*a33 + a14*a33 + a12*a34 - a13*a34)*b21)/
+					   (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
+					    a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
+					    a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
+					    a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
+					   ((~(a13*a31) + a14*a31 + a11*a33 - a14*a33 - a11*a34 + a13*a34)*b22)/
+					   (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
+					    a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
+					    a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
+					    a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
+					   ((a12*a31 - a14*a31 - a11*a32 + a14*a32 + a11*a34 - a12*a34)*b23)/
+					   (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
+					    a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
+					    a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
+					    a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
+					   ((~(a12*a31) + a13*a31 + a11*a32 - a13*a32 - a11*a33 + a12*a33)*b24)/
+					   (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
+					    a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
+					    a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
+					    a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34),
+					   ((~(a13*a22) + a14*a22 + a12*a23 - a14*a23 - a12*a24 + a13*a24)*b21)/
+					   (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
+					    a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
+					    a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
+					    a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
+					   ((a13*a21 - a14*a21 - a11*a23 + a14*a23 + a11*a24 - a13*a24)*b22)/
+					   (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
+					    a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
+					    a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
+					    a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
+					   ((~(a12*a21) + a14*a21 + a11*a22 - a14*a22 - a11*a24 + a12*a24)*b23)/
+					   (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
+					    a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
+					    a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
+					    a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
+					   ((a12*a21 - a13*a21 - a11*a22 + a13*a22 + a11*a23 - a12*a23)*b24)/
+					   (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
+					    a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
+					    a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
+					    a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34),
+					   ((a14*a23*a32 - a13*a24*a32 - a14*a22*a33 + a12*a24*a33 + a13*a22*a34 - a12*a23*a34)*b21)/
+					   (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
+					    a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
+					    a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
+					    a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
+					   ((~(a14*a23*a31) + a13*a24*a31 + a14*a21*a33 - a11*a24*a33 - a13*a21*a34 + a11*a23*a34)*
+					    b22)/(~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + 
+						  a13*a24*a31 + a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - 
+						  a13*a24*a32 - a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + 
+						  a12*a24*a33 + a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - 
+						  a12*a23*a34) + ((a14*a22*a31 - a12*a24*a31 - a14*a21*a32 + a11*a24*a32 + a12*a21*a34 - 
+								   a11*a22*a34)*b23)/
+								 (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
+								  a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
+								  a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
+								  a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
+					   ((~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33)*
+					    b24)/(~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + 
+						  a13*a24*a31 + a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - 
+						  a13*a24*a32 - a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + 
+						  a12*a24*a33 + a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - 
+						  a12*a23*a34)],[((~(a23*a32) + a24*a32 + a22*a33 - a24*a33 - a22*a34 + a23*a34)*b31)/
+								 (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
+								  a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
+								  a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
+								  a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
+								 ((a23*a31 - a24*a31 - a21*a33 + a24*a33 + a21*a34 - a23*a34)*b32)/
+								 (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
+								  a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
+								  a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
+								  a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
+								 ((~(a22*a31) + a24*a31 + a21*a32 - a24*a32 - a21*a34 + a22*a34)*b33)/
+								 (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
+								  a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
+								  a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
+								  a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
+								 ((a22*a31 - a23*a31 - a21*a32 + a23*a32 + a21*a33 - a22*a33)*b34)/
+								 (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
+								  a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
+								  a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
+								  a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34),
+								 ((a13*a32 - a14*a32 - a12*a33 + a14*a33 + a12*a34 - a13*a34)*b31)/
+								 (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
+								  a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
+								  a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
+								  a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
+								 ((~(a13*a31) + a14*a31 + a11*a33 - a14*a33 - a11*a34 + a13*a34)*b32)/
+								 (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
+								  a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
+								  a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
+								  a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
+								 ((a12*a31 - a14*a31 - a11*a32 + a14*a32 + a11*a34 - a12*a34)*b33)/
+								 (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
+								  a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
+								  a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
+								  a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
+								 ((~(a12*a31) + a13*a31 + a11*a32 - a13*a32 - a11*a33 + a12*a33)*b34)/
+								 (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
+								  a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
+								  a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
+								  a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34),
+								 ((~(a13*a22) + a14*a22 + a12*a23 - a14*a23 - a12*a24 + a13*a24)*b31)/
+								 (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
+								  a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
+								  a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
+								  a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
+								 ((a13*a21 - a14*a21 - a11*a23 + a14*a23 + a11*a24 - a13*a24)*b32)/
+								 (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
+								  a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
+								  a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
+								  a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
+								 ((~(a12*a21) + a14*a21 + a11*a22 - a14*a22 - a11*a24 + a12*a24)*b33)/
+								 (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
+								  a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
+								  a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
+								  a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
+								 ((a12*a21 - a13*a21 - a11*a22 + a13*a22 + a11*a23 - a12*a23)*b34)/
+								 (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
+								  a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
+								  a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
+								  a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34),
+								 ((a14*a23*a32 - a13*a24*a32 - a14*a22*a33 + a12*a24*a33 + a13*a22*a34 - a12*a23*a34)*b31)/
+								 (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
+								  a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
+								  a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
+								  a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
+								 ((~(a14*a23*a31) + a13*a24*a31 + a14*a21*a33 - a11*a24*a33 - a13*a21*a34 + a11*a23*a34)*
+								  b32)/(~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + 
+									a13*a24*a31 + a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - 
+									a13*a24*a32 - a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + 
+									a12*a24*a33 + a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - 
+									a12*a23*a34) + ((a14*a22*a31 - a12*a24*a31 - a14*a21*a32 + a11*a24*a32 + a12*a21*a34 - 
+											 a11*a22*a34)*b33)/
+										       (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
+											a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
+											a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
+											a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
+								 ((~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33)*
+								  b34)/(~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + 
+									a13*a24*a31 + a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - 
+									a13*a24*a32 - a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + 
+									a12*a24*a33 + a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - 
+									a12*a23*a34)],[(a22*a31 - a23*a31 - a21*a32 + a23*a32 + a21*a33 - a22*a33)/
+										       (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
+											a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
+											a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
+											a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
+										       (~(a22*a31) + a24*a31 + a21*a32 - a24*a32 - a21*a34 + a22*a34)/
+										       (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
+											a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
+											a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
+											a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
+										       (a23*a31 - a24*a31 - a21*a33 + a24*a33 + a21*a34 - a23*a34)/
+										       (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
+											a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
+											a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
+											a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
+										       (~(a23*a32) + a24*a32 + a22*a33 - a24*a33 - a22*a34 + a23*a34)/
+										       (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
+											a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
+											a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
+											a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34),
+										       (~(a12*a31) + a13*a31 + a11*a32 - a13*a32 - a11*a33 + a12*a33)/
+										       (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
+											a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
+											a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
+											a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
+										       (a12*a31 - a14*a31 - a11*a32 + a14*a32 + a11*a34 - a12*a34)/
+										       (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
+											a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
+											a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
+											a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
+										       (a13*a32 - a14*a32 - a12*a33 + a14*a33 + a12*a34 - a13*a34)/
+										       (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
+											a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
+											a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
+											a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
+										       (~(a13*a31) + a14*a31 + a11*a33 - a14*a33 - a11*a34 + a13*a34)/
+										       (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
+											a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
+											a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
+											a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34),
+										       (a12*a21 - a13*a21 - a11*a22 + a13*a22 + a11*a23 - a12*a23)/
+										       (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
+											a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
+											a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
+											a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
+										       (~(a12*a21) + a14*a21 + a11*a22 - a14*a22 - a11*a24 + a12*a24)/
+										       (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
+											a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
+											a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
+											a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
+										       (a13*a21 - a14*a21 - a11*a23 + a14*a23 + a11*a24 - a13*a24)/
+										       (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
+											a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
+											a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
+											a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
+										       (~(a13*a22) + a14*a22 + a12*a23 - a14*a23 - a12*a24 + a13*a24)/
+										       (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
+											a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
+											a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
+											a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34),
+										       (~(a13*a22*a31) + a12*a23*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33)/
+										       (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
+											a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
+											a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
+											a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
+										       (a14*a22*a31 - a12*a24*a31 - a14*a21*a32 + a11*a24*a32 + a12*a21*a34 - a11*a22*a34)/
+										       (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
+											a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
+											a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
+											a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
+										       (~(a14*a23*a31) + a13*a24*a31 + a14*a21*a33 - a11*a24*a33 - a13*a21*a34 + a11*a23*a34)/
+										       (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
+											a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
+											a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
+											a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34) + 
+										       (a14*a23*a32 - a13*a24*a32 - a14*a22*a33 + a12*a24*a33 + a13*a22*a34 - a12*a23*a34)/
+										       (~(a13*a22*a31) + a14*a22*a31 + a12*a23*a31 - a14*a23*a31 - a12*a24*a31 + a13*a24*a31 + 
+											a13*a21*a32 - a14*a21*a32 - a11*a23*a32 + a14*a23*a32 + a11*a24*a32 - a13*a24*a32 - 
+											a12*a21*a33 + a14*a21*a33 + a11*a22*a33 - a14*a22*a33 - a11*a24*a33 + a12*a24*a33 + 
+											a12*a21*a34 - a13*a21*a34 - a11*a22*a34 + a13*a22*a34 + a11*a23*a34 - a12*a23*a34)]]
     in
      result
     end
-(*actual trick: in the above, if any our zero, replace them by the thing.*)
-(*Insert testing for the above......pairs of points to hit...... alright...fine*)
-(*world version*)
-(*enter time: no *)
-
 fun swapSign(x) =
     let
      val sign = Real.sign x;
@@ -930,465 +888,469 @@ fun swapSign(x) =
 fun correctNormalOrientation center (d, normal) =
     let
      val preDot = ListPair.map (Real.*) (center, normal);
-     val dot = List.foldr (Real.+) 0.0 preDot;
-     val result = d - dot;
-     val sign = Real.sign result;
-     (*We want the interior to be positive for all functional so if it is negative, we swap the sign*)
-     (*Thus, we just multiply everything by the sign*)
-     val d' = if sign > 0
-	      then d
-	      else swapSign(d)
-     val normal' = if sign > 0
-		   then normal
-		   else List.map swapSign normal;
-     val _ = print("Got scalar d:"^(Real.toString d')^"\n")
-     val _ = print("Went to scalar d':"^(Real.toString d')^"\n")
-     val _ = print("Sign is:" ^ (Int.toString sign) ^ "\n")
-     val _ = print("Got normal:["^(String.concatWith "," (List.map (Real.toString) normal))^"]\n");
-     val _ = print("Went to normal:["^(String.concatWith "," (List.map (Real.toString) normal'))^"]\n");
-    in
-     (d', normal')
-    end
-					  
-fun analyzeGeometry2(points, higher2) =
-    let
-     val Points(xs, _) = points
-     val vecs = List.map (fn (x,y) => y) xs
-     val numPoints = List.length xs
-     val dim = (List.length (List.nth(vecs, 0)))
-     val zeros = List.tabulate(dim, fn x => 0.0)
-     val summed = List.foldr (ListPair.map (Real.+)) zeros vecs
-     val centroid = List.map (fn x => Real./(x, Real.fromInt numPoints)) summed
-     val signCorrection = correctNormalOrientation centroid
-			     
-     fun getVector i = List.nth(vecs, i)
+				val dot = List.foldr (Real.+) 0.0 preDot;
+				val result = d - dot;
+				val sign = Real.sign result;
+				(*We want the interior to be positive for all functional so if it is negative, we swap the sign*)
+				(*Thus, we just multiply everything by the sign*)
+				val d' = if sign > 0
+					 then d
+					 else swapSign(d)
+				val normal' = if sign > 0
+					      then normal
+					      else List.map swapSign normal;
+				val _ = print("Got scalar d:"^(Real.toString d')^"\n")
+				val _ = print("Went to scalar d':"^(Real.toString d')^"\n")
+				val _ = print("Sign is:" ^ (Int.toString sign) ^ "\n")
+				val _ = print("Got normal:["^(String.concatWith "," (List.map (Real.toString) normal))^"]\n");
+				val _ = print("Went to normal:["^(String.concatWith "," (List.map (Real.toString) normal'))^"]\n");
+				in
+				 (d', normal')
+				end
 
-     val Higher(2, xs) = higher2
-     val planes = List.map (fn (x,y,z) => (List.map (getVector o IntInf.toInt)) z) xs
-     val numPlanes = List.length planes
-     val computedInfo = List.map planeNormal planes
-     val extraPoints = List.map (fn (x,y,z) => z) computedInfo
-     val dNormPairsNoOrient = List.map (fn (x,y,z) => (y, x)) computedInfo
-     val dNormPairs = List.map signCorrection dNormPairsNoOrient
-     val affineDefs = ListPair.map (fn ([x,y,z], a) => [x,y,z,a]) (planes, extraPoints)
-     (*for x in affineDef, for y in affineDef: *)
+				fun analyzeGeometry2(points, higher2) =
+				    let
+				     val Points(xs, _) = points
+				     val vecs = List.map (fn (x,y) => y) xs
+				     val numPoints = List.length xs
+				     val dim = (List.length (List.nth(vecs, 0)))
+				     val zeros = List.tabulate(dim, fn x => 0.0)
+				     val summed = List.foldr (ListPair.map (Real.+)) zeros vecs
+				     val centroid = List.map (fn x => Real./(x, Real.fromInt numPoints)) summed
+				     val signCorrection = correctNormalOrientation centroid
+										   
+				     fun getVector i = List.nth(vecs, i)
 
-     val transforms : real list list list list = ugg(buildTansform, affineDefs, affineDefs) (*[x][y] maps from facet x to facet y*)
-						    (*todo: build *)
-     val _ = print(printRealListListListList(transforms)^"\n")
-    in
-     (PlaneParam(dNormPairs, transforms), List.length planes)
-    end
+				     val Higher(2, xs) = higher2
+				     val planes = List.map (fn (x,y,z) => (List.map (getVector o IntInf.toInt)) z) xs
+				     val numPlanes = List.length planes
+				     val computedInfo = List.map planeNormal planes
+				     val extraPoints = List.map (fn (x,y,z) => z) computedInfo
+				     val dNormPairsNoOrient = List.map (fn (x,y,z) => (y, x)) computedInfo
+				     val dNormPairs = List.map signCorrection dNormPairsNoOrient
+				     val affineDefs = ListPair.map (fn ([x,y,z], a) => [x,y,z,a]) (planes, extraPoints)
+				     (*for x in affineDef, for y in affineDef: *)
 
-
-      
-fun parseGeometryOfRefCell(env, cxt, dim, json, meshName) =
-    let
-     val geometry = errIfNo(env, cxt, "geometry", "refCell", meshName) json
-     val verticies = errIfNo(env, cxt, "vertices", "geometry", meshName) geometry
-     val vertToNode = errIfNo(env, cxt, "toNode", "geometry", meshName) geometry
+				     val transforms : real list list list list = ugg(buildTansform, affineDefs, affineDefs) (*[x][y] maps from facet x to facet y*)
+				     (*todo: build *)
+				     val _ = print(printRealListListListList(transforms)^"\n")
+				    in
+				     (PlaneParam(dNormPairs, transforms), List.length planes)
+				    end
 
 
-     fun parseToNode(SOME(json)) =
-	 let
-	  val array = (JU.arrayMap (IntInf.toInt o JU.asIntInf)) json
-	 in
-	  SOME(array)
-	  handle exn => NONE
-	 end
-       | parseToNode (NONE) = NONE
-     val vertToNode' = parseToNode(vertToNode)
-
-     val zero = List.tabulate(dim, fn x => 0.0)
-     fun parsePoint (idx, jsonPoint) =
-	 let
-	  val array = JU.arrayMap (JU.asNumber) jsonPoint
-	  val _ = if List.length array = dim
-		  then ()
-		  else raise (Fail "...")
-			     
-	 in
-	  (idx,array)
-	  handle exn => ((TypeError.error(cxt,[S "Unable to process point ",
-					       S(Int.toString idx),
-					       S" for mesh ", A(meshName),
-					       S". Chechk that all verticies have the correct dim and are arrays of reals."]); (idx, zero)))
-	 end
-
-     fun parseVerticies'(SOME(verts)) = Vector.foldr (op ::) [] (JU.asArray(verts))
-       | parseVerticies'(NONE) = []
-				 handle exn => ((TypeError.error(cxt,[S "Unable to process verticies for mesh named", A(meshName), S"."]); []))
-											
-
-     fun parseVerticies(verts) = let val len = List.length verts
-				 in
-				  Points(ListPair.map parsePoint (List.tabulate(len, fn x =>x ), verts), vertToNode')
-				 end
-     val verts = parseVerticies(parseVerticies'(verticies))
-
-     val higherObjects = List.tabulate(dim - 1 , fn x => (x+1, errIfNo(env, cxt, "object"^(Int.toString (x+1)), "geometry", meshName) geometry))
-     fun parserHigherEntry(subDim, json, index) =
-	 let
-	  val name = "object"^(Int.toString subDim)
-	  val lowerObjects = errIfNo(env, cxt, "entity", name, meshName) (SOME(json))
-	  val planePoints = errIfNo(env, cxt, "plane", name, meshName) (SOME(json))
-
-	  fun arrayOfInts(json, ty) = JU.arrayMap (JU.asIntInf) json
-				      handle exn => (TypeError.error(cxt, [S "Unable to process ", S ty, S" of ", S(name),
-									   S(" entry "^(Int.toString index)),
-									   S" in ", A(meshName), S"."]); [])
-
-	  val entities = Option.getOpt(Option.map (fn x => arrayOfInts(x, "entity")) lowerObjects, [])
-	  val planeDef =  Option.getOpt(Option.map (fn x => arrayOfInts(x, "plane")) planePoints, List.tabulate(subDim + 1, fn x => IntInf.fromInt 0))
-	  (*points to define a subdimensional object is that dim*)
-	  val _ = if List.length planeDef = subDim + 1 (*TODO: get indexs hight.*)
-		  then ()
-		  else TypeError.error(cxt, [S"Unable to process ", S(name), S (" entry" ^(Int.toString index)),
-					     S" because plane has wrong number of points."])
+				      
+				fun parseGeometryOfRefCell(env, cxt, dim, json, meshName) =
+				    let
+				     val geometry = errIfNo(env, cxt, "geometry", "refCell", meshName) json
+				     val verticies = errIfNo(env, cxt, "vertices", "geometry", meshName) geometry
+				     val vertToNode = errIfNo(env, cxt, "toNode", "geometry", meshName) geometry
 
 
-	 in
-	  (index, entities, planeDef)
-	 end
-	 handle exn => raise exn
+				     fun parseToNode(SOME(json)) =
+					 let
+					  val array = (JU.arrayMap (IntInf.toInt o JU.asIntInf)) json
+					 in
+					  SOME(array)
+					  handle exn => NONE
+					 end
+				       | parseToNode (NONE) = NONE
+				     val vertToNode' = parseToNode(vertToNode)
 
-     fun parseHigher(subDim, SOME(json)) =
-	 let
-	  val _ = print("Ummm:"^(Int.toString subDim))
-	  val listOfJson =  Vector.foldr (op ::) [] (JU.asArray(json))
-	  val count = List.length listOfJson
+				     val zero = List.tabulate(dim, fn x => 0.0)
+				     fun parsePoint (idx, jsonPoint) =
+					 let
+					  val array = JU.arrayMap (JU.asNumber) jsonPoint
+					  val _ = if List.length array = dim
+						  then ()
+						  else raise (Fail "...")
+							     
+					 in
+					  (idx,array)
+					  handle exn => ((TypeError.error(cxt,[S "Unable to process point ",
+									       S(Int.toString idx),
+									       S" for mesh ", A(meshName),
+									       S". Chechk that all verticies have the correct dim and are arrays of reals."]); (idx, zero)))
+					 end
 
-	  val results = ListPair.map (fn (x,y) => parserHigherEntry(subDim, x, y)) (listOfJson, List.tabulate(count, fn x => x))
-	 in
-	  Higher(subDim, results)
-	 end
-       | parseHigher (subDim, NONE) = Higher(subDim, [])
+				     fun parseVerticies'(SOME(verts)) = Vector.foldr (op ::) [] (JU.asArray(verts))
+				       | parseVerticies'(NONE) = []
+								 handle exn => ((TypeError.error(cxt,[S "Unable to process verticies for mesh named", A(meshName), S"."]); []))
+										 
 
-     val higher = List.map parseHigher higherObjects
+				     fun parseVerticies(verts) = let val len = List.length verts
+								 in
+								  Points(ListPair.map parsePoint (List.tabulate(len, fn x =>x ), verts), vertToNode')
+								 end
+				     val verts = parseVerticies(parseVerticies'(verticies))
 
-     fun mappingInserts(json) =
-	 let
-	  val possibleFields = List.tabulate(dim - 1, fn x => ("map"^(Int.toString (x+1)), x))
-	  val grabField = fn x => (Option.map JU.asString) (JU.findField json x)
-	  val possible = (List.filter (fn (x,y) =>Option.isSome y)) (List.map (fn (f,i) => (i, grabField f)) possibleFields)
-	  val possible' = List.map (fn (x,SOME(y)) => Mapping(x,y)) possible
-	 in
-	  possible'
-	  handle exn => []
-	 end
-     val maps = Option.getOpt((Option.map mappingInserts json),[])
-	   (*do basis version*)
-			     (*tabulate over it...*)
+				     val higherObjects = List.tabulate(dim - 1 , fn x => (x+1, errIfNo(env, cxt, "object"^(Int.toString (x+1)), "geometry", meshName) geometry))
+				     fun parserHigherEntry(subDim, json, index) =
+					 let
+					  val name = "object"^(Int.toString subDim)
+					  val lowerObjects = errIfNo(env, cxt, "entity", name, meshName) (SOME(json))
+					  val planePoints = errIfNo(env, cxt, "plane", name, meshName) (SOME(json))
 
-     val (parameterized, nunF) = if dim = 2
-			 then
-			  (case List.find(fn Higher(1, _) => true | _ => false) higher
-			    of SOME(h) => analyzeGeometry1(cxt, verts, h)
-			     | _ => raise Fail "case not covered but insert C")
-			 else if dim = 3
-			 then (case List.find (fn Higher(2, _) => true | _ => false) higher
-				of SOME(h) => analyzeGeometry2(verts, h)
-				 | _ => raise Fail "case not covered but insert C")
-			 else raise Fail "invalid dim"
-     val result = parameterized::verts::(List.@(higher, maps))
-    in
-     (result, nunF)
-    end
+					  fun arrayOfInts(json, ty) = JU.arrayMap (JU.asIntInf) json
+								      handle exn => (TypeError.error(cxt, [S "Unable to process ", S ty, S" of ", S(name),
+													   S(" entry "^(Int.toString index)),
+													   S" in ", A(meshName), S"."]); [])
 
-      
-      
-fun paresRefCell(env, cxt, refCellJson, dim, machinePres, meshName) =
-    let
-     val tyOption = (findField "type") refCellJson
-     val epsilonOption = (findField "epsilon") refCellJson
-     val epsilon = Option.mapPartial (optionRealLit) epsilonOption
-     val eps = (case epsilon
-		 of SOME(e) => e
-		  | _ => makeParseError(err,cxt, "epsilon", "field doesn't exist or isn't a real number.",  realToRealLit machinePres))
-     val cellClass = Option.mapPartial (oE JU.asString) tyOption
-     val cell = Option.mapPartial (fn  x => FemData.fromStr(x, dim)) cellClass
+					  val entities = Option.getOpt(Option.map (fn x => arrayOfInts(x, "entity")) lowerObjects, [])
+					  val planeDef =  Option.getOpt(Option.map (fn x => arrayOfInts(x, "plane")) planePoints, List.tabulate(subDim + 1, fn x => IntInf.fromInt 0))
+					  (*points to define a subdimensional object is that dim*)
+					  val _ = if List.length planeDef = subDim + 1 (*TODO: get indexs hight.*)
+						  then ()
+						  else TypeError.error(cxt, [S"Unable to process ", S(name), S (" entry" ^(Int.toString index)),
+									     S" because plane has wrong number of points."])
 
-     val newtonParamsJson = (findField "newtonParams") refCellJson
-     val insideInsert = Option.mapPartial optionString (findField "insideInsert" refCellJson)
-     val (geometry, numF) = parseGeometryOfRefCell(env, cxt, dim, SOME(refCellJson), meshName)
-     val newtonParamsDict = (case newtonParamsJson
-			      of NONE => {contraction = true, itters = 16, killAfterTol = true, newtonTol = realToRealLit 0.001, start = NONE}
-			       | SOME(json) =>
-				 let
-				  val contraction = Option.getOpt(Option.mapPartial (optionBool) (findField "contraction" json), true)
-				  val _ = print("Contraction test:" ^ (Bool.toString contraction) ^ "\n")
-				  val itters = Option.getOpt(Option.mapPartial (optionInt) (findField "itters" json), 16)
-				  val killAfterTol = Option.getOpt(Option.mapPartial (optionBool) (findField "killAfterTol" json), true)
-				  val newtonTol = Option.getOpt(Option.mapPartial (optionRealLit) (findField "newtonTol" json), realToRealLit 0.001)
 
-				  val start = Option.mapPartial optionRealLitList (findField "start" json)
+					 in
+					  (index, entities, planeDef)
+					 end
+					 handle exn => raise exn
+
+				     fun parseHigher(subDim, SOME(json)) =
+					 let
+					  val _ = print("Ummm:"^(Int.toString subDim))
+					  val listOfJson =  Vector.foldr (op ::) [] (JU.asArray(json))
+					  val count = List.length listOfJson
+
+					  val results = ListPair.map (fn (x,y) => parserHigherEntry(subDim, x, y)) (listOfJson, List.tabulate(count, fn x => x))
+					 in
+					  Higher(subDim, results)
+					 end
+				       | parseHigher (subDim, NONE) = Higher(subDim, [])
+
+				     val higher = List.map parseHigher higherObjects
+
+				     fun mappingInserts(json) =
+					 let
+					  val possibleFields = List.tabulate(dim - 1, fn x => ("map"^(Int.toString (x+1)), x))
+					  val grabField = fn x => (Option.map JU.asString) (JU.findField json x)
+					  val possible = (List.filter (fn (x,y) =>Option.isSome y)) (List.map (fn (f,i) => (i, grabField f)) possibleFields)
+					  val possible' = List.map (fn (x,SOME(y)) => Mapping(x,y)) possible
+					 in
+					  possible'
+					  handle exn => []
+					 end
+				     val maps = Option.getOpt((Option.map mappingInserts json),[])
+				     (*do basis version*)
+				     (*tabulate over it...*)
+
+				     val (parameterized, nunF) = if dim = 2
+								 then
+								  (case List.find(fn Higher(1, _) => true | _ => false) higher
+								    of SOME(h) => analyzeGeometry1(cxt, verts, h)
+								     | _ => raise Fail "case not covered but insert C")
+								 else if dim = 3
+								 then (case List.find (fn Higher(2, _) => true | _ => false) higher
+									of SOME(h) => analyzeGeometry2(verts, h)
+									 | _ => raise Fail "case not covered but insert C")
+								 else raise Fail "invalid dim"
+				     val result = parameterized::verts::(List.@(higher, maps))
+				    in
+				     (result, nunF, verts)
+				    end
+
+				      
+				      
+				fun paresRefCell(env, cxt, refCellJson, dim, machinePres, meshName) =
+				    let
+				     val tyOption = (findField "type") refCellJson
+				     val epsilonOption = (findField "epsilon") refCellJson
+				     val epsilon = Option.mapPartial (optionRealLit) epsilonOption
+				     val eps = (case epsilon
+						 of SOME(e) => e
+						  | _ => makeParseError(err,cxt, "epsilon", "field doesn't exist or isn't a real number.",  realToRealLit machinePres))
+				     val cellClass = Option.mapPartial (oE JU.asString) tyOption
+				     val (geometry, numF, pts) = parseGeometryOfRefCell(env, cxt, dim, SOME(refCellJson), meshName)
+				     val Points(xs, _) = pts
+				     val verts = List.map (fn (x, y) => List.map realToRealLit y) xs
+										  
+				     val cell = Option.mapPartial (fn  x => FemData.fromStr(x, dim, verts)) cellClass
+
+				     val newtonParamsJson = (findField "newtonParams") refCellJson
+				     val insideInsert = Option.mapPartial optionString (findField "insideInsert" refCellJson)
+				     
+				     val newtonParamsDict = (case newtonParamsJson
+							      of NONE => {contraction = true, itters = 16, killAfterTol = true, newtonTol = realToRealLit 0.001, start = NONE}
+							       | SOME(json) =>
+								 let
+								  val contraction = Option.getOpt(Option.mapPartial (optionBool) (findField "contraction" json), true)
+								  val _ = print("Contraction test:" ^ (Bool.toString contraction) ^ "\n")
+								  val itters = Option.getOpt(Option.mapPartial (optionInt) (findField "itters" json), 16)
+								  val killAfterTol = Option.getOpt(Option.mapPartial (optionBool) (findField "killAfterTol" json), true)
+								  val newtonTol = Option.getOpt(Option.mapPartial (optionRealLit) (findField "newtonTol" json), realToRealLit 0.001)
+
+								  val start = Option.mapPartial optionRealLitList (findField "start" json)
+												
+
+								 in
+								  {contraction=contraction, itters=itters, killAfterTol=killAfterTol, newtonTol=newtonTol, start = start}
+								 end
+							    (*end case*))
+
+				    in
+				     (case cell
+				       of SOME(cellVal) => SOME(FemData.RefCellData({ty=cellVal, eps = eps,insideInsert = insideInsert, newtonControl = newtonParamsDict,numFaces = numF}), geometry)
+					| NONE => makeParseError(err, cxt, "cell:type", "field doesn't exsist, isn't a string, or string is stupid", NONE)
 								
+				     (*end case*))
+				    end
 
-				 in
-				  {contraction=contraction, itters=itters, killAfterTol=killAfterTol, newtonTol=newtonTol, start = start}
-				 end
-			    (*end case*))
+				      
 
-    in
-     (case cell
-       of SOME(cellVal) => SOME(FemData.RefCellData({ty=cellVal, eps = eps,insideInsert = insideInsert, newtonControl = newtonParamsDict,numFaces = numF}), geometry)
-	| NONE => makeParseError(err, cxt, "cell:type", "field doesn't exsist, isn't a string, or string is stupid", NONE)
-				
-     (*end case*))
-    end
+				      
+				      
+				fun parseAccelerate(env, cxt, json, meshName) =
+				    let
+				     val acc = findField "accelerate" json
+				     val use = Option.mapPartial (findField "use") acc
+				     val use' = Option.mapPartial (optionBool) (use)
+								  
+				     val useTest = if (Option.isSome(use))
+						   then (Option.valOf(use'))
+						   else true
 
-      
+				     val insert = warnIfNo(env, cxt, "insert", "accelerate", meshName) acc
+				     val includes = warnIfNo(env, cxt, "includes", "accelerate", meshName) acc
+				     val linkDirs =  warnIfNo(env, cxt, "linkDirs", "accelerate", meshName) acc
+				     val includeDirs =  warnIfNo(env, cxt, "includeDirs", "accelerate", meshName) acc
+				     val libs =  warnIfNo(env, cxt, "libs", "accelerate", meshName) acc;
+				     val conservative =  warnIfNo(env, cxt, "conservative", "accelerate", meshName) acc
 
-    
-      
-fun parseAccelerate(env, cxt, json, meshName) =
-    let
-     val acc = findField "accelerate" json
-     val use = Option.mapPartial (findField "use") acc
-     val use' = Option.mapPartial (optionBool) (use)
-				  
-     val useTest = if (Option.isSome(use))
-		   then (Option.valOf(use'))
-		   else true
-
-     val insert = warnIfNo(env, cxt, "insert", "accelerate", meshName) acc
-     val includes = warnIfNo(env, cxt, "includes", "accelerate", meshName) acc
-     val linkDirs =  warnIfNo(env, cxt, "linkDirs", "accelerate", meshName) acc
-     val includeDirs =  warnIfNo(env, cxt, "includeDirs", "accelerate", meshName) acc
-     val libs =  warnIfNo(env, cxt, "libs", "accelerate", meshName) acc;
-     val conservative =  warnIfNo(env, cxt, "conservative", "accelerate", meshName) acc
-
-     fun getStrings(json) = (case json
-			      of SOME(json') => JU.arrayMap (JU.asString) json'			
-			       | NONE => []
-			    )
-			    handle exn => []
-     val includes' = getStrings(includes)
-     val linkDirs' = getStrings(linkDirs)
-     val includeDirs' = getStrings(includeDirs)
-     val libs' = getStrings(libs)
-     (*store properties*)
-     val newProp = Properties.NeedsExtraLibs(includes', includeDirs', libs', linkDirs')
-     val _ = Env.recordProp(env, newProp);
-     (*check if the env exists*)
-     val parseInsert = Option.map JU.asString insert handle exn => NONE
-     val conservative' = (JU.asBool) (Option.valOf conservative) handle exn => false
-    in
-     (case parseInsert
-       of SOME(file) => if OS.FileSys.access(file, [])
-			then if useTest
-			     then SOME(Atom.atom file, conservative')
-			     else NONE
-			else
-			 (TypeError.warning(cxt, [S"File ", S(file), S" does not exist."]);
-			  NONE)
-	| NONE =>  (TypeError.warning(cxt, [S"Insert not found!"]);
-			  NONE))
-    end
+				     fun getStrings(json) = (case json
+							      of SOME(json') => JU.arrayMap (JU.asString) json'			
+							       | NONE => []
+							    )
+							    handle exn => []
+				     val includes' = getStrings(includes)
+				     val linkDirs' = getStrings(linkDirs)
+				     val includeDirs' = getStrings(includeDirs)
+				     val libs' = getStrings(libs)
+				     (*store properties*)
+				     val newProp = Properties.NeedsExtraLibs(includes', includeDirs', libs', linkDirs')
+				     val _ = Env.recordProp(env, newProp);
+				     (*check if the env exists*)
+				     val parseInsert = Option.map JU.asString insert handle exn => NONE
+				     val conservative' = (JU.asBool) (Option.valOf conservative) handle exn => false
+				    in
+				     (case parseInsert
+				       of SOME(file) => if OS.FileSys.access(file, [])
+							then if useTest
+							     then SOME(Atom.atom file, conservative')
+							     else NONE
+							else
+							 (TypeError.warning(cxt, [S"File ", S(file), S" does not exist."]);
+							  NONE)
+					| NONE =>  (TypeError.warning(cxt, [S"Insert not found!"]);
+						    NONE))
+				    end
 
 
-fun parseMeshTys(json) =
-    let
-     val tys = findField "types" json
-     fun astTyToDumb(Ty.T_Bool) = FT.Bool
-       | astTyToDumb (Ty.T_String) = FT.String
-       | astTyToDumb (Ty.T_Int) = FT.Int
-       | astTyToDumb (Ty.T_Tensor(Ty.Shape([]))) = FT.Real
-       | astTyToDumb (Ty.T_Tensor(Ty.Shape(dims))) = FT.Tensor(List.map (fn (Ty.DimConst(c)) => c) dims)
-       | astTyToDumb (Ty.T_Sequence(ty, SOME(Ty.DimConst(i)))) = FT.Array(astTyToDumb ty, i)
-       | astTyToDumb _ = raise Fail "impossible"
-     fun paresPair(j) =
-	 let
-	  val tyName = Option.mapPartial optionString (findField "name" j)
-	  val tyType = Option.mapPartial optionString (findField "ty" j)
-	  val tyParsed = Option.map (fn (x,_,_) => x) (Option.mapPartial matchType tyType)
-	 in
-	  (case (tyName, tyParsed)
-	    of (SOME(tyName'), SOME(tyParsed')) => SOME(Atom.atom tyName', tyParsed', astTyToDumb tyParsed')
-	     | _ => NONE)
-	 end
-	   
-     val data = Option.map (JU.arrayMap (paresPair)) tys
-     val data' = Option.map (List.filter (Option.isSome)) data
-     val data'' : (Atom.atom * Types.ty * FemData.cellDataType) list option = Option.map (List.map (Option.valOf)) data'
-    in
-     data''
-    end
-      
-fun parseMesh(env, cxt, tyName, json) =
-    let
-     val mesh = findField "mesh" json
+				fun parseMeshTys(json) =
+				    let
+				     val tys = findField "types" json
+				     fun astTyToDumb(Ty.T_Bool) = FT.Bool
+				       | astTyToDumb (Ty.T_String) = FT.String
+				       | astTyToDumb (Ty.T_Int) = FT.Int
+				       | astTyToDumb (Ty.T_Tensor(Ty.Shape([]))) = FT.Real
+				       | astTyToDumb (Ty.T_Tensor(Ty.Shape(dims))) = FT.Tensor(List.map (fn (Ty.DimConst(c)) => c) dims)
+				       | astTyToDumb (Ty.T_Sequence(ty, SOME(Ty.DimConst(i)))) = FT.Array(astTyToDumb ty, i)
+				       | astTyToDumb _ = raise Fail "impossible"
+				     fun paresPair(j) =
+					 let
+					  val tyName = Option.mapPartial optionString (findField "name" j)
+					  val tyType = Option.mapPartial optionString (findField "ty" j)
+					  val tyParsed = Option.map (fn (x,_,_) => x) (Option.mapPartial matchType tyType)
+					 in
+					  (case (tyName, tyParsed)
+					    of (SOME(tyName'), SOME(tyParsed')) => SOME(Atom.atom tyName', tyParsed', astTyToDumb tyParsed')
+					     | _ => NONE)
+					 end
+					   
+				     val data = Option.map (JU.arrayMap (paresPair)) tys
+				     val data' = Option.map (List.filter (Option.isSome)) data
+				     val data'' : (Atom.atom * Types.ty * FemData.cellDataType) list option = Option.map (List.map (Option.valOf)) data'
+				    in
+				     data''
+				    end
+				      
+				fun parseMesh(env, cxt, tyName, json) =
+				    let
+				     val mesh = findField "mesh" json
 
-     val constantsField = Option.mapPartial (findField "constants") mesh
+				     val constantsField = Option.mapPartial (findField "constants") mesh
 
-     val constant = Option.map (fn x => parseConstants(env, cxt, tyName, x)) (mesh)
+				     val constant = Option.map (fn x => parseConstants(env, cxt, tyName, x)) (mesh)
 
-     val dimConstCheck = Option.valOf (Option.map (constantExists(FN.dim, SOME(Ty.T_Int))) constant)
-     val meshMapConstCheck = Option.valOf (Option.map (constantExists(FN.meshMapDim, SOME(Ty.T_Int))) constant)
-     val degreeConstCheck = Option.valOf (Option.map (constantExists(FN.maxDegree, SOME(Ty.T_Int))) constant)
-     val dim : int option = Option.mapPartial (extractIntConst cxt) dimConstCheck
-     val spaceDim : int option = Option.mapPartial (extractIntConst cxt) meshMapConstCheck
-     val degree : int option = Option.mapPartial (extractIntConst cxt) degreeConstCheck
-				   
-     val combined = optionList [dimConstCheck, meshMapConstCheck]
-     val transformShapeConst = Option.map (fn ([(ty, expr, name), (ty', expr', name')])
-					      =>
-						let
-						 val ty'' = (Ty.T_Sequence(Ty.T_Int, SOME(Ty.DimConst(2))))
-						in
-						 [(ty'', CE.Seq([expr', expr], ty''), FN.tds)]
-						end
-					  ) combined
-     val newConstants = Option.map (List.@) (optionTuple(constant, transformShapeConst))
+				     val dimConstCheck = Option.valOf (Option.map (constantExists(FN.dim, SOME(Ty.T_Int))) constant)
+				     val meshMapConstCheck = Option.valOf (Option.map (constantExists(FN.meshMapDim, SOME(Ty.T_Int))) constant)
+				     val degreeConstCheck = Option.valOf (Option.map (constantExists(FN.maxDegree, SOME(Ty.T_Int))) constant)
+				     val dim : int option = Option.mapPartial (extractIntConst cxt) dimConstCheck
+				     val spaceDim : int option = Option.mapPartial (extractIntConst cxt) meshMapConstCheck
+				     val degree : int option = Option.mapPartial (extractIntConst cxt) degreeConstCheck
+										 
+				     val combined = optionList [dimConstCheck, meshMapConstCheck]
+				     val transformShapeConst = Option.map (fn ([(ty, expr, name), (ty', expr', name')])
+									      =>
+										let
+										 val ty'' = (Ty.T_Sequence(Ty.T_Int, SOME(Ty.DimConst(2))))
+										in
+										 [(ty'', CE.Seq([expr', expr], ty''), FN.tds)]
+										end
+									  ) combined
+				     val newConstants = Option.map (List.@) (optionTuple(constant, transformShapeConst))
 
-     val scalarBasis = Option.mapPartial (findField "basis") mesh 
-     val parsedBasis = Option.map
-			 (fn (json', dim', degree', spaceDim') =>
-			     (parseScalarBasis(env, cxt, tyName, json', dim', degree', spaceDim')))
-			 (case (scalarBasis, dim, degree, spaceDim)
-			   of (SOME(a), SOME(b), SOME(c), SOME(d)) => SOME((a,b,c,d))
-			    | _ => NONE (*end case *))
+				     val scalarBasis = Option.mapPartial (findField "basis") mesh 
+				     val parsedBasis = Option.map
+							 (fn (json', dim', degree', spaceDim') =>
+							     (parseScalarBasis(env, cxt, tyName, json', dim', degree', spaceDim')))
+							 (case (scalarBasis, dim, degree, spaceDim)
+							   of (SOME(a), SOME(b), SOME(c), SOME(d)) => SOME((a,b,c,d))
+							    | _ => NONE (*end case *))
 
-     val refCellField = Option.mapPartial (findField "refCell") mesh
-     val refCellData = Option.mapPartial (fn (x,y) => paresRefCell(env, cxt,x,y, 0.0000001, tyName))
-					 (optionTuple(refCellField, dim))
+				     val refCellField = Option.mapPartial (findField "refCell") mesh
+				     val refCellData = Option.mapPartial (fn (x,y) => paresRefCell(env, cxt,x,y, 0.0000001, tyName))
+									 (optionTuple(refCellField, dim))
 
-     val dimMethods = Option.getOpt(Option.map (fn (x,y) => y) refCellData, [])
+				     val dimMethods = Option.getOpt(Option.map (fn (x,y) => y) refCellData, [])
 
-     val optionalAcceleration = Option.mapPartial (fn x => parseAccelerate(env, cxt, x, tyName)) mesh
+				     val optionalAcceleration = Option.mapPartial (fn x => parseAccelerate(env, cxt, x, tyName)) mesh
 
-     val tys = (Option.mapPartial parseMeshTys mesh)
-     val tys' = Option.getOpt(tys, [])
-     val tys'' = List.map (fn (x,y,z) => (x,z)) tys'
-     val meshVal = Option.map (fn (x,y,z,basis, cell) => FT.mkMesh(x,y,z,
-							     basis,
-							     tyName, cell, optionalAcceleration, tys''))
-			      (case (dim, spaceDim, degree, parsedBasis, refCellData)
-				of (SOME(a), SOME(b), SOME(c), SOME(d), SOME(e, _)) => SOME((a,b,c,d,e))
-				 | _ => NONE (* end case*))
-     val newConstants' = Option.getOpt(newConstants, [])
+				     val tys = (Option.mapPartial parseMeshTys mesh)
+				     val tys' = Option.getOpt(tys, [])
+				     val tys'' = List.map (fn (x,y,z) => (x,z)) tys'
+				     val meshVal = Option.map (fn (x,y,z,basis, cell) => FT.mkMesh(x,y,z,
+												   basis,
+												   tyName, cell, optionalAcceleration, tys''))
+							      (case (dim, spaceDim, degree, parsedBasis, refCellData)
+								of (SOME(a), SOME(b), SOME(c), SOME(d), SOME(e, _)) => SOME((a,b,c,d,e))
+								 | _ => NONE (* end case*))
+				     val newConstants' = Option.getOpt(newConstants, [])
 
-    in
-     (meshVal, newConstants', dimMethods, tys')
-    end
+				    in
+				     (meshVal, newConstants', dimMethods, tys')
+				    end
 
 
-fun parseSpace(env, cxt, tyName, basisFunctionShape : int list, rangeShape : int list, meshData, json) =
-    let
+				fun parseSpace(env, cxt, tyName, basisFunctionShape : int list, rangeShape : int list, meshData, json) =
+				    let
 
-     (*we will note use basisFunctionShape, but I'm keeping it here for now.*)
-     val _ = if List.length basisFunctionShape = 0
-	     then ()
-	     else raise Fail "illegal operation"
-			
-     val space = findField "space" json
+				     (*we will note use basisFunctionShape, but I'm keeping it here for now.*)
+				     val _ = if List.length basisFunctionShape = 0
+					     then ()
+					     else raise Fail "illegal operation"
+							
+				     val space = findField "space" json
 
-     val constantsField = Option.mapPartial (findField "constants") space
-     val constant = Option.map (fn x => parseConstants(env, cxt, tyName, x)) (space) 
-     val rangeShapeLength = List.length rangeShape
-     val _ = print("Size of range:"^(Int.toString rangeShapeLength)^"\n");
-     val rangeTy = Ty.T_Sequence(Ty.T_Int, SOME(Ty.DimConst rangeShapeLength))
+				     val constantsField = Option.mapPartial (findField "constants") space
+				     val constant = Option.map (fn x => parseConstants(env, cxt, tyName, x)) (space) 
+				     val rangeShapeLength = List.length rangeShape
+				     val _ = print("Size of range:"^(Int.toString rangeShapeLength)^"\n");
+				     val rangeTy = Ty.T_Sequence(Ty.T_Int, SOME(Ty.DimConst rangeShapeLength))
 
-     val dimConstCheck = Option.valOf (Option.map (constantExists(FN.dim, SOME(Ty.T_Int))) constant) handle exn => raise exn
-     val spaceMapDim = Option.valOf (Option.map (constantExists(FN.spaceMapDim, SOME(Ty.T_Int))) constant) handle exn => raise exn
-     val degreeConstCheck = Option.valOf (Option.map (constantExists(FN.maxDegree, SOME(Ty.T_Int))) constant) handle exn => raise exn
-     val temp = (Option.map (constantExists(FN.rangeShape, SOME(rangeTy))) constant)
-     val _ = (case temp
-	       of SOME(SOME(_)) => print("Okay shape\n")
-		| SOME(NONE) => print("NOT FUCK OKAY SHAPE\n")
-		| NONE => print("NOT OKAY SHAPE\n")
-	     );
-     val rangeConstCheck =  Option.join temp handle exn => raise exn
-     
-					 
+				     val dimConstCheck = Option.valOf (Option.map (constantExists(FN.dim, SOME(Ty.T_Int))) constant) handle exn => raise exn
+				     val spaceMapDim = Option.valOf (Option.map (constantExists(FN.spaceMapDim, SOME(Ty.T_Int))) constant) handle exn => raise exn
+				     val degreeConstCheck = Option.valOf (Option.map (constantExists(FN.maxDegree, SOME(Ty.T_Int))) constant) handle exn => raise exn
+				     val temp = (Option.map (constantExists(FN.rangeShape, SOME(rangeTy))) constant)
+				     val _ = (case temp
+					       of SOME(SOME(_)) => print("Okay shape\n")
+						| SOME(NONE) => print("NOT FUCK OKAY SHAPE\n")
+						| NONE => print("NOT OKAY SHAPE\n")
+					     );
+				     val rangeConstCheck =  Option.join temp handle exn => raise exn
+												 
+												 
 
-     val dim : int option = Option.mapPartial (extractIntConst cxt) dimConstCheck
-     val spaceDim : int option = Option.mapPartial (extractIntConst cxt) spaceMapDim
-     val degree : int option = Option.mapPartial (extractIntConst cxt) degreeConstCheck
-     val rangeShape : int list option = Option.mapPartial (extractShapeConst cxt) rangeConstCheck
-     val rangeShape = (case rangeShape
-			of SOME([1]) => SOME([])
-			 | NONE => (SOME([])) (*maybe register a warning?*)
-			 | _ => rangeShape)
-     val combined = optionList [spaceMapDim, rangeConstCheck]
-     val spaceDofShapeConst = Option.map (fn ([(ty, expr, name), (ty', expr', name')])
-					     =>
-					       let
-						val ty'' = (Ty.T_Sequence(Ty.T_Int, SOME(Ty.DimConst(1+rangeShapeLength))))
-						val CE.Seq(lst, _) = expr'
-					       in
-						[(ty'', CE.Seq(expr::lst, ty''), FN.sds)]
-					       end
-					 ) combined
-     val newConstants = Option.map (List.@) (optionTuple(constant, spaceDofShapeConst))
+				     val dim : int option = Option.mapPartial (extractIntConst cxt) dimConstCheck
+				     val spaceDim : int option = Option.mapPartial (extractIntConst cxt) spaceMapDim
+				     val degree : int option = Option.mapPartial (extractIntConst cxt) degreeConstCheck
+				     val rangeShape : int list option = Option.mapPartial (extractShapeConst cxt) rangeConstCheck
+				     val rangeShape = (case rangeShape
+							of SOME([1]) => SOME([])
+							 | NONE => (SOME([])) (*maybe register a warning?*)
+							 | _ => rangeShape)
+				     val combined = optionList [spaceMapDim, rangeConstCheck]
+				     val spaceDofShapeConst = Option.map (fn ([(ty, expr, name), (ty', expr', name')])
+									     =>
+									       let
+										val ty'' = (Ty.T_Sequence(Ty.T_Int, SOME(Ty.DimConst(1+rangeShapeLength))))
+										val CE.Seq(lst, _) = expr'
+									       in
+										[(ty'', CE.Seq(expr::lst, ty''), FN.sds)]
+									       end
+									 ) combined
+				     val newConstants = Option.map (List.@) (optionTuple(constant, spaceDofShapeConst))
 
-     val scalarBasis = Option.mapPartial (findField "basis") space
-     val parsedBasis = Option.map
-			 (fn (json', dim', degree', spaceDim') =>
-			     (parseScalarBasis(env, cxt, tyName, json', dim', degree', spaceDim')))
-			 (case (scalarBasis, dim, degree, spaceDim)
-			   of (SOME(a), SOME(b), SOME(c), SOME(d)) => SOME((a,b,c,d))
-			    | _ => NONE (*end case *))
+				     val scalarBasis = Option.mapPartial (findField "basis") space
+				     val parsedBasis = Option.map
+							 (fn (json', dim', degree', spaceDim') =>
+							     (parseScalarBasis(env, cxt, tyName, json', dim', degree', spaceDim')))
+							 (case (scalarBasis, dim, degree, spaceDim)
+							   of (SOME(a), SOME(b), SOME(c), SOME(d)) => SOME((a,b,c,d))
+							    | _ => NONE (*end case *))
 
-     val spaceVal = Option.map (fn (x,y,basis) => FT.mkSpace(x,y, meshData,
-							     basis,
-							     tyName))
-			      (case (spaceDim, rangeShape, parsedBasis)
-				of (SOME(a), SOME(b), SOME(c)) => SOME((a,b,c))
-				 | _ => NONE (* end case*))
-			      
-     val newConstants' : constant list = Option.getOpt(newConstants, [])
+				     val spaceVal = Option.map (fn (x,y,basis) => FT.mkSpace(x,y, meshData,
+											     basis,
+											     tyName))
+							       (case (spaceDim, rangeShape, parsedBasis)
+								 of (SOME(a), SOME(b), SOME(c)) => SOME((a,b,c))
+								  | _ => NONE (* end case*))
+							       
+				     val newConstants' : constant list = Option.getOpt(newConstants, [])
 
 
 
 
-    in
-     (spaceVal, newConstants') handle exn => raise exn
-    end
-fun parseFunc(env, cxt, tyName, expectedRangeShape, space, json) =
-    let
-     val _ = (case expectedRangeShape
-	       of NONE => ()
-		| _ => raise Fail "illegal operation")
-     val func = findField "function" json
+				    in
+				     (spaceVal, newConstants') handle exn => raise exn
+				    end
+				fun parseFunc(env, cxt, tyName, expectedRangeShape, space, json) =
+				    let
+				     val _ = (case expectedRangeShape
+					       of NONE => ()
+						| _ => raise Fail "illegal operation")
+				     val func = findField "function" json
 
-     val constantsField = Option.mapPartial (findField "constants") func
-     val constant = Option.map (fn x => parseConstants(env, cxt, tyName, x)) func
-     val _ = Option.app (fn x => print(Int.toString(List.length(x)))) constant
+				     val constantsField = Option.mapPartial (findField "constants") func
+				     val constant = Option.map (fn x => parseConstants(env, cxt, tyName, x)) func
+				     val _ = Option.app (fn x => print(Int.toString(List.length(x)))) constant
 
 
-     (*these could actually be parsed and used but for now we block them to avoid confusion*)
-     val optionalRange = (Option.mapPartial (constantExists(FN.rangeShape, NONE)) constant)
-     val _ = (case optionalRange
-	       of (NONE) => ()
-		| SOME(_) => raise Fail "illegal constant assignment")
+				     (*these could actually be parsed and used but for now we block them to avoid confusion*)
+				     val optionalRange = (Option.mapPartial (constantExists(FN.rangeShape, NONE)) constant)
+				     val _ = (case optionalRange
+					       of (NONE) => ()
+						| SOME(_) => raise Fail "illegal constant assignment")
 
-     val spaceShape = FT.spaceShape space
-     val spaceDim = FT.spaceDim space
-     val spaceDofShape = spaceDim :: spaceShape
+				     val spaceShape = FT.spaceShape space
+				     val spaceDim = FT.spaceDim space
+				     val spaceDofShape = spaceDim :: spaceShape
 
-     fun makeShapeConst(seq) =
-	 let
-	  val ty = Ty.T_Sequence(Ty.T_Int, SOME((Ty.DimConst o List.length) seq))
-	 in
-	  (ConstExpr.Seq(List.map (ConstExpr.Int o IntLit.fromInt) seq, ty), ty)
-	 end
-     val (spaceShapeTy, spaceShapeConst) = makeShapeConst spaceShape
-     val (dofShapeTy, dofShapeConst) = makeShapeConst spaceDofShape
-				       
+				     fun makeShapeConst(seq) =
+					 let
+					  val ty = Ty.T_Sequence(Ty.T_Int, SOME((Ty.DimConst o List.length) seq))
+					 in
+					  (ConstExpr.Seq(List.map (ConstExpr.Int o IntLit.fromInt) seq, ty), ty)
+					 end
+				     val (spaceShapeTy, spaceShapeConst) = makeShapeConst spaceShape
+				     val (dofShapeTy, dofShapeConst) = makeShapeConst spaceDofShape
+										      
 
-     val spaceRangeConst = (spaceShapeConst, spaceShapeTy, FN.rangeShape)
-     val spaceDofConst = (dofShapeConst, dofShapeTy, FN.fds)
-     val constants' = spaceDofConst :: spaceRangeConst :: (Option.getOpt(constant, []))
-     val funcType = SOME(FT.mkFunc(space, spaceShape, tyName))
-				       
+				     val spaceRangeConst = (spaceShapeConst, spaceShapeTy, FN.rangeShape)
+				     val spaceDofConst = (dofShapeConst, dofShapeTy, FN.fds)
+				     val constants' = spaceDofConst :: spaceRangeConst :: (Option.getOpt(constant, []))
+				     val funcType = SOME(FT.mkFunc(space, spaceShape, tyName))
+							
 
-				  
+							
 
-	       
-			   
-			   
-    in
-     (funcType, constants')
-    end
-end
+							
+							
+							
+				    in
+				     (funcType, constants')
+				    end
+				end
