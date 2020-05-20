@@ -110,7 +110,8 @@ return to Strands until Fixed
   datatype input_init = datatype Inputs.input_init
 
   datatype input = datatype Inputs.input
-					 
+
+  (*goes through inputs and adds base feminputs to a registery*)
   fun procBaseInputs(inputs : V.t input list, modifyInputTable : FD.femType * V.t -> unit) =
       let
        fun doit(S.INP{var, name, ty, desc, init}) =
@@ -125,6 +126,8 @@ return to Strands until Fixed
       in
        List.app doit inputs
       end
+
+	
 
 
 	
@@ -150,7 +153,11 @@ return to Strands until Fixed
    fun findDep ( v1 : V.t) : V.t option = VTbl.find femDep v1
 
 
+   (*Figure out the base fem inputs.*)
    val _ = procBaseInputs(inputs, addType)
+
+   (*Go through global init to find dependecies between fems*)
+   val _ = ()
 
   in
    prog

@@ -154,7 +154,7 @@ structure CheckConst : sig
 							 else err [S "invalid init of FEM data"]
 		  | AST.E_LoadFem(data, SOME(e'), NONE) =>
 		    (case eval' e
-		      of C.Expr r => if isInput andalso (FemData.validInput data) then C.Expr r
+		      of C.Expr r => if isInput andalso (FemData.validInput data) then C.Expr (AST.E_LoadFem(data, SOME(r), NONE))
 				     else err [S "invalid init of FEM data"]
 		       | _ => raise Fail "impossible"
 		    (*end case*))
