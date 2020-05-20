@@ -123,7 +123,7 @@ return to Strands until Fixed
 			| _ => raise Fail "impossible: compound types with base fem not allowed in inputs!")
 	   (*end case*))
       in
-       List.map doit inputs
+       List.app doit inputs
       end
 
 
@@ -148,6 +148,9 @@ return to Strands until Fixed
    val femDep = VTbl.mkTable(32, Fail "fem dep not found")
    fun addDep (v1 : V.t, v2 : V.t) = VTbl.insert femDep (v1, v2)
    fun findDep ( v1 : V.t) : V.t option = VTbl.find femDep v1
+
+
+   val _ = procBaseInputs(inputs, addType)
 
   in
    prog
