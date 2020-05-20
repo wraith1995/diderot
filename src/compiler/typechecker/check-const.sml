@@ -83,7 +83,8 @@ structure CheckConst : sig
        exception EVAL
        fun err msg = (TypeError.error (cxt, msg); raise EVAL)
           fun mkPrim (f, mvs, args, ty) =
-                if Basis.allowedInConstExp f
+              if Basis.allowedInConstExp f andalso (not(isInput))
+						     (*FIXME: to make fem analysis stuff work, inputs now can't use all basis expression in inputs...*)
                   then C.Expr(AST.E_Prim(f, mvs, List.map C.valueToExpr args, ty))
                   else err [S "invalid use of ", V f, S " in constant expression"]
           val findBinOp = Var.Tbl.find binOpTbl

@@ -127,7 +127,8 @@ return to Strands until Fixed
        List.app doit inputs
       end
 
-	
+
+
 
 
 	
@@ -156,7 +157,11 @@ return to Strands until Fixed
    (*Figure out the base fem inputs.*)
    val _ = procBaseInputs(inputs, addType)
 
-   (*Go through global init to find dependecies between fems*)
+   (*Go through global init to find dependecies between fems   fun procGlobalInput - base expression, but we register dependencies*)
+   (*Idea: go through this as normal, but if you have a global var, we check the assignment for its type.
+   If clean, we add a dependency
+   handleGlobalAssign callback - 
+    *)
    val _ = ()
 
   in
