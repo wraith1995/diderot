@@ -67,14 +67,34 @@ return to Strands until Fixed
   (*details: reductions (boring as just going inside) - functions - lots of inling.*)
 
   structure S = Simple
-  structure TY = SimpleTypes
+  structure Ty = SimpleTypes
   structure V = SimpleVar
   structure VTbl = SimpleVar.Tbl
   structure FD = FemData
   structure FO = FemOpt
   structure HT = HashTable
 
-  (*Proc global function*)
+  (*Proc globals and global inits*)
+  (*Make data structures for FEM possiblie assocations: list, seq, Tuple, ... - yay for SSA in conversions*)
+  (*make prop for assinging these*)
+
+  datatype femPres = Base of FD.femType * V.t option | ALL of FD.femType | NOTHING (* all, nothing, or one thing *)
+		     | Tuple of femPres list | Array of femPres list (* variety *)
+		     | Seq of femPres (* must be homogenous i.e no partitioning on an array*)
+
+  fun toFemPres (Ty.T_Bool) = NOTHING
+    | toFemPres (Ty.T_Int) = NOTHING
+    | toFemPres (Ty.T_String) = NOTHING
+    | toFemPres (Ty.T_Tensor _) = NOTHING
+    | toFemPres (Ty.T_Sequence(t, SOME k)) = Array(List.tabulate(k, fn x => toFemPres t))
+    | toFemPres (Ty.T_Sequence(t, NONE)) = Seq(toFemPres t)
+    | toFemPres (Ty.T_Tuple(tys)) = Tuple(List.map toFemPres tys)
+    | toFemPres (Ty.T_Strand _) = NOTHING
+    | toFemPres (Ty.T_Field _) = NOTHING
+    | toFemPres (Ty.T_Fem(f)) = if FD.baseFem f
+				then Base(f, NONE)
+				else Base(Option.valOf(FD.dependencyOf(f)), NONE)
+	
 
   fun transform prog = let
    val S.Program{props, consts, inputs, constInit, globals,
@@ -88,6 +108,8 @@ return to Strands until Fixed
 			   of SOME(vs) => HT.insert femTable (ty, v::vs)
 			    | NONE => HT.insert femTable (ty, [v])
 			 (*end case*))
+
+   (*find index (ty, v)*)
 
 
    val femDep = VTbl.mkTable(32, Fail "fem dep not found")
