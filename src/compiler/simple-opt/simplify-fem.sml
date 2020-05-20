@@ -73,14 +73,25 @@ return to Strands until Fixed
   structure FD = FemData
   structure FO = FemOpt
   structure HT = HashTable
+  (*plan: as above*)
+  (*1. Proc globals and global inits*)
+  (*1.5 make tool for updating femPress (merge two togeather)*)
+  (*2. make prop for assigning femPres and make sure props make sense - they do because see inline*)
+  (*3. Make expression rules for pushing things - skip apply*)
+  (*4. Go through stages igoning apply and reduction*)
+  (*5. Fix functions *)
+  (*6. Do rewrite*)
 
-  (*Proc globals and global inits*)
+
+
   (*Make data structures for FEM possiblie assocations: list, seq, Tuple, ... - yay for SSA in conversions*)
-  (*make prop for assinging these*)
 
   datatype femPres = Base of FD.femType * V.t option | ALL of FD.femType | NOTHING (* all, nothing, or one thing *)
 		     | Tuple of femPres list | Array of femPres list (* variety *)
 		     | Seq of femPres (* must be homogenous i.e no partitioning on an array*)
+
+  type callSite =  V.t list  (* structure for idying a call site *)
+  (* think about functions...*)
 
   fun toFemPres (Ty.T_Bool) = NOTHING
     | toFemPres (Ty.T_Int) = NOTHING
@@ -94,6 +105,28 @@ return to Strands until Fixed
     | toFemPres (Ty.T_Fem(f)) = if FD.baseFem f
 				then Base(f, NONE)
 				else Base(Option.valOf(FD.dependencyOf(f)), NONE)
+
+
+  datatype input_init = datatype Inputs.input_init
+
+  datatype input = datatype Inputs.input
+					 
+  fun procBaseInputs(inputs : V.t input list, modifyInputTable : FD.femType * V.t -> unit) =
+      let
+       fun doit(S.INP{var, name, ty, desc, init}) =
+	   (case ty
+	     of APITypes.FemData(f) => if FemData.baseFem f
+				       then modifyInputTable(f, var)
+				       else raise Fail "impossible: non base fems use converted inputs!"
+	      | t => (case List.filter (FemData.baseFem) (APITypes.allFems t)
+		       of [] => ()
+			| _ => raise Fail "impossible: compound types with base fem not allowed in inputs!")
+	   (*end case*))
+      in
+       List.map doit inputs
+      end
+
+
 	
 
   fun transform prog = let

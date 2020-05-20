@@ -37,6 +37,11 @@ structure APITypes =
       | hasFem (TupleTy(tys)) = not (List.all (not o hasFem) tys)
       | hasFem _ = false
 
+    fun allFems (SeqTy(ty, _)) = allFems ty
+      | allFems (FemData(f)) = [f]
+      | allFems (TupleTy(tys)) = List.concatMap allFems tys
+      | allFems _ = []
+
     fun hasTupleEsq (SeqTy(ty, SOME(n))) = hasDynamicSize ty orelse hasTupleEsq ty (*has tuple or [][n]*)
       | hasTupleEsq (SeqTy(ty, NONE)) = hasTupleEsq ty
       | hasTupleEsq (TupleTy(tys)) = true
