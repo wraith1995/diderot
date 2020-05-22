@@ -866,7 +866,6 @@ structure Simplify : sig
                    of NONE => simplifyState (r, x'''@xs, stms)
                     | SOME e => let
                      val (stms, e') = simplifyExp (cxt, e, stms)
-
                     in
 		     (case transformStm
 		       of SOME(tStm) =>

@@ -140,6 +140,7 @@ structure SimplifyFields : sig
               | S.E_Seq _ => NONE
 (* WARNING: if tuples become a surface-language feature, then we will need to track tuples
  * that contain fields or images.
+ * WARNING: For now, tuples can only hold values so no fields, images, fem loads.
  *)
               | S.E_Tuple xs => NONE
               | S.E_Project(x, i) => NONE
@@ -155,11 +156,13 @@ structure SimplifyFields : sig
 	      | S.E_ExtractFem(_,_) => NONE
 	      | S.E_ExtractFemItem(_,_,_) => NONE
 	      | S.E_ExtractFemItem2(_,_,_,_, _) => NONE
-	      | S.E_FemField(_,_,_,_,_,_) => (bindImages(lhs, VMap.empty); NONE) (* THIS IS MAYBE NOT THE RIGHT WAY TO DO femFields -> we should be tracking mesh, spaces, etc like images*)
+	      | S.E_FemField(_,_,_,_,_,_) => (bindImages(lhs, VMap.empty); NONE)
+	      (* THIS IS MAYBE NOT THE RIGHT WAY TO DO femFields -> we should be tracking mesh, spaces, etc like images*)
+	      (*No need to track: access refCell (fields on ref) or mesh (invs) - add tests there*)
 	      | S.E_ExtractFemItemN(vars, tys, outTy, opt, funcOpt) => NONE
               | S.E_LoadImage _ => image()
               | S.E_InsideImage _ => raise Fail "premature InsideImage"
-(* QUESTION: is this a valid way to handle field functions? *)
+(* QUESTION: is this a valid way to handle field functions? ANSWER: NOOOO *)
               | S.E_FieldFn f => (bindImages(lhs, VMap.empty); NONE)
             (* end case *)
           end

@@ -111,8 +111,8 @@ structure Simple =
       (* Creation of femdata from femdata; the femtype argument is the result type*)
       | E_ExtractFem of var * FemData.femType    (*Extracting femdata of type femType from femdata*)
       | E_ExtractFemItem of var * ty * FemOpt.femOption (* var.femOption : ty*)
-      | E_ExtractFemItem2 of var * var * ty * ty * FemOpt.femOption (* var.femOption : ty*)
-      | E_FemField of var * var * var option * ty * FemOpt.femField * func option
+      | E_ExtractFemItem2 of var * var * ty * ty * FemOpt.femOption (*fem, other :ty1 -> ty2 via femOption with femty*)
+      | E_FemField of var * var * var option * ty * FemOpt.femField * func option (*fem1, fem1Dep, optional init, fieldty, femOption, one of two functions*)
       | E_ExtractFemItemN of var list * ty list * ty * FemOpt.femOption * func option
       | E_InsideImage of var * var * int        (* inside-image test; introduced by the
                                                  * simplify-fields pass. The third argument is

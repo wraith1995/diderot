@@ -69,6 +69,7 @@ return to Strands until Fixed
   structure S = Simple
   structure Ty = SimpleTypes
   structure V = SimpleVar
+  structure F = SimpleFunc
   structure VTbl = SimpleVar.Tbl
   structure FD = FemData
   structure FO = FemOpt
@@ -200,17 +201,180 @@ return to Strands until Fixed
 
   type callSite =  V.t list  (* structure for idying a call site *)
   (* think about functions...*)
+  (*preProc globals in each func*)
+  (*call site to args+globals femPres and args+globals femPres to new function defs*)
 
-  fun expToFemPres(exp : S.exp) : femPres  =
+  fun expToFemPres(exp : S.exp,
+		   retTy : Ty.ty,
+		   getDep : V.t -> V.t option,
+		   addDep : V.t * V.t -> unit,
+		   change : bool ref) : femPres  =
       let
-       val _ = ()
+       val retHasFem : bool = true (*FIXME: does the ty have fem*)
+       val mergeFemPreses = List.foldr (fn (x,y) => merge(x, y, change))
+       fun doit (S.E_Var(v)) = (checkExistence (V.nameOf v) v; getFemPres v)
+	 | doit (S.E_Lit(l)) = NOTHING
+	 | doit (S.E_Kernel(k)) = NOTHING
+	 | doit (S.E_Select(v1, v2)) = (
+	  checkExistence ("strand var " ^ (V.nameOf v2)) v2;
+	  getFemPres v2
+	 )
+	 | doit (S.E_Apply(f, vs)) = (List.app (checkExistence ((F.nameOf f) ^ "_arg")) vs; raise Fail "fixme"; NOTHING)
+	 | doit (S.E_Prim(v, [], vs, t)) =
+	   (List.app (checkExistence ("_arg")) vs;
+	    if Var.same(v, BasisVars.subscript) andalso retHasFem
+	    then let val [sy, index] = vs (*this might be pointless*)
+		     val Array(ps) = getFemPres sy
+		     val retP = tyToFemPres retTy
+		     val merged =  mergeFemPreses retP ps
+		 in merged end
+	    else if Var.same(v, BasisVars.dynSubscript) andalso retHasFem
+	    then let val [sy, index] = vs
+		     val Seq(p) = getFemPres sy
+		 in
+		  p
+		 end
+	    else if Var.same(v, BasisVars.at_dT)
+	    then let val [sy, a] = vs
+		     val Seq(p) = getFemPres sy
+		     val p' = getFemPres a
+		     val p'' = merge(p, p', change)
+		 in Seq(p'') end
+	    else if Var.same(v, BasisVars.at_Td)
+	    then let val [a, sy] = vs
+		     val Seq(p) = getFemPres sy
+		     val p' = getFemPres a
+		     val p'' = merge(p, p', change)
+		 in Seq(p'') end
+	    else if Var.same(v, BasisVars.at_dd)
+	    then let val [sy1, sy2] = vs
+		     val Seq(p1) = getFemPres sy1
+		     val Seq(p2) = getFemPres sy2
+		     val p = merge(p1, p2, change)
+		 in Seq(p) end
+	    else NOTHING 
+	   )
+	 | doit (S.E_Tensor(vs, _)) = (List.app (checkExistence ( "_ten")) vs; NOTHING)
+	 | doit (S.E_Field(vs, _)) = (List.app (checkExistence ("_fld")) vs; NOTHING)
+	 | doit (S.E_Seq(vs, t)) =
+	   (List.app (checkExistence ("_seq")) vs;
+	   (case t
+	     of Ty.T_Sequence(t', NONE) => Seq(mergeFemPreses (tyToFemPres t') (List.map getFemPres vs))
+	      | Ty.T_Sequence(t', SOME(k)) => Array(List.map getFemPres vs)
+	   (*end case*)))
+	 | doit (S.E_Tuple(vs)) =
+	   (List.app (checkExistence ("_tpl")) vs;
+	    Tuple(List.map getFemPres vs)
+	   )
+	 | doit (S.E_Project(v, i)) =
+	   let val _ =  checkExistence ("_project_" ^ (Int.toString i)) v
+	    val Tuple(vs) = getFemPres v
+	   in List.nth(vs, i)
+	   end
+	 | doit (S.E_Slice(v, _, _)) = (((checkExistence ("_slice")) v; NOTHING))
+	 | doit (S.E_Coerce {srcTy, dstTy, x}) =
+	   (checkExistence "_coerce" x;
+	   (case (srcTy, dstTy)
+	     of (Ty.T_Int, Ty.T_Tensor _) => NOTHING
+	      | (Ty.T_Sequence(ty, SOME n), Ty.T_Sequence(ty', NONE)) =>
+		let
+		 val Array(ps) = getFemPres x
+		 (* merge all femPress to largest one*)
+		 val m = mergeFemPreses (tyToFemPres ty) ps
+		in
+		 Seq(m)
+		end
+	      | _ => NOTHING (*kernel to kernel, sequence to sequence, int to tensor, same; tuple handled earlier*)
+	   (*end case*)))
+	 | doit (S.E_BorderCtl(b, v)) = ((checkExistence ( "_b")) v; NOTHING)
+	 | doit (S.E_LoadSeq _) = NOTHING
+	 | doit (S.E_LoadImage _) = NOTHING
+	 | doit (S.E_LoadFem(f, v1, v2)) =
+	   (List.app (checkExistence ("_loadFem")) [v1, v2]; (*CHECK ME*)
+	    if FD.baseFem f (*v1 is the dest data; v2 is the dep; *)
+	    then ((case getFemPres v2
+		    of Base(f', SOME(v2')) => (addDep(v1, v2'); Base(f, SOME(v1)))
+		     | Base(f', NONE) => raise Fail "base fem load not set" (*risk {} here.*)
+		     | ALL(f') => raise Fail "base fem load unable to trace" (*Should be impossible*)
+		     | _ => raise Fail "impossible"
+		 (* end case*)))
+	    else Base(f, SOME(v1))) (*v1 is base data (func or mesh); v2 is an int for a cell*)
+		   
+	 | doit (S.E_ExtractFem(v, f)) = (
+	  let
+	   val _ = checkExistence "_extractFem" v
+	   val retFem = (case retTy
+			  of Ty.T_Fem(f') => f'
+			   | _ => raise Fail "invalid ExtractFem")
+	   val _ = if (FD.baseFem retFem) andalso (FD.baseFem f)
+		   then ()
+		   else raise Fail "invalid extractFem"
+	   val vty = V.typeOf v
+	   val vtyf = (case vty
+			of Ty.T_Fem(f') => f'
+			 | _ => raise Fail "invalid ExtractFem Arg")
+			
+			  (*This is either taking something out of a func/space so we get a dep if possible*)
+			  (*If *)
+	  in
+	   if FD.baseFem vtyf
+	   then (case getFemPres v
+		  of Base(vtyf', SOME(v')) => (case (FD.dependencyOf vtyf', getDep v')
+						of (SOME(f'), SOME(v'')) => Base(f',SOME(v''))
+						 | (SOME(f'), NONE) => ALL(f') (*FIXME: ???*)
+						 | (NONE, _) => raise Fail "impossible mesh extract"
+					      (* end case*))
+		   | Base(vtyf', NONE) => raise Fail "extracting from non init" (*{} case?*)
+		   | ALL(vtyf') => ALL(vtyf')
+		   | _ => raise Fail "impossible extract FEM"
+		(* end case*))
+	   else getFemPres v (*take base out of cell or pos; *)
+	  end)
+	 | doit (S.E_ExtractFemItem(v, t, fo)) = (checkExistence "_EFI1" v;
+						  if retHasFem
+						  then raise Fail "impossible"
+						  else tyToFemPres retTy (*should not have Base/ALL*))
+	 (*above could be:c cells, refCell -> but these should be eliminated in prior phases*)
+	 | doit (S.E_ExtractFemItem2(v1, v2, t1, t2, fo)) = (checkExistence "_EFI2_1" v1;
+							     checkExistence "_EFI2_2" v2;
+							     if retHasFem
+							     then raise Fail "impossible"
+							     else tyToFemPres retTy (*FIX THIS*))
+	 | doit (S.E_FemField(v1, v2, v3o, t, fof, func)) = (checkExistence "_FField_1" v1;
+							     checkExistence "_FField_2" v2;
+							     Option.app (checkExistence "_FField_3") v3o;
+							    (*fix me: handle function*)
+							     tyToFemPres retTy)
+	 | doit (S.E_ExtractFemItemN(vs, tys, t, fo, func)) = ((List.app (checkExistence "_FFIN") vs);
+	   if Bool.not retHasFem
+	   then tyToFemPres retTy
+	   else
+	    (*refBuild, InvalidBuild, InvalidbuildBoundary, AllBuild  *)
+            (* -> scan vars for baseFem -> kind it -> huh.*)
+	    let
+	     (*from fo, we find key fem -> find relevant ty -> get var*)
+	     val (opt, data) = fo
+	     val n = List.length tys
+	     val tabed = List.tabulate(n, fn x => (x, List.nth(tys, x)))
+	     val pos  = List.filter
+			  (fn (_, Ty.T_Fem(f')) => FD.same(data, f') | _ => false) tabed
+
+	    in
+	     (case pos
+	       of [(idx, _)] => getFemPres (List.nth(vs, idx))
+		| _ => raise Fail "not planned in extractFemItemN")
+	    end)
+							       
+	 | doit (S.E_InsideImage(v1, v2, _)) = (List.app (checkExistence ("_in")) [v1, v2]; NOTHING)
+	 | doit (S.E_FieldFn _) = NOTHING (*FIXME/QUESTION, should the func be procedded? Probably, but ignore/FIXME:*)
       in
+       (*check compatible set*)
        NOTHING
       end
 
   fun procStatement(stm : S.stmt, changed : bool ref,
 		    ret : callSite option,
-		    news : (Atom.atom * V.t list) list ref) =
+		    news : (Atom.atom * V.t list) list ref, expToFemPres) =
       let
        fun doit (S.S_Var(v, NONE)) = () (*ignore but we should check for problems here*)
 	 | doit (S.S_Var(v, SOME(e))) = updateFemPresRef(v, expToFemPres(e), changed)
