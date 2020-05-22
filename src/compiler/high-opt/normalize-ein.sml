@@ -187,6 +187,16 @@ structure NormalizeEin : sig
                     let
                     val e1' = rewrite e1
                     val es' = List.map (fn (e2, n2)=> (rewrite e2, n2)) es
+		    (*chance here - find field nodes - replace with identity field - identity field - derivative is zero - probe is identity
+inductively prove no problenm -- also, just force the rewrite!*)
+				       (*Plan: loop these rewrites to make sure they finish everything*)
+				       (*Then look for field functions - in first - looks for inputs - list
+					For each input, try to detech match with output if it is a transform
+				        Replace the desired inputs with an identity field (Probe is just x)
+				        Derivative is identity matrix (deltas_ij)
+					Later add identity field at top
+				        fields in functions... (close over arguments, not in loop context,etc)
+					*)
                     in  E.Comp(e1', es') end
                   | E.Probe(E.Comp(e1, es), x)  =>
                     let
@@ -349,10 +359,10 @@ structure NormalizeEin : sig
                 val totalTicks = ST.sum{from = firstCounter, to = lastCounter}
                 in
                   ST.tick cntRounds;
-(*DEBUG*)if (ST.count cntRounds - start > 50) then raise Fail "too many steps" else ();
-                  if (totalTicks > total)
-                    then loop(body', totalTicks, true)
-                  else if changed
+		  (* (*DEBUG*)if (ST.count cntRounds - start > 50) then raise Fail "too many steps" else (); *)
+                  if (totalTicks > total) (* something changed *)
+                    then loop(body', totalTicks, true) (* keep going *)
+                  else if changed (* nothing changed - if any changes happened at all, provide result*)
                     then SOME(Ein.EIN{params=params, index=index, body=body'})
                     else NONE
                 end
