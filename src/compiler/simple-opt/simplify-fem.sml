@@ -88,7 +88,7 @@ return to Strands until Fixed
   (*Make data structures for FEM possiblie assocations: list, seq, Tuple, ... - yay for SSA in conversions*)
 
   datatype femPres = Base of FD.femType * V.t option | ALL of FD.femType | NOTHING (* all, nothing, or one thing *)
-		     | Tuple of femPres list | Array of femPres list (* variety *)
+		     | Tuple of femPres list | Array of femPres (* []  -> [seqTy]*)
 		     | Seq of femPres (* must be homogenous i.e no partitioning on an array*)
 
 
@@ -107,13 +107,13 @@ return to Strands until Fixed
 		    | (Base(f1, NONE), Base(f2, SOME(v1))) => if FemData.same(f1, f2)
 							      then changed(Base(f1, SOME(v1)))
 							      else raise Fail "impossible: fem types different"
-		    | (Base(_, NONE), Base(_, NONE)) => raise Fail "can't merge unit femPres."
+		    | (Base(_, NONE), Base(_, NONE)) => raise Fail "can't merge unit femPres; should be replaced"
 		    | (NOTHING, NOTHING) => NOTHING
 		    | (Base _, ALL(f)) => changed(ALL(f))
 		    | (ALL(f), Base _) => changed(ALL(f))
 		    (*end possible base cases*)
 		    | (Tuple(tys1), Tuple(tys2)) => Tuple(ListPair.map merge' (tys1, tys2))
-		    | (Array(tys1), Array(tys2)) => Array(ListPair.map merge' (tys1, tys2))
+		    | (Array(ty1), Array(ty2)) => Array(merge' (ty1, ty2))
 		    | (Seq(t1), Seq(t2)) => Seq(merge'(t1, t2))
 		    | _ => raise Fail "impossible: merging incompatible femPress - must of come from different types"
 		 (*end case*))
@@ -127,14 +127,27 @@ return to Strands until Fixed
     | tyToFemPres (Ty.T_Int) = NOTHING
     | tyToFemPres (Ty.T_String) = NOTHING
     | tyToFemPres (Ty.T_Tensor _) = NOTHING
-    | tyToFemPres (Ty.T_Sequence(t, SOME k)) = Array(List.tabulate(k, fn x => tyToFemPres t))
+    | tyToFemPres (Ty.T_Sequence(t, SOME k)) = Array(tyToFemPres t)
     | tyToFemPres (Ty.T_Sequence(t, NONE)) = Seq(tyToFemPres t)
     | tyToFemPres (Ty.T_Tuple(tys)) = Tuple(List.map tyToFemPres tys)
     | tyToFemPres (Ty.T_Strand _) = NOTHING
     | tyToFemPres (Ty.T_Field _) = NOTHING
     | tyToFemPres (Ty.T_Fem(f)) = if FD.baseFem f
-				then Base(f, NONE)
-				else Base(Option.valOf(FD.dependencyOf(f)), NONE)
+				  then Base(f, NONE)
+				  else Base(Option.valOf(FD.dependencyOf(f)), NONE)
+
+  fun tyToFemPresSeq (Ty.T_Bool) = NOTHING
+    | tyToFemPresSeq (Ty.T_Int) = NOTHING
+    | tyToFemPresSeq (Ty.T_String) = NOTHING
+    | tyToFemPresSeq (Ty.T_Tensor _) = NOTHING
+    | tyToFemPresSeq (Ty.T_Sequence(t, SOME k)) = Array(tyToFemPresSeq t)
+    | tyToFemPresSeq (Ty.T_Sequence(t, NONE)) = Seq(tyToFemPresSeq t)
+    | tyToFemPresSeq (Ty.T_Tuple(tys)) = Tuple(List.map tyToFemPresSeq tys)
+    | tyToFemPresSeq (Ty.T_Strand _) = NOTHING
+    | tyToFemPresSeq (Ty.T_Field _) = NOTHING
+    | tyToFemPresSeq (Ty.T_Fem(f)) = if FD.baseFem f
+				     then ALL(f) (* handle empty seq case *)
+				     else Base(Option.valOf(FD.dependencyOf(f)), NONE)					   
 	
   local
    val {clrFn, getFn, peekFn, setFn} = V.newProp(fn v => tyToFemPres(V.typeOf(v)))
@@ -155,7 +168,7 @@ return to Strands until Fixed
       (case V.kindOf v
 	of Var.InputVar => (case tyToFemPres(V.typeOf(v))
 			     of Base(f, NONE) => setFn(v, Base(f, SOME(v)))
-			      | alt => setFn(v, alt) (*only Base(f, NONE) can appear in inputs*)
+			      | alt => setFn(v, alt) (*only Base(f, NONE) can appear in base fem inputs and only base fem inputs exist for fem inputs*)
 			   (*end case*))
 	 | _ => raise Fail "invalid use of setInput"
       (*end case*))
@@ -204,30 +217,41 @@ return to Strands until Fixed
   (*preProc globals in each func*)
   (*call site to args+globals femPres and args+globals femPres to new function defs*)
 
+  (*SOL: 
+  1. For each function, we isolate globals and relize that as a prop (see analyzeSimple)
+  2. For each function, we have a callSite -> femPres for args + femPres for globs
+  3. For each femPess for args + femPress for globals -> new function definition (copied) * ret 
+  --if only baseFem in args, skip -> use ty 
+   *)
+
   fun expToFemPres(exp : S.exp,
 		   retTy : Ty.ty,
 		   getDep : V.t -> V.t option,
 		   addDep : V.t * V.t -> unit,
-		   change : bool ref) : femPres  =
+		   changeOuter : bool ref) : femPres  =
       let
-       val retHasFem : bool = true (*FIXME: does the ty have fem*)
+       val change = ref false
+       val retHasFem = Ty.hasFem retTy 
        val mergeFemPreses = List.foldr (fn (x,y) => merge(x, y, change))
-       fun doit (S.E_Var(v)) = (checkExistence (V.nameOf v) v; getFemPres v)
+       fun doit (S.E_Var(v)) = (checkExistence ("_var_" ^ (V.nameOf v)) v; getFemPres v)
 	 | doit (S.E_Lit(l)) = NOTHING
 	 | doit (S.E_Kernel(k)) = NOTHING
 	 | doit (S.E_Select(v1, v2)) = (
-	  checkExistence ("strand var " ^ (V.nameOf v2)) v2;
-	  getFemPres v2
+	  checkExistence ("_strand_var_" ^ (V.nameOf v2)) v2;
+	  getFemPres v2 (* read strand state *)
 	 )
-	 | doit (S.E_Apply(f, vs)) = (List.app (checkExistence ((F.nameOf f) ^ "_arg")) vs; raise Fail "fixme"; NOTHING)
+	 | doit (S.E_Apply(f, vs)) = (
+	  List.app (checkExistence ((F.nameOf f) ^ "_arg")) vs;
+	  raise Fail "fixme"; NOTHING
+	 )
 	 | doit (S.E_Prim(v, [], vs, t)) =
 	   (List.app (checkExistence ("_arg")) vs;
 	    if Var.same(v, BasisVars.subscript) andalso retHasFem
-	    then let val [sy, index] = vs (*this might be pointless*)
-		     val Array(ps) = getFemPres sy
-		     val retP = tyToFemPres retTy
-		     val merged =  mergeFemPreses retP ps
-		 in merged end
+	    then let val [sy, index] = vs (*this merge might be pointless*)
+		     val Array(p') = getFemPres sy
+		     (* val retP = tyToFemPres retTy *)
+		     (* val merged =  merge(retP, ps, change) *)
+		 in p' end
 	    else if Var.same(v, BasisVars.dynSubscript) andalso retHasFem
 	    then let val [sy, index] = vs
 		     val Seq(p) = getFemPres sy
@@ -252,15 +276,20 @@ return to Strands until Fixed
 		     val Seq(p2) = getFemPres sy2
 		     val p = merge(p1, p2, change)
 		 in Seq(p) end
-	    else NOTHING 
+	    else tyToFemPres retTy (* fem should not be possible here *) 
 	   )
 	 | doit (S.E_Tensor(vs, _)) = (List.app (checkExistence ( "_ten")) vs; NOTHING)
 	 | doit (S.E_Field(vs, _)) = (List.app (checkExistence ("_fld")) vs; NOTHING)
 	 | doit (S.E_Seq(vs, t)) =
 	   (List.app (checkExistence ("_seq")) vs;
 	   (case t
-	     of Ty.T_Sequence(t', NONE) => Seq(mergeFemPreses (tyToFemPres t') (List.map getFemPres vs))
-	      | Ty.T_Sequence(t', SOME(k)) => Array(List.map getFemPres vs)
+	     of Ty.T_Sequence(t', NONE) => if List.length vs <> 0
+					   then Seq(mergeFemPreses (tyToFemPres t') (List.map getFemPres vs))
+					   else Seq(tyToFemPresSeq t') (*{} -> ALL*)
+	      | Ty.T_Sequence(t', SOME(k)) => if k <> 0
+					      then Array(mergeFemPreses (tyToFemPres t') (List.map getFemPres vs))
+					      else Array(tyToFemPresSeq t')
+	   (*^ {} init... -> [1] for something... any {} should be coerced? ^*)
 	   (*end case*)))
 	 | doit (S.E_Tuple(vs)) =
 	   (List.app (checkExistence ("_tpl")) vs;
@@ -277,12 +306,13 @@ return to Strands until Fixed
 	   (case (srcTy, dstTy)
 	     of (Ty.T_Int, Ty.T_Tensor _) => NOTHING
 	      | (Ty.T_Sequence(ty, SOME n), Ty.T_Sequence(ty', NONE)) =>
-		let
-		 val Array(ps) = getFemPres x
-		 (* merge all femPress to largest one*)
-		 val m = mergeFemPreses (tyToFemPres ty) ps
+		let (*FIXME: fix {} case*)
+		 val Array(p') = getFemPres x
+		 val p = if n = 0
+			 then tyToFemPresSeq ty (*use ALL if FEM as {}*)
+			 else merge((tyToFemPres ty), p', change) (*if there is a FEM, there is an init so Base(x, SOME k) gets used*)
 		in
-		 Seq(m)
+		 Seq(p)
 		end
 	      | _ => NOTHING (*kernel to kernel, sequence to sequence, int to tensor, same; tuple handled earlier*)
 	   (*end case*)))
@@ -299,7 +329,6 @@ return to Strands until Fixed
 		     | _ => raise Fail "impossible"
 		 (* end case*)))
 	    else Base(f, SOME(v1))) (*v1 is base data (func or mesh); v2 is an int for a cell*)
-		   
 	 | doit (S.E_ExtractFem(v, f)) = (
 	  let
 	   val _ = checkExistence "_extractFem" v
@@ -353,11 +382,13 @@ return to Strands until Fixed
             (* -> scan vars for baseFem -> kind it -> huh.*)
 	    let
 	     (*from fo, we find key fem -> find relevant ty -> get var*)
+	     (*FIXME: handle function*)
 	     val (opt, data) = fo
 	     val n = List.length tys
 	     val tabed = List.tabulate(n, fn x => (x, List.nth(tys, x)))
 	     val pos  = List.filter
 			  (fn (_, Ty.T_Fem(f')) => FD.same(data, f') | _ => false) tabed
+
 
 	    in
 	     (case pos
@@ -371,8 +402,7 @@ return to Strands until Fixed
        (*check compatible set*)
        NOTHING
       end
-
-  fun procStatement(stm : S.stmt, changed : bool ref,
+  and procStatement(stm : S.stmt, changed : bool ref,
 		    ret : callSite option,
 		    news : (Atom.atom * V.t list) list ref, expToFemPres) =
       let

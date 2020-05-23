@@ -105,6 +105,17 @@ structure SimpleTypes =
       | metaArgToString (SHAPE shp) = concat["[", shapeToString shp, "]"]
       | metaArgToString (DIM d) = Int.toString d
 
+    fun hasFem (T_Bool) = false
+      | hasFem (T_Int) = false
+      | hasFem (T_Tensor _) = false
+      | hasFem (T_Sequence(t, _)) = hasFem t
+      | hasFem (T_Tuple(tys)) = List.exists hasFem tys
+      | hasFem (T_Strand _) = false
+      | hasFem (T_Kernel) = false
+      | hasFem (T_Image _) = false
+      | hasFem (T_Field _) = false
+      | hasFem (T_Fem _) = true
+
     end (* local *)
 
   end
