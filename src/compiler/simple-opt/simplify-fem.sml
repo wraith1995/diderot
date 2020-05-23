@@ -93,70 +93,79 @@ return to Strands until Fixed
   fun registerFunctions((F as S.Func{f,...})::funcs) = (registerFuncDef(f, SOME(F));registerFunctions(funcs))
     | registerFunctions([]) = ()
   end
-		   
-  fun collectVarsExp (e) =
-      (case e
-	of S.E_Var x => [x]
-	 | S.E_Lit _ => []
-	 | S.E_Kernel _ => []
-	 | S.E_Select(y, z) => (
-	  [y])
-	 | S.E_Apply(f, xs) =>
-	   let val SOME(S.Func{f, params, body}) = getfuncDef f
-	       val more = collectBlock(body)
-	   in more@xs end
-	 | S.E_Prim(_, _, xs, _) => xs
-	 | S.E_Tensor(xs, _) => xs
-	 | S.E_Field(xs, _) => xs
-	 | S.E_Seq(xs, _) => xs
-	 | S.E_Tuple xs => xs
-	 | S.E_Project(x, i) => [x]
-	 | S.E_Slice(x, _, _) => [x]
-	 | S.E_Coerce{x, ...} => [x]
-	 | S.E_BorderCtl(BorderCtl.Default x, y) => [x, y]
-	 | S.E_BorderCtl(_, x) => [x]
-	 | S.E_LoadSeq _ => []
-	 | S.E_LoadImage _ => []
-	 | S.E_LoadFem(_,x,y) => [x,y]
-	 | S.E_ExtractFem(v,_) => [v]
-	 | S.E_ExtractFemItem(v,_,_) => [v]
-	 | S.E_ExtractFemItem2(v1, v2,_,_, _) => [v1,v2]
-	 | S.E_ExtractFemItemN(vars,_,_, _, _) => vars
-	 | S.E_FemField(v1,v1',v2,_,_,_) => v1::v1'::(Option.getOpt(Option.map (fn x => [x]) v2, []))
-	 | S.E_InsideImage(pos, img, _) => [pos, img]
-	 | S.E_FieldFn f => []
-      (* end case *))
-  and collectStm(s) =
-      (case s
-	of S.S_Var(v, SOME(x)) => collectVarsExp x
-	 | S.S_Var(v, NONE) => []
-	 | S.S_Assign(v, x) => collectVarsExp x
-	 | S.S_IfThenElse(v, b1, b2) => v::((collectBlock b1)@((collectBlock b2)))
-	 | S.S_Foreach(x, xs, b) => (x::xs:: (collectBlock b))
-	 | S.S_New(_, vs) => vs
-	 | S.S_Return(v) => [v]
-	 | S.S_Print(vs) => vs
-	 | S.S_MapReduce(mrs) => raise Fail "fixme"
-	 | S.S_KillAll => []
-	 | S.S_StabilizeAll => []
-	 | S.S_Continue => []
-	 | S.S_Die => []
-	 | S.S_Stabilize => []
-      (*end case*))
-  and collectBlock(S.Block{code,...}) = List.foldr (fn (x,y) => (collectStm x) @ y) [] code
+  local	   
+   fun collectVarsExp (e) =
+       (case e
+	 of S.E_Var x => [x]
+	  | S.E_Lit _ => []
+	  | S.E_Kernel _ => []
+	  | S.E_Select(y, z) => (
+	   [y])
+	  | S.E_Apply(f, xs) =>
+	    let val SOME(S.Func{f, params, body}) = getfuncDef f
+		val more = collectBlock(body)
+	    in more@xs end
+	  | S.E_Prim(_, _, xs, _) => xs
+	  | S.E_Tensor(xs, _) => xs
+	  | S.E_Field(xs, _) => xs
+	  | S.E_Seq(xs, _) => xs
+	  | S.E_Tuple xs => xs
+	  | S.E_Project(x, i) => [x]
+	  | S.E_Slice(x, _, _) => [x]
+	  | S.E_Coerce{x, ...} => [x]
+	  | S.E_BorderCtl(BorderCtl.Default x, y) => [x, y]
+	  | S.E_BorderCtl(_, x) => [x]
+	  | S.E_LoadSeq _ => []
+	  | S.E_LoadImage _ => []
+	  | S.E_LoadFem(_,x,y) => [x,y]
+	  | S.E_ExtractFem(v,_) => [v]
+	  | S.E_ExtractFemItem(v,_,_) => [v]
+	  | S.E_ExtractFemItem2(v1, v2,_,_, _) => [v1,v2]
+	  | S.E_ExtractFemItemN(vars,_,_, _, _) => vars
+	  | S.E_FemField(v1,v1',v2,_,_,_) => v1::v1'::(Option.getOpt(Option.map (fn x => [x]) v2, []))
+	  | S.E_InsideImage(pos, img, _) => [pos, img]
+	  | S.E_FieldFn f => []
+       (* end case *))
+   and collectStm(s) =
+       (case s
+	 of S.S_Var(v, SOME(x)) => collectVarsExp x
+	  | S.S_Var(v, NONE) => []
+	  | S.S_Assign(v, x) => collectVarsExp x
+	  | S.S_IfThenElse(v, b1, b2) => v::((collectBlock b1)@((collectBlock b2)))
+	  | S.S_Foreach(x, xs, b) => (x::xs:: (collectBlock b))
+	  | S.S_New(_, vs) => vs
+	  | S.S_Return(v) => [v]
+	  | S.S_Print(vs) => vs
+	  | S.S_MapReduce(mrs) => raise Fail "fixme"
+	  | S.S_KillAll => []
+	  | S.S_StabilizeAll => []
+	  | S.S_Continue => []
+	  | S.S_Die => []
+	  | S.S_Stabilize => []
+       (*end case*))
+   and collectBlock(S.Block{code,...}) = List.foldr (fn (x,y) => (collectStm x) @ y) [] code
 
-  fun globsInFunc(f) =
-      let val SOME(S.Func{f, params, body}) = getfuncDef f
-	  val more = collectBlock(body)
-      in more end
+   fun globsInFunc(f) =
+       let val SOME(S.Func{f, params, body}) = getfuncDef f
+	   val more = collectBlock(body)
+	   val more' = List.filter (fn x => (case (V.kindOf x)
+					      of Var.GlobalVar => true
+					       | Var.InputVar => true
+					       | Var.ConstVar => false
+					       | _ => false
+				   (*end case*))) more
+       in more' end
+   val {clrFn, getFn, peekFn, setFn} = F.newProp(fn f => [] : V.t list)
+  in
+  fun registerGlobVarsInFunc(F as S.Func{f, params, body}) = setFn(f,globsInFunc(f))
+  val getFuncGlobs = getFn
+
+  end
 
 
-
-
-  (*Make data structures for FEM possiblie assocations: list, seq, Tuple, ... - yay for SSA in conversions*)
 
   datatype femPres = Base of FD.femType * V.t option | ALL of FD.femType | NOTHING (* all, nothing, or one thing *)
-		     | Tuple of femPres list | Array of femPres (* []  -> [seqTy]*)
+		     | Tuple of femPres list | Array of femPres 
 		     | Seq of femPres (* must be homogenous i.e no partitioning on an array*)
 
 
@@ -282,7 +291,7 @@ return to Strands until Fixed
 
   type callSite =  V.t list  (* structure for idying a call site *)
   type functionCall  = femPres list * femPres list (* arguments and globals *)
-					      
+  (*callSite -> functionCall*)
   (* think about functions...*)
   (*preProc globals in each func*)
   (*call site to args+globals femPres and args+globals femPres to new function defs*)
@@ -508,6 +517,7 @@ return to Strands until Fixed
 		 globInit, funcs, strand, create, start, update} = prog
 
    val _ = registerFunctions(funcs)
+   val _ = List.app registerGlobVarsInFunc funcs
    val S.Strand{name, params, spatialDim,  state, stateInit, startM, updateM, stabilizeM} = strand
    (*sml docs said: explain the use and semantics of mkTable HERE.*)
    val femTable : (FD.femType, V.t list) HT.hash_table = HT.mkTable(FD.hash, FD.same) (32, Fail "femtype not added yet")
