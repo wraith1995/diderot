@@ -390,22 +390,52 @@ return to Strands until Fixed
    fun hashCall((args1, globs1)) = (List.foldl (fn (v, s) => 0w5 * hash v + s) 0w3 args1) +
 				   (List.foldl (fn (v, s) => 0w7 * hash v + s) 0w3 globs1)
 
-  in
   fun mkCallSiteTable(j : int) : (callSite, functionCall) HT.hash_table =
       HT.mkTable (hashSite, sameSite) (j, raise Fail "missing call site")
   fun mkFuncDefTable(j : int) : (functionCall, callResult) HT.hash_table =
       HT.mkTable (hashCall, sameCall) (j, raise Fail "missing call site")
 
-  end
-  (*add prop, do it for all*)
-  local
    val {clrFn, getFn, peekFn, setFn} = F.newProp(fn f => mkCallSiteTable 8)
-   val {clrFn, getFn, peekFn, setFn} = F.newProp(fn f => mkFuncDefTable 8)
+   val defTblProp = F.newProp(fn f => mkFuncDefTable 8)
+   val getFnTbl = #getFn defTblProp
+												
   in
   (*operation:we need to from a f, 
     and info about the calls (args +glob femPress) -> SOME(function_def) (SOME if we need to do something and NONE if it is already done -> how to get ret var then?)  -> function_def can be processed *)
   (*from the procced thing, we get the accepted one, which we get back here.*)
-  fun addCall j = ()
+  fun addCall(f : F.t, call : callSite, callArgs : functionCall) : callResult =
+      let
+       val callTable = getFn f
+       val defsTable = getFnTbl f
+       val callLookup : functionCall option = HT.find callTable call
+       val callExists = (case callLookup
+		of SOME(callArgs') => sameCall(callArgs', callArgs)
+		 | NONE => (HT.insert callTable (call, callArgs); false)
+			(* end case*))
+			  
+      in
+       if callExists
+       then HT.lookup defsTable callArgs
+       else let
+	val _ = HT.insert callTable (call, callArgs)
+	val SOME(oldDef) = getfuncDef f
+		val copyF = functionCopy(oldDef)
+		val ret = (copyF, NONE)
+			    (*check if the function with these callArgs exists anyway*)
+       in (case HT.find defsTable callArgs
+	    of SOME(r) => r
+	     | NONE => (HT.insert defsTable (callArgs, ret); ret)
+	  (* end case *))
+       end
+      end
+
+  fun updateCall(f : F.t, call : callSite, callArgs : functionCall,
+		 newDef : S.func_def, retF : femPres) : unit =
+      let
+       val defsTable = getFnTbl f
+      in
+       HT.insert defsTable (callArgs, (newDef, SOME(retF)))
+      end
   end
 				   
 
@@ -621,13 +651,39 @@ return to Strands until Fixed
 	 | doit (S.S_Stabilize) = ()
 	 | doit (S.S_Return(v)) = (case ret
 				 of NONE => ()
-				  | SOME(site) => raise Fail "use call site")
+				  | SOME(site) => raise Fail "use call site") (* should update call site *)
 	 | doit (S.S_Print(vs)) = List.app (checkExistence "print") vs
 	 | doit (S.S_MapReduce(maps)) = raise Fail "mapreduce"
        and doBlock(S.Block{code, ...}) = List.app doit code
       in
        doit(stm)
       end
+  and doBlock(S.Block{code, ...}, changed, ret, news, expToFempres) = List.map (fn s => procStatement(s, changed, ret, news, expToFempres)) code
+  and procApply(f : F.t, args : V.t list, call : callSite, changed, expToFemPres) = let
+   val argsp = List.map getFemPres args
+   val globs = getFuncGlobs f
+   val globsp = List.map getFemPres globs
+   val callArgs : functionCall = (argsp, globsp)
+   val (fdef, possibleRet) = addCall(f, call, callArgs)
+							       
+  in
+   (case possibleRet
+     of SOME(_) => () (*updated for this var at return*)
+      | NONE =>
+	let
+	 val S.Func{params, body, ...} = fdef
+	 val _ = ListPair.map updateFemPres (params, argsp)
+	 val _ = doBlock(body, changed, SOME(call), ref [], expToFemPres)
+	 val v : V.t = List.hd call
+
+	 val femPres = getFemPres v
+	in
+	 updateCall(f, call, callArgs, fdef, femPres) (*updated for this var at return*)
+	end
+	
+   )
+
+  end
 		   
 
 	
