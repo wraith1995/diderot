@@ -276,7 +276,9 @@ return to Strands until Fixed
 		     val Seq(p2) = getFemPres sy2
 		     val p = merge(p1, p2, change)
 		 in Seq(p) end
-	    else tyToFemPres retTy (* fem should not be possible here *) 
+	    else if retHasFem
+	    then raise Fail "impossible fem basis ret"
+	    else tyToFemPres retTy 
 	   )
 	 | doit (S.E_Tensor(vs, _)) = (List.app (checkExistence ( "_ten")) vs; NOTHING)
 	 | doit (S.E_Field(vs, _)) = (List.app (checkExistence ("_fld")) vs; NOTHING)
@@ -289,14 +291,13 @@ return to Strands until Fixed
 	      | Ty.T_Sequence(t', SOME(k)) => if k <> 0
 					      then Array(mergeFemPreses (tyToFemPres t') (List.map getFemPres vs))
 					      else Array(tyToFemPresSeq t')
-	   (*^ {} init... -> [1] for something... any {} should be coerced? ^*)
 	   (*end case*)))
 	 | doit (S.E_Tuple(vs)) =
 	   (List.app (checkExistence ("_tpl")) vs;
 	    Tuple(List.map getFemPres vs)
 	   )
 	 | doit (S.E_Project(v, i)) =
-	   let val _ =  checkExistence ("_project_" ^ (Int.toString i)) v
+	   let val _ =  checkExistence ("_project_" ^ (Int.toString i) ^ "_") v
 	    val Tuple(vs) = getFemPres v
 	   in List.nth(vs, i)
 	   end
@@ -306,10 +307,10 @@ return to Strands until Fixed
 	   (case (srcTy, dstTy)
 	     of (Ty.T_Int, Ty.T_Tensor _) => NOTHING
 	      | (Ty.T_Sequence(ty, SOME n), Ty.T_Sequence(ty', NONE)) =>
-		let (*FIXME: fix {} case*)
+		let (*FIXME*)
 		 val Array(p') = getFemPres x
 		 val p = if n = 0
-			 then tyToFemPresSeq ty (*use ALL if FEM as {}*)
+			 then tyToFemPresSeq ty 
 			 else merge((tyToFemPres ty), p', change) (*if there is a FEM, there is an init so Base(x, SOME k) gets used*)
 		in
 		 Seq(p)
@@ -324,18 +325,18 @@ return to Strands until Fixed
 	    if FD.baseFem f (*v1 is the dest data; v2 is the dep; *)
 	    then ((case getFemPres v2
 		    of Base(f', SOME(v2')) => (addDep(v1, v2'); Base(f, SOME(v1)))
-		     | Base(f', NONE) => raise Fail "base fem load not set" (*risk {} here.*)
-		     | ALL(f') => raise Fail "base fem load unable to trace" (*Should be impossible*)
-		     | _ => raise Fail "impossible"
+		     | Base(f', NONE) => raise Fail "base fem load not set; impossible!" 
+		     | ALL(f') => raise Fail "base fem load unable to trace!" (*Should be impossible*)
+		     | _ => raise Fail "impossible!"
 		 (* end case*)))
-	    else Base(f, SOME(v1))) (*v1 is base data (func or mesh); v2 is an int for a cell*)
-	 | doit (S.E_ExtractFem(v, f)) = (
+	    else Base(f, SOME(v1))) (*v1 is base data (func or mesh); v2 is an int for a cell?*)
+	 | doit (S.E_ExtractFem(v, f)) = ( (*if the return has fem, this is getting a func or space or mesh*)
 	  let
 	   val _ = checkExistence "_extractFem" v
 	   val retFem = (case retTy
 			  of Ty.T_Fem(f') => f'
 			   | _ => raise Fail "invalid ExtractFem")
-	   val _ = if (FD.baseFem retFem) andalso (FD.baseFem f)
+	   val _ = if (FD.baseFem retFem) andalso (FD.baseFem f) (*extractFem's return type is f*)
 		   then ()
 		   else raise Fail "invalid extractFem"
 	   val vty = V.typeOf v
@@ -343,21 +344,19 @@ return to Strands until Fixed
 			of Ty.T_Fem(f') => f'
 			 | _ => raise Fail "invalid ExtractFem Arg")
 			
-			  (*This is either taking something out of a func/space so we get a dep if possible*)
-			  (*If *)
 	  in
 	   if FD.baseFem vtyf
-	   then (case getFemPres v
+	   then (case getFemPres v (*This is either taking something out of a func/space so we get a dep if possible*)
 		  of Base(vtyf', SOME(v')) => (case (FD.dependencyOf vtyf', getDep v')
 						of (SOME(f'), SOME(v'')) => Base(f',SOME(v''))
-						 | (SOME(f'), NONE) => ALL(f') (*FIXME: ???*)
-						 | (NONE, _) => raise Fail "impossible mesh extract"
+						 | (SOME(f'), NONE) => ALL(f') 
+						 | (NONE, _) => raise Fail "impossible mesh extract in simple"
 					      (* end case*))
-		   | Base(vtyf', NONE) => raise Fail "extracting from non init" (*{} case?*)
+		   | Base(vtyf', NONE) => raise Fail "extracting from non init"
 		   | ALL(vtyf') => ALL(vtyf')
 		   | _ => raise Fail "impossible extract FEM"
 		(* end case*))
-	   else getFemPres v (*take base out of cell or pos; *)
+	   else getFemPres v (*take base out of cell or pos; just propogate same info*)
 	  end)
 	 | doit (S.E_ExtractFemItem(v, t, fo)) = (checkExistence "_EFI1" v;
 						  if retHasFem
@@ -368,11 +367,11 @@ return to Strands until Fixed
 							     checkExistence "_EFI2_2" v2;
 							     if retHasFem
 							     then raise Fail "impossible"
-							     else tyToFemPres retTy (*FIX THIS*))
+							     else tyToFemPres retTy)
 	 | doit (S.E_FemField(v1, v2, v3o, t, fof, func)) = (checkExistence "_FField_1" v1;
 							     checkExistence "_FField_2" v2;
 							     Option.app (checkExistence "_FField_3") v3o;
-							    (*fix me: handle function*)
+							    (*FIXME: handle function*)
 							     tyToFemPres retTy)
 	 | doit (S.E_ExtractFemItemN(vs, tys, t, fo, func)) = ((List.app (checkExistence "_FFIN") vs);
 	   if Bool.not retHasFem
@@ -392,15 +391,14 @@ return to Strands until Fixed
 
 	    in
 	     (case pos
-	       of [(idx, _)] => getFemPres (List.nth(vs, idx))
+	       of [(idx, _)] => getFemPres (List.nth(vs, idx)) (*propogate Base/ALL*)
 		| _ => raise Fail "not planned in extractFemItemN")
 	    end)
 							       
 	 | doit (S.E_InsideImage(v1, v2, _)) = (List.app (checkExistence ("_in")) [v1, v2]; NOTHING)
 	 | doit (S.E_FieldFn _) = NOTHING (*FIXME/QUESTION, should the func be procedded? Probably, but ignore/FIXME:*)
       in
-       (*check compatible set*)
-       NOTHING
+       doit(exp)
       end
   and procStatement(stm : S.stmt, changed : bool ref,
 		    ret : callSite option,
