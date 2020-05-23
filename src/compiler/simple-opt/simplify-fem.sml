@@ -84,6 +84,55 @@ return to Strands until Fixed
   (*6. Do rewrite*)
 
 
+  fun collectVarsExp (e) =
+      (case e
+	of S.E_Var x => [x]
+	 | S.E_Lit _ => []
+	 | S.E_Kernel _ => []
+	 | S.E_Select(y, z) => (
+	  [y])
+	 | S.E_Apply(_, xs) => xs
+	 | S.E_Prim(_, _, xs, _) => xs
+	 | S.E_Tensor(xs, _) => xs
+	 | S.E_Field(xs, _) => xs
+	 | S.E_Seq(xs, _) => xs
+	 | S.E_Tuple xs => xs
+	 | S.E_Project(x, i) => [x]
+	 | S.E_Slice(x, _, _) => [x]
+	 | S.E_Coerce{x, ...} => [x]
+	 | S.E_BorderCtl(BorderCtl.Default x, y) => [x, y]
+	 | S.E_BorderCtl(_, x) => [x]
+	 | S.E_LoadSeq _ => []
+	 | S.E_LoadImage _ => []
+	 | S.E_LoadFem(_,x,y) => [x,y]
+	 | S.E_ExtractFem(v,_) => [v]
+	 | S.E_ExtractFemItem(v,_,_) => [v]
+	 | S.E_ExtractFemItem2(v1, v2,_,_, _) => [v1,v2]
+	 | S.E_ExtractFemItemN(vars,_,_, _, _) => vars
+	 | S.E_FemField(v1,v1',v2,_,_,_) => v1::v1'::(Option.getOpt(Option.map (fn x => [x]) v2, []))
+	 | S.E_InsideImage(pos, img, _) => [pos, img]
+	 | S.E_FieldFn f => []
+      (* end case *))
+  and collectStm(s) =
+      (case s
+	of S.S_Var(v, SOME(x)) => collectVarsExp x
+	 | S.S_Var(v, NONE) => []
+	 | S.S_Assign(v, x) => collectVarsExp x
+	 | S.S_IfThenElse(v, b1, b2) => v::((collectBlock b1)@((collectBlock b2)))
+	 | S.S_Foreach(x, xs, b) => (x::xs:: (collectBlock b))
+	 | S.S_New(_, vs) => vs
+	 | S.S_Return(v) => [v]
+	 | S.S_Print(vs) => vs
+	 | S.S_MapReduce(mrs) => raise Fail "fixme"
+	 | S.S_KillAll => []
+	 | S.S_StabilizeAll => []
+	 | S.S_Continue => []
+	 | S.S_Die => []
+	 | S.S_Stabilize => []
+      (*end case*))
+  and collectBlock(S.Block{code,...}) = List.foldr (fn (x,y) => (collectStm x) @ y) [] code
+			      
+
 
   (*Make data structures for FEM possiblie assocations: list, seq, Tuple, ... - yay for SSA in conversions*)
 
@@ -213,10 +262,16 @@ return to Strands until Fixed
 
 
   type callSite =  V.t list  (* structure for idying a call site *)
+  type functionCall  = femPres list * femPres list (* arguments and globals *)
+					      
   (* think about functions...*)
   (*preProc globals in each func*)
   (*call site to args+globals femPres and args+globals femPres to new function defs*)
-
+  (*
+  1. Callsite can be found via traversing htings and map into a femPres for args + femPres for global
+  2. From the femPres for args (non-globs) + femPress for globals
+  3. From the args + fem for globals, we can find a functoin def/copy one over.
+  *)
   (*SOL: 
   1. For each function, we isolate globals and relize that as a prop (see analyzeSimple)
   2. For each function, we have a callSite -> femPres for args + femPres for globs
@@ -307,10 +362,10 @@ return to Strands until Fixed
 	   (case (srcTy, dstTy)
 	     of (Ty.T_Int, Ty.T_Tensor _) => NOTHING
 	      | (Ty.T_Sequence(ty, SOME n), Ty.T_Sequence(ty', NONE)) =>
-		let (*FIXME*)
+		let 
 		 val Array(p') = getFemPres x
 		 val p = if n = 0
-			 then tyToFemPresSeq ty 
+			 then tyToFemPresSeq ty  (*QUESTION: this is a bet weird as we have the p' - for {}, p' would already be all so this is redudant*)
 			 else merge((tyToFemPres ty), p', change) (*if there is a FEM, there is an init so Base(x, SOME k) gets used*)
 		in
 		 Seq(p)
@@ -321,7 +376,7 @@ return to Strands until Fixed
 	 | doit (S.E_LoadSeq _) = NOTHING
 	 | doit (S.E_LoadImage _) = NOTHING
 	 | doit (S.E_LoadFem(f, v1, v2)) =
-	   (List.app (checkExistence ("_loadFem")) [v1, v2]; (*CHECK ME*)
+	   (List.app (checkExistence ("_loadFem")) [v1, v2]; 
 	    if FD.baseFem f (*v1 is the dest data; v2 is the dep; *)
 	    then ((case getFemPres v2
 		    of Base(f', SOME(v2')) => (addDep(v1, v2'); Base(f, SOME(v1)))

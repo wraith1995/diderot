@@ -166,4 +166,5 @@ structure Simple =
     fun newProp initFn = PropList.newProp (fn (Block{props, ...}) => props, initFn)
     fun newFlag () = PropList.newFlag (fn (Block{props, ...}) => props)
 
+
   end
