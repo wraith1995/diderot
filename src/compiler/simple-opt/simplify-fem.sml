@@ -101,7 +101,10 @@ return to Strands until Fixed
 	 | S.E_Kernel _ => []
 	 | S.E_Select(y, z) => (
 	  [y])
-	 | S.E_Apply(f, xs) => xs
+	 | S.E_Apply(f, xs) =>
+	   let val SOME(S.Func{f, params, body}) = getfuncDef f
+	       val more = collectBlock(body)
+	   in more@xs end
 	 | S.E_Prim(_, _, xs, _) => xs
 	 | S.E_Tensor(xs, _) => xs
 	 | S.E_Field(xs, _) => xs
@@ -141,6 +144,12 @@ return to Strands until Fixed
 	 | S.S_Stabilize => []
       (*end case*))
   and collectBlock(S.Block{code,...}) = List.foldr (fn (x,y) => (collectStm x) @ y) [] code
+
+  fun globsInFunc(f) =
+      let val SOME(S.Func{f, params, body}) = getfuncDef f
+	  val more = collectBlock(body)
+      in more end
+
 
 
 
