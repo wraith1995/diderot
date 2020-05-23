@@ -236,6 +236,28 @@ return to Strands until Fixed
 		     | Tuple of femPres list | Array of femPres 
 		     | Seq of femPres (* must be homogenous i.e no partitioning on an array*)
 
+  fun anyFem (Base _) = true
+    | anyFem (ALL _) = true
+    | anyFem (NOTHING) = false
+    | anyFem (Tuple(ps)) = List.exists anyFem ps
+    | anyFem (Array p) = anyFem p
+    | anyFem (Seq p) = anyFem p
+
+  fun hash (NOTHING) = 0w1
+    | hash (ALL(f)) = 0w2 * FD.hash f
+    | hash (Base(f, NONE)) = 0w3
+    | hash (Base(f, SOME(v))) = 0w5 * (FD.hash f) + 0w7 * (V.hash v)
+    | hash (Array(g)) = 0w11 * (hash g)
+    | hash (Seq(g)) = 0w13 * (hash g)
+    | hash (Tuple(gs)) = List.foldl (fn (ty, s) => hash ty + s) 0w17 gs
+
+  fun same (NOTHING, NOTHING) = true
+    | same (ALL(f1), ALL(f2)) = FD.same(f1, f2)
+    | same (Base(f1, NONE), Base(f2, NONE)) = FD.same(f1, f2)
+    | same (Base(f1, SOME(v1)), Base(f2, SOME(v2))) = FD.same(f1, f2) andalso V.same(v1, v2)
+    | same (Array(p1), Array(p2)) = same(p1, p2)
+    | same (Seq(p1), Seq(p2)) = same(p1, p2)
+    | same (Tuple(ps1), Tuple(ps2)) = ListPair.all same (ps1, ps2)
 
   fun merge(a1 : femPres, a2 : femPres, change : bool ref) =
       let
@@ -359,17 +381,43 @@ return to Strands until Fixed
 
   type callSite =  V.t list  (* structure for idying a call site *)
   type functionCall  = femPres list * femPres list (* arguments and globals *)
+  type callResult = S.func_def * femPres option
+  local
+   fun sameSite(vs1, vs2) = ListPair.all (V.same) (vs1, vs2)
+   fun hashSite(vs) = List.foldl (fn (v, s) => V.hash v + s) 0w3 vs
+   fun sameCall((args1, globs1), (args2, globs2)) = ListPair.all same (args1, args2)
+						    andalso ListPair.all same (globs1, globs2)
+   fun hashCall((args1, globs1)) = (List.foldl (fn (v, s) => 0w5 * hash v + s) 0w3 args1) +
+				   (List.foldl (fn (v, s) => 0w7 * hash v + s) 0w3 globs1)
+
+  in
+  fun mkCallSiteTable(j : int) : (callSite, functionCall) HT.hash_table =
+      HT.mkTable (hashSite, sameSite) (j, raise Fail "missing call site")
+  fun mkFuncDefTable(j : int) : (functionCall, callResult) HT.hash_table =
+      HT.mkTable (hashCall, sameCall) (j, raise Fail "missing call site")
+
+  end
+  (*add prop, do it for all*)
+  local
+   val {clrFn, getFn, peekFn, setFn} = F.newProp(fn f => mkCallSiteTable 8)
+   val {clrFn, getFn, peekFn, setFn} = F.newProp(fn f => mkFuncDefTable 8)
+  in
+  (*operation:we need to from a f, 
+    and info about the calls (args +glob femPress) -> SOME(function_def) (SOME if we need to do something and NONE if it is already done -> how to get ret var then?)  -> function_def can be processed *)
+  (*from the procced thing, we get the accepted one, which we get back here.*)
+  fun addCall j = ()
+  end
+				   
+
   (*Now we encounter a call site:
    We have a call site-> we add globs and add params
    We copy, register new props, and hold the func_def there*)
-  (*callSite -> functionCall*)
-  (* think about functions...*)
-  (*preProc globals in each func*)
   (*call site to args+globals femPres and args+globals femPres to new function defs*)
   (*
   1. Callsite can be found via traversing htings and map into a femPres for args + femPres for global
-  2. From the femPres for args (non-globs) + femPress for globals
+  2. From the femPres for args (non-globs) + femPress for globals we get a function def (which is copied if it doesn't exist)
   3. From the args + fem for globals, we can find a functoin def/copy one over.
+
   *)
   (*SOL: 
   1. For each function, we isolate globals and relize that as a prop (see analyzeSimple)
