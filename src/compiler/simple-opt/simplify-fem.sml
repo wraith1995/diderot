@@ -83,7 +83,17 @@ return to Strands until Fixed
   (*5. Fix functions *)
   (*6. Do rewrite*)
 
+  (*add property for function*)
 
+  local
+   val {clrFn, getFn, peekFn, setFn} = F.newProp(fn v => NONE : S.func_def option)
+  in
+  val registerFuncDef = setFn
+  val getfuncDef = getFn
+  fun registerFunctions((F as S.Func{f,...})::funcs) = (registerFuncDef(f, SOME(F));registerFunctions(funcs))
+    | registerFunctions([]) = ()
+  end
+		   
   fun collectVarsExp (e) =
       (case e
 	of S.E_Var x => [x]
@@ -91,7 +101,7 @@ return to Strands until Fixed
 	 | S.E_Kernel _ => []
 	 | S.E_Select(y, z) => (
 	  [y])
-	 | S.E_Apply(_, xs) => xs
+	 | S.E_Apply(f, xs) => xs
 	 | S.E_Prim(_, _, xs, _) => xs
 	 | S.E_Tensor(xs, _) => xs
 	 | S.E_Field(xs, _) => xs
@@ -131,7 +141,7 @@ return to Strands until Fixed
 	 | S.S_Stabilize => []
       (*end case*))
   and collectBlock(S.Block{code,...}) = List.foldr (fn (x,y) => (collectStm x) @ y) [] code
-			      
+
 
 
   (*Make data structures for FEM possiblie assocations: list, seq, Tuple, ... - yay for SSA in conversions*)
@@ -488,6 +498,7 @@ return to Strands until Fixed
    val S.Program{props, consts, inputs, constInit, globals,
 		 globInit, funcs, strand, create, start, update} = prog
 
+   val _ = registerFunctions(funcs)
    val S.Strand{name, params, spatialDim,  state, stateInit, startM, updateM, stabilizeM} = strand
    (*sml docs said: explain the use and semantics of mkTable HERE.*)
    val femTable : (FD.femType, V.t list) HT.hash_table = HT.mkTable(FD.hash, FD.same) (32, Fail "femtype not added yet")
