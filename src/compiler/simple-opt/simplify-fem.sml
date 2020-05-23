@@ -162,6 +162,74 @@ return to Strands until Fixed
 
   end
 
+  fun functionCopy(F as S.Func{f, params,body}) =
+      let
+       val env = V.Tbl.mkTable(10 * List.length params, raise Fail "copy table fail")
+       val params' = List.map (fn x => V.copy(x, V.kindOf x)) params
+       val _ = ListPair.app  (fn (x, x') => V.Tbl.insert env (x, x')) (params, params')
+
+       fun rename x = (case V.Tbl.find env x
+			of SOME x' => x'
+			 | NONE => if V.hasGlobalScope x
+				   then x
+				   else raise Fail ("unknown var " ^ V.uniqueNameOf x)
+		      (*end case*))
+       fun add x x' = V.Tbl.insert env (x, x')
+       fun copy x = let val x' = (V.copy(x, V.kindOf x)) in (add x x'; x') end
+       fun remove x = V.Tbl.remove env x
+
+       fun doStm(stm) =
+	   (case stm
+	     of S.S_Var(x, optE) => let val x' = copy x
+				       val optE' = Option.map (doExp) optE
+				   in S.S_Var(x', optE') end
+	      | S.S_Assign(x, e) => (S.S_Assign(rename x, doExp e))
+	      | S.S_IfThenElse(x, b1, b2) => S.S_IfThenElse(rename x, doBlock b1, doBlock b2)
+	      | S.S_Foreach(x, xs, blk) => let val x' = copy x (* add itter *)
+					       val xs' = rename xs
+					       val blk' = doBlock blk
+					   in (remove x; S.S_Foreach(x', xs', blk')) end
+	      | S.S_New _ => raise Fail "new impossible in function!"
+	      | S.S_KillAll => raise Fail "kill impossible in function!"
+	      | S.S_StabilizeAll => raise Fail "stab impossible in function!"
+	      | S.S_Continue  => raise Fail "continue impossible in function!"
+	      | S.S_Die => raise Fail "die impossible in function"
+	      | S.S_Return x => S.S_Return(rename x)
+	      | S.S_MapReduce _ => raise Fail "map reduce impossible in function!"
+	   (*end case*))
+       and doBlock(S.Block{props, code}) = S.Block{props = props, code = List.map doStm code}
+       and doExp e =
+	   (case e
+	     of S.E_Var x => S.E_Var(rename x)
+	      | S.E_Select(x, fld) => S.E_Select(rename x, fld)
+	      | S.E_Lit _ => e
+	      | S.E_Kernel _ => e
+	      | S.E_Apply(f, xs) => S.E_Apply(f, List.map rename xs) (*FIXME:?*)
+	      | S.E_Prim(f, tys, xs, ty) => S.E_Prim(f, tys, List.map rename xs, ty)
+	      | S.E_Tensor(xs, ty) => S.E_Tensor(List.map rename xs, ty)
+	      | S.E_Seq(xs, ty) => S.E_Seq(List.map rename xs, ty)
+	      | S.E_Tuple(xs) => S.E_Tuple(List.map rename xs)
+	      | S.E_Project(x, i) => S.E_Project(rename x, i)
+	      | S.E_Slice(x, idxs, ty) => S.E_Slice(rename x, idxs, ty)
+	      | S.E_Coerce{srcTy, dstTy, x} => S.E_Coerce{srcTy=srcTy, dstTy=dstTy, x=rename x}
+	      | S.E_BorderCtl(ctl, x) =>
+		S.E_BorderCtl(BorderCtl.map rename ctl, rename x)
+	      | S.E_LoadSeq _ => raise Fail "unexpected load seq during inlining"
+              | S.E_LoadImage _ => raise Fail "unexpected load image during inlining"
+              | S.E_InsideImage _ => raise Fail "unexpected InsideImage during inlining"
+              | S.E_FieldFn _ => e
+	      | S.E_ExtractFem(v, data) => S.E_ExtractFem(rename v, data)
+	      | S.E_ExtractFemItem(v, ty, data) => S.E_ExtractFemItem(rename v, ty, data)
+	      | S.E_ExtractFemItem2(v1, v2, ty, outTy, data) => S.E_ExtractFemItem2(rename v1, rename v2, ty, outTy, data)
+	      | S.E_LoadFem(data, v1, v2) => S.E_LoadFem(data, rename v1, rename v2)
+	      | S.E_FemField(v1, v1', v2, ty, field, func) => S.E_FemField(rename v1,rename v1', Option.map (rename) v2, ty, field, func) (*FIXME: func*)
+	      | S.E_ExtractFemItemN(vars, tys, outTy, opt, NONE) => S.E_ExtractFemItemN(List.map rename vars, tys, outTy, opt, NONE) (*FIXME*)
+			     
+	   (* end case *))
+      in
+       S.Func{f=f, params=params',body=doBlock(body)}
+      end
+
 
 
   datatype femPres = Base of FD.femType * V.t option | ALL of FD.femType | NOTHING (* all, nothing, or one thing *)
@@ -291,6 +359,9 @@ return to Strands until Fixed
 
   type callSite =  V.t list  (* structure for idying a call site *)
   type functionCall  = femPres list * femPres list (* arguments and globals *)
+  (*Now we encounter a call site:
+   We have a call site-> we add globs and add params
+   We copy, register new props, and hold the func_def there*)
   (*callSite -> functionCall*)
   (* think about functions...*)
   (*preProc globals in each func*)
@@ -320,6 +391,7 @@ return to Strands until Fixed
 	 | doit (S.E_Lit(l)) = NOTHING
 	 | doit (S.E_Kernel(k)) = NOTHING
 	 | doit (S.E_Select(v1, v2)) = (
+	  checkExistence ("_strand_" ^ (V.nameOf v1)) v1;
 	  checkExistence ("_strand_var_" ^ (V.nameOf v2)) v2;
 	  getFemPres v2 (* read strand state *)
 	 )
