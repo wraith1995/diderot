@@ -489,7 +489,7 @@ return to Strands until Fixed
 	      )
 	      | doit (S.E_Apply(f, vs)) = (
 	       List.app (checkExistence ((F.nameOf f) ^ "_arg")) vs;
-	       procApply(f, vs, call, change); (*these are the only places where call is used.*)
+	       procApply(f, vs, call); (*these are the only places where call is used.*)
 	       getFemPres (List.hd call)
 	      )
 	      | doit (S.E_Prim(v, [], vs, t)) =
@@ -682,7 +682,7 @@ return to Strands until Fixed
 		    (*NOTE: reduction and domain can be ignored *)
 		    (*NOTE: This is a case of an apply where args are the params and result is the callsite *)
 		   in
-		    procApply(f, args, [result], changed)
+		    procApply(f, args, [result])
 		   end
 	      in
 	       List.app doReduce maps
@@ -700,8 +700,7 @@ return to Strands until Fixed
 	    List.app g code
 	   end
        and procApply(f : F.t, args : V.t list,
-		     call : callSite,
-		     changed : bool ref) = let
+		     call : callSite) = let
 	val argsp = List.map getFemPres args
 	val globs = getFuncGlobs f
 	val globsp = List.map getFemPres globs
@@ -714,10 +713,10 @@ return to Strands until Fixed
 	   | NONE =>
 	     let
 	      (* in this path, we can't find an already inlined version of this function so there was a change.*)
-	      val _ = changed := true 
+	      val _ = changeOuter := true 
 	      val S.Func{params, body, ...} = fdef
 	      val _ = ListPair.map updateFemPres (params, argsp)
-	      val _ = doBlock(body, ref false, call, ref [])
+	      val _ = doBlock(body, ref false, call, ref []) (*we can ignore changes/new here as we found them/they are impossible.*)
 	      val v : V.t = List.hd call
 	      val femPres = getFemPres v
 	     in
