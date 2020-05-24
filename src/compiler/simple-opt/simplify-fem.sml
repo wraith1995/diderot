@@ -683,12 +683,10 @@ return to Strands until Fixed
 		    val _ = registerFunctions([mapf])
 		    val _ = registerGlobVarsInFunc mapf
 		    val _ = List.app (checkExistence "_map_args_") args
-		    (*map reduce results can't have fem so we can just do result*)
-		    (*args are just args to the function*)
-		    (*source is the strand var -> nothing*)
-		    (*reduction we can ignore and domain we can ignore*)
-
-		    (*This is an apply where args are the params and result is the callsite *)
+		    (*FIXME: val _ = (checkExistence "_strand") source: we generaly ingore the strand type *)
+		    (*NOTE: args are just args to the function*)
+		    (*reduction and domain can be ignored *)
+		    (*This is a case of an apply where args are the params and result is the callsite *)
 		   in
 		    procApply(f, args, [result], changed)
 		   end
