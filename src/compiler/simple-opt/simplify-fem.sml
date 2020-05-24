@@ -679,9 +679,18 @@ return to Strands until Fixed
 	      | doit (S.S_MapReduce(maps)) = let
 	       fun doReduce(S.MapReduce{result, reduction, mapf, args, source, domain}) =
 		   let
-		    val _ = ()
+		    val S.Func{f, ...} = mapf
+		    val _ = registerFunctions([mapf])
+		    val _ = registerGlobVarsInFunc mapf
+		    val _ = List.app (checkExistence "_map_args_") args
+		    (*map reduce results can't have fem so we can just do result*)
+		    (*args are just args to the function*)
+		    (*source is the strand var -> nothing*)
+		    (*reduction we can ignore and domain we can ignore*)
+
+		    (*This is an apply where args are the params and result is the callsite *)
 		   in
-		    ()
+		    procApply(f, args, [result], changed)
 		   end
 	      in
 	       List.app doReduce maps
