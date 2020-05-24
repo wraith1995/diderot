@@ -66,14 +66,6 @@ return to Strands until Fixed
 
   (*details: reductions (boring as just going inside) - functions - lots of inling.*)
 
-  structure S = Simple
-  structure Ty = SimpleTypes
-  structure V = SimpleVar
-  structure F = SimpleFunc
-  structure VTbl = SimpleVar.Tbl
-  structure FD = FemData
-  structure FO = FemOpt
-  structure HT = HashTable
   (*plan: as above*)
   (*1. Proc globals and global inits*)
   (*1.5 make tool for updating femPress (merge two togeather)*)
@@ -83,8 +75,48 @@ return to Strands until Fixed
   (*5. Fix functions *)
   (*6. Do rewrite*)
 
-  (*add property for function*)
+  (*Now we encounter a call site:
+   We have a call site-> we add globs and add params
+   We copy, register new props, and hold the func_def there*)
+  (*call site to args+globals femPres and args+globals femPres to new function defs*)
+  (*
+  1. Callsite can be found via traversing htings and map into a femPres for args + femPres for global
+  2. From the femPres for args (non-globs) + femPress for globals we get a function def (which is copied if it doesn't exist)
+  3. From the args + fem for globals, we can find a functoin def/copy one over.
 
+  *)
+  (*SOL: 
+  1. For each function, we isolate globals and relize that as a prop (see analyzeSimple)
+  2. For each function, we have a callSite -> femPres for args + femPres for globs
+  3. For each femPess for args + femPress for globals -> new function definition (copied) * ret 
+  --if only baseFem in args, skip -> use ty 
+   *)
+  (*Function should take:
+   -depManage functions 
+   -inner_change flag
+   -block
+
+   =>
+   news
+   *)
+  (*^changes, getFn, Returns, applies, no fem function def
+  Is getFn working correctly?
+  Are the changes operating correctly? Being recordered correctly?
+  Are callsites and news being managed correctly?
+  Are stored functions working correctly? (check fem gen)
+   *)
+
+
+  structure S = Simple
+  structure Ty = SimpleTypes
+  structure V = SimpleVar
+  structure F = SimpleFunc
+  structure VTbl = SimpleVar.Tbl
+  structure FD = FemData
+  structure FO = FemOpt
+  structure HT = HashTable
+
+  (*Functions for managing function defs and globals used by a function:*)
   local
    val {clrFn, getFn, peekFn, setFn} = F.newProp(fn v => NONE : S.func_def option)
   in
@@ -159,9 +191,9 @@ return to Strands until Fixed
   in
   fun registerGlobVarsInFunc(F as S.Func{f, params, body}) = setFn(f,globsInFunc(f))
   val getFuncGlobs = getFn
-
   end
 
+  (*function to copy function defs for symbolic inlining effectively*)
   fun functionCopy(F as S.Func{f, params,body}) =
       let
        val env = V.Tbl.mkTable(10 * List.length params, raise Fail "copy table fail")
@@ -222,16 +254,16 @@ return to Strands until Fixed
 	      | S.E_ExtractFemItem(v, ty, data) => S.E_ExtractFemItem(rename v, ty, data)
 	      | S.E_ExtractFemItem2(v1, v2, ty, outTy, data) => S.E_ExtractFemItem2(rename v1, rename v2, ty, outTy, data)
 	      | S.E_LoadFem(data, v1, v2) => S.E_LoadFem(data, rename v1, rename v2)
-	      | S.E_FemField(v1, v1', v2, ty, field, func) => S.E_FemField(rename v1,rename v1', Option.map (rename) v2, ty, field, func) (*FIXME: func*)
-	      | S.E_ExtractFemItemN(vars, tys, outTy, opt, NONE) => S.E_ExtractFemItemN(List.map rename vars, tys, outTy, opt, NONE) (*FIXME*)
-			     
+	      | S.E_FemField(v1, v1', v2, ty, field, func) => S.E_FemField(rename v1,rename v1', Option.map (rename) v2, ty, field, func)
+	      (*^NOTE: no globals are in these functions*)
+	      | S.E_ExtractFemItemN(vars, tys, outTy, opt, NONE) => S.E_ExtractFemItemN(List.map rename vars, tys, outTy, opt, NONE) 
 	   (* end case *))
       in
        S.Func{f=f, params=params',body=doBlock(body)}
       end
 
 
-
+  (*Data structure and helper functions for symbolically reasoning about fem data*)
   datatype femPres = Base of FD.femType * V.t option | ALL of FD.femType | NOTHING (* all, nothing, or one thing *)
 		     | Tuple of femPres list | Array of femPres 
 		     | Seq of femPres (* must be homogenous i.e no partitioning on an array*)
@@ -315,7 +347,8 @@ return to Strands until Fixed
     | tyToFemPresSeq (Ty.T_Fem(f)) = if FD.baseFem f
 				     then ALL(f) (* handle empty seq case *)
 				     else Base(Option.valOf(FD.dependencyOf(f)), NONE)					   
-	
+
+  (*Propery for mapping vars to their symbolic fem info; inputs handled specially*)
   local
    val {clrFn, getFn, peekFn, setFn} = V.newProp(fn v => tyToFemPres(V.typeOf(v)))
   in
@@ -348,11 +381,9 @@ return to Strands until Fixed
   val getFemPres = getFn
   end
 
-
+  (*Function to manage inputs*)
   datatype input_init = datatype Inputs.input_init
-
   datatype input = datatype Inputs.input
-
   (*goes through inputs and adds base feminputs to a registery*)
   fun procBaseInputs(inputs : V.t input list, modifyInputTable : FD.femType * V.t -> unit) =
       let
@@ -369,16 +400,7 @@ return to Strands until Fixed
        List.app doit inputs
       end
 
-
-  (*Write expressions/statements with - trickies are function calls, for each - recall if/thenelse handled by property nature -> for each, a block needs to consider uniformly -> not really because itter comes from somewhere - either a sequence or a thing
-  In an assign - basic outline is peet at expressions -> reason based on type of expression what the fempres is -> continue on.
-  Step:
-  make merge better ergonomics
-  
-  
-   *)
-
-
+  (*data structures and functions to manage symbolic manipulation of functions at various callsites:*)
   type callSite =  V.t list  (* structure for idying a call site *)
   type functionCall  = femPres list * femPres list (* arguments and globals *)
   type callResult = S.func_def * femPres option
@@ -401,7 +423,8 @@ return to Strands until Fixed
 												
   in
   (*operation:we need to from a f, 
-    and info about the calls (args +glob femPress) -> SOME(function_def) (SOME if we need to do something and NONE if it is already done -> how to get ret var then?)  -> function_def can be processed *)
+    and info about the calls (args +glob femPress) -> SOME(function_def)	
+    (SOME if we need to do something and NONE if it is already done -> how to get ret var then?)  -> function_def can be processed *)
   (*from the procced thing, we get the accepted one, which we get back here.*)
   fun addCall(f : F.t, call : callSite, callArgs : functionCall) : callResult =
       let
@@ -437,41 +460,8 @@ return to Strands until Fixed
        HT.insert defsTable (callArgs, (newDef, SOME(retF)))
       end
   end
-				   
-
-  (*Now we encounter a call site:
-   We have a call site-> we add globs and add params
-   We copy, register new props, and hold the func_def there*)
-  (*call site to args+globals femPres and args+globals femPres to new function defs*)
-  (*
-  1. Callsite can be found via traversing htings and map into a femPres for args + femPres for global
-  2. From the femPres for args (non-globs) + femPress for globals we get a function def (which is copied if it doesn't exist)
-  3. From the args + fem for globals, we can find a functoin def/copy one over.
-
-  *)
-  (*SOL: 
-  1. For each function, we isolate globals and relize that as a prop (see analyzeSimple)
-  2. For each function, we have a callSite -> femPres for args + femPres for globs
-  3. For each femPess for args + femPress for globals -> new function definition (copied) * ret 
-  --if only baseFem in args, skip -> use ty 
-   *)
-  (*Function should take:
-   -depManage functions 
-   -inner_change flag
-   -block
-
-   =>
-   news
-   *)
-  (*^changes, getFn, Returns, applies, no fem function def
-  When do we need to know changes? Changes need to occur in functions and vars; however for a function change to occur, a var change needs to occur too.
-  Is getFn working correctly?
-  We need to implement the replies and actually use the exp function?
-  map reduce-already an inline function
-
-  After this, do the global hookup and loop. YAY!
-
-   *)
+  
+  (*function to actually analyze a block of code*)
   fun analyzeBlock(b as S.Block{code, ...},
 		   changeOuter : bool ref,
 		   newsOuter : (Atom.atom * V.t list) list ref,
@@ -480,9 +470,15 @@ return to Strands until Fixed
       let
        fun expToFemPres(exp : S.exp, retTy : Ty.ty, call : callSite) : femPres  =
 	   let
-	    val change = ref false (* changes in here don't matter*)
-	    val retHasFem = Ty.hasFem retTy 
-	    val mergeFemPreses = List.foldr (fn (x,y) => merge(x, y, change))
+	    val change = ref false (* changes in here don't matter?*)
+	    val merge = (fn (x,y) => merge(x,y,change))
+	    (*These three are the only place where retTy is used:*)
+	    val retHasFem = Ty.hasFem retTy
+	    val nonFemRet = tyToFemPres retTy
+	    val possibleFemData = (case retTy
+				    of Ty.T_Fem(f') => SOME(f')
+				     | _ => NONE)
+	    val mergeFemPreses = List.foldr (fn (x,y) => merge(x, y))
 	    fun doit (S.E_Var(v)) = (checkExistence ("_var_" ^ (V.nameOf v)) v; getFemPres v)
 	      | doit (S.E_Lit(l)) = NOTHING
 	      | doit (S.E_Kernel(k)) = NOTHING
@@ -493,7 +489,7 @@ return to Strands until Fixed
 	      )
 	      | doit (S.E_Apply(f, vs)) = (
 	       List.app (checkExistence ((F.nameOf f) ^ "_arg")) vs;
-	       procApply(f, vs, call, change);
+	       procApply(f, vs, call, change); (*these are the only places where call is used.*)
 	       getFemPres (List.hd call)
 	      )
 	      | doit (S.E_Prim(v, [], vs, t)) =
@@ -501,8 +497,6 @@ return to Strands until Fixed
 		 if Var.same(v, BasisVars.subscript) andalso retHasFem
 		 then let val [sy, index] = vs (*this merge might be pointless*)
 			  val Array(p') = getFemPres sy
-						     (* val retP = tyToFemPres retTy *)
-						     (* val merged =  merge(retP, ps, change) *)
 		      in p' end
 		 else if Var.same(v, BasisVars.dynSubscript) andalso retHasFem
 		 then let val [sy, index] = vs
@@ -514,23 +508,23 @@ return to Strands until Fixed
 		 then let val [sy, a] = vs
 			  val Seq(p) = getFemPres sy
 			  val p' = getFemPres a
-			  val p'' = merge(p, p', change)
+			  val p'' = merge(p, p')
 		      in Seq(p'') end
 		 else if Var.same(v, BasisVars.at_Td)
 		 then let val [a, sy] = vs
 			  val Seq(p) = getFemPres sy
 			  val p' = getFemPres a
-			  val p'' = merge(p, p', change)
+			  val p'' = merge(p, p')
 		      in Seq(p'') end
 		 else if Var.same(v, BasisVars.at_dd)
 		 then let val [sy1, sy2] = vs
 			  val Seq(p1) = getFemPres sy1
 			  val Seq(p2) = getFemPres sy2
-			  val p = merge(p1, p2, change)
+			  val p = merge(p1, p2)
 		      in Seq(p) end
 		 else if retHasFem
 		 then raise Fail "impossible fem basis ret"
-		 else tyToFemPres retTy 
+		 else nonFemRet 
 		)
 	      | doit (S.E_Tensor(vs, _)) = (List.app (checkExistence ( "_ten")) vs; NOTHING)
 	      | doit (S.E_Field(vs, _)) = (List.app (checkExistence ("_fld")) vs; NOTHING)
@@ -542,7 +536,7 @@ return to Strands until Fixed
 						 else Seq(tyToFemPresSeq t') (*{} -> ALL*)
 		    | Ty.T_Sequence(t', SOME(k)) => if k <> 0
 						    then Array(mergeFemPreses (tyToFemPres t') (List.map getFemPres vs))
-						    else Array(tyToFemPresSeq t')
+						    else Array(tyToFemPresSeq t') (* {} -> ALL*)
 		(*end case*)))
 	      | doit (S.E_Tuple(vs)) =
 		(List.app (checkExistence ("_tpl")) vs;
@@ -562,8 +556,8 @@ return to Strands until Fixed
 		      let 
 		       val Array(p') = getFemPres x
 		       val p = if n = 0
-			       then tyToFemPresSeq ty  (*QUESTION: this is a bet weird as we have the p' - for {}, p' would already be all so this is redudant*)
-			       else merge((tyToFemPres ty), p', change) (*if there is a FEM, there is an init so Base(x, SOME k) gets used*)
+			       then tyToFemPresSeq ty  (*QUESTION: this is a bit weird as we have the p' - for {}, p' would already be all so this is redudant*)
+			       else merge((tyToFemPres ty), p') (*if there is a FEM, there is an init so Base(x, SOME k) gets used*)
 		      in
 		       Seq(p)
 		      end
@@ -585,8 +579,8 @@ return to Strands until Fixed
 	      | doit (S.E_ExtractFem(v, f)) = ( (*if the return has fem, this is getting a func or space or mesh*)
 	       let
 		val _ = checkExistence "_extractFem" v
-		val retFem = (case retTy
-			       of Ty.T_Fem(f') => f'
+		val retFem = (case possibleFemData
+			       of SOME(f') => f'
 				| _ => raise Fail "invalid ExtractFem")
 		val _ = if (FD.baseFem retFem) andalso (FD.baseFem f) (*extractFem's return type is f*)
 			then ()
@@ -613,21 +607,21 @@ return to Strands until Fixed
 	      | doit (S.E_ExtractFemItem(v, t, fo)) = (checkExistence "_EFI1" v;
 						       if retHasFem
 						       then raise Fail "impossible"
-						       else tyToFemPres retTy (*should not have Base/ALL*))
+						       else nonFemRet (*should not have Base/ALL*))
 	      (*above could be:c cells, refCell -> but these should be eliminated in prior phases*)
 	      | doit (S.E_ExtractFemItem2(v1, v2, t1, t2, fo)) = (checkExistence "_EFI2_1" v1;
 								  checkExistence "_EFI2_2" v2;
 								  if retHasFem
 								  then raise Fail "impossible"
-								  else tyToFemPres retTy)
+								  else nonFemRet)
 	      | doit (S.E_FemField(v1, v2, v3o, t, fof, func)) = (checkExistence "_FField_1" v1;
 								  checkExistence "_FField_2" v2;
 								  Option.app (checkExistence "_FField_3") v3o;
 								  (*NOTE: function here is FEM free modulo a mesh arg!*)
-								  tyToFemPres retTy)
+								  nonFemRet)
 	      | doit (S.E_ExtractFemItemN(vs, tys, t, fo, NONE)) = ((List.app (checkExistence "_FFIN") vs);
 								    if Bool.not retHasFem
-								    then tyToFemPres retTy
+								    then nonFemRet
 								    else
 								     (*refBuild, InvalidBuild, InvalidbuildBoundary, AllBuild  *)
 								     let
@@ -673,7 +667,7 @@ return to Strands until Fixed
 			       | [] => raise Fail "return outside of function!"
 			    (* end case*))
 	      in
-	       updateFemPresRef(retVar, sitePres, changed)
+	       updateFemPresRef(retVar, sitePres, changed) (*NOTE: preempts the last step of processing apply*)
 	      end
 	      | doit (S.S_Print(vs)) = List.app (checkExistence "print") vs
 	      | doit (S.S_MapReduce(maps)) = let
@@ -683,10 +677,10 @@ return to Strands until Fixed
 		    val _ = registerFunctions([mapf])
 		    val _ = registerGlobVarsInFunc mapf
 		    val _ = List.app (checkExistence "_map_args_") args
-		    (*FIXME: val _ = (checkExistence "_strand") source: we generaly ingore the strand type *)
+		    (*QUESTION: val _ = (checkExistence "_strand") source: we generaly ingore the strand type *)
 		    (*NOTE: args are just args to the function*)
-		    (*reduction and domain can be ignored *)
-		    (*This is a case of an apply where args are the params and result is the callsite *)
+		    (*NOTE: reduction and domain can be ignored *)
+		    (*NOTE: This is a case of an apply where args are the params and result is the callsite *)
 		   in
 		    procApply(f, args, [result], changed)
 		   end
@@ -719,11 +713,12 @@ return to Strands until Fixed
 	  of SOME(_) => () 
 	   | NONE =>
 	     let
+	      (* in this path, we can't find an already inlined version of this function so there was a change.*)
+	      val _ = changed := true 
 	      val S.Func{params, body, ...} = fdef
 	      val _ = ListPair.map updateFemPres (params, argsp)
-	      val _ = doBlock(body, changed, call, ref [])
+	      val _ = doBlock(body, ref false, call, ref [])
 	      val v : V.t = List.hd call
-
 	      val femPres = getFemPres v
 	     in
 	      updateCall(f, call, callArgs, fdef, femPres) : unit
