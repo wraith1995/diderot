@@ -115,6 +115,7 @@ structure SimpleTypes =
       | hasFem (T_Image _) = false
       | hasFem (T_Field _) = false
       | hasFem (T_Fem _) = true
+      | hasFem _ = false
 
     fun allFems (T_Fem d) = [d]
       | allFems (T_Sequence(t,_)) = allFems t
