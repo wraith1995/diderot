@@ -705,8 +705,11 @@ return to Strands until Fixed
 	val globs = getFuncGlobs f
 	val globsp = List.map getFemPres globs
 	val callArgs : functionCall = (argsp, globsp)
-	val femsInvolved = List.concatMap (Ty.allFems o V.typeOf) (args@globs)
-	val anyNonBase = List.exists (Bool.not o FD.baseFem) femsInvolved
+	val femsInvolvedArgs = List.concatMap (Ty.allFems o V.typeOf) (args)
+	val femsINvolvedGlobs = List.concatMap (Ty.allFems o V.typeOf) (globs)
+	val anyNonBase = List.exists (Bool.not o FD.baseFem) femsInvolvedArgs
+			 orelse (List.length femsINvolvedGlobs <> 0)
+				     
 	val v : V.t = List.hd call
        in
 	if anyNonBase
@@ -766,7 +769,9 @@ return to Strands until Fixed
 NOTE: peekFn doesn't create the thing -> getFn or setFn will though ->all vars need to be accounted for then.
 NOTE: need to prevent analysis of non-fem functions.
 NOTE: updateCall/those tables won't be around (peekFn => NONE) for functions with no fem/no new defs
-
+NOW: DO block function -> do inits -> do a loop/read read notes for this.
+Then: rewrite (should be quick)
+Then: composition/clean up around globals and such
 Global question: what about globalInit/things that are not inited?
      What about function use later on?
      GetFn/setFn question
