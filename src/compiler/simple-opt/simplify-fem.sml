@@ -227,6 +227,7 @@ return to Strands until Fixed
 	      | S.S_Continue  => raise Fail "continue impossible in function!"
 	      | S.S_Die => raise Fail "die impossible in function"
 	      | S.S_Return x => S.S_Return(rename x)
+	      | S.S_Print(vs) => S.S_Print(List.map rename vs)
 	      | S.S_MapReduce _ => raise Fail "map reduce impossible in function!"
 	   (*end case*))
        and doBlock(S.Block{props, code}) = S.Block{props = props, code = List.map doStm code}
