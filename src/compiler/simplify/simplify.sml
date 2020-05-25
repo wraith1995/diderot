@@ -1029,7 +1029,7 @@ structure Simplify : sig
 		    S.S_Var(itterStart, SOME(S.E_Lit(Literal.Int(IntLit.fromInt 1)))), (*the first cell is 0, we do 1*)
 		    S.S_Var(one, SOME(S.E_Lit(Literal.Int(IntLit.fromInt 1)))),
 		    S.S_Var(first, SOME(S.E_Lit(Literal.Int(IntLit.fromInt 0)))),
-		    S.S_Var(startCell, SOME(S.E_LoadFem(data, x', first))),
+		    S.S_Var(startCell, SOME(S.E_LoadFem(data', x', first))),
 		    S.S_Var(itterEnd', SOME(S.E_ExtractFemItem(x', STy.T_Int, (FemOpt.NumCell, data)))),
 		    S.S_Var(itterEnd, SOME(S.E_Prim(BasisVars.sub_ii,[], [itterEnd', one], STy.T_Int))),
 

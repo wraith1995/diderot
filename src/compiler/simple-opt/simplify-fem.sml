@@ -268,6 +268,20 @@ return to Strands until Fixed
 		     | Tuple of femPres list | Array of femPres 
 		     | Seq of femPres (* must be homogenous i.e no partitioning on an array*)
 
+  fun valid' (ALL(f)) = FD.baseFem f
+    | valid' (Base(f, NONE)) = FD.baseFem f
+    | valid' (Base(f, SOME(v))) = FD.baseFem f andalso
+				 (case V.typeOf v
+				   of Ty.T_Fem(f') => FD.same(f, f')
+				    | _ => false)
+    | valid' (Tuple(ts)) = List.all valid' ts
+    | valid' (Seq(t)) = valid' t
+    | valid' (Array(t)) = valid' t
+
+  fun valid d = if valid' d
+		then d
+		else raise Fail "invalid femPres"
+
   fun anyFem (Base _) = true
     | anyFem (ALL _) = true
     | anyFem (NOTHING) = false
@@ -318,7 +332,7 @@ return to Strands until Fixed
 		    | _ => raise Fail "impossible: merging incompatible femPress - must of come from different types"
 		 (*end case*))
       in
-       (merge'(a1, a2))
+       valid (merge'(a1, a2))
       end
 
   fun merge'(a1, a2) = (merge(a1, a2, ref false))
@@ -572,12 +586,12 @@ return to Strands until Fixed
 		(List.app (checkExistence ("_loadFem")) [v1, v2]; 
 		 if FD.baseFem f (*v1 is the dest data; v2 is the dep; *)
 		 then ((case getFemPres v2
-			 of Base(f', SOME(v2')) => (addDep(v1, v2'); Base(f, SOME(v1)))
+			 of Base(f', SOME(v2')) => (addDep(v1, v2'); valid (Base(f, SOME(v1))))
 			  | Base(f', NONE) => raise Fail "base fem load not set; impossible!" 
 			  | ALL(f') => raise Fail "base fem load unable to trace!" (*Should be impossible*)
-			  | _ => raise Fail "impossible!"
+			  | _ => raise Fail ("impossible: " ^ (V.uniqueNameOf v2))
 		      (* end case*)))
-		 else Base((Option.valOf o FD.dependencyOf) f, SOME(v1))) (*v1 is base data (func or mesh); v2 is an int for a cell?*)
+		 else valid (Base((Option.valOf o FD.dependencyOf) f, SOME(v1)))) (*v1 is base data (func or mesh); v2 is an int for a cell?*)
 	      | doit (S.E_ExtractFem(v, f)) = ( (*if the return has fem, this is getting a func or space or mesh*)
 	       let
 		val _ = checkExistence "_extractFem" v
@@ -596,12 +610,12 @@ return to Strands until Fixed
 		if FD.baseFem vtyf
 		then (case getFemPres v (*This is either taking something out of a func/space so we get a dep if possible*)
 		       of Base(vtyf', SOME(v')) => (case (FD.dependencyOf vtyf', getDep v')
-						     of (SOME(f'), SOME(v'')) => Base(f',SOME(v''))
-						      | (SOME(f'), NONE) => ALL(f') 
+						     of (SOME(f'), SOME(v'')) => valid (Base(f',SOME(v'')))
+						      | (SOME(f'), NONE) => valid (ALL(f') )
 						      | (NONE, _) => raise Fail "impossible mesh extract in simple"
 						   (* end case*))
 			| Base(vtyf', NONE) => raise Fail "extracting from non init"
-			| ALL(vtyf') => ALL(vtyf')
+			| ALL(vtyf') => valid (ALL(vtyf'))
 			| _ => raise Fail "impossible extract FEM"
 		     (* end case*))
 		else getFemPres v (*take base out of cell or pos; just propogate same info*)
@@ -779,8 +793,7 @@ return to Strands until Fixed
 NOTE: peekFn doesn't create the thing -> getFn or setFn will though ->all vars need to be accounted for then.
 NOTE: need to prevent analysis of non-fem functions.
 NOTE: updateCall/those tables won't be around (peekFn => NONE) for functions with no fem/no new defs
-NOTE: cells expansion needs an init in {} and empty seqs infer from number of meshes
-NOTE: ALL, etc should be replaced with functions that handle shit.
+NOTE: ALL, etc should be replaced with functions that handle shit; NO:make valid function
 NOW: DO block function -> do inits -> do a loop/read read notes for this.
 
 Then: rewrite (should be quick)
