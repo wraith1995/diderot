@@ -378,7 +378,7 @@ return to Strands until Fixed
 				| SOME _ => ()
 			     (*end case*))
 
-  val getFemPres = getFn
+  val getFemPres = Option.valOf o peekFn
   end
 
   (*Function to manage inputs*)
@@ -705,9 +705,15 @@ return to Strands until Fixed
 	val globs = getFuncGlobs f
 	val globsp = List.map getFemPres globs
 	val callArgs : functionCall = (argsp, globsp)
-	val (fdef, possibleRet) = addCall(f, call, callArgs)
-					 
+	val femsInvolved = List.concatMap (Ty.allFems o V.typeOf) (args@globs)
+	val anyNonBase = List.exists (Bool.not o FD.baseFem) femsInvolved
+	val v : V.t = List.hd call
        in
+	if anyNonBase
+	then
+	 let
+	  val (fdef, possibleRet) = addCall(f, call, callArgs) 
+	 in
 	(case possibleRet
 	  of SOME(_) => () 
 	   | NONE =>
@@ -717,12 +723,14 @@ return to Strands until Fixed
 	      val S.Func{params, body, ...} = fdef
 	      val _ = ListPair.map updateFemPres (params, argsp)
 	      val _ = doBlock(body, ref false, call, ref []) (*we can ignore changes/new here as we found them/they are impossible.*)
-	      val v : V.t = List.hd call
+
 	      val femPres = getFemPres v
 	     in
 	      updateCall(f, call, callArgs, fdef, femPres) : unit
 	     end
 	(* end case*))
+	 end
+	else updateFemPresRef(v, tyToFemPresSeq (V.typeOf v), changeOuter) (*no fem involved, but we mark this.*)
        end
       in
        doBlock(b, changeOuter, [], newsOuter)
@@ -749,11 +757,24 @@ return to Strands until Fixed
    (*Figure out the base fem inputs.*)
    val _ = procBaseInputs(inputs, addType)
 
-   (*Go through global init to find dependecies between fems   fun procGlobalInput - base expression, but we register dependencies*)
-   (*Idea: go through this as normal, but if you have a global var, we check the assignment for its type.
-   If clean, we add a dependency
-   handleGlobalAssign callback - 
-    *)
+   (* register const inputs - no fem*)
+   val _ = List.map getFemPres consts
+
+
+   (*
+
+NOTE: peekFn doesn't create the thing -> getFn or setFn will though ->all vars need to be accounted for then.
+NOTE: need to prevent analysis of non-fem functions.
+NOTE: updateCall/those tables won't be around (peekFn => NONE) for functions with no fem/no new defs
+
+Global question: what about globalInit/things that are not inited?
+     What about function use later on?
+     GetFn/setFn question
+     globInit -> create -> start -> doStrands -> update -> loop from doStrands as above
+    setupFn()
+    strands()
+    globs()
+    loop (strands(); globs())*)
    val _ = ()
 
   in

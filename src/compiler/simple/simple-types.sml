@@ -116,6 +116,11 @@ structure SimpleTypes =
       | hasFem (T_Field _) = false
       | hasFem (T_Fem _) = true
 
+    fun allFems (T_Fem d) = [d]
+      | allFems (T_Sequence(t,_)) = allFems t
+      | allFems (T_Tuple(ts)) = List.concatMap allFems ts
+      | allFems _ = []
+
     end (* local *)
 
   end
