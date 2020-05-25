@@ -351,6 +351,7 @@ structure Util : sig
 	   | doit (e, Ty.T_Sequence(ty, _), t as Ty.T_Sequence(ty', NONE), true) =
 	     let
 	      (*create itter var, *)
+	      (*TODO: correct this.*)
 	      val itVar = Var.new(Atom.atom "0_itter", span, Var.IterVar, ty)
 	      val iter = (itVar, e)
 	      val cleaned = doit(AST.E_Var((itVar, span)), ty, ty', true)

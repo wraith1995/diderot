@@ -350,18 +350,31 @@ return to Strands until Fixed
 				  then Base(f, NONE)
 				  else Base(Option.valOf(FD.dependencyOf(f)), NONE)
 
-  fun tyToFemPresSeq (Ty.T_Bool) = NOTHING
-    | tyToFemPresSeq (Ty.T_Int) = NOTHING
-    | tyToFemPresSeq (Ty.T_String) = NOTHING
-    | tyToFemPresSeq (Ty.T_Tensor _) = NOTHING
-    | tyToFemPresSeq (Ty.T_Sequence(t, SOME k)) = Array(tyToFemPresSeq t)
-    | tyToFemPresSeq (Ty.T_Sequence(t, NONE)) = Seq(tyToFemPresSeq t)
-    | tyToFemPresSeq (Ty.T_Tuple(tys)) = Tuple(List.map tyToFemPresSeq tys)
-    | tyToFemPresSeq (Ty.T_Strand _) = NOTHING
-    | tyToFemPresSeq (Ty.T_Field _) = NOTHING
-    | tyToFemPresSeq (Ty.T_Fem(f)) = if FD.baseFem f
-				     then ALL(f) (* handle empty seq case *)
-				     else Base(Option.valOf(FD.dependencyOf(f)), NONE)					   
+  fun tyToFemPresSeq onlyOne (t) = let
+  fun tyToFemPresSeq' (Ty.T_Bool) = NOTHING
+    | tyToFemPresSeq' (Ty.T_Int) = NOTHING
+    | tyToFemPresSeq' (Ty.T_String) = NOTHING
+    | tyToFemPresSeq' (Ty.T_Tensor _) = NOTHING
+    | tyToFemPresSeq' (Ty.T_Sequence(t, SOME k)) = Array(tyToFemPresSeq' t)
+    | tyToFemPresSeq' (Ty.T_Sequence(t, NONE)) = Seq(tyToFemPresSeq' t)
+    | tyToFemPresSeq' (Ty.T_Tuple(tys)) = Tuple(List.map tyToFemPresSeq' tys)
+    | tyToFemPresSeq' (Ty.T_Strand _) = NOTHING
+    | tyToFemPresSeq' (Ty.T_Field _) = NOTHING
+    | tyToFemPresSeq' (Ty.T_Fem(f)) =
+      if FD.baseFem f
+      then (case onlyOne f
+	     of SOME(v) => Base(f, SOME(v))
+	      | _ => ALL(f)
+	   (*end case*)) (* handle empty seq case *)
+      else
+       (case onlyOne (Option.valOf(FD.dependencyOf(f)))
+	     of SOME(v) => Base(Option.valOf(FD.dependencyOf(f)), SOME(v))
+	      | _ =>  Base(Option.valOf(FD.dependencyOf(f)), NONE)
+       (* end case*))
+      
+  in
+   tyToFemPresSeq' t
+  end
 
   (*Propery for mapping vars to their symbolic fem info; inputs handled specially*)
   local
@@ -482,7 +495,8 @@ return to Strands until Fixed
 		   changeOuter : bool ref,
 		   newsOuter : (Atom.atom * V.t list) list ref,
 		   getDep : V.t -> V.t option,
-		   addDep : V.t * V.t -> unit) =
+		   addDep : V.t * V.t -> unit,
+		   onlyOne : FemData.femType -> V.t option) =
       let
        fun expToFemPres(exp : S.exp, retTy : Ty.ty, call : callSite) : femPres  =
 	   let
@@ -549,10 +563,10 @@ return to Strands until Fixed
 		 (case t
 		   of Ty.T_Sequence(t', NONE) => if List.length vs <> 0
 						 then Seq(mergeFemPreses (tyToFemPres t') (List.map getFemPres vs))
-						 else Seq(tyToFemPresSeq t') (*{} -> ALL*)
+						 else Seq(tyToFemPresSeq onlyOne t') (*{} -> ALL?*)
 		    | Ty.T_Sequence(t', SOME(k)) => if k <> 0
 						    then Array(mergeFemPreses (tyToFemPres t') (List.map getFemPres vs))
-						    else Array(tyToFemPresSeq t') (* {} -> ALL*)
+						    else Array(tyToFemPresSeq onlyOne t') (* {} -> ALL?*)
 		(*end case*)))
 	      | doit (S.E_Tuple(vs)) =
 		(List.app (checkExistence ("_tpl")) vs;
@@ -572,7 +586,7 @@ return to Strands until Fixed
 		      let 
 		       val Array(p') = getFemPres x
 		       val p = if n = 0
-			       then tyToFemPresSeq ty  (*QUESTION: this is a bit weird as we have the p' - for {}, p' would already be all so this is redudant*)
+			       then tyToFemPresSeq onlyOne ty  (*QUESTION: this is a bit weird as we have the p' - for {}, p' would already be all so this is redudant*)
 			       else merge((tyToFemPres ty), p') (*if there is a FEM, there is an init so Base(x, SOME k) gets used*)
 		      in
 		       Seq(p)
@@ -755,7 +769,7 @@ return to Strands until Fixed
 	     end
 	(* end case*))
 	 end
-	else updateFemPresRef(v, tyToFemPresSeq (V.typeOf v), changeOuter) (*no fem involved, but we mark this.*)
+	else updateFemPresRef(v, tyToFemPresSeq onlyOne (V.typeOf v), changeOuter) (*no fem involved, but we mark this.*)
        end
       in
        doBlock(b, changeOuter, [], newsOuter)
@@ -775,6 +789,9 @@ return to Strands until Fixed
 			   of SOME(vs) => HT.insert femTable (ty, v::vs)
 			    | NONE => HT.insert femTable (ty, [v])
 			 (*end case*))
+   fun onlyOne (ty) = (case HT.find femTable ty
+			of SOME([v]) => SOME(v)
+			 | _ => NONE)
    val femDep = VTbl.mkTable(32, Fail "fem dep not found")
    fun addDep (v1 : V.t, v2 : V.t) = VTbl.insert femDep (v1, v2)
    fun findDep ( v1 : V.t) : V.t option = VTbl.find femDep v1
@@ -785,17 +802,20 @@ return to Strands until Fixed
    (* register const inputs - no fem*)
    val _ = List.app defaultFemPres consts
 
-   fun analyze(b, change, news) = analyzeBlock(b, change, news, findDep, addDep)
+   fun analyze(b, change, news) = analyzeBlock(b, change, news, findDep, addDep, onlyOne)
 
    val _ = analyze(globInit, ref false, ref [])
    (*
 
 NOTE: peekFn doesn't create the thing -> getFn or setFn will though ->all vars need to be accounted for then.
-NOTE: need to prevent analysis of non-fem functions.
 NOTE: updateCall/those tables won't be around (peekFn => NONE) for functions with no fem/no new defs
-NOTE: ALL, etc should be replaced with functions that handle shit; NO:make valid function
-NOW: DO block function -> do inits -> do a loop/read read notes for this.
+NOTE: add single function/modify input/globals transformation (avoid {})
 
+NOTE: find if possible that only 1 global {} 
+and think about {}s and def of rep (not SSA) 
+and make sure valid checks that base v is an input.
+
+NOW: loops
 Then: rewrite (should be quick)
 Then: composition/clean up around globals and such
 Global question: what about globalInit/things that are not inited?
