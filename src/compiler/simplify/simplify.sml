@@ -1021,7 +1021,7 @@ structure Simplify : sig
 	       val tempAcc = newTemp cellTy
 	       val makeCell' = S.S_Var(tempAcc, SOME(S.E_LoadFem(data', x', itterIn)))
 	       val appendCell = S.S_Assign(accp, S.E_Prim(BasisVars.at_dT, [S.TY cellTy], [accp, tempAcc], femCellTySeq))
-
+					  
 	       val block = List.rev [
 		    S.S_Var(itterStart, SOME(S.E_Lit(Literal.Int(IntLit.fromInt 0)))),
 		    S.S_Var(one, SOME(S.E_Lit(Literal.Int(IntLit.fromInt 1)))),

@@ -294,18 +294,19 @@ return to Strands until Fixed
   fun merge(a1 : femPres, a2 : femPres, change : bool ref) =
       let
        fun changed v = (change := true; v)
+       fun failDiff(f1, f2) = raise Fail ("impossible Fem types different: " ^ (FD.toString f1) ^ (FD.toString f2))
        fun merge'(t1,t2) = (case (t1, t2)
 		   of (Base(f1, SOME(v1)), Base(f2, SOME(v2))) => if FemData.same(f1, f2)
 								  then if V.same(v1, v2)
 								       then Base(f1, SOME(v1))
 								       else changed (ALL(f1))
-								  else raise Fail "impossible: fem types different"
+								  else raise failDiff(f1, f2)
 		    | (Base(f1, SOME(v1)), Base(f2, NONE)) => if FemData.same(f1, f2)
 							      then changed(Base(f1, SOME(v1)))
-							      else raise Fail "impossible: fem types different"
+							      else failDiff(f1, f2)
 		    | (Base(f1, NONE), Base(f2, SOME(v1))) => if FemData.same(f1, f2)
 							      then changed(Base(f1, SOME(v1)))
-							      else raise Fail "impossible: fem types different"
+							      else failDiff(f1, f2)
 		    | (Base(_, NONE), Base(_, NONE)) => raise Fail "can't merge unit femPres; should be replaced"
 		    | (NOTHING, NOTHING) => NOTHING
 		    | (Base _, ALL(f)) => changed(ALL(f))
@@ -379,6 +380,7 @@ return to Strands until Fixed
 			     (*end case*))
 
   val getFemPres = Option.valOf o peekFn
+  val defaultFemPres = (fn x => (getFn x; ()))
   end
 
   (*Function to manage inputs*)
@@ -492,7 +494,7 @@ return to Strands until Fixed
 	       procApply(f, vs, call); (*these are the only places where call is used.*)
 	       getFemPres (List.hd call)
 	      )
-	      | doit (S.E_Prim(v, [], vs, t)) =
+	      | doit (S.E_Prim(v, _, vs, t)) =
 		(List.app (checkExistence ("_arg")) vs;
 		 if Var.same(v, BasisVars.subscript) andalso retHasFem
 		 then let val [sy, index] = vs (*this merge might be pointless*)
@@ -575,7 +577,7 @@ return to Strands until Fixed
 			  | ALL(f') => raise Fail "base fem load unable to trace!" (*Should be impossible*)
 			  | _ => raise Fail "impossible!"
 		      (* end case*)))
-		 else Base(f, SOME(v1))) (*v1 is base data (func or mesh); v2 is an int for a cell?*)
+		 else Base((Option.valOf o FD.dependencyOf) f, SOME(v1))) (*v1 is base data (func or mesh); v2 is an int for a cell?*)
 	      | doit (S.E_ExtractFem(v, f)) = ( (*if the return has fem, this is getting a func or space or mesh*)
 	       let
 		val _ = checkExistence "_extractFem" v
@@ -627,19 +629,23 @@ return to Strands until Fixed
 								     let
 								      (*NOTE: function here is currently impossible.*)
 								      val (opt, data) = fo
+								      val data' = (Option.valOf o FD.dependencyOf) data
 								      val n = List.length tys
 								      val tabed = List.tabulate(n, fn x => (x, List.nth(tys, x)))
 								      val pos  = List.filter
-										   (fn (_, Ty.T_Fem(f')) => FD.same(data, f')
+										   (fn (_, Ty.T_Fem(f')) => FD.same(data', f')
 										   | _ => false) tabed
+								      val poses = "[" ^ (String.concatWithMap "," Ty.toString (tys)) ^ "]"
 								     in
 								      (case pos
 									of [(idx, _)] => getFemPres (List.nth(vs, idx)) (*propogate Base/ALL*)
-									 | _ => raise Fail "not planned in extractFemItemN")
+									 | _ => raise Fail ("not planned in extractFemItemN:"^poses)
+								      (*end case*))
 								     end)
 								     
 	      | doit (S.E_InsideImage(v1, v2, _)) = (List.app (checkExistence ("_in")) [v1, v2]; NOTHING)
 	      | doit (S.E_FieldFn _) = NOTHING (* FIXME:handle function *)
+
 	   in
 	    doit(exp)
 	   end
@@ -647,15 +653,17 @@ return to Strands until Fixed
 			 call : callSite,
 			 news : (Atom.atom * V.t list) list ref) =
 	   let
-	    fun doit (S.S_Var(v, NONE)) = () (*Question: should we do anythin?*)
+	    fun doit (S.S_Var(v, NONE)) = () (*Question: should we do anything: Answer, for itter vars, sure?*)
 	      | doit (S.S_Var(v, SOME(e))) = updateFemPresRef(v, expToFemPres(e, V.typeOf v, v::call), changed)
 	      (*QUESTION: should we check existence @ an assign?*)
 	      | doit (S.S_Assign(v, e)) = updateFemPresRef(v, expToFemPres(e, V.typeOf v, v::call), changed) 
 	      | doit (S.S_IfThenElse(v, b1, b2)) = (checkExistence "condition" v; doBlock(b1); doBlock(b2))
 	      | doit (S.S_New(a,vs)) = news := (a, vs) :: !news
-	      | doit (S.S_Foreach(itter, src, blk)) = (checkExistence "itter" itter;
-						       checkExistence "itterSrc" src;
-						       doBlock(blk))
+	      | doit (S.S_Foreach(itter, src, blk)) =
+		(updateFemPresRef(itter, getFemPres src, changed);
+		checkExistence "itter" itter;
+		 checkExistence "itterSrc" src;
+		 doBlock(blk))
 	      | doit (S.S_KillAll) = ()
 	      | doit (S.S_Continue) = ()
 	      | doit (S.S_Die) = ()
@@ -761,9 +769,11 @@ return to Strands until Fixed
    val _ = procBaseInputs(inputs, addType)
 
    (* register const inputs - no fem*)
-   val _ = List.map getFemPres consts
+   val _ = List.app defaultFemPres consts
 
+   fun analyze(b, change, news) = analyzeBlock(b, change, news, findDep, addDep)
 
+   val _ = analyze(globInit, ref false, ref [])
    (*
 
 NOTE: peekFn doesn't create the thing -> getFn or setFn will though ->all vars need to be accounted for then.
