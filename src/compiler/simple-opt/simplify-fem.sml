@@ -4,7 +4,7 @@
  *
  * This code is part of the Diderot Project (http://diderot-language.cs.uchicago.edu)
  *
- * COPYRIGHT (c) 2018 The University of Chicago
+ * COPYRIGHT (c) 2020 The University of Chicago
  * All rights reserved.
  *)
 
@@ -779,7 +779,10 @@ return to Strands until Fixed
 NOTE: peekFn doesn't create the thing -> getFn or setFn will though ->all vars need to be accounted for then.
 NOTE: need to prevent analysis of non-fem functions.
 NOTE: updateCall/those tables won't be around (peekFn => NONE) for functions with no fem/no new defs
+NOTE: cells expansion needs an init in {} and empty seqs infer from number of meshes
+NOTE: ALL, etc should be replaced with functions that handle shit.
 NOW: DO block function -> do inits -> do a loop/read read notes for this.
+
 Then: rewrite (should be quick)
 Then: composition/clean up around globals and such
 Global question: what about globalInit/things that are not inited?
