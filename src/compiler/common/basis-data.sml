@@ -197,7 +197,6 @@ fun makeBasisFunc(reals, dim, degree) =
      val reals' = A.fromArray'(reals, shape)
      val monoRep = Atom.atom (makeMonoTerms(reals', dim, degree))
      val degree' = actualDegree(reals')
-     val _ = print("Imported basis func of degree "^(Int.toString degree')^" with mono: " ^ (Atom.toString monoRep) ^ "\n")
     in
      SOME(BasisFunc({dim = dim, degree = degree', mapDim = numNonZero(Array(reals')), coeffs = Array(reals'), strForm = monoRep}))
      handle exn => (print(exnMessage(exn)); NONE)
@@ -207,8 +206,6 @@ fun zero dim = BasisFunc({dim = dim, degree = 0,mapDim = 1, coeffs = Array(A.fro
       
 fun dx(t as BasisFunc({dim, degree, coeffs=Array(coeffs'), strForm, mapDim,...}), varIndex) =
     let
-     val _ = print("DX!\n");
-     val _ = print("Check (d/dx"^(Int.toString varIndex)^" ("^(Atom.toString strForm)^"))\n");
      val degree' = Int.max(degree - 1, 0)
      val newShape = dimDegreeShape(dim, degree')
      val start = List.tabulate(dim, fn _ => 0)
@@ -234,7 +231,6 @@ fun dx(t as BasisFunc({dim, degree, coeffs=Array(coeffs'), strForm, mapDim,...})
 	     else ArrayNd.modifyi' modNew newArray
      val strForm' = Atom.atom (makeMonoTerms(newArray, dim, degree'))
      val mapDim' = numNonZero(Array(newArray))
-     val _ = print("Check (d/dx"^(Int.toString varIndex)^" ("^(Atom.toString strForm)^")) - ("^(Atom.toString strForm')^")\n")
      (* val _ = print("We started with poly:"^(Atom.toString strForm)^"\n") *)
      (* val _ = print("We took the derivative:"^(Int.toString varIndex)^"\n") *)
      (* val _ = print("We got the poly:"^(Atom.toString strForm')^"\n") *)

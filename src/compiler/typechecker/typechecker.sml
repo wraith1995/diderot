@@ -81,7 +81,6 @@ structure Typechecker : sig
                     else ()
                 end
             else ();
-	    GlobalEnv.printEnv(gEnv);
             (prog, gEnv)
           end
 
