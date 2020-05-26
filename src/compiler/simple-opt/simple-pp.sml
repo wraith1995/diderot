@@ -10,9 +10,9 @@
 
 structure SimplePP : sig
 
-    val output : TextIO.outstream * string * Simple.program -> unit
+    val output : (SimpleVar.t -> string ) option -> TextIO.outstream * string * Simple.program  -> unit
 
-    val outputFunc : TextIO.outstream * string * Simple.func_def -> unit
+    val outputFunc : TextIO.outstream * string * Simple.func_def * (SimpleVar.t -> string ) option  -> unit
 
   end = struct
 
@@ -51,10 +51,13 @@ structure SimplePP : sig
             ppList ppTyArg ("<", ";", ">") (ppStrm, mvs)
           end
 
-    fun ppVar (ppStrm, x) = PP.string ppStrm (V.uniqueNameOf x)
+    fun ppVar (ppStrm, x, f) = PP.string ppStrm (case f
+						  of NONE => (V.uniqueNameOf x)
+						   | SOME(f') => (V.uniqueNameOf x) ^ " (" ^ (f' x) ^ ")"
+						(* end case*))
 
-    fun ppVarBind (ppStrm, x) = (
-          PP.string ppStrm (Ty.toString(V.typeOf x)); PP.space ppStrm 1; ppVar (ppStrm, x))
+    fun ppVarBind (ppStrm, x, f) = (
+          PP.string ppStrm (Ty.toString(V.typeOf x)); PP.space ppStrm 1; ppVar (ppStrm, x, f))
 
     fun ppFunc (ppStrm, f) = PP.string ppStrm (SimpleFunc.uniqueNameOf f)
 
@@ -76,12 +79,13 @@ structure SimplePP : sig
               PP.closeBox ppStrm)
           end
 
-    fun ppExp (ppStrm, e) = let
+    fun ppExp (ppStrm, e, f) = let
           fun sp () = PP.space ppStrm 1
           val string = PP.string ppStrm
-          fun var x = ppVar (ppStrm, x)
+          fun var x = ppVar (ppStrm, x, f)
           fun ppIndex (ppStrm, NONE) = PP.string ppStrm ":"
             | ppIndex (ppStrm, SOME i) = string(Int.toString i)
+	  fun ppVar' (a,b) = ppVar(a, b, f)
           fun pp e = (case e
                  of S.E_Var x => var x
                   | S.E_Lit lit => string (Literal.toString lit)
@@ -91,9 +95,9 @@ structure SimplePP : sig
                   | S.E_Prim(f, [], args, _) => (string "prim "; ppASTVar(ppStrm, f); sp(); ppArgs (ppStrm, args))
                   | S.E_Prim(f, mvs, args, _) => (
                       string "prim ";ppASTVar(ppStrm, f); ppTyArgs (ppStrm, mvs); sp(); ppArgs (ppStrm, args))
-                  | S.E_Tensor(es, _) => ppList ppVar ("[", ",", "]") (ppStrm, es)
-                  | S.E_Seq(es, _) => ppList ppVar ("{", ",", "}") (ppStrm, es)
-                  | S.E_Tuple es => ppList ppVar ("(", ",", ")") (ppStrm, es)
+                  | S.E_Tensor(es, _) => ppList ppVar' ("[", ",", "]") (ppStrm, es)
+                  | S.E_Seq(es, _) => ppList ppVar' ("{", ",", "}") (ppStrm, es)
+                  | S.E_Tuple es => ppList ppVar' ("(", ",", ")") (ppStrm, es)
                   | S.E_Project(x, i) => (var x; string "."; string(Int.toString i))
                   | S.E_Slice(x, indices, _) => (
                       var x;
@@ -140,48 +144,49 @@ structure SimplePP : sig
             pp e
           end
 
-    and ppArgs (ppStrm, args) = ppList ppVar ("(", ",", ")") (ppStrm, args)
+    and ppArgs (ppStrm, args) = ppList (fn (a,b) => ppVar(a,b,NONE)) ("(", ",", ")") (ppStrm, args)
 
-    fun ppBlock (ppStrm, [], S.Block{code=[], ...}) = PP.string ppStrm "{ }"
-      | ppBlock (ppStrm, vars, S.Block{code, ...}) = let
+    fun ppBlock (ppStrm, [], S.Block{code=[], ...}, f) = PP.string ppStrm "{ }"
+      | ppBlock (ppStrm, vars, S.Block{code, ...}, f) = let
           fun sp () = PP.space ppStrm 1
           fun nl () = PP.newline ppStrm
           val string = PP.string ppStrm
-          fun var x = ppVar (ppStrm, x)
+          fun var x = ppVar (ppStrm, x, f)
+	  fun ppBlock' (a,b, c) = ppBlock(a,b,c,f)
           fun ppStmt stmt = (
                 nl();
                 case stmt
                  of S.S_Var(x, optE) => (
                       PP.openHBox ppStrm;
-                        ppVarBind (ppStrm, x);
+                        ppVarBind (ppStrm, x, f);
                         case optE
-                         of SOME e => (sp(); string "="; sp(); ppExp(ppStrm, e))
+                         of SOME e => (sp(); string "="; sp(); ppExp(ppStrm, e, f))
                           | NONE => ()
                         (* end case *);
                         string ";";
                       PP.closeBox ppStrm)
                   | S.S_Assign(x, e) => (
                       PP.openHBox ppStrm;
-                        var x; sp(); string "="; sp(); ppExp(ppStrm, e); string ";";
+                        var x; sp(); string "="; sp(); ppExp(ppStrm, e, f); string ";";
                       PP.closeBox ppStrm)
                   | S.S_IfThenElse(x, blk, S.Block{code=[], ...}) => (
                       PP.openHBox ppStrm;
-                        string "if"; sp(); ppVar(ppStrm, x);
-                        sp(); ppBlock (ppStrm, [], blk);
+                        string "if"; sp(); ppVar(ppStrm, x, f);
+                        sp(); ppBlock' (ppStrm, [], blk);
                       PP.closeBox ppStrm)
                   | S.S_IfThenElse(x, blk1, blk2) => (
                       PP.openHBox ppStrm;
-                        string "if"; sp(); ppVar(ppStrm, x);
-                        sp(); ppBlock (ppStrm, [], blk1);
+                        string "if"; sp(); ppVar(ppStrm, x, f);
+                        sp(); ppBlock' (ppStrm, [], blk1);
                       PP.closeBox ppStrm;
                       PP.openHBox ppStrm;
-                        sp(); string "else"; sp(); ppBlock (ppStrm, [], blk2);
+                        sp(); string "else"; sp(); ppBlock' (ppStrm, [], blk2);
                       PP.closeBox ppStrm)
                   | S.S_Foreach(x, xs, blk) => (
                       PP.openHBox ppStrm;
-                        string "foreach"; sp(); ppVar(ppStrm, x);
-                        sp(); string "in"; sp(); ppVar(ppStrm, xs);
-                        sp(); ppBlock (ppStrm, [], blk);
+                        string "foreach"; sp(); ppVar(ppStrm, x, f);
+                        sp(); string "in"; sp(); ppVar(ppStrm, xs, f);
+                        sp(); ppBlock' (ppStrm, [], blk);
                       PP.closeBox ppStrm)
                   | S.S_New(strand, args) => (
                       PP.openHBox ppStrm;
@@ -195,7 +200,7 @@ structure SimplePP : sig
                   | S.S_Stabilize => string "stabilize;"
                   | S.S_Return x => (
                       PP.openHBox ppStrm;
-                        string "return"; sp(); ppVar(ppStrm, x); string ";";
+                        string "return"; sp(); ppVar(ppStrm, x, f); string ";";
                       PP.closeBox ppStrm)
                   | S.S_Print args => (
                       PP.openHBox ppStrm;
@@ -205,17 +210,17 @@ structure SimplePP : sig
                       val S.Func{params, body, ...} = mapf
                       in
                         PP.openHBox ppStrm;
-                          ppVarBind(ppStrm, result); string "="; sp();
+                          ppVarBind(ppStrm, result, f); string "="; sp();
                           string(Reductions.toString reduction);
                           sp(); string "{"; sp();
                           PP.openVBox ppStrm indent;
                             PP.openHBox ppStrm;
-                              ppList ppVar ("(", ",", ")") (ppStrm, params);
+                              ppList (fn (a,b) => ppVar(a,b, f)) ("(", ",", ")") (ppStrm, params);
                               sp(); string "=>"; sp();
                             PP.closeBox ppStrm;
-                            ppBlock (ppStrm, [], body);
+                            ppBlock' (ppStrm, [], body);
                           PP.closeBox ppStrm;
-                          sp(); ppList ppVar ("(", ",", ")") (ppStrm, source::args); nl();
+                          sp(); ppList (fn (a,b) => ppVar(a,b, f)) ("(", ",", ")") (ppStrm, source::args); nl();
                           string "|";
                           sp(); var source; sp(); string "in"; sp();
                           string(StrandSets.toString domain);
@@ -270,16 +275,16 @@ structure SimplePP : sig
           val string = PP.string ppStrm
           in
             ppList
-              (fn (_, x) => (string(Ty.toString(V.typeOf x)); sp(); ppVar (ppStrm, x)))
+              (fn (_, x) => (string(Ty.toString(V.typeOf x)); sp(); ppVar (ppStrm, x, NONE)))
               ("(", ",", ")")
               (ppStrm, params)
           end
 
-    fun ppFuncDef ppStrm (S.Func{f, params, body}) = let
+    fun ppFuncDef ppStrm (S.Func{f, params, body}) f' = let
           fun sp () = PP.space ppStrm 1
           fun nl () = PP.newline ppStrm
           val string = PP.string ppStrm
-          fun var x = ppVar (ppStrm, x)
+          fun var x = ppVar (ppStrm, x, NONE)
           in
             PP.openHBox ppStrm;
               if SimpleFunc.isDifferentiable f then (string "field"; sp()) else ();
@@ -289,20 +294,20 @@ structure SimplePP : sig
               sp(); ppFunc(ppStrm, f); sp(); ppParams (ppStrm, params);
             PP.closeBox ppStrm;
             nl();
-            ppBlock (ppStrm, [], body);
+            ppBlock (ppStrm, [], body, f');
             nl()
           end
 
-    fun ppStrand (ppStrm, strand) = let
+    fun ppStrand (ppStrm, f, strand) = let
           val S.Strand{
                   name, params, spatialDim, state, stateInit, startM, updateM, stabilizeM
                 } = strand
           fun sp () = PP.space ppStrm 1
           fun nl () = PP.newline ppStrm
           val string = PP.string ppStrm
-          fun var x = ppVar (ppStrm, x)
+          fun var x = ppVar (ppStrm, x, f)
           fun ppMethod name body = (
-                nl(); string name; sp(); ppBlock (ppStrm, [], body))
+                nl(); string name; sp(); ppBlock (ppStrm, [], body, f))
           in
             PP.openHBox ppStrm;
               string "strand"; sp(); string(Atom.toString name); sp();
@@ -317,7 +322,7 @@ structure SimplePP : sig
               string "{";
               List.app (fn vdcl => (nl(); ppVarDecl ppStrm vdcl)) state;
               nl();
-              ppBlock (ppStrm, [], stateInit);
+              ppBlock (ppStrm, [], stateInit, f);
               Option.app (ppMethod "start") startM;
               ppMethod "update" updateM;
               Option.app (ppMethod "stabilize") stabilizeM;
@@ -326,16 +331,16 @@ structure SimplePP : sig
             string "}";  nl()
           end
 
-    fun ppInput ppStrm = let
+    fun ppInput f ppStrm = let
           fun sp () = PP.space ppStrm 1
           fun nl () = PP.newline ppStrm
           val string = PP.string ppStrm
-          fun var x = ppVar (ppStrm, x)
+          fun var x = ppVar (ppStrm, x, f)
           fun pp (S.INP{var, name, ty, desc, init}) = (
                 PP.openHBox ppStrm;
                   string "input"; sp();
                   string (APITypes.toString ty); sp();
-                  ppVar (ppStrm, var);
+                  ppVar (ppStrm, var, f);
                   case desc
                    of SOME desc => string(concat["(\"", desc, "\")"])
                     | NONE => ()
@@ -350,7 +355,7 @@ structure SimplePP : sig
             pp
           end
 
-    fun output (outS, message, prog) = let
+    fun output f (outS, message, prog) = let
           val S.Program{
                   props, consts, inputs, constInit, globals, funcs, globInit,
                   strand, create, start, update
@@ -362,14 +367,14 @@ structure SimplePP : sig
           fun ppTopBlock (prefix, SOME blk) = (
                 PP.openHBox ppStrm;
                   string prefix; sp();
-                  ppBlock (ppStrm, [], blk);
+                  ppBlock (ppStrm, [], blk,f );
                 PP.closeBox ppStrm;
                 nl())
             | ppTopBlock _ = ()
           fun ppVarDecl prefix x = (
                 PP.openHBox ppStrm;
                   string prefix; sp(); string(Ty.toString(V.typeOf x)); sp();
-                  ppVar (ppStrm, x); string ";";
+                  ppVar (ppStrm, x, f); string ";";
                 PP.closeBox ppStrm;
                 PP.newline ppStrm)
           in
@@ -384,12 +389,12 @@ structure SimplePP : sig
                 PP.newline ppStrm;
               PP.closeBox ppStrm;
               List.app (ppVarDecl "const") consts;
-              List.app (ppInput ppStrm) inputs;
+              List.app (ppInput f ppStrm) inputs;
               ppTopBlock ("constants", SOME constInit);
               List.app (ppVarDecl "global") globals;
-              List.app (ppFuncDef ppStrm) funcs;
+              List.app (fn a => ppFuncDef ppStrm a f) funcs;
               ppTopBlock ("globalInit", SOME globInit);
-              ppStrand (ppStrm, strand);
+              ppStrand (ppStrm, f, strand);
               case create
                of Create.Create{dim=SOME d, code} =>
                     ppTopBlock (concat["grid(", Int.toString d, ")"], SOME code)
@@ -402,7 +407,7 @@ structure SimplePP : sig
             PP.closeStream ppStrm
           end
 
-    fun outputFunc (outS, msg, func) = let
+    fun outputFunc (outS, msg, func, f) = let
           val ppStrm = PP.openOut {dst = outS, wid = 120}
           in
             PP.openVBox ppStrm (PP.Abs 0);

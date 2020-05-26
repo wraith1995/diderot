@@ -21,7 +21,7 @@ structure SimpleOpt : sig
     val checkAfter = Log.after {
             dumpCtl = Ctl.dumpSimple,
             checkCtl = Ctl.dumpSimple,
-            output = SimplePP.output,
+            output = SimplePP.output NONE,
             checkIR = CheckSimple.check
           }
 
