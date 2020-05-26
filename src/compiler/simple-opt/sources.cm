@@ -15,14 +15,16 @@ is
   $/basis.cm
   $/smlnj-lib.cm
   $/controls-lib.cm
-
+  $/pp-lib.cm
+  
   ../ast/sources.cm
   ../basis/sources.cm
   ../common/sources.cm
   ../inputs/sources.cm
   ../options/sources.cm
   ../simple/sources.cm
-
+  
+  simple-pp.sml
   check-for-bsp.sml
   inliner.sml
   map-reduce-opt.sml

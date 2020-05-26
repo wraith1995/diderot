@@ -11,7 +11,7 @@ Library
   structure CheckSimple
   structure Simple
   structure SimpleFunc
-  structure SimplePP
+
   structure SimpleTypes
   structure SimpleVar
 
@@ -30,6 +30,5 @@ is
   check-simple.sml
   simple.sml
   simple-func.sml
-  simple-pp.sml
   simple-types.sml
   simple-var.sml

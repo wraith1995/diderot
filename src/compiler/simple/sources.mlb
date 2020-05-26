@@ -27,7 +27,7 @@ local
   simple-func.sml
   simple.sml
   check-simple.sml
-  simple-pp.sml
+
 
 in
 

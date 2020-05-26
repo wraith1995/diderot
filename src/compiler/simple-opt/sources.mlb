@@ -23,6 +23,7 @@ local
   ../inputs/sources.mlb
   ../simple/sources.mlb
 
+  simple-pp.sml
   check-for-bsp.sml
   inliner.sml
   map-reduce-opt.sml
