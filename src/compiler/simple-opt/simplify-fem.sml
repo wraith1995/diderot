@@ -546,7 +546,6 @@ return to Strands until Fixed
 	      | doit (S.E_Apply(f, vs)) = (
 	       List.app (checkExistence ((F.nameOf f) ^ "_arg")) vs;
 	       procApply(f, vs, call) handle ex => raise ex; (*these are the only places where call is used.*)
-	       print("\ncall ret place: " ^ (V.uniqueNameOf (List.hd call)) ^ "\n\n");
 	       getFemPres (List.hd call) handle ex => raise ex
 	      )
 	      | doit (S.E_Prim(v, _, vs, t)) =
@@ -565,8 +564,6 @@ return to Strands until Fixed
 		 then let val [sy, a] = vs
 			  val Seq(p) = getFemPres sy
 			  val p' = getFemPres a handle ex => raise ex
-			  val _ = print("p:" ^ (presToString p))
-			  val _ = print("p:'" ^ (presToString p'))
 			  val p'' = merge(p, p') handle ex => raise ex
 		      in Seq(p'') end
 		 else if Var.same(v, BasisVars.at_Td)
@@ -723,7 +720,7 @@ return to Strands until Fixed
 	      (*QUESTION: should we check existence @ an assign?*)
 	      | doit (S.S_Assign(v, e)) = updateFemPresRef(v, expToFemPres(e, V.typeOf v, v::call), changed) 
 	      | doit (S.S_IfThenElse(v, b1, b2)) = (checkExistence "condition" v; doBlock'(b1); doBlock'(b2))
-	      | doit (S.S_New(a,vs)) = (print("newing!\n");news := (a, vs) :: !news)
+	      | doit (S.S_New(a,vs)) = (news := (a, vs) :: !news)
 	      | doit (S.S_Foreach(itter, src, blk)) =
 		(updateFemPresRef(itter, getFemPres src, changed);
 		checkExistence "itter" itter;
@@ -740,7 +737,6 @@ return to Strands until Fixed
 			      of v::_ => v
 			       | [] => raise Fail "return outside of function!"
 			    (* end case*))
-	       val _ = print("At return for var " ^ (V.uniqueNameOf retVar) ^ "\n");
 	      in
 	       updateFemPresRef(retVar, sitePres, changed) (*NOTE: preempts the last step of processing apply*)
 	      end
@@ -774,9 +770,6 @@ return to Strands until Fixed
 		   ret : callSite,
 		   news : (Atom.atom * V.t list) list ref) =
 	   let
-	    val _ = if List.length ret <> 0
-		    then print("in function!\n")
-		    else ()
 	    val g =  (fn s => procStatement(s, changed, ret, news))
 	   in
 	    List.app g code
@@ -798,8 +791,6 @@ return to Strands until Fixed
 	if anyNonBase
 	then
 	 let
-	  val _ = print("b..."^n)
-	  val _ = print("calllen:" ^ (Int.toString (List.length call)) ^ "\n")
 	  val (fdef, possibleRet) = addCall(f, call, callArgs) 
 	 in
 	(case possibleRet
@@ -821,7 +812,7 @@ return to Strands until Fixed
 	     end
 	(* end case*))
 	 end
-	else (print("a..."^n);updateFemPresRef(v, tyToFemPresSeq onlyOne (V.typeOf v), changeOuter)) (*no fem involved, but we mark this.*)
+	else (updateFemPresRef(v, tyToFemPresSeq onlyOne (V.typeOf v), changeOuter)) (*no fem involved, but we mark this.*)
        end
       in
        doBlock(b, changeOuter, [], newsOuter)
@@ -921,20 +912,18 @@ NOTE: peekFn doesn't create the thing -> getFn or setFn will though ->all vars n
 NOTE: updateCall/those tables won't be around (peekFn => NONE) for functions with no fem/no new defs
 NOTE: add single function/modify input/globals transformation (avoid {})
 NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
+*)
+   val _ =()
+	    (*Now do transform:
+	    0. Print	    
+	    1. insert array of fems - mesh, space, func
+	    2. start doing conversions of vars via properties and fem via extract fem - both depend on thing:
+	    2.1. Base something -> just get the global and convert to the base one
+	    2.2 ALL -> extra int and access into a thing
+	    2.3 Conversion from base to all -> access into global (Is this possible?)
+	    3. inverse, position, cancel, inside.
+	     *)
 
-NOTE: mark strand in reduction
-
-NOW: loops
-Then: rewrite (should be quick)
-Then: composition/clean up around globals and such
-Global question: what about globalInit/things that are not inited?
-     What about function use later on?
-     GetFn/setFn question
-     globInit -> create -> start -> doStrands -> update -> loop from doStrands as above
-    setupFn()
-    strands()
-    globs()
-    loop (strands(); globs())*)
   in
    prog
   end
