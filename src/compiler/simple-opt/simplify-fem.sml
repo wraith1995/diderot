@@ -271,8 +271,9 @@ return to Strands until Fixed
 		     | Tuple of femPres list | Array of femPres 
 		     | Seq of femPres (* must be homogenous i.e no partitioning on an array*)
 
-  fun presToString(Base _) = "base"
-    | presToString (ALL f) = "all( " ^ (FD.toString f) ^ ")"
+  fun presToString(Base(f, NONE)) = "Base(" ^ (FD.toString f) ^ ")"
+    | presToString(Base(f, SOME(v))) =  "Base(" ^ (FD.toString f) ^ ", " ^ (V.uniqueNameOf v) ^ ")"
+    | presToString (ALL f) = "All( " ^ (FD.toString f) ^ ")"
     | presToString (NOTHING) = "nothing"
     | presToString (Tuple ts) = "(" ^ (String.concatWith "," (List.map presToString ts)) ^ ")"
     | presToString (Seq(t)) = "Seq(" ^ (presToString t) ^ ")"
@@ -640,10 +641,12 @@ return to Strands until Fixed
 			  | _ => raise Fail ("impossible: " ^ (V.uniqueNameOf v2))
 		      (* end case*)))
 		 else let val g = (Option.valOf o FD.dependencyOf) f handle ex => raise ex in
-		       (case getDep v1 (*v1 is the dep, v2 is an int*)
-			 of SOME(v1')=> valid (Base(g, SOME(v1'))) 
-			  | NONE => valid((ALL(g)))
-		       (*end case*)) end)
+		       getFemPres v1
+		       (* (case getDep v1 (*v1 is the dep, v2 is an int*) *)
+		       (* 	 of SOME(v1')=> valid (Base(g, SOME(v1')))  *)
+		       (* 	  | NONE => valid((ALL(g))) *)
+		       (* (*end case*)) *)
+		      end)
 	      (*v1 is base data (func or mesh); v2 is an int for a cell?*)
 	      | doit (S.E_ExtractFem(v, f)) = ( (*if the return has fem, this is getting a func or space or mesh*)
 	       let
