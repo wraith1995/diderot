@@ -11,6 +11,8 @@
 
 structure SimplifyFem : sig
 	   val transform : Simple.program -> Simple.program
+
+	   val getPropString : SimpleVar.t -> string
 	  end = struct
 
 
@@ -430,6 +432,12 @@ return to Strands until Fixed
    rr
   end handle ex => raise ex
   val defaultFemPres = (fn x => (getFn x; ()))
+
+  fun getPropString v =
+      (case peekFn v
+	of NONE => "error"
+	 | SOME(t) => presToString(t)
+      (* end case*))
   end
 
   (*Function to manage inputs*)

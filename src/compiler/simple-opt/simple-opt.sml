@@ -23,7 +23,13 @@ structure SimpleOpt : sig
             checkCtl = Ctl.dumpSimple,
             output = SimplePP.output NONE,
             checkIR = CheckSimple.check
-          }
+        }
+    val checkAfter' = Log.after {
+         dumpCtl = Ctl.dumpSimple,
+         checkCtl = Ctl.dumpSimple,
+         output = SimplePP.output (SOME(SimplifyFem.getPropString)),
+         checkIR = CheckSimple.check
+        }
 
     fun transform prog = let
           val prog = checkAfter ("contraction (1)", SimpleContract.transform prog)
