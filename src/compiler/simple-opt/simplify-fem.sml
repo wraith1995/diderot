@@ -641,7 +641,7 @@ return to Strands until Fixed
 			  | _ => raise Fail ("impossible: " ^ (V.uniqueNameOf v2))
 		      (* end case*)))
 		 else let val g = (Option.valOf o FD.dependencyOf) f handle ex => raise ex in
-		       getFemPres v1
+		       valid(getFemPres v1)
 		       (* (case getDep v1 (*v1 is the dep, v2 is an int*) *)
 		       (* 	 of SOME(v1')=> valid (Base(g, SOME(v1')))  *)
 		       (* 	  | NONE => valid((ALL(g))) *)
@@ -766,9 +766,10 @@ return to Strands until Fixed
 		    (*QUESTION: val _ = (checkExistence "_strand") source: we generaly ingore the strand type *)
 		    (*NOTE: args are just args to the function*)
 		    (*NOTE: reduction and domain can be ignored *)
-		    (*NOTE: This is a case of an apply where args are the params and result is the callsite *)
+				     (*NOTE: This is a case of an apply where args are the params and result is the callsite *)
+		    val _ = procApply(f, args, [result])
 		   in
-		    procApply(f, args, [result])
+		    ()
 		   end
 	      in
 	       List.app doReduce maps
@@ -830,7 +831,7 @@ return to Strands until Fixed
       end
 										      
 
-  fun transform prog = let
+  fun analysis prog = let
    val S.Program{props, consts, inputs, constInit, globals,
 		 globInit, funcs, strand, create, start, update} = prog
 
@@ -926,7 +927,10 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 *)
    val _ =()
 	    (*Now do transform:
-	    0. Print	    
+	    0. Two erros: map reduce has error and functions with no calls are filled with errors...
+	    ---Reason is that we don't replace the function def.......could cause problems later.
+	    ---Note: the no calls thing we might want to change: if we have a mesh1 and mesh2, we might comopare equality...
+	    ??
 	    1. insert array of fems - mesh, space, func
 	    2. start doing conversions of vars via properties and fem via extract fem - both depend on thing:
 	    2.1. Base something -> just get the global and convert to the base one
@@ -938,4 +942,12 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
   in
    prog
   end
+
+  fun transform prog =
+      let
+       val prog' = analysis prog
+      in
+       prog'
+      end
+
   end
