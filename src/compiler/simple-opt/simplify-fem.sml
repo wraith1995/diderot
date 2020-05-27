@@ -930,6 +930,7 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 	    0. Two erros: map reduce has error and functions with no calls are filled with errors...
 	    ---Reason is that we don't replace the function def.......could cause problems later.
 	    ---Note: the no calls thing we might want to change: if we have a mesh1 and mesh2, we might comopare equality...
+	    ---empy seq? Correct order?
 	    ??
 	    1. insert array of fems - mesh, space, func
 	    2. start doing conversions of vars via properties and fem via extract fem - both depend on thing:
@@ -940,14 +941,112 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 	     *)
 
   in
-   prog
+   (prog, femTable, femDep)
   end
 
+  (*infustructure to do translation:
+  1.we need five arrays to hold info: meshes, spaces, funcs, func -> space, space -> mesh
+  2. We need to do a cvtVar (just convert the type) if needed
+  3. cvt block -> cvt stm -> cvt exp + applies 
+  (most things are just immediate - just convert
+   next thing are load/extract -> pretty clear
+   Watch out for conversions: seq merge - so we need a convert between preses -> where could this occur -> seqs merge
+   ..
+   temp
+   for x in origin
+   ret = covert{}, ..,{}
+   end
+   use ret for the rest...
+  )
+  4. Functions
+  5. tomorrow we do cancel/identity field and pos and other stuff (maybe inside)
+   *)
+
+  fun buildGlobalFemTables(femTable : (FD.femType, V.t list) HT.hash_table, femDep : SimpleVar.t VTbl.hash_table) =
+      let
+       val initsAndVarTbl = HT.mapi (fn (d, vs) =>
+				     let
+				      val n = List.length vs
+				      val ty = Ty.T_Sequence(Ty.T_Fem(d), SOME(n))
+				      val glob = V.new("globFem", Var.GlobalVar, ty)
+				      val init = S.S_Assign(glob, S.E_Seq(vs, ty))
+				     in
+				      (glob, init)
+				     end) femTable
+
+       fun femItoGlob(femType, i) = (case HT.find femTable (femType)
+				      of SOME(ls) => if (0 <= i) andalso (i <= ((List.length ls) - 1))
+						     then SOME(List.nth(ls, i))
+						     else NONE
+				       | NONE => NONE
+				    (* end case*))
+
+       fun find' test vs=
+	   let
+	    val n = List.length vs
+	    val tabed = List.tabulate(n, fn x => (x, List.nth(vs, x)))
+	   in
+	    Option.map (fn (x,y) => x) (List.find (fn (x,y) => test y) tabed)
+	   end
+       fun femGlobToI (femType, v) : int option = Option.mapPartial (find' (fn x => V.same(x,v))) (HT.find femTable femType)
+
+
+				      
+       (*each global is an array acting as map from Int to GlobalVar of this type.*)
+       val (newGlobals : V.t list, newInit: S.stmt list) = ListPair.unzip (HT.listItems initsAndVarTbl)
+
+       val counts = List.map List.length (HT.listItems femTable)
+       val filteredTable = HT.copy(femTable)
+       val _ =  (HT.filteri (Option.isSome o FD.dependencyOf o (fn (x,y) => x))) filteredTable
+       val globDepTable = HT.mapi (fn (d, vs) =>
+				      let
+				       val n = List.length vs
+				       val deps = List.map (fn v => VTbl.lookup femDep v) vs
+				       val ty = Ty.T_Sequence(Ty.T_Fem(d), SOME(n))
+				       val depNums = List.map (fn x => Option.valOf (femGlobToI(d, x))) deps
+				       val ty' = Ty.T_Sequence(Ty.T_Int, SOME(n))
+
+				       val globD = V.new("globFemDep", Var.GlobalVar, ty)
+				       val globI = V.new("globalFemDepI", Var.GlobalVar, ty')
+				       val ises = List.tabulate(n, fn x => V.new("globFemI_"^(Int.toString x), Var.LocalVar, Ty.T_Int))
+				       val isesAssign = ListPair.map (fn (x,y) => S.S_Var(x, SOME(S.E_Lit(Literal.intLit y)))) (ises, depNums)
+				      in
+				       ((globD, S.S_Assign(globD, S.E_Seq(deps, ty))),
+					(globI, isesAssign@[S.S_Assign(globI, S.E_Seq(ises, ty'))]))
+				      end
+				  ) filteredTable
+       val (depVars, depIdx) = ListPair.unzip (HT.listItems globDepTable)
+       val ((newGlobals', newInit'), (newGlobals'', newInit'')) = (ListPair.unzip depVars, ListPair.unzip depIdx)
+						      
+
+       val newGlobals = newGlobals@newGlobals'@newGlobals''
+       val newInits = newInit@newInit'@(List.concat newInit'')
+					 (*!!!now want (fem, I) -> (femDep, I) and a get dep function fem, v -> (stm, v)*)
+       fun femItoDepI() = raise Fail "ops"
+       fun femItoDepIImpl(fem, v) = raise Fail "oops"
+       fun femGlobToIImpl (fem, v) = raise Fail "oops"
+      in
+       (newGlobals, newInits, femGlobToI, femItoGlob, femItoDepI, femItoDepIImpl,femGlobToIImpl)
+      end
+			
+  fun translate (tbs as (femTable : (FD.femType, V.t list) HT.hash_table, femDep : SimpleVar.t VTbl.hash_table)) prog =
+      let
+       val S.Program{props, consts, inputs, constInit, globals,
+		     globInit, funcs, strand, create, start, update} = prog
+
+       val (newGlobals, newInits, femGlobToI, femItoGlob, femItoDepI, femItoDepIImpl,femGlobToIImpl) = buildGlobalFemTables tbs
+      in
+       S.Program{props=props, consts=consts, inputs=inputs, constInit=constInit, globals=globals,
+		 globInit=globInit, funcs=funcs, strand=strand, create=create, start=start, update=update}
+      end
+			
   fun transform prog =
       let
-       val prog' = analysis prog
+       val (prog', femTable, femDep) = analysis prog
+
+       val prog'' = translate (femTable, femDep) prog'
       in
-       prog'
+       prog''
       end
 
   end
