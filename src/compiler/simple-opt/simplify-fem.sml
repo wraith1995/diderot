@@ -556,7 +556,7 @@ return to Strands until Fixed
        if anyNonBase
        then NONE (*leave the apply alone*)
        else (case HT.find (getCvtTbl fvar) callArgs
-	      of SOME(f') => SOME(f')
+	      of SOME(f') => (F.use f'; F.decCnt fvar; SOME(f'))
 	       | NONE => let
 		val defsTable = getFnTbl fvar
 		val someDef = HT.find defsTable callArgs
@@ -574,7 +574,7 @@ return to Strands until Fixed
 		val _ = newDefs := (def' :: !newDefs)
 		val _ = HT.insert (getCvtTbl fvar) (callArgs, f')
 	       in
-		SOME(f')
+		(F.use f'; F.decCnt fvar; SOME(f'))
 	       end
 	    (* end case*))
       end	
