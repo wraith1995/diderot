@@ -254,8 +254,8 @@ fun extractIntConst cxt (ty, cexpr, name) =
 fun extractShapeConst cxt (ty, cexpr, name) =
     (case cexpr
       of ConstExpr.Seq(seq, Ty.T_Sequence(Ty.T_Int,_)) =>
-	 (print("Good shape!");(SOME(List.map (Option.valOf o (fn x => extractIntConst cxt (Ty.T_Int, x, ""))) seq)))
-       | _ => (print("Bad shape!");NONE))
+	 ((SOME(List.map (Option.valOf o (fn x => extractIntConst cxt (Ty.T_Int, x, ""))) seq)))
+       | _ => (NONE))
       
 
 fun loadJson(fileName, cxt) = SOME(JP.parseFile fileName)

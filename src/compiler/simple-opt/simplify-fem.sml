@@ -12,6 +12,8 @@
 structure SimplifyFem : sig
 	   val transform : Simple.program -> Simple.program
 
+	   val analysisOnly : Simple.program -> Simple.program
+
 	   val getPropString : SimpleVar.t -> string
 	  end = struct
 
@@ -477,9 +479,17 @@ return to Strands until Fixed
   fun mkFuncDefTable(j : int) : (functionCall, callResult) HT.hash_table =
       HT.mkTable (hashCall, sameCall) (j,  Fail "missing function call data")
 
+   fun mkFuncVarTable(j : int) : (functionCall, F.t) HT.hash_table =
+       HT.mkTable (hashCall, sameCall) (j,  Fail "missing function call cvt")
+
+   val cvtTbl = (F.newProp(fn f => mkFuncVarTable 16))
+   val getCvtTbl = #getFn (cvtTbl)
+
+
    val {clrFn, getFn, peekFn, setFn} = F.newProp(fn f => mkCallSiteTable 16)
    val defTblProp = F.newProp(fn f => mkFuncDefTable 16)
    val getFnTbl = #getFn defTblProp
+
 												
   in
   (*operation:we need to from a f, 
@@ -515,6 +525,15 @@ return to Strands until Fixed
 	  (* end case *))
        end
       end handle exn => raise exn
+  fun testFunction(args, globs) =
+      let
+       val femsInvolvedArgs = List.concatMap (Ty.allFems o V.typeOf) (args)
+       val femsINvolvedGlobs = List.concatMap (Ty.allFems o V.typeOf) (globs)
+       val anyNonBase = List.exists (Bool.not o FD.baseFem) femsInvolvedArgs
+			orelse (List.length femsINvolvedGlobs <> 0)
+      in
+       anyNonBase
+      end
 
   fun updateCall(f : F.t, call : callSite, callArgs : functionCall,
 		 newDef : S.func_def, retF : femPres) : unit =
@@ -523,7 +542,44 @@ return to Strands until Fixed
       in
        HT.insert defsTable (callArgs, (newDef, SOME(retF)))
       end
+  fun cvtFun(fvar : F.t, args : callSite, retVar : V.t,
+	     newDefs : S.func_def list ref,
+	     cvtBody : S.block * S.func_def list ref-> S.block,
+	     cvtVar : V.t -> V.t) =
+      let
+       val argsp = List.map getFemPres args
+       val globs = getFuncGlobs fvar
+       val globsp = List.map getFemPres globs
+       val callArgs = (argsp, globsp)
+       val anyNonBase = testFunction(args, globs)
+      in
+       if anyNonBase
+       then NONE (*leave the apply alone*)
+       else (case HT.find (getCvtTbl fvar) callArgs
+	      of SOME(f') => SOME(f')
+	       | NONE => let
+		val defsTable = getFnTbl fvar
+		val someDef = HT.find defsTable callArgs
+		val (def, retV) = (case someDef
+				    of SOME(def, SOME(v)) => (def, v)
+				     | NONE => raise Fail "impossible"
+				  (* end case*))
+		val retTy' = V.typeOf(cvtVar retVar)
+		val S.Func{f, params, body} = def
+		val params' = List.map cvtVar params
+		val paramsTys = List.map V.typeOf params'
+		val body' = cvtBody(body, newDefs)
+		val f' = F.new(F.nameOf fvar, retTy', paramsTys)
+		val def' = S.Func{f=f', params=params', body=body'}
+		val _ = newDefs := (def' :: !newDefs)
+		val _ = HT.insert (getCvtTbl fvar) (callArgs, f')
+	       in
+		SOME(f')
+	       end
+	    (* end case*))
+      end	
   end
+
   
   (*function to actually analyze a block of code*)
   fun analyzeBlock(b as S.Block{code, ...},
@@ -632,16 +688,19 @@ return to Strands until Fixed
 	      | doit (S.E_LoadSeq _) = NOTHING
 	      | doit (S.E_LoadImage _) = NOTHING
 	      | doit (S.E_LoadFem(f, v1, v2)) =
-		(List.app (checkExistence ("_loadFem")) [v1, v2]; 
+		(List.app (checkExistence ("_loadFem")) [v1, v2];
+		 print("someloading...");
+		 print(FD.toString f);
+		 print("\n");
 		 if FD.baseFem f (*v1 is the dest data; v2 is the dep; *)
 		 then ((case getFemPres v2
-			 of Base(f', SOME(v2')) => (addDep(v1, v2'); valid (Base(f, SOME(v1))) handle exn => raise exn) 
+			 of Base(f', SOME(v2')) => (addDep(v1, v2'); print("cor..\n"); valid (Base(f, SOME(v1))) handle exn => raise exn) 
 			  | Base(f', NONE) => raise Fail "base fem load not set; impossible!" 
 			  | ALL(f') => raise Fail "base fem load unable to trace!" (*Should be impossible*)
 			  | _ => raise Fail ("impossible: " ^ (V.uniqueNameOf v2))
 		      (* end case*)))
 		 else let val g = (Option.valOf o FD.dependencyOf) f handle ex => raise ex in
-		       valid(getFemPres v1)
+		       (print("stupid;\n");valid(getFemPres v1))
 		       (* (case getDep v1 (*v1 is the dep, v2 is an int*) *)
 		       (* 	 of SOME(v1')=> valid (Base(g, SOME(v1')))  *)
 		       (* 	  | NONE => valid((ALL(g))) *)
@@ -789,15 +848,11 @@ return to Strands until Fixed
        and procApply(f : F.t, args : V.t list,
 		     call : callSite) = let
 
-	val n =("name: " ^ (F.nameOf f) ^ "\n")
 	val argsp = List.map getFemPres args
 	val globs = getFuncGlobs f
 	val globsp = List.map getFemPres globs
 	val callArgs : functionCall = (argsp, globsp)
-	val femsInvolvedArgs = List.concatMap (Ty.allFems o V.typeOf) (args)
-	val femsINvolvedGlobs = List.concatMap (Ty.allFems o V.typeOf) (globs)
-	val anyNonBase = List.exists (Bool.not o FD.baseFem) femsInvolvedArgs
-			 orelse (List.length femsINvolvedGlobs <> 0)
+	val anyNonBase = testFunction(args, globs)
 	val v : V.t = List.hd call
        in
 	if anyNonBase
@@ -847,7 +902,7 @@ return to Strands until Fixed
 			of SOME([v]) => SOME(v)
 			 | _ => NONE)
    val femDep = VTbl.mkTable(32, Fail "fem dep not found")
-   fun addDep (v1 : V.t, v2 : V.t) = VTbl.insert femDep (v1, v2)
+   fun addDep (v1 : V.t, v2 : V.t) = (VTbl.insert femDep (v1, v2))
    fun findDep ( v1 : V.t) : V.t option = VTbl.find femDep v1
 
    (*Figure out the base fem inputs.*)
@@ -944,7 +999,7 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
    (prog, femTable, femDep)
   end
 
-  (*infustructure to do translation:
+  (*infustructure to do translation: TOMORROW: (do all up to ID field, then cancel/pos, then affine)
   1.we need five arrays to hold info: meshes, spaces, funcs, func -> space, space -> mesh
   2. We need to do a cvtVar (just convert the type) if needed
   3. cvt block -> cvt stm -> cvt exp + applies 
@@ -962,13 +1017,14 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
   5. tomorrow we do cancel/identity field and pos and other stuff (maybe inside)
    *)
 
+			
   fun buildGlobalFemTables(femTable : (FD.femType, V.t list) HT.hash_table, femDep : SimpleVar.t VTbl.hash_table) =
       let
        val initsAndVarTbl = HT.mapi (fn (d, vs) =>
 				     let
 				      val n = List.length vs
 				      val ty = Ty.T_Sequence(Ty.T_Fem(d), SOME(n))
-				      val glob = V.new("globFem", Var.GlobalVar, ty)
+				      val glob = V.new("femGlobArray", Var.GlobalVar, ty)
 				      val init = S.S_Assign(glob, S.E_Seq(vs, ty))
 				     in
 				      (glob, init)
@@ -1000,19 +1056,22 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
        val _ =  (HT.filteri (Option.isSome o FD.dependencyOf o (fn (x,y) => x))) filteredTable
        val globDepTable = HT.mapi (fn (d, vs) =>
 				      let
+				       val d' = Option.valOf (FD.dependencyOf d)
 				       val n = List.length vs
+
 				       val deps = List.map (fn v => VTbl.lookup femDep v) vs
-				       val ty = Ty.T_Sequence(Ty.T_Fem(d), SOME(n))
-				       val depNums = List.map (fn x => Option.valOf (femGlobToI(d, x))) deps
+				       val ty = Ty.T_Sequence(Ty.T_Fem(d'), SOME(n))
+				       val depNums = List.map (fn x => Option.valOf (femGlobToI(d', x)) handle ex => raise ex) deps
 				       val ty' = Ty.T_Sequence(Ty.T_Int, SOME(n))
 
-				       val globD = V.new("globFemDep", Var.GlobalVar, ty)
-				       val globI = V.new("globalFemDepI", Var.GlobalVar, ty')
+
+				       val globD = V.new("femGloblDepArray", Var.GlobalVar, ty)
+				       val globI = V.new("femIntoToDepIntArray", Var.GlobalVar, ty')
 				       val ises = List.tabulate(n, fn x => V.new("globFemI_"^(Int.toString x), Var.LocalVar, Ty.T_Int))
 				       val isesAssign = ListPair.map (fn (x,y) => S.S_Var(x, SOME(S.E_Lit(Literal.intLit y)))) (ises, depNums)
 				      in
 				       ((globD, S.S_Assign(globD, S.E_Seq(deps, ty))),
-					(globI, isesAssign@[S.S_Assign(globI, S.E_Seq(ises, ty'))]))
+					(globI, isesAssign@[S.S_Var(globI, SOME(S.E_Seq(ises, ty')))]))
 				      end
 				  ) filteredTable
        val (depVars, depIdx) = ListPair.unzip (HT.listItems globDepTable)
@@ -1021,30 +1080,119 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 
        val newGlobals = newGlobals@newGlobals'@newGlobals''
        val newInits = newInit@newInit'@(List.concat newInit'')
-					 (*!!!now want (fem, I) -> (femDep, I) and a get dep function fem, v -> (stm, v)*)
-       fun femItoDepI() = raise Fail "ops"
-       fun femItoDepIImpl(fem, v) = raise Fail "oops"
-       fun femGlobToIImpl (fem, v) = raise Fail "oops"
+
+       fun femItoDepIImpl(fem, dFem, v) = 
+	   let
+	    val depVar = HT.lookup globDepTable fem
+	    val ((_, _), (idxi, _)) = depVar
+	    val accExp = S.E_Prim(BasisVars.subscript, [], [idxi, v], Ty.T_Int)
+	    val accVar = V.new("depIndex", Var.LocalVar, Ty.T_Int)
+	    val getI = S.S_Var(accVar, SOME(accExp))
+
+	    val (depArray, _) = HT.lookup initsAndVarTbl dFem
+	    val accExp' = S.E_Prim(BasisVars.subscript, [], [depArray, accVar], Ty.T_Fem(dFem))
+	    val accVar' = V.new("depFem", Var.LocalVar, Ty.T_Fem(dFem))
+	    val getD = S.S_Var(accVar', SOME(accExp'))
+	   in
+	    (accVar', accVar, [getI, getD])
+	   end
+       fun femGlobToIImpl (fem, v) = (*given a global, find the idx associated to it.*)
+	   let
+	    val i = Option.valOf (femGlobToI(fem, v)) handle ex => raise ex
+	    val lit = Literal.intLit i
+	    val litExp = S.E_Lit(lit)
+	    val litVar = V.new("femGlobI", Var.LocalVar, Ty.T_Int)
+	    val litDec = S.S_Var(litVar, SOME(litExp))
+	   in
+	    (litVar, litDec)
+	   end
       in
-       (newGlobals, newInits, femGlobToI, femItoGlob, femItoDepI, femItoDepIImpl,femGlobToIImpl)
+       (newGlobals, newInits, femGlobToI, femItoGlob, femItoDepIImpl,femGlobToIImpl)
       end
+
+  fun femTy(d, isBase) =
+      if FD.baseFem d
+      then if isBase
+	   then Ty.T_Fem(d)
+	   else Ty.T_Int
+      else (case d
+	     of FD.MeshPos(m) =>
+		if isBase
+		then Ty.T_Tuple([Ty.vecTy (FD.meshMapDim m), Ty.T_Int])
+		else Ty.T_Tuple([Ty.vecTy (FD.meshMapDim m), Ty.T_Int, Ty.T_Int])
+	      | FD.FuncCell(_) => if isBase
+				  then Ty.T_Int
+				  else Ty.T_Tuple([Ty.T_Int, Ty.T_Int])
+	      | FD.MeshCell(_) => if isBase
+				  then Ty.T_Int
+				  else Ty.T_Tuple([Ty.T_Int, Ty.T_Int])
+	      | FD.RefCell _ => raise Fail "impossible"
+	      | FD.Mesh _ => raise Fail "impossible"
+	      | FD.Space _ => raise Fail "impossible"
+	      | FD.Func _ => raise Fail "impossible"
+	   (* end case*))
+
+  fun cvtTy(ty, pres) =
+      (case (ty, pres)
+	of (Ty.T_Bool, NOTHING) => ty
+	 | (Ty.T_Int, NOTHING) => ty
+	 | (Ty.T_String, NOTHING) => ty
+	 | (Ty.T_Tensor _, NOTHING) => ty
+	 | (Ty.T_Sequence(t', NONE), Seq(p)) => Ty.T_Sequence(cvtTy(t', p), NONE)
+	 | (Ty.T_Sequence(t', SOME(k)), Array(p)) => Ty.T_Sequence(cvtTy(t', p), SOME(k))
+	 | (Ty.T_Tuple(ts), Tuple(ps)) => Ty.T_Tuple(ListPair.map cvtTy (ts, ps))
+	 | (Ty.T_Strand _, NOTHING) => ty
+	 | (Ty.T_Kernel, NOTHING) => ty
+	 | (Ty.T_Field _, NOTHING) => ty
+	 | (Ty.T_Fem(d), Base(d', NONE)) => raise Fail "cvtTy: analysis marked base none"
+	 | (Ty.T_Fem(d), Base(d', SOME(v))) => femTy(d, true)
+	 | (Ty.T_Fem(d), ALL(d')) => femTy(d, false)
+	 | _ => raise Fail "impossible"
+      (* end case*))
+
+
+  local
+   val {clrFn, getFn, peekFn, setFn} = V.newProp(fn v => V.new(V.nameOf v, V.kindOf v, cvtTy(V.typeOf v, getFemPres v)))
+  in
+  val cvtVar = getFn
+  end
+	   
+  (*cvt*)
+
 			
   fun translate (tbs as (femTable : (FD.femType, V.t list) HT.hash_table, femDep : SimpleVar.t VTbl.hash_table)) prog =
       let
        val S.Program{props, consts, inputs, constInit, globals,
 		     globInit, funcs, strand, create, start, update} = prog
 
-       val (newGlobals, newInits, femGlobToI, femItoGlob, femItoDepI, femItoDepIImpl,femGlobToIImpl) = buildGlobalFemTables tbs
+       (*Setup globals for managing glob arrays and deps: functions to support this later.*)
+       val S.Block({code,...}) = globInit
+       val (newGlobals, newInits, femGlobToI, femItoGlob, femItoDepIImpl,femGlobToIImpl) = buildGlobalFemTables tbs
+
+
+       (* build exp, statement, block runner with function returns*)
+       (*run on all*)
+       (*Clean up functions*)
+       val _ =()
+
       in
-       S.Program{props=props, consts=consts, inputs=inputs, constInit=constInit, globals=globals,
-		 globInit=globInit, funcs=funcs, strand=strand, create=create, start=start, update=update}
+       S.Program{props=props, consts=consts, inputs=inputs, constInit=constInit, globals=newGlobals@globals,
+		 globInit=S.Block{code=newInits@code, props=PropList.newHolder ()},
+		 funcs=funcs, strand=strand, create=create, start=start, update=update}
       end
-			
+
+  fun analysisOnly prog =
+      let
+       val (prog', femTable, femDep) = analysis prog handle ex => raise ex
+      in
+       prog'
+      end
+
+	
   fun transform prog =
       let
-       val (prog', femTable, femDep) = analysis prog
-
-       val prog'' = translate (femTable, femDep) prog'
+       val (prog', femTable, femDep) = analysis prog handle ex => raise ex
+       val prog'' = translate (femTable, femDep) prog' handle ex => raise ex
       in
        prog''
       end

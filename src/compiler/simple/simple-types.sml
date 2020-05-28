@@ -51,6 +51,8 @@ structure SimpleTypes =
     fun tupleTy [ty] = ty
       | tupleTy tys = T_Tuple tys
 
+    fun vecTy d = T_Tensor[d]
+
   (* compare types for equality *)
     fun same (ty1, ty2) = (case (ty1, ty2)
            of (T_Bool, T_Bool) => true
