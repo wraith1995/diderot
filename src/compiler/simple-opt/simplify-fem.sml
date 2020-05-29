@@ -1194,7 +1194,7 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 	 | doit (S.S_Stabilize) = lst (S.S_Stabilize)
 	 | doit (S.S_Return(v)) = lst (S.S_Return(cvtVar v))
 	 | doit (S.S_Print(vs)) = lst (S.S_Print(List.map cvtVar vs))
-	 | doit (S.S_MapReduce(mrlst)) = raise Fail "ummm"
+	 | doit (S.S_MapReduce(mrlst)) = raise Fail "FIXME:map reduce"
       in
        doit(stm)
       end
@@ -1323,7 +1323,7 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 	 | doit (S.E_Apply(f, vs)) = raise Fail "later"
 	 | doit (S.E_Prim(v, marg, vs, t)) = raise Fail "later" (*fuck, need return var pres; also, fuck: need to watch out for merge*)
 	 | doit (S.E_Tensor(vs,ty)) = none (S.E_Tensor(List.map cvtVar vs, ty))
-	 | doit (S.E_Seq(vs, ty)) = raise Fail "need converted return type"
+	 | doit (S.E_Seq(vs, ty)) = let val ty' = cvtTy(ty, retPres) in none(S.E_Seq(List.map cvtVar vs, ty')) end
 	 | doit (S.E_Tuple(vs)) = none (S.E_Tuple(List.map cvtVar vs))
 	 | doit (S.E_Project(v,i)) = none (S.E_Project(cvtVar v, i))
 	 | doit (S.E_Slice(v, s, t)) = none (S.E_Slice(cvtVar v, s, t)) 
