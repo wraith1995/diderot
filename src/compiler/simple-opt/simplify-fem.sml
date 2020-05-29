@@ -1157,8 +1157,69 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
   val cvtVar = getFn
   end
 	   
-  (*cvt*)
+  (*cvtVar, cvtTy, cvtFun -> cvtBlock*)
 
+  fun cvtBody(block : S.block, newDefs : S.func_def list ref) =
+      let
+       val S.Block{code, props} = block
+       val code' = List.concatMap (fn x => cvtStm(x, newDefs)) code
+      in
+       S.Block{code=code', props=props}
+      end
+  and cvtStm(stm : S.stmt, newDefs : S.func_def list ref) =
+      let
+       val cvtExp = fn x => cvtExp(x, newDefs)
+       val cvtBody = fn x => cvtBody(x, newDefs)
+       val lst = fn x => [x]
+       fun doit(S.S_Var(v, optE)) = (case Option.map cvtExp optE
+				      of SOME((stmts, vr)) => stmts@[S.S_Var(cvtVar v, SOME(vr))]
+				       | NONE => [S.S_Var(cvtVar v, NONE)]
+				    (* end case*))
+	 | doit (S.S_Assign(v, exp)) = let val (stms,exp) = cvtExp exp in stms@[S.S_Assign(cvtVar v, exp)] end
+	 | doit (S.S_Foreach(v1, v2, block)) = [S.S_Foreach(cvtVar v1, cvtVar v2, cvtBody block)]
+	 | doit (S.S_IfThenElse(v, b1, b2)) = [S.S_IfThenElse(cvtVar v, cvtBody b1, cvtBody b2)]
+	 | doit (S.S_New(a,vs)) = [S.S_New(a, List.map cvtVar vs)]
+	 | doit (S.S_KillAll) = lst (S.S_KillAll)
+	 | doit (S.S_StabilizeAll) = lst(S.S_StabilizeAll)
+	 | doit (S.S_Continue) = lst (S.S_Continue)
+	 | doit (S.S_Die) = lst (S.S_Die)
+	 | doit (S.S_Stabilize) = lst (S.S_Stabilize)
+	 | doit (S.S_Return(v)) = lst (S.S_Return(cvtVar v))
+	 | doit (S.S_Print(vs)) = lst (S.S_Print(List.map cvtVar vs))
+	 | doit (S.S_MapReduce(mrlst)) = raise Fail "ummm"
+      in
+       doit(stm)
+      end
+  and cvtExp(e : S.exp, newDefs : S.func_def list ref) : S.stmt list * S.exp =
+      let
+       (*where we merge things in:
+	based on type and expect type -> build a giant list of stms to convert something*)
+       (*base cases are clear*)
+       fun toAll(v : V.t) = raise Fail "umm"
+
+       val none = fn s => ([],s)
+       val retTy = S.typeOf e
+       fun doit (S.E_Var(v)) = none (S.E_Var(cvtVar v))
+	 | doit (l as S.E_Lit(_)) = none l
+	 | doit (k as S.E_Kernel _) = none k
+	 | doit (S.E_Select(v1, v2)) = none (S.E_Select(v1, cvtVar v2))
+	 | doit (S.E_Apply(f, vs)) = raise Fail "later"
+	 | doit (S.E_Prim(v, marg, vs, t)) = raise Fail "later" (*fuck, need return var pres; also, fuck: need to watch out for merge*)
+	 | doit (S.E_Tensor(vs,ty)) = none (S.E_Tensor(List.map cvtVar vs, ty))
+	 | doit (S.E_Seq(vs, ty)) = raise Fail "need converted return type"
+	 | doit (S.E_Tuple(vs)) = none (S.E_Tuple(List.map cvtVar vs))
+	 | doit (S.E_Project(v,i)) = none (S.E_Project(cvtVar v, i))
+	 | doit (S.E_Slice(v, s, t)) = none (S.E_Slice(cvtVar v, s, t))
+	 | doit (S.E_Coerce{srcTy, dstTy, x}) = raise Fail "careful: see above"
+	 | doit (S.E_BorderCtl(v1, v2)) = none(S.E_BorderCtl(v1, v2))
+	 | doit (S.E_LoadSeq(v1, s)) = none(S.E_LoadSeq(v1, s))
+	 | doit (S.E_LoadImage(t, s, i)) = none(S.E_LoadImage(t,s,i))
+	 | doit (S.E_InsideImage(v1,v2,i)) = none(S.E_InsideImage(cvtVar v1, cvtVar v2, i))
+	 | doit (S.E_FieldFn _) = raise Fail "fix me later"
+					(*do fem*)
+      in
+       raise Fail "umm"
+      end
 			
   fun translate (tbs as (femTable : (FD.femType, V.t list) HT.hash_table, femDep : SimpleVar.t VTbl.hash_table)) prog =
       let
