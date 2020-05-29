@@ -12,6 +12,7 @@
 structure SimplifyFem : sig
 	   val transform : Simple.program -> Simple.program
 
+	   (*debug only:*)
 	   val analysisOnly : Simple.program -> Simple.program
 
 	   val getPropString : SimpleVar.t -> string
@@ -305,6 +306,13 @@ return to Strands until Fixed
     | anyFem (Tuple(ps)) = List.exists anyFem ps
     | anyFem (Array p) = anyFem p
     | anyFem (Seq p) = anyFem p
+
+  fun anyAll (Base _) = false
+    | anyAll (ALL _) = true
+    | anyAll (NOTHING) = false
+    | anyAll (Tuple(ps)) = List.exists anyAll ps
+    | anyAll (Array p) = anyAll p
+    | anyAll (Seq p) = anyAll p
 
   fun hash (NOTHING) = 0w1
     | hash (ALL(f)) = 0w2 * FD.hash f
@@ -1159,23 +1167,23 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 	   
   (*cvtVar, cvtTy, cvtFun -> cvtBlock*)
 
-  fun cvtBody(block : S.block, newDefs : S.func_def list ref) =
+  fun cvtBody(block : S.block, newDefs : S.func_def list ref, globCvt) =
       let
        val S.Block{code, props} = block
-       val code' = List.concatMap (fn x => cvtStm(x, newDefs)) code
+       val code' = List.concatMap (fn x => cvtStm(x, newDefs, globCvt)) code
       in
        S.Block{code=code', props=props}
       end
-  and cvtStm(stm : S.stmt, newDefs : S.func_def list ref) =
+  and cvtStm(stm : S.stmt, newDefs : S.func_def list ref, globCvt) =
       let
-       val cvtExp = fn x => cvtExp(x, newDefs)
-       val cvtBody = fn x => cvtBody(x, newDefs)
+       val cvtExp = fn y => fn x => cvtExp(x, newDefs, y, globCvt)
+       val cvtBody = fn x => cvtBody(x, newDefs, globCvt)
        val lst = fn x => [x]
-       fun doit(S.S_Var(v, optE)) = (case Option.map cvtExp optE
+       fun doit(S.S_Var(v, optE)) = (case Option.map (cvtExp (getFemPres v)) optE
 				      of SOME((stmts, vr)) => stmts@[S.S_Var(cvtVar v, SOME(vr))]
 				       | NONE => [S.S_Var(cvtVar v, NONE)]
 				    (* end case*))
-	 | doit (S.S_Assign(v, exp)) = let val (stms,exp) = cvtExp exp in stms@[S.S_Assign(cvtVar v, exp)] end
+	 | doit (S.S_Assign(v, exp)) = let val (stms,exp) = cvtExp (getFemPres v) exp in stms@[S.S_Assign(cvtVar v, exp)] end
 	 | doit (S.S_Foreach(v1, v2, block)) = [S.S_Foreach(cvtVar v1, cvtVar v2, cvtBody block)]
 	 | doit (S.S_IfThenElse(v, b1, b2)) = [S.S_IfThenElse(cvtVar v, cvtBody b1, cvtBody b2)]
 	 | doit (S.S_New(a,vs)) = [S.S_New(a, List.map cvtVar vs)]
@@ -1190,12 +1198,121 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
       in
        doit(stm)
       end
-  and cvtExp(e : S.exp, newDefs : S.func_def list ref) : S.stmt list * S.exp =
+  and cvtExp(e : S.exp, newDefs : S.func_def list ref,
+	     retPres : femPres, globCvt : FD.femType * V.t -> (V.t * S.stmt) ) : S.stmt list * S.exp =
       let
        (*where we merge things in:
 	based on type and expect type -> build a giant list of stms to convert something*)
        (*base cases are clear*)
-       fun toAll(v : V.t) = raise Fail "umm"
+       fun toAll(v : V.t, retPres) =
+	   let
+	    val test = ref false
+	    val _ = merge(getFemPres v, retPres, test)
+	    fun toAll'(v : V.t, ty, pres, targetPres) = (*var, currentTy, currentPres, presToconvert it to*)
+		(case (ty, pres, targetPres)
+		  of (_, NOTHING, NOTHING) => ([], v)
+		   | (Ty.T_Sequence(ty', SOME(k)), Array(p), Array(p')) =>
+		     let
+
+		      val accTy = cvtTy(ty', p) (*new type for these arrays*)
+		      (*build index into array:*)
+		      val accAddr = List.tabulate(k, fn x => V.new("arrayAccIdx_"^(Int.toString x), Var.LocalVar, Ty.T_Int))
+		      val accAddrInit = List.tabulate(k, fn x => S.S_Var(List.nth(accAddr, k), SOME(S.E_Lit(Literal.intLit k))))
+
+		      (*build acc of array:*)
+		      fun acc k = S.E_Prim(BasisVars.subscript, [], [v, List.nth(accAddr, k)], ty')
+		      val accVars = List.tabulate(k, fn x => V.new("arrayAcc_"^(Int.toString x), Var.LocalVar, ty'))
+		      val accese = List.tabulate(k, fn x => S.S_Var(List.nth(accVars, k), SOME(acc k)))
+		      (*convert each acc:*)
+		      val rets = List.map (fn vv => toAll'(vv, ty', p, p')) accVars (*recursive call*)
+		      (*resulting stms:*)
+		      val newStms = List.concatMap (fn (x, y) => x) rets
+		      val newVars = List.map (fn (x, y) => y) rets
+		      (*seq replacement:*)
+		      val newVar = V.new(V.nameOf v, V.kindOf v, Ty.T_Sequence(accTy, SOME(k)))
+		      val ret = S.S_Var(newVar, SOME(S.E_Seq(newVars, Ty.T_Sequence(accTy, SOME(k)))))
+		     in
+		      if anyAll p' (*if conversion is needed at all; this might be wrong if alls matchup*)
+		      then (accAddrInit@accese@newStms@[ret], newVar)
+		      else ([], v)
+		     end
+		   | (Ty.T_Sequence(ty', NONE), Seq(p), Seq(p')) =>
+		     if anyAll p' (*if conversion is needed at all; this might be wrong if alls matchup*)
+		     then ([], v)
+		     else let
+		      val newTy = cvtTy(ty', p') (* new inner ty*)
+		      val retSeqTy = Ty.T_Sequence(newTy, NONE)
+						  
+		      val destVar = V.new(V.nameOf v, V.kindOf v, newTy) (*seq we store in*)
+		      val varStart = S.S_Var(destVar, SOME(S.E_Seq([], retSeqTy))) (*init for this seq*)
+		      val itter = V.new("itter", V.IterVar, ty') 
+		      val (innerStms, innerVar) = toAll'(itter, ty', p, p')
+		      (*^create body of loop that converts inner, 
+			store innerVar in seq:*)
+		      val appendExp = S.E_Prim(BasisVars.at_dT, [], [destVar, innerVar], retSeqTy)
+		      val appendStm = S.S_Assign(destVar, appendExp)
+		     in
+		      (varStart :: S.S_Foreach(itter, v, S.Block{code=innerStms@[appendStm], props=PropList.newHolder()}) :: [],
+		       destVar)
+		     end
+		   | (Ty.T_Tuple(tys), Tuple(ps), Tuple(ps')) =>
+		     let
+		      val k = List.length tys
+		      val tys' = ListPair.map cvtTy (tys, ps')
+		      val accVars = List.tabulate(k, fn x => V.new("tpl_"^(Int.toString x), Var.LocalVar, List.nth(tys, x)))
+		      val accStms = List.tabulate(k, fn x => S.S_Var(List.nth(accVars, x), SOME(S.E_Project(v, x))))
+		      val converts = List.tabulate(k, fn x => let val nth = fn l => List.nth(l, x) in 
+							       toAll'(nth accVars, nth tys, nth ps, nth ps') end)
+		      val convertStms = List.concatMap (fn (x,y) => x) converts
+		      val convertVars = List.map (fn (x,y) => y) converts
+		      val finVar = V.new(V.nameOf v, V.kindOf v, Ty.T_Tuple(tys'))
+		      val finVarStm = S.S_Var(finVar, SOME(S.E_Tuple(convertVars)))
+			    
+		     in
+		      if List.exists anyAll ps'
+		      then (accStms@convertStms@[finVarStm], finVar)
+		      else ([], v)
+		     end
+		   | (Ty.T_Fem(d), Base(d', SOME v1), Base(d'', SOME v2)) => if FD.same(d', d'')
+									     then if V.same(v1, v2)
+										  then ([], v)
+										  else raise Fail "impossible convert: wrong base var"
+									     else raise Fail "impossible convert: wrong fems"
+		   | (Ty.T_Fem(d), Base(d', SOME v1), ALL(d'')) =>
+		     let
+		      val dim = FD.underlyingDim d
+		      val (newVar, newStm)  = globCvt(d', v1)
+		      val newTy = cvtTy(ty, ALL(d'))
+		      val newVar' = V.new(V.nameOf v, V.kindOf v, newTy)
+		      val posVecVar = V.new("refPos", Var.LocalVar, Ty.vecTy dim)
+		      val posCellVar = V.new("cell", Var.LocalVar, Ty.T_Int)
+						     (*get a few accs*)
+		     in
+		      
+		     if FD.same(d', d'')
+		     then if FD.baseFem d
+			  then ([newStm], newVar)
+			  else (case d
+				 of FD.MeshCell _ => ([newStm, S.S_Var(newVar', SOME(S.E_Tuple([v, newVar])))],
+						      newVar')
+				  | FD.FuncCell _ => ([newStm, S.S_Var(newVar', SOME(S.E_Tuple([v, newVar])))],
+						      newVar')
+				  | FD.MeshPos _ => ([newStm, S.S_Var(posVecVar, SOME(S.E_Project(v, 0))),
+						      S.S_Var(posCellVar, SOME(S.E_Project(v, 1))),
+						      S.S_Var(newVar', SOME(S.E_Tuple([posVecVar, posCellVar, newVar])))],
+						     newVar')
+			       (* end case*))
+			  else raise Fail "impossible convert: wrong fems"
+		     end
+		   | (Ty.T_Fem(d), Base(_, NONE), _) => raise Fail "not allowed NONE"
+		   | (Ty.T_Fem(d), _, Base(_, NONE)) => raise Fail "not allowed NONE"
+		   | (Ty.T_Fem(d), ALL(d'), Base(d'', SOME v1)) => raise Fail "impossible conversion: ALL -> base; could be implemented"
+		(* end case*))
+	   in
+	    if anyAll (retPres) andalso !test
+	    then toAll'(v, V.typeOf v, getFemPres v,retPres)
+	    else ([], v)
+	   end
 
        val none = fn s => ([],s)
        val retTy = S.typeOf e
@@ -1209,13 +1326,20 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 	 | doit (S.E_Seq(vs, ty)) = raise Fail "need converted return type"
 	 | doit (S.E_Tuple(vs)) = none (S.E_Tuple(List.map cvtVar vs))
 	 | doit (S.E_Project(v,i)) = none (S.E_Project(cvtVar v, i))
-	 | doit (S.E_Slice(v, s, t)) = none (S.E_Slice(cvtVar v, s, t))
-	 | doit (S.E_Coerce{srcTy, dstTy, x}) = raise Fail "careful: see above"
+	 | doit (S.E_Slice(v, s, t)) = none (S.E_Slice(cvtVar v, s, t)) 
+	 | doit (S.E_Coerce{srcTy, dstTy, x}) =
+	   let
+	    val srcPres = getFemPres x
+	   in
+	    none (S.E_Coerce {srcTy = cvtTy(srcTy, srcPres),
+	     dstTy = cvtTy(dstTy, retPres),
+	     x = cvtVar x})
+	   end
 	 | doit (S.E_BorderCtl(v1, v2)) = none(S.E_BorderCtl(v1, v2))
 	 | doit (S.E_LoadSeq(v1, s)) = none(S.E_LoadSeq(v1, s))
 	 | doit (S.E_LoadImage(t, s, i)) = none(S.E_LoadImage(t,s,i))
 	 | doit (S.E_InsideImage(v1,v2,i)) = none(S.E_InsideImage(cvtVar v1, cvtVar v2, i))
-	 | doit (S.E_FieldFn _) = raise Fail "fix me later"
+	 | doit (S.E_FieldFn _) = raise Fail "FIXME: field function"
 					(*do fem*)
       in
        raise Fail "umm"
