@@ -1163,6 +1163,7 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
    val {clrFn, getFn, peekFn, setFn} = V.newProp(fn v => V.new(V.nameOf v, V.kindOf v, cvtTy(V.typeOf v, getFemPres v)))
   in
   val cvtVar = getFn
+  val setVar = setFn
   end
 	   
   (*cvtVar, cvtTy, cvtFun -> cvtBlock*)
@@ -1201,9 +1202,6 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
   and cvtExp(e : S.exp, newDefs : S.func_def list ref,
 	     retPres : femPres, globCvt : FD.femType * V.t -> (V.t * S.stmt) ) : S.stmt list * S.exp =
       let
-       (*where we merge things in:
-	based on type and expect type -> build a giant list of stms to convert something*)
-       (*base cases are clear*)
        fun toAll(v : V.t, retPres) =
 	   let
 	    val test = ref false
@@ -1306,7 +1304,7 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 		     end
 		   | (Ty.T_Fem(d), Base(_, NONE), _) => raise Fail "not allowed NONE"
 		   | (Ty.T_Fem(d), _, Base(_, NONE)) => raise Fail "not allowed NONE"
-		   | (Ty.T_Fem(d), ALL(d'), Base(d'', SOME v1)) => raise Fail "impossible conversion: ALL -> base; could be implemented"
+		   | (Ty.T_Fem(d), ALL(d'), Base(d'', SOME v1)) => raise Fail "impossible conversion: ALL -> base; could be implemented; could be useful for apply?"
 		(* end case*))
 	   in
 	    if anyAll (retPres) andalso !test
@@ -1314,14 +1312,83 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 	    else ([], v)
 	   end
 
+
        val none = fn s => ([],s)
        val retTy = S.typeOf e
        fun doit (S.E_Var(v)) = none (S.E_Var(cvtVar v))
 	 | doit (l as S.E_Lit(_)) = none l
 	 | doit (k as S.E_Kernel _) = none k
-	 | doit (S.E_Select(v1, v2)) = none (S.E_Select(v1, cvtVar v2))
-	 | doit (S.E_Apply(f, vs)) = raise Fail "later"
-	 | doit (S.E_Prim(v, marg, vs, t)) = raise Fail "later" (*fuck, need return var pres; also, fuck: need to watch out for merge*)
+	 | doit (S.E_Select(v1, v2)) = none (S.E_Select(v1, cvtVar v2)) (* strand var doesn't change.*)
+	 | doit (S.E_Apply(f, vs)) = raise Fail "later" (**)
+	 | doit (S.E_Prim(f, marg, vs, t)) =
+	   (* here we need to check for any Bases that are appended to an all seq or an all being appaned to a base or so forth 
+	      - we conver the base to an all via toAll and then we are done. *)
+	   (*TODO: double check*)
+	   let
+	    val vs' = List.map cvtVar vs
+	    val t' = cvtTy(t, retPres)
+	    val test1 = ref false
+	    val test2 = ref false
+	   in
+	    if Var.same(BasisVars.at_dT, f)
+	    then let
+	     val [syOld, aOld] = vs
+	     val [sy, a] = vs'
+
+	     val _ = merge(getFemPres syOld, retPres, test1)
+	     val _ = merge(Seq(getFemPres aOld), retPres, test2)
+	     val Seq(aPesDest) = retPres
+	     val (stms1, sy') = if !test1
+				then toAll(syOld, retPres)
+				else ([], sy)
+	     val _ = setVar(syOld, sy') (*remove sy*)
+	     val (stms2, a') = if !test2
+				then toAll(aOld, aPesDest)
+				else ([], aOld)
+	     val _ = setVar(aOld, a)
+			    
+	    in
+	     (stms1@stms2, S.E_Prim(f, marg, List.map cvtVar vs, t'))
+	    end
+	    else if Var.same(BasisVars.at_Td, f)
+	    then let
+	     val [aOld, syOld] = vs
+	     val [a, sy] = vs'
+
+	     val _ = merge(getFemPres syOld, retPres, test1)
+	     val _ = merge(Seq(getFemPres aOld), retPres, test2)
+	     val Seq(aPesDest) = retPres
+	     val (stms1, sy') = if !test1
+				then toAll(syOld, retPres)
+				else ([], sy)
+	     val _ = setVar(syOld, sy') (*remove sy*)
+	     val (stms2, a') = if !test2
+				then toAll(aOld, aPesDest)
+				else ([], aOld)
+	     val _ = setVar(aOld, a)
+			    
+	    in
+	     (stms1@stms2, S.E_Prim(f, marg, List.map cvtVar vs, t'))
+	    end
+	    else if Var.same(BasisVars.at_dd, f)
+	    then let
+	     val [sy1Old, sy2Old] = vs
+	     val [sy1, sy2] = vs'
+	     val _ = merge(getFemPres sy1Old, retPres, test1)
+	     val _ = merge(getFemPres sy2Old, retPres, test2)
+	     val (stms1, sy1') = if !test1
+				 then toAll(sy1Old, retPres)
+				 else ([], sy1)
+	     val (stms2, sy2') = if !test2
+				 then toAll(sy2Old, retPres)
+				 else ([], sy2)
+	     val _ = setVar(sy1Old, sy1');
+	     val _ = setVar(sy2Old, sy2');
+	    in
+	     (stms1@stms2, S.E_Prim(f, marg, List.map cvtVar vs, t'))
+	    end
+	    else none (S.E_Prim(f, marg, vs', t'))
+	   end
 	 | doit (S.E_Tensor(vs,ty)) = none (S.E_Tensor(List.map cvtVar vs, ty))
 	 | doit (S.E_Seq(vs, ty)) = let val ty' = cvtTy(ty, retPres) in none(S.E_Seq(List.map cvtVar vs, ty')) end
 	 | doit (S.E_Tuple(vs)) = none (S.E_Tuple(List.map cvtVar vs))
@@ -1342,7 +1409,7 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 	 | doit (S.E_FieldFn _) = raise Fail "FIXME: field function"
 					(*do fem*)
       in
-       raise Fail "umm"
+       doit(e)
       end
 			
   fun translate (tbs as (femTable : (FD.femType, V.t list) HT.hash_table, femDep : SimpleVar.t VTbl.hash_table)) prog =
