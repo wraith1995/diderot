@@ -1178,15 +1178,15 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
   and cvtStm(stm : S.stmt, newDefs : S.func_def list ref, globCvt) =
       let
        val cvtExp = fn (y,z) => fn x => cvtExp(x, newDefs, y, z, globCvt)
-       val cvtBody = fn x => cvtBody(x, newDefs, globCvt)
+       val cvtBody' = fn x => cvtBody(x, newDefs, globCvt)
        val lst = fn x => [x]
        fun doit(S.S_Var(v, optE)) = (case Option.map (cvtExp (getFemPres v, v)) optE
 				      of SOME((stmts, vr)) => stmts@[S.S_Var(cvtVar v, SOME(vr))]
 				       | NONE => [S.S_Var(cvtVar v, NONE)]
 				    (* end case*))
 	 | doit (S.S_Assign(v, exp)) = let val (stms,exp) = cvtExp (getFemPres v, v) exp in stms@[S.S_Assign(cvtVar v, exp)] end
-	 | doit (S.S_Foreach(v1, v2, block)) = [S.S_Foreach(cvtVar v1, cvtVar v2, cvtBody block)]
-	 | doit (S.S_IfThenElse(v, b1, b2)) = [S.S_IfThenElse(cvtVar v, cvtBody b1, cvtBody b2)]
+	 | doit (S.S_Foreach(v1, v2, block)) = [S.S_Foreach(cvtVar v1, cvtVar v2, cvtBody' block)]
+	 | doit (S.S_IfThenElse(v, b1, b2)) = [S.S_IfThenElse(cvtVar v, cvtBody' b1, cvtBody' b2)]
 	 | doit (S.S_New(a,vs)) = [S.S_New(a, List.map cvtVar vs)]
 	 | doit (S.S_KillAll) = lst (S.S_KillAll)
 	 | doit (S.S_StabilizeAll) = lst(S.S_StabilizeAll)
@@ -1195,7 +1195,32 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 	 | doit (S.S_Stabilize) = lst (S.S_Stabilize)
 	 | doit (S.S_Return(v)) = lst (S.S_Return(cvtVar v))
 	 | doit (S.S_Print(vs)) = lst (S.S_Print(List.map cvtVar vs))
-	 | doit (S.S_MapReduce(mrlst)) = raise Fail "FIXME:map reduce"
+	 | doit (S.S_MapReduce(mrlst)) =
+	   let
+	    fun translateReduce(S.MapReduce{result, reduction, mapf,args, source, domain}) =
+		let
+		 val args' = List.map cvtVar args
+		 val S.Func{f, params, body} = mapf
+		 val defs = ref []
+		 val test = Option.isSome(cvtFun(f, args, result, defs, (fn (x,y) => cvtBody(x,y, globCvt)), cvtVar))
+		 val mapf' = if test
+			     then let val def::vs = !defs (* our def is on top*)
+				      val _ = newDefs := vs@ (!newDefs)
+				  in
+				   def
+				  end
+			     else mapf
+		in
+		 ([], S.MapReduce{result=cvtVar result,
+				  reduction=reduction,
+				  mapf = mapf',
+				  source=source,
+				  args=args',
+				  domain=domain})
+		end
+	   in
+	    lst (S.S_MapReduce(mrlst))
+	   end
       in
        doit(stm)
       end
