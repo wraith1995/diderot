@@ -1177,14 +1177,14 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
       end
   and cvtStm(stm : S.stmt, newDefs : S.func_def list ref, globCvt) =
       let
-       val cvtExp = fn y => fn x => cvtExp(x, newDefs, y, globCvt)
+       val cvtExp = fn (y,z) => fn x => cvtExp(x, newDefs, y, z, globCvt)
        val cvtBody = fn x => cvtBody(x, newDefs, globCvt)
        val lst = fn x => [x]
-       fun doit(S.S_Var(v, optE)) = (case Option.map (cvtExp (getFemPres v)) optE
+       fun doit(S.S_Var(v, optE)) = (case Option.map (cvtExp (getFemPres v, v)) optE
 				      of SOME((stmts, vr)) => stmts@[S.S_Var(cvtVar v, SOME(vr))]
 				       | NONE => [S.S_Var(cvtVar v, NONE)]
 				    (* end case*))
-	 | doit (S.S_Assign(v, exp)) = let val (stms,exp) = cvtExp (getFemPres v) exp in stms@[S.S_Assign(cvtVar v, exp)] end
+	 | doit (S.S_Assign(v, exp)) = let val (stms,exp) = cvtExp (getFemPres v, v) exp in stms@[S.S_Assign(cvtVar v, exp)] end
 	 | doit (S.S_Foreach(v1, v2, block)) = [S.S_Foreach(cvtVar v1, cvtVar v2, cvtBody block)]
 	 | doit (S.S_IfThenElse(v, b1, b2)) = [S.S_IfThenElse(cvtVar v, cvtBody b1, cvtBody b2)]
 	 | doit (S.S_New(a,vs)) = [S.S_New(a, List.map cvtVar vs)]
@@ -1200,8 +1200,10 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
        doit(stm)
       end
   and cvtExp(e : S.exp, newDefs : S.func_def list ref,
-	     retPres : femPres, globCvt : FD.femType * V.t -> (V.t * S.stmt) ) : S.stmt list * S.exp =
+	     retPres : femPres, retVar : V.t,
+	     globCvt : FD.femType * V.t -> (V.t * S.stmt) ) : S.stmt list * S.exp =
       let
+       val cvtBody = fn (x,y) => cvtBody(x, y, globCvt)
        fun toAll(v : V.t, retPres) =
 	   let
 	    val test = ref false
@@ -1319,7 +1321,16 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 	 | doit (l as S.E_Lit(_)) = none l
 	 | doit (k as S.E_Kernel _) = none k
 	 | doit (S.E_Select(v1, v2)) = none (S.E_Select(v1, cvtVar v2)) (* strand var doesn't change.*)
-	 | doit (S.E_Apply(f, vs)) = raise Fail "later" (**)
+	 | doit (S.E_Apply(f, vs)) =
+	   let
+	    val vs' = List.map cvtVar vs (*FIXME: func call doesn't quite make sense*)
+	    val callSite = vs
+	   in
+	    (case cvtFun(f, callSite, retVar, newDefs, cvtBody, cvtVar)
+	      of SOME(f') => none (S.E_Apply(f', vs'))
+	       | NONE => none (S.E_Apply(f, vs'))
+	    (* end case*))
+	   end
 	 | doit (S.E_Prim(f, marg, vs, t)) =
 	   (* here we need to check for any Bases that are appended to an all seq or an all being appaned to a base or so forth 
 	      - we conver the base to an all via toAll and then we are done. *)
