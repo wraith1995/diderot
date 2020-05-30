@@ -562,32 +562,37 @@ return to Strands until Fixed
        val anyNonBase = testFunction(args, globs)
       in
        if anyNonBase
-       then NONE (*leave the apply alone*)
-       else (case HT.find (getCvtTbl fvar) callArgs
-	      of SOME(f') => (F.use f'; F.decCnt fvar; SOME(f'))
-	       | NONE => let
-		val defsTable = getFnTbl fvar
-		val someDef = HT.find defsTable callArgs
-		val (def, retV) = (case someDef
-				    of SOME(def, SOME(v)) => (def, v)
-				     | NONE => raise Fail "impossible"
-				  (* end case*))
-		val retTy' = V.typeOf(cvtVar retVar)
-		val S.Func{f, params, body} = def
-		val params' = List.map cvtVar params
-		val paramsTys = List.map V.typeOf params'
-		val body' = cvtBody(body, newDefs)
-		val f' = F.new(F.nameOf fvar, retTy', paramsTys)
-		val def' = S.Func{f=f', params=params', body=body'}
-		val _ = newDefs := (def' :: !newDefs)
-		val _ = HT.insert (getCvtTbl fvar) (callArgs, f')
-	       in
-		(F.use f'; F.decCnt fvar; SOME(f'))
-	       end
-	    (* end case*))
-      end	
-  end
-
+       then NONE 
+       else
+	let
+	 val defsTable = getFnTbl fvar
+	 val someDef = HT.find defsTable callArgs
+	 val (def, retV) = (case someDef
+			     of SOME(def, SOME(v)) => (def, v)
+			      | NONE => raise Fail "impossible"
+			   (* end case*))
+	 val retPres = retV
+	in
+	 (case HT.find (getCvtTbl fvar) callArgs
+	   of SOME(f') => (F.use f'; F.decCnt fvar; SOME(f', retPres))
+	    | NONE =>
+	      let
+	       val retTy' = V.typeOf(cvtVar retVar)
+	       val S.Func{f, params, body} = def
+	       val params' = List.map cvtVar params
+	       val paramsTys = List.map V.typeOf params'
+	       val body' = cvtBody(body, newDefs)
+	       val f' = F.new(F.nameOf fvar, retTy', paramsTys)
+	       val def' = S.Func{f=f', params=params', body=body'}
+	       val _ = newDefs := (def' :: !newDefs)
+	       val _ = HT.insert (getCvtTbl fvar) (callArgs, f')
+	      in
+	       (F.use f'; F.decCnt fvar; SOME(f', retPres))
+	      end
+	 (* end case*))
+	end
+      end
+  end (* end local *)
   
   (*function to actually analyze a block of code*)
   fun analyzeBlock(b as S.Block{code, ...},
@@ -1165,9 +1170,17 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
   val cvtVar = getFn
   val setVar = setFn
   end
-	   
-  (*cvtVar, cvtTy, cvtFun -> cvtBlock*)
 
+  fun checkMerge(pres1, pres2) =
+      let
+       val ret = ref false
+       val _ = merge(pres1, pres2, ret)
+      in
+       !ret
+      end
+				   
+  (*introduce check pres function -> use in toAll -> introduce in cvtExp to see what is needed.
+   use inductive assumption: if a var is called somwhere, it has already conformed to its femPres*)
   fun cvtBody(block : S.block, newDefs : S.func_def list ref, globCvt) =
       let
        val S.Block{code, props} = block
@@ -1238,7 +1251,6 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 		  of (_, NOTHING, NOTHING) => ([], v)
 		   | (Ty.T_Sequence(ty', SOME(k)), Array(p), Array(p')) =>
 		     let
-
 		      val accTy = cvtTy(ty', p) (*new type for these arrays*)
 		      (*build index into array:*)
 		      val accAddr = List.tabulate(k, fn x => V.new("arrayAccIdx_"^(Int.toString x), Var.LocalVar, Ty.T_Int))
@@ -1331,28 +1343,37 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 		     end
 		   | (Ty.T_Fem(d), Base(_, NONE), _) => raise Fail "not allowed NONE"
 		   | (Ty.T_Fem(d), _, Base(_, NONE)) => raise Fail "not allowed NONE"
-		   | (Ty.T_Fem(d), ALL(d'), Base(d'', SOME v1)) => raise Fail "impossible conversion: ALL -> base; could be implemented; could be useful for apply?"
+		   | (Ty.T_Fem(d), ALL(d'), Base(d'', SOME v1)) => raise Fail "impossible conversion: ALL -> base; could be implemented; could be useful for apply?; if base type, then find it via indexing; if regular type, discard...."
 		(* end case*))
 	   in
-	    if anyAll (retPres) andalso !test
+	    if checkMerge(getFemPres v, retPres)
 	    then toAll'(v, V.typeOf v, getFemPres v,retPres)
 	    else ([], v)
 	   end
 
+       fun maybeRunAll(exp, currentPres, expectedPres) = if checkMerge(currentPres, expectedPres)
+							 then let
+							  val v = V.new("cvtTemp", Var.LocalVar, S.typeOf(exp))
+							  val tempAssign = S.S_Var(v, SOME(exp))
+							  val (cvtStms, v') = toAll(v, expectedPres)
+							 in (tempAssign::cvtStms, S.E_Var(v')) end
+							 else ([], exp)
+
 
        val none = fn s => ([],s)
        val retTy = S.typeOf e
-       fun doit (S.E_Var(v)) = none (S.E_Var(cvtVar v))
+       fun doit (S.E_Var(v)) = none (S.E_Var(cvtVar v)) (*what if there is a conversion needed*)
 	 | doit (l as S.E_Lit(_)) = none l
 	 | doit (k as S.E_Kernel _) = none k
-	 | doit (S.E_Select(v1, v2)) = none (S.E_Select(v1, cvtVar v2)) (* strand var doesn't change.*)
+	 | doit (S.E_Select(v1, v2)) = none (S.E_Select(v1, cvtVar v2)) (* strand var doesn't change so no conversion possible.*)
 	 | doit (S.E_Apply(f, vs)) =
 	   let
 	    val vs' = List.map cvtVar vs (*FIXME: func call doesn't quite make sense*)
 	    val callSite = vs
+			     (*FIXME: add return press and cvt - maybeRunAll*)
 	   in
 	    (case cvtFun(f, callSite, retVar, newDefs, cvtBody, cvtVar)
-	      of SOME(f') => none (S.E_Apply(f', vs'))
+	      of SOME(f', actualRetPres) => none (S.E_Apply(f', vs'))
 	       | NONE => none (S.E_Apply(f, vs'))
 	    (* end case*))
 	   end
@@ -1363,22 +1384,20 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 	   let
 	    val vs' = List.map cvtVar vs
 	    val t' = cvtTy(t, retPres)
-	    val test1 = ref false
-	    val test2 = ref false
 	   in
 	    if Var.same(BasisVars.at_dT, f)
 	    then let
 	     val [syOld, aOld] = vs
 	     val [sy, a] = vs'
 
-	     val _ = merge(getFemPres syOld, retPres, test1)
-	     val _ = merge(Seq(getFemPres aOld), retPres, test2)
+	     val test1 = checkMerge(getFemPres syOld, retPres)
+	     val test2 = checkMerge(Seq(getFemPres aOld), retPres)
 	     val Seq(aPesDest) = retPres
-	     val (stms1, sy') = if !test1
+	     val (stms1, sy') = if test1
 				then toAll(syOld, retPres)
 				else ([], sy)
 	     val _ = setVar(syOld, sy') (*remove sy*)
-	     val (stms2, a') = if !test2
+	     val (stms2, a') = if test2
 				then toAll(aOld, aPesDest)
 				else ([], aOld)
 	     val _ = setVar(aOld, a)
@@ -1391,14 +1410,14 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 	     val [aOld, syOld] = vs
 	     val [a, sy] = vs'
 
-	     val _ = merge(getFemPres syOld, retPres, test1)
-	     val _ = merge(Seq(getFemPres aOld), retPres, test2)
+	     val test1 = checkMerge(getFemPres syOld, retPres)
+	     val test2 = checkMerge(Seq(getFemPres aOld), retPres)
 	     val Seq(aPesDest) = retPres
-	     val (stms1, sy') = if !test1
+	     val (stms1, sy') = if test1
 				then toAll(syOld, retPres)
 				else ([], sy)
 	     val _ = setVar(syOld, sy') (*remove sy*)
-	     val (stms2, a') = if !test2
+	     val (stms2, a') = if test2
 				then toAll(aOld, aPesDest)
 				else ([], aOld)
 	     val _ = setVar(aOld, a)
@@ -1410,12 +1429,12 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 	    then let
 	     val [sy1Old, sy2Old] = vs
 	     val [sy1, sy2] = vs'
-	     val _ = merge(getFemPres sy1Old, retPres, test1)
-	     val _ = merge(getFemPres sy2Old, retPres, test2)
-	     val (stms1, sy1') = if !test1
+	     val test1 = checkMerge(getFemPres sy1Old, retPres)
+	     val test2 = checkMerge(getFemPres sy2Old, retPres)
+	     val (stms1, sy1') = if test1
 				 then toAll(sy1Old, retPres)
 				 else ([], sy1)
-	     val (stms2, sy2') = if !test2
+	     val (stms2, sy2') = if test2
 				 then toAll(sy2Old, retPres)
 				 else ([], sy2)
 	     val _ = setVar(sy1Old, sy1');
@@ -1426,11 +1445,12 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 	    else none (S.E_Prim(f, marg, vs', t'))
 	   end
 	 | doit (S.E_Tensor(vs,ty)) = none (S.E_Tensor(List.map cvtVar vs, ty))
+	 (*Seq though coerce need maybeRunAll too*)
 	 | doit (S.E_Seq(vs, ty)) = let val ty' = cvtTy(ty, retPres) in none(S.E_Seq(List.map cvtVar vs, ty')) end
 	 | doit (S.E_Tuple(vs)) = none (S.E_Tuple(List.map cvtVar vs))
 	 | doit (S.E_Project(v,i)) = none (S.E_Project(cvtVar v, i))
 	 | doit (S.E_Slice(v, s, t)) = none (S.E_Slice(cvtVar v, s, t)) 
-	 | doit (S.E_Coerce{srcTy, dstTy, x}) =
+	 | doit (S.E_Coerce{srcTy, dstTy, x}) = (*Array->Seq careful with maybeRunAll*)
 	   let
 	    val srcPres = getFemPres x
 	   in
@@ -1443,7 +1463,11 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 	 | doit (S.E_LoadImage(t, s, i)) = none(S.E_LoadImage(t,s,i))
 	 | doit (S.E_InsideImage(v1,v2,i)) = none(S.E_InsideImage(cvtVar v1, cvtVar v2, i))
 	 | doit (S.E_FieldFn _) = raise Fail "FIXME: field function"
-					(*do fem*)
+	 (*Plan: loadFem - ExtractFem should be a straight forward translation using the new cvt expression...
+	  hmm: there is a lot of complexity here.Reread above.
+	  maybe not: for loads, we convert forwards
+	  for extracts, convert back or just tuple extract
+	  the larger extracts will be pos*)
       in
        doit(e)
       end
