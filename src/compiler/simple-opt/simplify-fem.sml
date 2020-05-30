@@ -533,12 +533,14 @@ return to Strands until Fixed
 	  (* end case *))
        end
       end handle exn => raise exn
-  fun testFunction(args, globs) =
+  fun testFunction(args, globs, retTy) =
       let
        val femsInvolvedArgs = List.concatMap (Ty.allFems o V.typeOf) (args)
        val femsINvolvedGlobs = List.concatMap (Ty.allFems o V.typeOf) (globs)
-       val anyNonBase = List.exists (Bool.not o FD.baseFem) femsInvolvedArgs
+       val anyFem = 0 <> (List.length (Ty.allFems retTy))
+       val anyNonBase = (List.length femsInvolvedArgs <> 0)
 			orelse (List.length femsINvolvedGlobs <> 0)
+			orelse anyFem
       in
        anyNonBase
       end
@@ -559,7 +561,7 @@ return to Strands until Fixed
        val globs = getFuncGlobs fvar
        val globsp = List.map getFemPres globs
        val callArgs = (argsp, globsp)
-       val anyNonBase = testFunction(args, globs)
+       val anyNonBase = testFunction(args, globs, F.resultTypeOf fvar)
       in
        if anyNonBase
        then NONE 
@@ -865,7 +867,7 @@ return to Strands until Fixed
 	val globs = getFuncGlobs f
 	val globsp = List.map getFemPres globs
 	val callArgs : functionCall = (argsp, globsp)
-	val anyNonBase = testFunction(args, globs)
+	val anyNonBase = testFunction(args, globs, F.resultTypeOf f)
 	val v : V.t = List.hd call
        in
 	if anyNonBase
