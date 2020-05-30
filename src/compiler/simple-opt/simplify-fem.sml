@@ -358,7 +358,7 @@ return to Strands until Fixed
 		    | (Tuple(tys1), Tuple(tys2)) => Tuple(ListPair.map merge' (tys1, tys2))
 		    | (Array(ty1), Array(ty2)) => Array(merge' (ty1, ty2))
 		    | (Seq(t1), Seq(t2)) => Seq(merge'(t1, t2))
-		    | _ => raise Fail "impossible: merging incompatible femPress - must of come from different types"
+		    | _ => raise Fail ("impossible: merging incompatible femPress - must of come from different types: (" ^ (presToString t1) ^ ")" ^ " vs. (" ^ (presToString t2) ^ ")\n")
 		 (*end case*))
       in
        valid (merge'(a1, a2)) handle exn => raise exn
@@ -417,7 +417,7 @@ return to Strands until Fixed
 					       | NONE => (setFn(v, p); true)
 					    (*end case*))
   fun updateFemPresRef(v : V.t, p : femPres, changed) = (case peekFn(v)
-					      of SOME(p') => (let val p'' = merge(p, p', changed) handle ex => raise ex
+							  of SOME(p') => (let val p'' = merge(p, p', changed) handle ex => (print("unable to merge:"^(V.uniqueNameOf v)^"\n"); raise ex)
 							      in setFn(v, p'') end)
 					       | NONE => (setFn(v, p); changed := true)
 					    (*end case*))
@@ -807,10 +807,18 @@ return to Strands until Fixed
 	      | doit (S.S_IfThenElse(v, b1, b2)) = (checkExistence "condition" v; doBlock'(b1); doBlock'(b2))
 	      | doit (S.S_New(a,vs)) = (news := (a, vs) :: !news)
 	      | doit (S.S_Foreach(itter, src, blk)) =
-		(updateFemPresRef(itter, getFemPres src, changed);
+		let
+		 val itterPres = (case getFemPres src
+				   of Seq(a) => a
+				    | Array(a) => a
+				    | _ => raise Fail "impossible: itter with wrong seq type"
+				 (* end case*))
+		in
+		(updateFemPresRef(itter, itterPres, changed);
 		checkExistence "itter" itter;
 		 checkExistence "itterSrc" src;
 		 doBlock'(blk))
+		end
 	      | doit (S.S_KillAll) = ()
 	      | doit (S.S_StabilizeAll) = ()
 	      | doit (S.S_Continue) = ()
@@ -877,7 +885,7 @@ return to Strands until Fixed
 	 in
 	(case possibleRet
 	  of SOME(p) => (case call
-			  of v ::_ => updateFemPresRef(v, p, changeOuter) 
+			  of v ::_ => (updateFemPresRef(v, p, changeOuter)  handle ex => raise ex)
 			   | _ => raise Fail "call not in call"
 			(*end case*))
 	   | NONE =>
@@ -886,7 +894,8 @@ return to Strands until Fixed
 	      val _ = changeOuter := true 
 	      val S.Func{params, body, ...} = fdef
 	      val _ = ListPair.map updateFemPres (params, argsp)
-	      val _ = doBlock(body, ref false, call, ref []) (*we can ignore changes/new here as we found them/they are impossible.*)
+	      val _ = doBlock(body, ref false, call, ref []) handle ex => raise ex
+	      (*we can ignore changes/new here as we found them/they are impossible.*)
 
 	      val femPres = getFemPres v
 	     in

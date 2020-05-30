@@ -341,7 +341,7 @@ fun makeMeshPosSearch(env, cxt, span, refCellClass, meshData, newtonTol, newtonA
      val numCellExpr = makePrim'(BV.sub_ii, [numCellExpr', one], [Ty.T_Int, Ty.T_Int], Ty.T_Int)
      val dummExp = AST.E_ExtractFemItem(meshExpr, Ty.T_Int, (FemOpt.StartCell, meshData))
      val numCellVar = Var.new(Atom.atom "numCell", span, Var.LocalVar, Ty.T_Int)
-     val numCellAssign = AST.S_Assign((numCellVar, span), numCellExpr)
+     val numCellAssign = AST.S_Decl((numCellVar, SOME(numCellExpr)))
      val numCellVarExpr = AST.E_Var((numCellVar, span))
      val initStms = numCellAssign::initStms
 				     
@@ -355,13 +355,13 @@ fun makeMeshPosSearch(env, cxt, span, refCellClass, meshData, newtonTol, newtonA
      (*setup the vars that we use in the itteration.*)
      val cellItterVar = Var.new(Atom.atom "cellInt", span, Var.LocalVar, Ty.T_Int)
      val newtonItterVar = Var.new(Atom.atom "newtonInt", span, Var.LocalVar, Ty.T_Int)
-     val newtonReset =  AST.S_Assign((newtonItterVar, span), zero)
-     val initStms = newtonReset::AST.S_Assign((cellItterVar, span), dummExp)::initStms;
+     val newtonReset =  AST.S_Decl((newtonItterVar, SOME(zero)))
+     val initStms = newtonReset::AST.S_Decl((cellItterVar,  SOME(dummExp)))::initStms;
      val cellItterVarExp = AST.E_Var((cellItterVar, span))
      val newtonItterVarExp = AST.E_Var((newtonItterVar, span))
 
      val newPosVar = Var.new(Atom.atom "xn", span, Var.LocalVar, insideVec)
-     val newPosInit = AST.S_Assign((newPosVar, span), startPosition)
+     val newPosInit = AST.S_Decl((newPosVar, SOME(startPosition)))
      val newPosVarExpr = AST.E_Var((newPosVar, span))
      val initStms = newPosInit::initStms
      val updateVar = Var.new(Atom.atom "delta", span, Var.LocalVar, insideVec)
@@ -439,10 +439,10 @@ fun makeMeshPosSearch(env, cxt, span, refCellClass, meshData, newtonTol, newtonA
 	  let
 	   val probeD = makePrim'(BV.op_probe, [invDTransformField, startPosition], [dTransformFieldTy, insideVec], insideMat)
 	   val matVar = Var.new(Atom.atom "A", span, AST.LocalVar, insideMat)
-	   val probeDAssign = AST.S_Assign((matVar,span), probeD)
+	   val probeDAssign = AST.S_Decl((matVar, SOME(probeD)))
 	   val dotFields = makePrim'(BV.op_inner_tf,  [AST.E_Var(matVar, span), transformFieldModPos], [insideMat, transformFieldTy], transformFieldTy)
 	   val probeUpdate = makePrim'(BV.op_probe, [dotFields, newPosVarExpr], [transformFieldTy, insideVec], insideVec)
-	   val updateDeltaStm = AST.S_Assign((updateVar, span), probeUpdate)
+	   val updateDeltaStm = AST.S_Decl((updateVar, SOME(probeUpdate)))
 	   val updateCurrentPosExpr = makePrim'(BV.sub_tt, [AST.E_Var(newPosVar,span), AST.E_Var(updateVar, span)], [insideVec, insideVec], insideVec)
 	   val updateCurrentPosStm = AST.S_Assign((newPosVar,span), updateCurrentPosExpr)
 	  in
@@ -479,7 +479,7 @@ fun makeMeshPosSearch(env, cxt, span, refCellClass, meshData, newtonTol, newtonA
 	       val printSeq = makePrinStatement("Cells:", [cellExpr],"\n")
 	       val currentlyAt = makePrinStatement("RefPos Estimate is: ", [newPosVarExpr], "\n")
 	       val newCellsVar = Var.new(Atom.atom "yayCells", span, AST.LocalVar, Ty.T_Sequence(Ty.T_Int, NONE))
-	       val newAssign = AST.S_Assign((newCellsVar, span), cellExpr)
+	       val newAssign = AST.S_Decl((newCellsVar, SOME(cellExpr)))
 
 	       val itterVar = Var.new(Atom.atom "cellItter", span, AST.IterVar, Ty.T_Int)
 	       val newtonItterVar = Var.new(Atom.atom "newtonItter", span, AST.IterVar, Ty.T_Int)
@@ -580,7 +580,7 @@ fun makeNewtonInversesBody(env, cxt, span, refCellClass, meshData, newtonTol, ne
 
 	   val probeD = makePrim'(BV.op_probe, [invDTransformField, startPosition], [dTransformFieldTy, insideVec], insideMat)
 	   val matVar = Var.new(Atom.atom "A", span, AST.LocalVar, insideMat)
-	   val probeDAssign = AST.S_Assign((matVar,span), probeD)
+	   val probeDAssign = AST.S_Decl((matVar, SOME(probeD)))
 	   val dotFields = makePrim'(BV.op_inner_tf,  [AST.E_Var(matVar, span), transformFieldModPos], [insideMat, transformFieldTy], transformFieldTy)
 	   val probeUpdate = makePrim'(BV.op_probe, [dotFields, newPosVarExpr], [transformFieldTy, insideVec], insideVec)
 	   val updateDeltaStm = AST.S_Assign((updateVar, span), probeUpdate)
