@@ -808,6 +808,7 @@ return to Strands until Fixed
 	      | doit (S.S_New(a,vs)) = (news := (a, vs) :: !news)
 	      | doit (S.S_Foreach(itter, src, blk)) =
 		let
+		 val _ = checkExistence "itterSrc" src
 		 val itterPres = (case getFemPres src
 				   of Seq(a) => a
 				    | Array(a) => a
@@ -816,7 +817,6 @@ return to Strands until Fixed
 		in
 		(updateFemPresRef(itter, itterPres, changed);
 		checkExistence "itter" itter;
-		 checkExistence "itterSrc" src;
 		 doBlock'(blk))
 		end
 	      | doit (S.S_KillAll) = ()
