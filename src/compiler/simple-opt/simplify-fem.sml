@@ -704,9 +704,6 @@ return to Strands until Fixed
 	      | doit (S.E_LoadImage _) = NOTHING
 	      | doit (S.E_LoadFem(f, v1, v2)) =
 		(List.app (checkExistence ("_loadFem")) [v1, v2];
-		 print("someloading...");
-		 print(FD.toString f);
-		 print("\n");
 		 if FD.baseFem f (*v1 is the dest data; v2 is the dep; *)
 		 then ((case getFemPres v2
 			 of Base(f', SOME(v2')) => (addDep(v1, v2'); print("cor..\n"); valid (Base(f, SOME(v1))) handle exn => raise exn) 
@@ -715,7 +712,7 @@ return to Strands until Fixed
 			  | _ => raise Fail ("impossible: " ^ (V.uniqueNameOf v2))
 		      (* end case*)))
 		 else let val g = (Option.valOf o FD.dependencyOf) f handle ex => raise ex in
-		       (print("stupid;\n");valid(getFemPres v1))
+		       (valid(getFemPres v1))
 		       (* (case getDep v1 (*v1 is the dep, v2 is an int*) *)
 		       (* 	 of SOME(v1')=> valid (Base(g, SOME(v1')))  *)
 		       (* 	  | NONE => valid((ALL(g))) *)
@@ -1199,17 +1196,17 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 				   
   (*introduce check pres function -> use in toAll -> introduce in cvtExp to see what is needed.
    use inductive assumption: if a var is called somwhere, it has already conformed to its femPres*)
-  fun cvtBody(block : S.block, newDefs : S.func_def list ref, globCvt) =
+  fun cvtBody(block : S.block, newDefs : S.func_def list ref, globCvt, globDep, globDepToDep, depToV) =
       let
        val S.Block{code, props} = block
-       val code' = List.concatMap (fn x => cvtStm(x, newDefs, globCvt)) code
+       val code' = List.concatMap (fn x => cvtStm(x, newDefs, globCvt, globDep, globDepToDep, depToV)) code
       in
        S.Block{code=code', props=props}
       end
-  and cvtStm(stm : S.stmt, newDefs : S.func_def list ref, globCvt) =
+  and cvtStm(stm : S.stmt, newDefs : S.func_def list ref, globCvt, globDep, globDepToDep, depToV) =
       let
-       val cvtExp = fn (y,z) => fn x => cvtExp(x, newDefs, y, z, globCvt)
-       val cvtBody' = fn x => cvtBody(x, newDefs, globCvt)
+       val cvtExp = fn (y,z) => fn x => cvtExp(x, newDefs, y, z, globCvt, globDep, globDepToDep, depToV)
+       val cvtBody' = fn x => cvtBody(x, newDefs, globCvt, globDep, globDepToDep, depToV)
        val lst = fn x => [x]
        fun doit(S.S_Var(v, optE)) = (case Option.map (cvtExp (getFemPres v, v)) optE
 				      of SOME((stmts, vr)) => stmts@[S.S_Var(cvtVar v, SOME(vr))]
@@ -1233,7 +1230,7 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 		 val args' = List.map cvtVar args
 		 val S.Func{f, params, body} = mapf
 		 val defs = ref []
-		 val test = Option.isSome(cvtFun(f, args, result, defs, (fn (x,y) => cvtBody(x,y, globCvt)), cvtVar))
+		 val test = Option.isSome(cvtFun(f, args, result, defs, (fn (x,y) => cvtBody(x,y, globCvt, globDep, globDepToDep, depToV)), cvtVar))
 		 val mapf' = if test
 			     then let val def::vs = !defs (* our def is on top*)
 				      val _ = newDefs := vs@ (!newDefs)
@@ -1257,9 +1254,13 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
       end
   and cvtExp(e : S.exp, newDefs : S.func_def list ref,
 	     retPres : femPres, retVar : V.t,
-	     globCvt : FD.femType * V.t -> (V.t * S.stmt) ) : S.stmt list * S.exp =
+	     globCvt : FD.femType * V.t -> (V.t * S.stmt),
+	     globDep : V.t -> V.t option,
+	     globDepToDep : FD.femType * V.t -> (S.stmt list * V.t),
+	     depToV : FD.femType  * V.t -> (S.stmt list * V.t)) : S.stmt list * S.exp =
       let
-       val cvtBody = fn (x,y) => cvtBody(x, y, globCvt)
+       val cvtBody = fn (x,y) => cvtBody(x, y, globCvt, globDep, globDepToDep, depToV)
+       fun projectCvt v i = ([], S.E_Project(cvtVar v, i))
        fun toAll'(v : V.t, ty, pres, targetPres) = (*var, currentTy, currentPres, presToconvert it to*)
 	   (case (ty, pres, targetPres)
 	     of (_, NOTHING, NOTHING) => ([], v)
@@ -1340,6 +1341,7 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 		 val newVar' = V.new(V.nameOf v, V.kindOf v, newTy)
 		 val posVecVar = V.new("refPos", Var.LocalVar, Ty.vecTy dim)
 		 val posCellVar = V.new("cell", Var.LocalVar, Ty.T_Int)
+		 val faceCellVar = V.new("cell", Var.LocalVar, Ty.T_Int)
 				       (*get a few accs*)
 		in
 		 if FD.same(d', d'')
@@ -1352,7 +1354,8 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 						  newVar')
 			      | FD.MeshPos _ => ([newStm, S.S_Var(posVecVar, SOME(S.E_Project(v, 0))),
 						  S.S_Var(posCellVar, SOME(S.E_Project(v, 1))),
-						  S.S_Var(newVar', SOME(S.E_Tuple([posVecVar, posCellVar, newVar])))],
+						  S.S_Var(faceCellVar, SOME(S.E_Project(v, 2))),
+						  S.S_Var(newVar', SOME(S.E_Tuple([posVecVar, posCellVar,faceCellVar, newVar])))],
 						 newVar')
 			   (* end case*))
 		 else raise Fail "impossible convert: wrong fems"
@@ -1523,6 +1526,183 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 	 | doit (S.E_LoadImage(t, s, i)) = none(S.E_LoadImage(t,s,i))
 	 | doit (S.E_InsideImage(v1,v2,i)) = none(S.E_InsideImage(cvtVar v1, cvtVar v2, i))
 	 | doit (S.E_FieldFn _) = raise Fail "FIXME: field function"
+	 | doit (S.E_LoadFem(data, v1, v2)) =
+	   if FD.baseFem data
+	   then (case (getFemPres v1, retPres)
+		  of (Base(d', SOME(v)), Base(d'', SOME(v'))) => none (S.E_Var(cvtVar v))
+		   | (Base(d', SOME(v)), ALL(d'')) => let val (newVar, newStm)  = globCvt(d', v1)
+						      in ([newStm], S.E_Var(newVar)) end
+		   | (ALL(d'), ALL(d'')) => none (S.E_Var(cvtVar v1))
+		   | _ => raise Fail "conversion not allowed for LoadFem"
+		(* end case*))
+	   else (case (getFemPres v1, retPres, data)
+		  of (Base(d', SOME(v)), Base(d'', SOME(v')), FD.MeshCell _) => none (S.E_Var(cvtVar v2))
+		   | (Base(d', SOME(v)), Base(d'', SOME(v')), FD.FuncCell _) => none (S.E_Var(cvtVar v2))
+		   | (Base(d', SOME(v)), ALL(d''), FD.MeshCell _) =>
+		     let val (newVar, newStm)  = globCvt(d', v1)
+			 val tupleExp = S.E_Tuple([cvtVar v2, newVar])
+		     in ([newStm], tupleExp) end
+		   | (Base(d', SOME(v)), ALL(d''), FD.FuncCell _) =>
+		     let val (newVar, newStm)  = globCvt(d', v1)
+			 val tupleExp = S.E_Tuple([cvtVar v2, newVar])
+		     in ([newStm], tupleExp) end
+		   | (_, _, FD.MeshPos _) => raise Fail "impossible"
+		   | (_, _, FD.RefCell _) => raise Fail "impossible"
+		   | (ALL(d'), ALL(d''), _) => none (S.E_Tuple([cvtVar v2, cvtVar v1]))
+		(* end case*))
+	 | doit (S.E_ExtractFem(v, data)) =
+	   let val Ty.T_Fem(data') = V.typeOf v
+	   in
+	    if FD.baseFem data
+	    then (case (getFemPres v, retPres)
+		   of (Base(d, SOME(v')), Base(d', SOME(v''))) =>
+		      ([], S.E_Var((Option.valOf o globDep) v'))
+		    | (Base(d, SOME(v')), ALL(d')) =>
+		      let val SOME(depV) = globDep v'
+			  val (newVar, newStm) = globCvt(data, depV)
+		      in ([newStm], S.E_Var(newVar)) end
+		    | (ALL(d), ALL(d')) =>
+		      let val (stms, newVar) = globDepToDep(d, cvtVar v)
+		      in (stms, S.E_Var(newVar)) end
+		 (* end case*))
+	    else (case (getFemPres v, retPres, data)
+		   of (_, _, FD.RefCell _) => raise Fail "impossible"
+		    | (Base(d', SOME(v1)), Base(d'', SOME(v1')),  _) => none (S.E_Var(cvtVar v1))
+		    | (Base(d', SOME(v1)), ALL(d''),  _) =>
+		      let val (newVar, newStm)  = globCvt(d', v1)
+		      in ([newStm], S.E_Var(newVar)) end
+		    | (ALL(d'), ALL(d''), FD.MeshCell _) =>
+		      ([], S.E_Project(cvtVar v, 1))
+		    | (ALL(d'), ALL(d''), FD.FuncCell _) =>
+		      ([], S.E_Project(cvtVar v, 1))
+		    | (ALL(d'), ALL(d''), FD.MeshPos  _) =>
+		      ([], S.E_Project(cvtVar v, 4))
+		 (* end case*))
+	   end
+	 | doit (S.E_ExtractFemItem(v, ty, (opt, data))) =
+	   if FO.arity opt <> 1
+	   then raise Fail "validation error"
+	   else if FD.baseFem data
+	   then (case getFemPres v
+		  of Base(_, SOME(v')) =>
+		     none (S.E_ExtractFemItem(cvtVar v', ty, (opt, data)))
+		   | ALL(_) =>
+		     let val (stms, newVar) = depToV(data, cvtVar v)
+		     in (stms, S.E_ExtractFemItem(newVar, ty, (opt, data)))
+		     end
+		(* end case*))
+	   else
+	    (case (opt, getFemPres v, data)
+	      of (FO.CellIndex, Base _, FD.MeshCell _) => none (S.E_Var(cvtVar v))
+	      |  (FO.CellIndex, Base _, FD.FuncCell _) => none (S.E_Var(cvtVar v))
+	      |  (FO.CellIndex, _, FD.MeshPos _) => projectCvt v 1
+	      |  (FO.CellIndex, ALL _, FD.MeshCell _) =>
+		 projectCvt v 0
+	      |  (FO.CellIndex, ALL _, FD.FuncCell _ ) =>
+		 projectCvt v 0
+	      |  (FO.RefPos, _, FD.MeshPos _) =>
+		 projectCvt v 0
+	      |  (FO.InvalidBuild, _, _) => raise Fail "use with N"
+	      |  (FO.RefCell, _, _) => raise Fail "invalid"
+	      |  (FO.PosEntryFacet, _, _) =>
+		 projectCvt v 2
+	    (* end case*))
+	 | doit (S.E_ExtractFemItem2(v1, v2, ty, outTy, (opt, data))) =
+	   if FO.arity opt <> 2
+	   then raise Fail "validation error"
+	   else if FD.baseFem data
+	   then (case getFemPres v1
+		  of Base(_, SOME(v1')) =>
+		     none (S.E_ExtractFemItem2(cvtVar v1', cvtVar v2, ty, outTy, (opt, data)))
+		   | ALL(_) =>
+		     let val (stms, newVar) = depToV(data, cvtVar v1)
+		     in (stms, S.E_ExtractFemItem2(newVar, v2, ty, outTy, (opt, data)))
+		     end
+		(* end case*))
+	   else raise Fail "no extractFemItem2s access non base fem data"
+	 (*RefBuild, InvalidBuild, InvalidBuildBoundary, AllBuild, *CellFaceCell*)
+	 | doit (S.E_ExtractFemItemN(vs, tys, ty, (opt, data), NONE)) = (*we never use the function here - for now*)
+	   if FO.arity opt <> (List.length vs)
+	   then raise Fail "invalid arity for fem opt"
+		      (*function to get the int of the fem involved...*)
+	   else
+	    let
+	     val femArg :: args = vs
+	     val femArg' = cvtVar femArg
+	     val args' = List.map cvtVar args
+	     val nanVar = V.new("nan", Var.LocalVar, Ty.realTy)
+	     val nanDec = S.S_Var(nanVar, SOME(S.E_Lit(Literal.Real(RealLit.nan))))
+	     val nanVecVar = V.new("nanVec", Var.LocalVar, Ty.T_Tensor[3])
+	     val nanVecDec = S.S_Var(nanVecVar, SOME(S.E_Tensor([nanVar, nanVar, nanVar], Ty.T_Tensor[3])))
+	     val neg1 = V.new("neg1", Var.LocalVar, Ty.T_Int)
+	     val neg1Dec = S.S_Var(neg1, SOME(S.E_Lit(Literal.intLit (~1))))
+
+	     val presRecover = (case (getFemPres femArg, retPres)
+				 of (Base(_, NONE), _) => raise Fail "impossible"
+				  | (_, Base(_, NONE)) => raise Fail "impossible"
+				  | (Base(_, SOME _), Base(_, SOME _)) => NONE
+				  | (Base(_, SOME v), ALL(data')) =>
+				    let val (newVar, newStm)  = globCvt(data', cvtVar v)
+				    in SOME([newStm], newVar) 
+				    end
+				  | (ALL(_), ALL(_)) => SOME([], femArg')
+				  | (ALL _, NOTHING) =>
+				    let val (stms, newVar) = depToV(data, cvtVar femArg) (*TODO:is this right*)
+				    in SOME(stms, newVar)
+				    end
+				  | (Base(_, SOME v), NOTHING) => SOME([], cvtVar v)
+			       (* end case*))
+	     val startStms = nanDec :: nanVecDec :: neg1Dec :: []
+
+	    in
+	     (case opt
+	       of FO.RefBuild =>
+		  let
+		   val [cell, refPos, facet] = List.map cvtVar args
+		  in
+		   (case presRecover
+		     of NONE =>  (startStms, S.E_Tuple([refPos, cell, facet]))
+		      | SOME(stms, dataVar) => (startStms@stms, S.E_Tuple([refPos, cell, facet, dataVar]))
+		   (* end case*))
+		  end
+		| FO.InvalidBuild =>
+		  let
+		   val [] = List.map cvtVar args
+		  in
+		   (case presRecover
+		     of NONE =>  (startStms, S.E_Tuple([nanVecVar, neg1, neg1]))
+		      | SOME(stms, dataVar) => (startStms@stms, S.E_Tuple([nanVecVar, neg1, neg1, dataVar]))
+		   (* end case*))
+		  end
+		| FO.InvalidBuildBoundary =>
+		  let
+		   val [refPos, facet] = List.map cvtVar vs
+		  in
+		   (case presRecover
+		     of NONE => (startStms, S.E_Tuple([refPos, neg1, facet]))
+		     | SOME(stms, dataVar) => (startStms@stms, S.E_Tuple([refPos, neg1, facet, dataVar]))
+		   (* end case*))
+		  end
+		| FO.AllBuild =>
+		  let
+		   val [refPos, cell, facet] = (case args
+						 of [cellInt, refPos, worldPos, facetIdExp] => [refPos, cellInt, facetIdExp]
+						  | [cellIntExp, refPos, worldPos] => [refPos, cellIntExp, neg1]
+						  | _ => raise Fail "invalid AllBuild config"
+					       (* end case*))
+		  in
+		   (case presRecover
+		     of NONE => (startStms, S.E_Tuple([refPos, cell, facet]))
+		      | SOME(stms, dataVar) => (startStms@stms, S.E_Tuple([refPos, cell, facet, dataVar]))
+		   (* end case*))
+		  end
+		| FO.CellFaceCell =>
+		  (case presRecover
+		    of NONE => raise Fail "impossible: CellFaceCell "
+		     | SOME(stms, dataVar) => (startStms@stms, S.E_ExtractFemItemN(dataVar::args', tys, ty, (opt, data), NONE))
+		  (* end case*))
+	     (* end case*))
+	    end
 	 (*Plan: loadFem - ExtractFem should be a straight forward translation using the new cvt expression...
 	  hmm: there is a lot of complexity here.Reread above.
 	  maybe not: for loads, we convert forwards

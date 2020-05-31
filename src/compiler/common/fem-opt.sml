@@ -55,6 +55,8 @@ structure FemOpt : sig
 	   (*Range of allowed stages*)
 	   val stageRange : femOption -> stages * stages
 
+	   val arity : femOpts -> int
+
 						    
 						    
 	  end = struct
@@ -134,11 +136,11 @@ fun arity (NumCell) = 1
   | arity (RefCell) = 1
   | arity (RefPos) = 1
   | arity (RefBuild) = 3
-  | arity (InvalidBuild) = 1
+  | arity (InvalidBuild) = 1 (* still uses N*)
   | arity (InvalidBuildBoundary) = 3
   | arity (AllBuild) = 4
-  | arity (NearbyCellQuery(_)) = 2
-  | arity (CellFaceCell) = 3
+  | arity (NearbyCellQuery(_)) = 2 
+  | arity (CellFaceCell) = 2 (*still uses N*)
   | arity (InsideInsert(_)) = 2
   | arity (PosEntryFacet) = 1
   | arity (CellData(_)) = 2
