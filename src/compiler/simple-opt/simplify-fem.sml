@@ -1196,7 +1196,11 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 				   
   (*introduce check pres function -> use in toAll -> introduce in cvtExp to see what is needed.
    use inductive assumption: if a var is called somwhere, it has already conformed to its femPres*)
-  fun cvtBody(block : S.block, newDefs : S.func_def list ref, globCvt, globDep, globDepToDep, depToV) =
+  fun cvtBody(block : S.block, newDefs : S.func_def list ref,
+	      globCvt : FD.femType * V.t -> (V.t * S.stmt),
+	      globDep : V.t -> V.t option,
+	      globDepToDep : FD.femType * V.t -> (S.stmt list * V.t),
+	      depToV : FD.femType  * V.t -> (S.stmt list * V.t)) =
       let
        val S.Block{code, props} = block
        val code' = List.concatMap (fn x => cvtStm(x, newDefs, globCvt, globDep, globDepToDep, depToV)) code
