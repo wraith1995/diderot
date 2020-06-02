@@ -268,6 +268,64 @@ return to Strands until Fixed
        S.Func{f=f, params=params',body=doBlock(body)}
       end
 
+  (*Property and function to record order of functions*)
+  local
+   val {clrFn, getFn, peekFn, setFn} = F.newProp(fn v => [] : F.t list)
+   fun isolate [] = []
+     | isolate (l as x::xs) =
+       let fun remove (x,[]) = []
+             | remove (x,l as y::ys) = if F.same(x,y)
+                                       then remove(x,ys)
+                                       else y::remove(x,ys)
+       in
+        x::isolate(remove(x,xs))
+       end
+   fun doStm(f, S.S_Var(_, SOME(S.E_Apply(f', _)))) = let
+    val fs = getFn(f')
+   in
+    setFn(f, isolate(f'::fs))
+   end
+     | doStm (f, S.S_Assign(_, S.E_Apply(f', _))) = let
+      val fs = getFn(f')
+     in
+      setFn(f, isolate(f'::fs))
+     end
+     | doStm (f, S.S_IfThenElse(_, b1, b2)) = (doBlock(f, b1); doBlock(f, b2))
+     | doStm (f, S.S_Foreach(_,_, b)) = doBlock(f, b)
+     | doStm _ = ()
+   and doBlock(f, S.Block{code,...}) = List.app (fn x => doStm(f,x)) code
+   fun defToName(S.Func{f,...}) = f
+
+   fun getAllDeps(f : F.t) =
+       let
+	val involved =  getFn f
+	val rest = isolate(List.concatMap getAllDeps involved)
+       in
+	involved@rest
+       end
+
+   fun orderFunction(def1, def2) =
+       let
+	val f1 = defToName(def1)
+	val f2 = defToName(def2)
+	val deps1 = getAllDeps(f1)
+	val deps2 = getAllDeps(f2)
+	val f1ltf2 = List.exists (fn x => F.same(x, f1)) deps2
+	val f2ltf1 = List.exists (fn x => F.same(x, f2)) deps1
+       in
+	if f1ltf2
+	then true
+	else if f2ltf1
+	then false
+	else false
+       end
+
+  in
+  val defToName = defToName
+  fun procFuncDef (S.Func{f, body,...}) = doBlock(f, body) (* apply this to defs *)
+  fun sortFuncDef defs =  ListMergeSort.sort orderFunction defs
+  end
+
 
   (*Data structure and helper functions for symbolically reasoning about fem data*)
   datatype femPres = Base of FD.femType * V.t option | ALL of FD.femType | NOTHING (* all, nothing, or one thing *)
@@ -1799,12 +1857,24 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 			      updateM=updateM', stabilizeM=stabilizeM'}
        end
 
+       local
+	val allDefs = funcs@ (!newDefs)
+	val _ = List.app procFuncDef allDefs
+	val allDefs' = sortFuncDef allDefs
+       in
+       val funcs' = List.filter (fn f => F.useCount (defToName f) > 0) allDefs'
+       end
+
+       (*clean up functions:
+	 sort them.
+	 clean them.
+	*)
 
 
       in
        S.Program{props=props, consts=consts, inputs=inputs, constInit=constInit, globals=globals'',
 		 globInit=globalInit',
-		 funcs=funcs, strand=strand', create=create', start=start', update=update'}
+		 funcs=funcs', strand=strand', create=create', start=start', update=update'}
       end
 
   fun analysisOnly prog =
