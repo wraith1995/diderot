@@ -1364,7 +1364,6 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 			   (* end case*))
 	    val (stmss, vs') = ListPair.unzip stmsXvs
 	    val stms = List.concat stmss
-		  
 	   in
 	    stms@[S.S_New(a, vs')]
 	   end
@@ -1779,11 +1778,6 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 	 function: depToV: takes an int representing a FEM and translates it from an int into a the actual FEM
 	 Note: the last two basically just build access to an array.
 	*)
-      (*3. strand do:
-	 3.1. params, state, etc
-         4. Start, update
-       
-       *)
        local
 	val S.Strand{name, params, spatialDim, state, stateInit, startM, updateM, stabilizeM} = strand
 
