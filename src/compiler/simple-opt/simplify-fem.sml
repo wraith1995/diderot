@@ -1745,11 +1745,14 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
        (*femGlobToI, femItoGlob, femItoDepIImpl,*)
        val (newGlobals, newInits,
 	    globCvt, findDep, globDepToDep, depToV) = buildGlobalFemTables tbs
-       (*We need:
-	function: globCvt that takes a known global and produces the int for it - femGlobToIImpl
-       function: globDep - we know from the table
-       globDepToDep: fem, global and produces code to translate an existing int to another int that is the dep
-       depToV: takes an int and translates it from an int into a the actual FEM.
+       (*We get:
+	 newGlobals: list of global arrays of fems and ints - these allow us to translate globals to ints and get dependencies and fems from inits; we have essentialy maps from fem -> int and int -> int
+	 newInits: initiatlization of these globals
+	 function: globCvt: that takes a known global and produces the int for it - essetnialy inverts the fem-> int array
+	 function: globDep: takes a fem var and produces the dep var -> goes from fem -> int to int-> int and int -> fem without hassel
+	 function: globDepToDep: takes a fem and an int representing it to an int representing the dep
+	 function: depToV: takes an int representing a FEM and translates it from an int into a the actual FEM
+	 Note: the last two basically just build access to an array.
 	*)
        fun doBlock(block : S.block, newDefs : S.func_def list ref)
 	   = cvtBody(block, newDefs, globCvt, findDep, globDepToDep, depToV)
