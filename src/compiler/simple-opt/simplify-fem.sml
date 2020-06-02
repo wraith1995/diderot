@@ -1740,11 +1740,20 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
        val S.Program{props, consts, inputs, constInit, globals,
 		     globInit, funcs, strand, create, start, update} = prog
 
-       (*Setup globals for managing glob arrays and deps: functions to support this later.*)
-       val S.Block({code,...}) = globInit
-       (*femGlobToI, femItoGlob, femItoDepIImpl,*)
+       (*setup new globals to manage fems*)
        val (newGlobals, newInits,
 	    globCvt, findDep, globDepToDep, depToV) = buildGlobalFemTables tbs
+       fun doBlock(block : S.block, newDefs : S.func_def list ref)
+	   = cvtBody(block, newDefs, globCvt, findDep, globDepToDep, depToV)
+       val newDefs = ref []
+       fun doBlock'(b) = doBlock(b, newDefs)
+       val globals' = List.map cvtVar globals
+       val globals'' = newGlobals@globals'
+       local
+	val S.Block({code,props}) = doBlock'(globInit)
+       in
+       val globalInit' = S.Block{code=newInits@code,props=props}
+       end
        (*We get:
 	 newGlobals: list of global arrays of fems and ints - these allow us to translate globals to ints and get dependencies and fems from inits; we have essentialy maps from fem -> int and int -> int
 	 newInits: initiatlization of these globals
@@ -1754,18 +1763,19 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 	 function: depToV: takes an int representing a FEM and translates it from an int into a the actual FEM
 	 Note: the last two basically just build access to an array.
 	*)
-       fun doBlock(block : S.block, newDefs : S.func_def list ref)
-	   = cvtBody(block, newDefs, globCvt, findDep, globDepToDep, depToV)
+       (*1. fix old inits
+	 2. produce funcs
+	 3. strand do:
+	 3.1. params, state, etc
+         4. Start, update
+       
+	*)
 
 
-       (* build exp, statement, block runner with function returns*)
-       (*run on all*)
-       (*Clean up functions*)
-       val _ =()
 
       in
-       S.Program{props=props, consts=consts, inputs=inputs, constInit=constInit, globals=newGlobals@globals,
-		 globInit=S.Block{code=newInits@code, props=PropList.newHolder ()},
+       S.Program{props=props, consts=consts, inputs=inputs, constInit=constInit, globals=globals'',
+		 globInit=globalInit',
 		 funcs=funcs, strand=strand, create=create, start=start, update=update}
       end
 
