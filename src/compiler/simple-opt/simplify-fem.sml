@@ -1195,7 +1195,6 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
    val {clrFn, getFn, peekFn, setFn} = V.newProp(fn v => V.new(V.nameOf v, V.kindOf v, cvtTy(V.typeOf v, getFemPres v)))
   in
   val cvtVar = getFn
-  val setVar = setFn
   end
 
   fun checkMerge(pres1, pres2) =
@@ -1212,79 +1211,11 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
   in
    !ret 
   end
-				   
-  (*introduce check pres function -> use in toAll -> introduce in cvtExp to see what is needed.
-   use inductive assumption: if a var is called somwhere, it has already conformed to its femPres*)
-  fun cvtBody(block : S.block, newDefs : S.func_def list ref,
-	      globCvt : FD.femType * V.t -> (V.t * S.stmt), (*given a glob, convert it to an intVar and a stm setting up the int*)
-	      globDep : V.t -> V.t option, (* get a dependency of a global*)
-	      globDepToDep : FD.femType * V.t -> (S.stmt list * V.t), (*given a global,*)
-	      depToV : FD.femType  * V.t -> (S.stmt list * V.t)) = (**)
+
+  fun makeConversions(globCvt, globDep, globDepToDep, depToV) =
       let
-       val S.Block{code, props} = block
-       val code' = List.concatMap (fn x => cvtStm(x, newDefs, globCvt, globDep, globDepToDep, depToV)) code
-      in
-       S.Block{code=code', props=props}
-      end
-  and cvtStm(stm : S.stmt, newDefs : S.func_def list ref, globCvt, globDep, globDepToDep, depToV) =
-      let
-       val cvtExp = fn (y,z) => fn x => cvtExp(x, newDefs, y, z, globCvt, globDep, globDepToDep, depToV)
-       val cvtBody' = fn x => cvtBody(x, newDefs, globCvt, globDep, globDepToDep, depToV)
-       val lst = fn x => [x]
-       fun doit(S.S_Var(v, optE)) = (case Option.map (cvtExp (getFemPres v, v)) optE
-				      of SOME((stmts, vr)) => stmts@[S.S_Var(cvtVar v, SOME(vr))]
-				       | NONE => [S.S_Var(cvtVar v, NONE)]
-				    (* end case*))
-	 | doit (S.S_Assign(v, exp)) = let val (stms,exp) = cvtExp (getFemPres v, v) exp in stms@[S.S_Assign(cvtVar v, exp)] end
-	 | doit (S.S_Foreach(v1, v2, block)) = [S.S_Foreach(cvtVar v1, cvtVar v2, cvtBody' block)]
-	 | doit (S.S_IfThenElse(v, b1, b2)) = [S.S_IfThenElse(cvtVar v, cvtBody' b1, cvtBody' b2)]
-	 | doit (S.S_New(a,vs)) = [S.S_New(a, List.map cvtVar vs)]
-	 | doit (S.S_KillAll) = lst (S.S_KillAll)
-	 | doit (S.S_StabilizeAll) = lst(S.S_StabilizeAll)
-	 | doit (S.S_Continue) = lst (S.S_Continue)
-	 | doit (S.S_Die) = lst (S.S_Die)
-	 | doit (S.S_Stabilize) = lst (S.S_Stabilize)
-	 | doit (S.S_Return(v)) = lst (S.S_Return(cvtVar v))
-	 | doit (S.S_Print(vs)) = lst (S.S_Print(List.map cvtVar vs))
-	 | doit (S.S_MapReduce(mrlst)) =
-	   let
-	    fun translateReduce(S.MapReduce{result, reduction, mapf,args, source, domain}) =
-		let
-		 val args' = List.map cvtVar args
-		 val S.Func{f, params, body} = mapf
-		 val defs = ref []
-		 val test = Option.isSome(cvtFun(f, args, result, defs, (fn (x,y) => cvtBody(x,y, globCvt, globDep, globDepToDep, depToV)), cvtVar))
-		 val mapf' = if test
-			     then let val def::vs = !defs (* our def is on top*)
-				      val _ = newDefs := vs@ (!newDefs)
-				  in
-				   def
-				  end
-			     else mapf
-		in
-		 ([], S.MapReduce{result=cvtVar result,
-				  reduction=reduction,
-				  mapf = mapf',
-				  source=source,
-				  args=args',
-				  domain=domain})
-		end
-	   in
-	    lst (S.S_MapReduce(mrlst))
-	   end
-      in
-       doit(stm)
-      end
-  and cvtExp(e : S.exp, newDefs : S.func_def list ref,
-	     retPres : femPres, retVar : V.t,
-	     globCvt : FD.femType * V.t -> (V.t * S.stmt),
-	     globDep : V.t -> V.t option,
-	     globDepToDep : FD.femType * V.t -> (S.stmt list * V.t),
-	     depToV : FD.femType  * V.t -> (S.stmt list * V.t)) : S.stmt list * S.exp =
-      let
-       val cvtBody = fn (x,y) => cvtBody(x, y, globCvt, globDep, globDepToDep, depToV)
        fun projectCvt v i = ([], S.E_Project(cvtVar v, i))
-       fun toAll'(v : V.t, ty, pres, targetPres) = (*var, currentTy, currentPres, presToconvert it to*)
+       fun toAll'(v : V.t, ty, pres, targetPres) = 
 	   (case (ty, pres, targetPres)
 	     of (_, NOTHING, NOTHING) => ([], v)
 	      | (Ty.T_Sequence(ty', SOME(k)), Array(p), Array(p')) =>
@@ -1365,7 +1296,7 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 		 val posVecVar = V.new("refPos", Var.LocalVar, Ty.vecTy dim)
 		 val posCellVar = V.new("cell", Var.LocalVar, Ty.T_Int)
 		 val faceCellVar = V.new("cell", Var.LocalVar, Ty.T_Int)
-				       (*get a few accs*)
+					(*get a few accs*)
 		in
 		 if FD.same(d', d'')
 		 then if FD.baseFem d
@@ -1388,14 +1319,101 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 	      | (Ty.T_Fem(d), ALL(d'), Base(d'', SOME v1)) => raise Fail "impossible conversion: ALL -> base; could be implemented; could be useful for apply?; if base type, then find it via indexing; if regular type, discard...."
 	   (* end case*))
        fun toAll(v : V.t, retPres) =
-	    if checkMerge(getFemPres v, retPres)
-	    then toAll'(cvtVar v, V.typeOf v, getFemPres v,retPres)
-	    else ([], v)
+	   if checkMerge(getFemPres v, retPres)
+	   then toAll'(cvtVar v, V.typeOf v, getFemPres v,retPres)
+	   else ([], v)
 
        fun toAlls(vs : V.t list, target : femPres) =
 	   let val (stmss, vs) = ListPair.unzip (List.map (fn x => toAll(x, target)) vs)
 	   in (List.concat stmss, vs) end
-
+      in
+       (toAll', toAll, toAlls)
+      end
+	
+  (*introduce check pres function -> use in toAll -> introduce in cvtExp to see what is needed.
+   use inductive assumption: if a var is called somwhere, it has already conformed to its femPres*)
+  fun cvtBody(block : S.block, newDefs : S.func_def list ref, strandParams : femPres list option,
+	      globCvt : FD.femType * V.t -> (V.t * S.stmt), (*given a glob, convert it to an intVar and a stm setting up the int*)
+	      globDep : V.t -> V.t option, (* get a dependency of a global*)
+	      globDepToDep : FD.femType * V.t -> (S.stmt list * V.t), (*given a global,*)
+	      depToV : FD.femType  * V.t -> (S.stmt list * V.t)) = (**)
+      let
+       val S.Block{code, props} = block
+       val code' = List.concatMap (fn x => cvtStm(x, newDefs, strandParams, globCvt, globDep, globDepToDep, depToV)) code
+      in
+       S.Block{code=code', props=props}
+      end
+  and cvtStm(stm : S.stmt, newDefs : S.func_def list ref, strandParams, globCvt, globDep, globDepToDep, depToV) =
+      let
+       val cvtExp = fn (y,z) => fn x => cvtExp(x, newDefs, strandParams, y, z, globCvt, globDep, globDepToDep, depToV)
+       val cvtBody' = fn x => cvtBody(x, newDefs, strandParams, globCvt, globDep, globDepToDep, depToV)
+       val lst = fn x => [x]
+       fun doit(S.S_Var(v, optE)) = (case Option.map (cvtExp (getFemPres v, v)) optE
+				      of SOME((stmts, vr)) => stmts@[S.S_Var(cvtVar v, SOME(vr))]
+				       | NONE => [S.S_Var(cvtVar v, NONE)]
+				    (* end case*))
+	 | doit (S.S_Assign(v, exp)) = let val (stms,exp) = cvtExp (getFemPres v, v) exp in stms@[S.S_Assign(cvtVar v, exp)] end
+	 | doit (S.S_Foreach(v1, v2, block)) = [S.S_Foreach(cvtVar v1, cvtVar v2, cvtBody' block)]
+	 | doit (S.S_IfThenElse(v, b1, b2)) = [S.S_IfThenElse(cvtVar v, cvtBody' b1, cvtBody' b2)]
+	 | doit (S.S_New(a,vs)) =
+	   let
+	    val (toAll', toAll, toAlls) = makeConversions(globCvt, globDep, globDepToDep, depToV)
+	    val stmsXvs = (case strandParams
+			of SOME(strandParams') => (ListPair.map toAll (vs, strandParams'))
+			 | NONE => raise Fail "impossible"
+			   (* end case*))
+	    val (stmss, vs') = ListPair.unzip stmsXvs
+	    val stms = List.concat stmss
+		  
+	   in
+	    stms@[S.S_New(a, vs')]
+	   end
+	 | doit (S.S_KillAll) = lst (S.S_KillAll)
+	 | doit (S.S_StabilizeAll) = lst(S.S_StabilizeAll)
+	 | doit (S.S_Continue) = lst (S.S_Continue)
+	 | doit (S.S_Die) = lst (S.S_Die)
+	 | doit (S.S_Stabilize) = lst (S.S_Stabilize)
+	 | doit (S.S_Return(v)) = lst (S.S_Return(cvtVar v))
+	 | doit (S.S_Print(vs)) = lst (S.S_Print(List.map cvtVar vs))
+	 | doit (S.S_MapReduce(mrlst)) =
+	   let
+	    fun translateReduce(S.MapReduce{result, reduction, mapf,args, source, domain}) =
+		let
+		 val args' = List.map cvtVar args
+		 val S.Func{f, params, body} = mapf
+		 val defs = ref []
+		 val test = Option.isSome(cvtFun(f, args, result, defs, (fn (x,y) => cvtBody(x,y, NONE, globCvt, globDep, globDepToDep, depToV)), cvtVar))
+		 val mapf' = if test
+			     then let val def::vs = !defs (* our def is on top*)
+				      val _ = newDefs := vs@ (!newDefs)
+				  in
+				   def
+				  end
+			     else mapf
+		in
+		 ([], S.MapReduce{result=cvtVar result,
+				  reduction=reduction,
+				  mapf = mapf',
+				  source=source,
+				  args=args',
+				  domain=domain})
+		end
+	   in
+	    lst (S.S_MapReduce(mrlst))
+	   end
+      in
+       doit(stm)
+      end
+  and cvtExp(e : S.exp, newDefs : S.func_def list ref, strandParams,
+	     retPres : femPres, retVar : V.t,
+	     globCvt : FD.femType * V.t -> (V.t * S.stmt),
+	     globDep : V.t -> V.t option,
+	     globDepToDep : FD.femType * V.t -> (S.stmt list * V.t),
+	     depToV : FD.femType  * V.t -> (S.stmt list * V.t)) : S.stmt list * S.exp =
+      let
+       fun projectCvt v i = ([], S.E_Project(cvtVar v, i))
+       val cvtBody = fn (x,y) => cvtBody(x, y, strandParams, globCvt, globDep, globDepToDep, depToV)
+       val (toAll', toAll, toAlls) = makeConversions(globCvt, globDep, globDepToDep, depToV)
        fun maybeCvt(exp, cvtExp, currentPres, expectedPres) = if checkMerge(currentPres, expectedPres)
        							      then let
 							       val oldTy = S.typeOf(exp)
@@ -1444,14 +1462,12 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 	     val (stms1, sy') = if test1
 				then toAll(syOld, retPres)
 				else ([], sy)
-	     val _ = setVar(syOld, sy') (*remove sy*)
 	     val (stms2, a') = if test2
 				then toAll(aOld, aPesDest)
 				else ([], aOld)
-	     val _ = setVar(aOld, a)
 			    
 	    in
-	     (stms1@stms2, S.E_Prim(f, marg, List.map cvtVar vs, t'))
+	     (stms1@stms2, S.E_Prim(f, marg, [sy', a], t'))
 	    end
 	    else if Var.same(BasisVars.at_Td, f)
 	    then let
@@ -1464,14 +1480,12 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 	     val (stms1, sy') = if test1
 				then toAll(syOld, retPres)
 				else ([], sy)
-	     val _ = setVar(syOld, sy') (*remove sy*)
 	     val (stms2, a') = if test2
 				then toAll(aOld, aPesDest)
 				else ([], aOld)
-	     val _ = setVar(aOld, a)
 			    
 	    in
-	     (stms1@stms2, S.E_Prim(f, marg, List.map cvtVar vs, t'))
+	     (stms1@stms2, S.E_Prim(f, marg, [a', sy'], t'))
 	    end
 	    else if Var.same(BasisVars.at_dd, f)
 	    then let
@@ -1485,10 +1499,8 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 	     val (stms2, sy2') = if test2
 				 then toAll(sy2Old, retPres)
 				 else ([], sy2)
-	     val _ = setVar(sy1Old, sy1');
-	     val _ = setVar(sy2Old, sy2');
 	    in
-	     (stms1@stms2, S.E_Prim(f, marg, List.map cvtVar vs, t'))
+	     (stms1@stms2, S.E_Prim(f, marg, [sy1', sy2'], t'))
 	    end
 	    else none (S.E_Prim(f, marg, vs', t'))
 	   end
@@ -1743,10 +1755,10 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
        (*setup new globals to manage fems*)
        val (newGlobals, newInits,
 	    globCvt, findDep, globDepToDep, depToV) = buildGlobalFemTables tbs
-       fun doBlock(block : S.block, newDefs : S.func_def list ref)
-	   = cvtBody(block, newDefs, globCvt, findDep, globDepToDep, depToV)
+       fun doBlock(block : S.block, newDefs : S.func_def list ref, params)
+	   = cvtBody(block, newDefs, params, globCvt, findDep, globDepToDep, depToV)
        val newDefs = ref []
-       fun doBlock'(b) = doBlock(b, newDefs)
+       fun doBlock'(b) = doBlock(b, newDefs, NONE)
        val globals' = List.map cvtVar globals
        val globals'' = newGlobals@globals'
        local
@@ -1754,6 +1766,10 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
        in
        val globalInit' = S.Block{code=newInits@code,props=props}
        end
+
+       val start' = Option.map doBlock' start
+       val update' = Option.map doBlock' update
+
        (*We get:
 	 newGlobals: list of global arrays of fems and ints - these allow us to translate globals to ints and get dependencies and fems from inits; we have essentialy maps from fem -> int and int -> int
 	 newInits: initiatlization of these globals
@@ -1763,20 +1779,38 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 	 function: depToV: takes an int representing a FEM and translates it from an int into a the actual FEM
 	 Note: the last two basically just build access to an array.
 	*)
-       (*1. fix old inits
-	 2. produce funcs
-	 3. strand do:
+      (*3. strand do:
 	 3.1. params, state, etc
          4. Start, update
        
-	*)
+       *)
+       local
+	val S.Strand{name, params, spatialDim, state, stateInit, startM, updateM, stabilizeM} = strand
+
+	fun doBlock''(b) = doBlock(b, newDefs, SOME(List.map getFemPres params))
+	val codeStms : S.block = Create.createCode create
+	val codeStms' = doBlock'' codeStms
+
+	val params' = List.map cvtVar params
+	val state' = List.map cvtVar state
+	val stateInit' = doBlock'' stateInit
+	val updateM' = doBlock'' updateM
+	val startM' = Option.map doBlock'' startM
+	val stabilizeM' = Option.map doBlock'' stabilizeM
+				   (*need to merge params... here and create*)
+       in
+       val create' = Create.Create {dim = Create.arrayDim create, code=codeStms'}
+       val strand' = S.Strand{name=name, spatialDim=spatialDim, params=params', state=state',
+			      stateInit=stateInit', startM=startM',
+			      updateM=updateM', stabilizeM=stabilizeM'}
+       end
 
 
 
       in
        S.Program{props=props, consts=consts, inputs=inputs, constInit=constInit, globals=globals'',
 		 globInit=globalInit',
-		 funcs=funcs, strand=strand, create=create, start=start, update=update}
+		 funcs=funcs, strand=strand', create=create', start=start', update=update'}
       end
 
   fun analysisOnly prog =
