@@ -1041,6 +1041,7 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 			
   fun buildGlobalFemTables(femTable : (FD.femType, V.t list) HT.hash_table, femDep : SimpleVar.t VTbl.hash_table) =
       let
+       fun findDep ( v1 : V.t) : V.t option = VTbl.find femDep v1
        val initsAndVarTbl = HT.mapi (fn (d, vs) =>
 				     let
 				      val n = List.length vs
@@ -1117,6 +1118,23 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 	   in
 	    (accVar', accVar, [getI, getD])
 	   end
+       fun globDepToDep(fem, var) =
+	   let
+	    val dep = Option.valOf (FD.dependencyOf fem)
+	    val (_, depInt, stms) = femItoDepIImpl(fem, dep, var)
+	   in
+	    (stms, depInt)
+	   end
+
+       fun intGlobToVar(fem, var) = (*given an idx, produce the glob assocaited to it*)
+	   let
+	    val (femTable, _) = HT.lookup initsAndVarTbl fem
+	    val accExp = S.E_Prim(BasisVars.subscript, [], [femTable, var], Ty.T_Fem(fem))
+	    val accVar = V.new("depFem", Var.LocalVar, Ty.T_Fem(fem))
+	    val getD = S.S_Var(accVar, SOME(accExp))
+	   in
+	    ([getD], accVar)
+	   end
        fun femGlobToIImpl (fem, v) = (*given a global, find the idx associated to it.*)
 	   let
 	    val i = Option.valOf (femGlobToI(fem, v)) handle ex => raise ex
@@ -1128,7 +1146,8 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 	    (litVar, litDec)
 	   end
       in
-       (newGlobals, newInits, femGlobToI, femItoGlob, femItoDepIImpl,femGlobToIImpl)
+       (*femGlobToI, femItoGlob, femItoDepIImpl*)
+       (newGlobals, newInits,femGlobToIImpl, findDep, globDepToDep, intGlobToVar)
       end
 
   fun femTy(d, isBase) =
@@ -1197,10 +1216,10 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
   (*introduce check pres function -> use in toAll -> introduce in cvtExp to see what is needed.
    use inductive assumption: if a var is called somwhere, it has already conformed to its femPres*)
   fun cvtBody(block : S.block, newDefs : S.func_def list ref,
-	      globCvt : FD.femType * V.t -> (V.t * S.stmt),
-	      globDep : V.t -> V.t option,
-	      globDepToDep : FD.femType * V.t -> (S.stmt list * V.t),
-	      depToV : FD.femType  * V.t -> (S.stmt list * V.t)) =
+	      globCvt : FD.femType * V.t -> (V.t * S.stmt), (*given a glob, convert it to an intVar and a stm setting up the int*)
+	      globDep : V.t -> V.t option, (* get a dependency of a global*)
+	      globDepToDep : FD.femType * V.t -> (S.stmt list * V.t), (*given a global,*)
+	      depToV : FD.femType  * V.t -> (S.stmt list * V.t)) = (**)
       let
        val S.Block{code, props} = block
        val code' = List.concatMap (fn x => cvtStm(x, newDefs, globCvt, globDep, globDepToDep, depToV)) code
@@ -1723,7 +1742,17 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 
        (*Setup globals for managing glob arrays and deps: functions to support this later.*)
        val S.Block({code,...}) = globInit
-       val (newGlobals, newInits, femGlobToI, femItoGlob, femItoDepIImpl,femGlobToIImpl) = buildGlobalFemTables tbs
+       (*femGlobToI, femItoGlob, femItoDepIImpl,*)
+       val (newGlobals, newInits,
+	    globCvt, findDep, globDepToDep, depToV) = buildGlobalFemTables tbs
+       (*We need:
+	function: globCvt that takes a known global and produces the int for it - femGlobToIImpl
+       function: globDep - we know from the table
+       globDepToDep: fem, global and produces code to translate an existing int to another int that is the dep
+       depToV: takes an int and translates it from an int into a the actual FEM.
+	*)
+       fun doBlock(block : S.block, newDefs : S.func_def list ref)
+	   = cvtBody(block, newDefs, globCvt, findDep, globDepToDep, depToV)
 
 
        (* build exp, statement, block runner with function returns*)
@@ -1749,6 +1778,7 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
       let
        val (prog', femTable, femDep) = analysis prog handle ex => raise ex
        val prog'' = translate (femTable, femDep) prog' handle ex => raise ex
+
       in
        prog''
       end
