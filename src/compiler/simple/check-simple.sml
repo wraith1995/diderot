@@ -195,7 +195,7 @@ structure II = ImageInfo
 	 end
     in
      (case s
-       of S.S_Var(v, NONE) => addVar(v)
+       of S.S_Var(v, NONE) => () (*FIXME: addVar(v) ???*)
 	| S.S_Var(v, SOME e) => (checkExp'(v, e); addVar(v))
 	| S.S_Assign(v, e) => (checkExp'(v,e); addVar(v))
 	| S.S_IfThenElse(v, b1, b2) => (checkUnusedVar([v], defined, msgs); doBlock' b1; doBlock' b2; defined)
@@ -234,6 +234,39 @@ structure II = ImageInfo
      (*end case*))
     end
     and doBlock(S.Block{code,...}, msgs, params, defined, ag, retTy) = List.foldr (fn (x,y) => checkStm(x, msgs, params, y, ag, retTy)) defined code
+
+
+    fun checkProgramTypes(prog) =
+	let
+	 val S.Program{
+          props, consts, inputs, constInit, globals, funcs,
+          globInit, strand, create, start, update
+         } = prog
+
+	 val errMsgs = ref []
+	 val defined = V.Set.empty
+	 val defined = V.Set.addList(defined, List.map Inputs.varOf inputs)
+	 val defined = V.Set.addList(defined, globals)
+
+	 val defined = doBlock(globInit, errMsgs, NONE, defined, false, NONE)
+
+	 val _ = List.map (fn S.Func{f, params, body} => doBlock(body, errMsgs, NONE, defined, false, SOME(F.resultTypeOf f))) funcs
+
+	 val S.Strand{name, params, spatialDim, state, stateInit, startM, updateM, stabilizeM} = strand
+
+	 val defined = doBlock(Create.createCode create, errMsgs, SOME(params), defined, false, NONE)
+	 val defined = Option.getOpt(Option.map (fn x => doBlock(x, errMsgs, NONE, defined, true, NONE)) start, defined)
+	 val defined = Option.getOpt(Option.map (fn x => doBlock(x, errMsgs, NONE, defined, true, NONE)) update, defined)
+
+	 val defined = doBlock(updateM, errMsgs, SOME(params), defined, false, NONE)
+	 val defined = doBlock(stateInit, errMsgs, SOME(params), defined, false, NONE)
+	 val defined = Option.getOpt(Option.map (fn x => doBlock(x, errMsgs, SOME(params), defined, false, NONE)) startM, defined)
+	 val defined = Option.getOpt(Option.map (fn x => doBlock(x, errMsgs, SOME(params), defined, false, NONE)) stabilizeM, defined)
+
+	in
+	 !errMsgs
+	end
+										  
     fun check (phase, prog) = let
           val S.Program{
                   props, consts, inputs, constInit, globals, funcs,
@@ -241,9 +274,13 @@ structure II = ImageInfo
           } = prog
 
 
-	  val errMsgs = ref []
+	  val errMsgs = checkProgramTypes(prog)
+	  val errors = Bool.not(List.length errMsgs = 0)
+	  val _ = if List.length errMsgs = 0
+		  then ()
+		  else print(String.concatWith "\n" errMsgs)
           in
-(* FIXME *)false
+(* FIXME *)errors
           end
 
   end
