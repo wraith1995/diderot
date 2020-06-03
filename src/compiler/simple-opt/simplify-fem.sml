@@ -1795,11 +1795,6 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 		  (* end case*))
 	     (* end case*))
 	    end
-	 (*Plan: loadFem - ExtractFem should be a straight forward translation using the new cvt expression...
-	  hmm: there is a lot of complexity here.Reread above.
-	  maybe not: for loads, we convert forwards
-	  for extracts, convert back or just tuple extract
-	  the larger extracts will be pos*)
       in
        doit(e)
       end
@@ -1849,7 +1844,7 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 	val updateM' = doBlock'' updateM
 	val startM' = Option.map doBlock'' startM
 	val stabilizeM' = Option.map doBlock'' stabilizeM
-				   (*need to merge params... here and create*)
+
        in
        val create' = Create.Create {dim = Create.arrayDim create, code=codeStms'}
        val strand' = S.Strand{name=name, spatialDim=spatialDim, params=params', state=state',
@@ -1864,13 +1859,6 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
        in
        val funcs' = List.filter (fn f => F.useCount (defToName f) > 0) allDefs'
        end
-
-       (*clean up functions:
-	 sort them.
-	 clean them.
-	*)
-
-
       in
        S.Program{props=props, consts=consts, inputs=inputs, constInit=constInit, globals=globals'',
 		 globInit=globalInit',

@@ -472,7 +472,7 @@ structure ProbeEin : sig
 	       val params'' = params @ newParamKinds
 	       val args'' = args @ [posVar, indexVar]
 	       val newProbe = E.Tensor(newParamId, alpha)
-	       val (_, body') = substituteProbe(body, newProbe) (*should we be doing sumShift or something like that;*)
+	       val (_, body') = substituteProbe(body, newProbe) (*should we be doing sumShift or something like that?*)
 	      in
 	       if (checkForIdentityReplace body)
 	       then (y, IR.VAR(posVar))
