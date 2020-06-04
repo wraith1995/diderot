@@ -81,7 +81,7 @@ structure II = ImageInfo
 
     fun checkUnusedVar(vs, defined, msgs) = let
      val usedVars =  V.Set.addList(V.Set.empty, vs)
-     val difs = V.Set.listItems (V.Set.difference(defined, usedVars))
+     val difs = V.Set.listItems (V.Set.difference(usedVars, defined))
      val msg = "[" ^ (String.concatWith ", " (List.map V.uniqueNameOf difs)) ^ "]"
      val () = if V.Set.isSubset(usedVars, defined)
 	      then ()
@@ -118,12 +118,13 @@ structure II = ImageInfo
 				 then ()
 				 else msgs := (vname ^ " allows poorly typed function call via " ^ (F.nameOf f)) :: !msgs
 			      end
-	| S.E_Prim(v, mal, vs, ty) => let val Types.T_Fun(args, ret) = Var.monoTypeOf v
-					  val args' = List.map cvtTy args
-				      in if ListPair.all (Ty.same) (args', List.map V.typeOf vs)
-					 then ()
-					 else msgs := (vname ^ " allows poorly typed prim call via " ^ (Var.nameOf v)) :: !msgs
-				      end
+	| S.E_Prim(v, mal, vs, ty) => ()
+	(* let val Types.T_Fun(args, ret) = Var.monoTypeOf v *)
+	(* 	  val args' = List.map cvtTy args *)
+	(* in if ListPair.all (Ty.same) (args', List.map V.typeOf vs) *)
+	(* 	 then () *)
+	(* 	 else msgs := (vname ^ " allows poorly typed prim call via " ^ (Var.nameOf v)) :: !msgs *)
+	(* end *)
 	(*FIXME: what should be checked for tensor, field, and tuple?*)
 	| S.E_Tensor(vs, ty) => ()
 	| S.E_Field(vs, ty) => ()
@@ -140,7 +141,7 @@ structure II = ImageInfo
 			       (* end case*))
 	(*FIXME: slice incorrect*)
 	| S.E_Slice _ => ()
-	| S.E_Coerce {srcTy, dstTy, x} => if Ty.same(dstTy, V.typeOf x)
+	| S.E_Coerce {srcTy, dstTy, x} => if Ty.same(srcTy, V.typeOf x)
 					  then ()
 					  else msgs := (vname ^ " allows coerce with incorrect inner type") :: !msgs
 	(*FIXME: border control and co*)
@@ -173,7 +174,7 @@ structure II = ImageInfo
     fun checkStm(s, msgs, params, defined,
 		 allowGlobal : bool, retTy : Ty.ty option) = let
      fun checkExp'(dst, e) = checkExp(dst, e, msgs, defined)
-     fun addVar(v) = V.Set.add(defined, v)
+     fun addVar(v : V.t) : V.Set.set = V.Set.add(defined, v)
      fun doBlock'(b) = doBlock(b, msgs, params, defined, allowGlobal, retTy)
      fun checkReduce(S.MapReduce{result, reduction, mapf, args, source, domain}, defined) = (*TODO:check reduction types*)
 	 let
@@ -195,13 +196,12 @@ structure II = ImageInfo
 	 end
     in
      (case s
-       of S.S_Var(v, NONE) => () (*FIXME: addVar(v) ???*)
+       of S.S_Var(v, NONE) => (addVar(v)) (*FIXME: addVar(v) ???*)
 	| S.S_Var(v, SOME e) => (checkExp'(v, e); addVar(v))
 	| S.S_Assign(v, e) => (checkExp'(v,e); addVar(v))
 	| S.S_IfThenElse(v, b1, b2) => (checkUnusedVar([v], defined, msgs); doBlock' b1; doBlock' b2; defined)
 	| S.S_Foreach(v, vs, b) =>
-	  (checkUnusedVar([v], defined, msgs); checkUnusedVar([vs], defined, msgs);
-	   doBlock(b, msgs, params, V.Set.add'(v, defined), allowGlobal, retTy); defined) (*remove itter*)
+	  (checkUnusedVar([vs], defined, msgs); doBlock(b, msgs, params, V.Set.add(defined,v), allowGlobal, retTy); defined) (*remove itter*)
 	| S.S_New(_, vs) => (case params
 			      of NONE => (msgs := " invalid new statement outside strand" :: !msgs;defined)
 			       | SOME(vs') => if ListPair.all (fn (x,y) => Ty.same(V.typeOf x, V.typeOf y)) (vs, vs')
@@ -233,7 +233,9 @@ structure II = ImageInfo
 	| S.S_MapReduce(maps) => List.foldr checkReduce defined maps
      (*end case*))
     end
-    and doBlock(S.Block{code,...}, msgs, params, defined, ag, retTy) = List.foldr (fn (x,y) => checkStm(x, msgs, params, y, ag, retTy)) defined code
+    and doBlock(S.Block{code,...}, msgs, params, defined, ag, retTy) =
+	let fun pd(s) = s
+	in List.foldr (fn (x,y) => pd(checkStm(x, msgs, params, y, ag, retTy))) defined (List.rev code) end
 
 
     fun checkProgramTypes(prog) =
@@ -250,7 +252,7 @@ structure II = ImageInfo
 
 	 val defined = doBlock(globInit, errMsgs, NONE, defined, false, NONE)
 
-	 val _ = List.map (fn S.Func{f, params, body} => doBlock(body, errMsgs, NONE, defined, false, SOME(F.resultTypeOf f))) funcs
+	 val _ = List.map (fn S.Func{f, params, body} => doBlock(body, errMsgs, NONE, V.Set.addList(defined,params), false, SOME(F.resultTypeOf f))) funcs
 
 	 val S.Strand{name, params, spatialDim, state, stateInit, startM, updateM, stabilizeM} = strand
 
@@ -258,13 +260,15 @@ structure II = ImageInfo
 	 val defined = Option.getOpt(Option.map (fn x => doBlock(x, errMsgs, NONE, defined, true, NONE)) start, defined)
 	 val defined = Option.getOpt(Option.map (fn x => doBlock(x, errMsgs, NONE, defined, true, NONE)) update, defined)
 
-	 val defined = doBlock(updateM, errMsgs, SOME(params), defined, false, NONE)
+	 val defined = V.Set.addList(defined, params)
 	 val defined = doBlock(stateInit, errMsgs, SOME(params), defined, false, NONE)
+	 val defined = V.Set.addList(defined, state)
+	 val defined = doBlock(updateM, errMsgs, SOME(params), defined, false, NONE)
 	 val defined = Option.getOpt(Option.map (fn x => doBlock(x, errMsgs, SOME(params), defined, false, NONE)) startM, defined)
 	 val defined = Option.getOpt(Option.map (fn x => doBlock(x, errMsgs, SOME(params), defined, false, NONE)) stabilizeM, defined)
 
 	in
-	 !errMsgs
+	 List.rev(!errMsgs)
 	end
 										  
     fun check (phase, prog) = let

@@ -770,7 +770,7 @@ fun newtonLoopBlock(normal, dScalar, refPosExp, dPosExp, maxN, eps, t) =
   val cellParam = Var.new (Atom.atom "cellId", span, AST.FunParam, Ty.T_Int)
   val refPosParam = Var.new (Atom.atom "refPos", span, AST.FunParam, vecTy)
   val dPosParam = Var.new (Atom.atom "dPos", span, AST.FunParam, vecTy)
-  val timeAndFace = Var.new(Atom.atom "time", span, AST.FunParam, vec2SeqTy)
+  val timeAndFace = Var.new(Atom.atom "time", span, AST.FunParam, vec2Ty)
 
   fun mkVar v = AST.E_Var(v,span)
 			 
@@ -782,7 +782,7 @@ fun newtonLoopBlock(normal, dScalar, refPosExp, dPosExp, maxN, eps, t) =
   
   val catchFacetIssue = true
   val hiddenExitPosAtom = Atom.atom "$exitPos"
-  val hiddenExitPosTy = Ty.T_Fun([meshTy, Ty.T_Int, vecTy, vecTy, vec2SeqTy], posTy) (*call this in build world*)
+  val hiddenExitPosTy = Ty.T_Fun([meshTy, Ty.T_Int, vecTy, vecTy, vec2Ty], posTy) (*call this in build world*)
   val hiddenExitPosVar = Var.new (hiddenExitPosAtom, span, Var.FunVar, hiddenExitPosTy)
   val bodyStm = makeRefExitPosBody(meshExp, cellExp, refExp, dExp, tfExp, dim, geometry, catchFacetIssue)
   val hiddeExitPosFunc = AST.D_Func(hiddenExitPosVar, [meshParam, cellParam, refPosParam, dPosParam, timeAndFace], bodyStm)
