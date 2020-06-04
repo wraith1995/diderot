@@ -1460,6 +1460,13 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
        fun projectCvt v i = ([], S.E_Project(cvtVar v, i))
        val cvtBody = fn (x,y) => cvtBody(x, y, strandParams, globCvt, globDep, globDepToDep, depToV)
        val (toAll', toAll, toAlls) = makeConversions(globCvt, globDep, globDepToDep, depToV)
+
+       fun acquireGlobal(v) = (case getFemPres v
+				of Base(_, SOME(v')) => ([],v')
+				 | ALL(f) => depToV(f, cvtVar v)
+				 | _ => raise Fail "invalid femPres for base fem global"
+			      (*end case*))
+						    
        fun maybeCvt(exp, cvtExp, currentPres, expectedPres) = if checkMerge(currentPres, expectedPres)
        							      then let
 							       val oldTy = S.typeOf(exp)
@@ -1786,7 +1793,21 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 		| _ => raise Fail "impossible FO"
 	     (* end case*))
 	    end
-	 | doit (S.E_FemField(v1, v2, v1opt, ty, fo, funcopt)) = raise Fail "femField"
+	 | doit (S.E_FemField(v1, v2, v1opt, ty, fo, funcopt)) =
+	   let
+	    val (stms1, v1') = acquireGlobal v1
+	    val (stms2, v2') = acquireGlobal v2
+	    val (stms3, v1opt') = (case Option.map getFemPres v1opt
+				    of NONE => ([], NONE)
+				     | SOME(NOTHING) => ([], v1opt)
+				     | SOME(_) => let val SOME(base) = v1opt
+						      val (stms, base') = acquireGlobal base
+						  in (stms, SOME(base')) end
+				  )
+	   in
+	    (stms1@stms2@stms3, S.E_FemField(v1', v2', v1opt', ty, fo, funcopt))
+	   end
+	     
 	 | doit _ = raise Fail "impossible STM"
 
 	      
