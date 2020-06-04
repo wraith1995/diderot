@@ -1550,6 +1550,7 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 	    end
 	    else none (S.E_Prim(f, marg, vs', t'))
 	   end
+	 | doit (S.E_Field(vs, ty)) = none (S.E_Field(List.map cvtVar vs, ty))
 	 | doit (S.E_Tensor(vs,ty)) = none (S.E_Tensor(List.map cvtVar vs, ty))
 	 (*Seq though coerce need maybeRunAll too*)
 	 | doit (S.E_Seq(vs, ty)) = let
@@ -1782,8 +1783,13 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 		    of NONE => raise Fail "impossible: CellFaceCell "
 		     | SOME(stms, dataVar) => (startStms@stms, S.E_ExtractFemItemN(dataVar::args', tys, ty, (opt, data), NONE))
 		  (* end case*))
+		| _ => raise Fail "impossible FO"
 	     (* end case*))
 	    end
+	 | doit (S.E_FemField(v1, v2, v1opt, ty, fo, funcopt)) = raise Fail "femField"
+	 | doit _ = raise Fail "impossible STM"
+
+	      
       in
        doit(e)
       end
