@@ -196,7 +196,7 @@ structure II = ImageInfo
 	 end
     in
      (case s
-       of S.S_Var(v, NONE) => (addVar(v)) (*FIXME: addVar(v) ???*)
+       of S.S_Var(v, NONE) => (addVar(v))
 	| S.S_Var(v, SOME e) => (checkExp'(v, e); addVar(v))
 	| S.S_Assign(v, e) => (checkExp'(v,e); addVar(v))
 	| S.S_IfThenElse(v, b1, b2) => (checkUnusedVar([v], defined, msgs); doBlock' b1; doBlock' b2; defined)
@@ -234,8 +234,9 @@ structure II = ImageInfo
      (*end case*))
     end
     and doBlock(S.Block{code,...}, msgs, params, defined, ag, retTy) =
-	let fun pd(s) = s
-	in List.foldr (fn (x,y) => pd(checkStm(x, msgs, params, y, ag, retTy))) defined (List.rev code) end
+	let fun pd(S.S_Var(x, _): S.stmt, s) = (s)
+	      | pd (_, s) = s
+	in List.foldl (fn (x,y) => pd(x, checkStm(x, msgs, params, y, ag, retTy))) defined (code) end
 
 
     fun checkProgramTypes(prog) =

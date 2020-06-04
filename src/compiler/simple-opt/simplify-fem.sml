@@ -365,12 +365,6 @@ return to Strands until Fixed
     | anyFem (Array p) = anyFem p
     | anyFem (Seq p) = anyFem p
 
-  fun anyAll (Base _) = false
-    | anyAll (ALL _) = true
-    | anyAll (NOTHING) = false
-    | anyAll (Tuple(ps)) = List.exists anyAll ps
-    | anyAll (Array p) = anyAll p
-    | anyAll (Seq p) = anyAll p
 
   fun hash (NOTHING) = 0w1
     | hash (ALL(f)) = 0w2 * FD.hash f
@@ -530,8 +524,8 @@ return to Strands until Fixed
 
   (*data structures and functions to manage symbolic manipulation of functions at various callsites:*)
   type callSite =  V.t list  (* structure for idying a call site *)
-  type functionCall  = femPres list * femPres list (* arguments and globals *)
-  type callResult = S.func_def * femPres option
+  type functionCall  = femPres list * femPres list (* arguments and globals: structure for noting fem info at callsite *)
+  type callResult = S.func_def * femPres option (* management for result of a callsite*)
   local
    fun sameSite(vs1, vs2) = ListPair.all (V.same) (vs1, vs2)
    fun hashSite(vs) = List.foldl (fn (v, s) => V.hash v + s) 0w3 vs
@@ -572,9 +566,6 @@ return to Strands until Fixed
 		of SOME(callArgs') => sameCall(callArgs', callArgs)
 		 | NONE => (HT.insert callTable (call, callArgs); false) handle exn => raise exn
 			(* end case*))
-
-
-			
       in
        if callExists
        then HT.lookup defsTable callArgs
@@ -582,8 +573,8 @@ return to Strands until Fixed
        else let
 	val _ = HT.insert callTable (call, callArgs) handle exn => raise exn
 	val SOME(oldDef) = getfuncDef f
-		val copyF = functionCopy(oldDef)
-		val ret = (copyF, NONE)
+	val copyF = functionCopy(oldDef)
+	val ret = (copyF, NONE)
 			    (*check if the function with these callArgs exists anyway*)
        in (case HT.find defsTable callArgs handle exn => raise exn
 	    of SOME(r) => r
@@ -594,10 +585,10 @@ return to Strands until Fixed
   fun testFunction(args, globs, retTy) =
       let
        val femsInvolvedArgs = List.concatMap (Ty.allFems o V.typeOf) (args)
-       val femsINvolvedGlobs = List.concatMap (Ty.allFems o V.typeOf) (globs)
+       val femsInvolvedGlobs = List.concatMap (Ty.allFems o V.typeOf) (globs)
        val anyFem = 0 <> (List.length (Ty.allFems retTy))
        val anyNonBase = (List.length femsInvolvedArgs <> 0)
-			orelse (List.length femsINvolvedGlobs <> 0)
+			orelse (List.length femsInvolvedGlobs <> 0)
 			orelse anyFem
       in
        anyNonBase
@@ -764,7 +755,7 @@ return to Strands until Fixed
 		(List.app (checkExistence ("_loadFem")) [v1, v2];
 		 if FD.baseFem f (*v1 is the dest data; v2 is the dep; *)
 		 then ((case getFemPres v2
-			 of Base(f', SOME(v2')) => (addDep(v1, v2'); print("cor..\n"); valid (Base(f, SOME(v1))) handle exn => raise exn) 
+			 of Base(f', SOME(v2')) => (addDep(v1, v2'); valid (Base(f, SOME(v1))) handle exn => raise exn) 
 			  | Base(f', NONE) => raise Fail "base fem load not set; impossible!" 
 			  | ALL(f') => raise Fail "base fem load unable to trace!" (*Should be impossible*)
 			  | _ => raise Fail ("impossible: " ^ (V.uniqueNameOf v2))
@@ -826,7 +817,6 @@ return to Strands until Fixed
 								    else
 								     (*refBuild, InvalidBuild, InvalidbuildBoundary, AllBuild  *)
 								     let
-								      (*NOTE: function here is currently impossible.*)
 								      val (opt, data) = fo
 								      val data' = (case FD.dependencyOf data
 										   of SOME(d) => d
@@ -855,10 +845,9 @@ return to Strands until Fixed
 			 call : callSite,
 			 news : (Atom.atom * V.t list) list ref) =
 	   let
-	    fun doit (S.S_Var(v, NONE)) = () (*Question: should we do anything: Answer, for itter vars, sure?*)
-	      | doit (S.S_Var(v, SOME(e))) = updateFemPresRef(v, expToFemPres(e, V.typeOf v, v::call), changed)
-	      (*QUESTION: should we check existence @ an assign?*)
-	      | doit (S.S_Assign(v, e)) = updateFemPresRef(v, expToFemPres(e, V.typeOf v, v::call), changed) 
+	    fun doit (S.S_Var(v, NONE)) = () (*Question: should we do anything: Answer: NO.*)
+	      | doit (S.S_Var(v, SOME(e))) = ((* print("var:"^(V.uniqueNameOf v) ^"\n"); *) updateFemPresRef(v, expToFemPres(e, V.typeOf v, v::call), changed))
+	      | doit (S.S_Assign(v, e)) = ((* print("assign:"^(V.uniqueNameOf v) ^"\n"); *)updateFemPresRef(v, expToFemPres(e, V.typeOf v, v::call), changed) )
 	      | doit (S.S_IfThenElse(v, b1, b2)) = (checkExistence "condition" v; doBlock'(b1); doBlock'(b2))
 	      | doit (S.S_New(a,vs)) = (news := (a, vs) :: !news)
 	      | doit (S.S_Foreach(itter, src, blk)) =
@@ -894,7 +883,7 @@ return to Strands until Fixed
 		   let
 		    fun markStrand x = (case V.typeOf x
 					 of Ty.T_Strand _ => (updateFemPres(x, NOTHING); ())
-					  | _ => ())
+					  | _ => () (*end case*))
 		    val S.Func{f, ...} = mapf
 		    val _ = registerFunctions([mapf])
 		    val _ = registerGlobVarsInFunc mapf
@@ -911,7 +900,7 @@ return to Strands until Fixed
 	      in
 	       List.app doReduce maps
 	      end
-	    and doBlock'(S.Block{code, ...}) = List.app doit code
+	    and doBlock'(S.Block{code, ...}) = List.app doit ( code)
 	   in
 	    doit(stm)
 	   end
@@ -921,7 +910,7 @@ return to Strands until Fixed
 	   let
 	    val g =  (fn s => procStatement(s, changed, ret, news))
 	   in
-	    List.app g code
+	    List.app g (code)
 	   end
        and procApply(f : F.t, args : V.t list,
 		     call : callSite) = let
