@@ -92,9 +92,10 @@ structure SimplePP : sig
                   | S.E_Kernel k => string (Kernel.name k)
                   | S.E_Select(x, fld) => (var x; string "."; var fld)
                   | S.E_Apply(f, args) => (string "func ";ppFunc (ppStrm, f); sp(); ppArgs (ppStrm, args))
-                  | S.E_Prim(f, [], args, _) => (string "prim "; ppASTVar(ppStrm, f); sp(); ppArgs (ppStrm, args))
-                  | S.E_Prim(f, mvs, args, _) => (
-                      string "prim ";ppASTVar(ppStrm, f); ppTyArgs (ppStrm, mvs); sp(); ppArgs (ppStrm, args))
+                  | S.E_Prim(f, [], args, ty) => (string "prim "; ppASTVar(ppStrm, f); sp(); ppArgs (ppStrm, args); string(" ty=");string(Ty.toString(ty)))
+                  | S.E_Prim(f, mvs, args, ty) => (
+                   string "prim ";ppASTVar(ppStrm, f); ppTyArgs (ppStrm, mvs); sp(); ppArgs (ppStrm, args); string(" ty=");string(Ty.toString(ty))
+		  )
                   | S.E_Tensor(es, _) => ppList ppVar' ("[", ",", "]") (ppStrm, es)
                   | S.E_Seq(es, _) => ppList ppVar' ("{", ",", "}") (ppStrm, es)
                   | S.E_Tuple es => ppList ppVar' ("(", ",", ")") (ppStrm, es)

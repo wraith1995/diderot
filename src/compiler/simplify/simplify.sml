@@ -534,7 +534,7 @@ structure Simplify : sig
                                 val acc = SimpleVar.new ("accum", Var.LocalVar, cvtTy ty)
                                 val initStm = S.S_Var(acc, SOME(S.E_Lit init))
                                 val updateStm = S.S_Assign(acc,
-                                      S.E_Prim(rator, mvs, [acc, bodyResult], seqTy'))
+                                      S.E_Prim(rator, mvs, [acc, bodyResult], elemTy))
                                 val foreachStm = S.S_Foreach(cvtVar x, xs,
                                       mkBlock(updateStm :: bodyStms))
                                 in

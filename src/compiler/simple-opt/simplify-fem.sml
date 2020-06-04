@@ -689,19 +689,19 @@ return to Strands until Fixed
 		      in
 		       p
 		      end
-		 else if Var.same(v, BasisVars.at_dT)
+		 else if Var.same(v, BasisVars.at_dT) andalso retHasFem
 		 then let val [sy, a] = vs
 			  val Seq(p) = getFemPres sy
 			  val p' = getFemPres a handle ex => raise ex
 			  val p'' = merge(p, p') handle ex => raise ex
 		      in Seq(p'') end
-		 else if Var.same(v, BasisVars.at_Td)
+		 else if Var.same(v, BasisVars.at_Td) andalso retHasFem
 		 then let val [a, sy] = vs
 			  val Seq(p) = getFemPres sy handle ex => raise ex
 			  val p' = getFemPres a
 			  val p'' = merge(p, p') handle ex => raise ex
 		      in Seq(p'') end
-		 else if Var.same(v, BasisVars.at_dd)
+		 else if Var.same(v, BasisVars.at_dd) andalso retHasFem
 		 then let val [sy1, sy2] = vs
 			  val Seq(p1) = getFemPres sy1 handle ex => raise ex
 			  val Seq(p2) = getFemPres sy2 handle ex => raise ex
@@ -1234,12 +1234,12 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 	 | (Ty.T_Fem(d), Base(d', NONE)) => raise Fail "cvtTy: analysis marked base none"
 	 | (Ty.T_Fem(d), Base(d', SOME(v))) => femTy(d, true)
 	 | (Ty.T_Fem(d), ALL(d')) => femTy(d, false)
-	 | _ => raise Fail "impossible"
+	 | _ => raise Fail ("impossible: " ^ (Ty.toString ty) ^ " vs. " ^ (presToString pres))
       (* end case*))
 
 
   local
-   val {clrFn, getFn, peekFn, setFn} = V.newProp(fn v => V.new(V.nameOf v, V.kindOf v, cvtTy(V.typeOf v, getFemPres v)))
+   val {clrFn, getFn, peekFn, setFn} = V.newProp(fn v => V.new(V.nameOf v, V.kindOf v, cvtTy(V.typeOf v, getFemPres v) handle ex=> raise ex))
   in
   val cvtVar = getFn
   end
@@ -1502,7 +1502,7 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 	   (*TODO: double check*)
 	   let
 	    val vs' = List.map cvtVar vs
-	    val t' = cvtTy(t, retPres)
+	    val t' = cvtTy(t, retPres) handle ex => raise ex
 	   in
 	    if Var.same(BasisVars.at_dT, f)
 	    then let
@@ -1642,10 +1642,12 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 	 | doit (S.E_ExtractFem(v, data)) =
 	   let val Ty.T_Fem(data') = V.typeOf v
 	   in
-	    if FD.baseFem data
+	    if FD.baseFem data'
 	    then (case (getFemPres v, retPres)
 		   of (Base(d, SOME(v')), Base(d', SOME(v''))) =>
-		      ([], S.E_Var((Option.valOf o globDep) v'))
+		      (case globDep v'
+			of SOME v''' => ([], S.E_Var(v'''))
+			 | _ => raise Fail ("globDep: " ^ (V.uniqueNameOf v')))
 		    | (Base(d, SOME(v')), ALL(d')) =>
 		      let val SOME(depV) = globDep v'
 			  val (newVar, newStm) = globCvt(data, depV)
@@ -1824,19 +1826,19 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
        val (newGlobals, newInits,
 	    globCvt, findDep, globDepToDep, depToV) = buildGlobalFemTables tbs
        fun doBlock(block : S.block, newDefs : S.func_def list ref, params)
-	   = cvtBody(block, newDefs, params, globCvt, findDep, globDepToDep, depToV)
+	   = cvtBody(block, newDefs, params, globCvt, findDep, globDepToDep, depToV) handle ex => raise ex
        val newDefs = ref []
        fun doBlock'(b) = doBlock(b, newDefs, NONE)
        val globals' = List.map cvtVar globals
        val globals'' = newGlobals@globals'
        local
-	val S.Block({code,props}) = doBlock'(globInit)
+	val S.Block({code,props}) = doBlock'(globInit) handle ex => raise ex
        in
        val globalInit' = S.Block{code=newInits@code,props=props}
        end
 
-       val start' = Option.map doBlock' start
-       val update' = Option.map doBlock' update
+       val start' = Option.map doBlock' start handle ex => raise ex
+       val update' = Option.map doBlock' update handle ex => raise ex
 
        (*We get:
 	 newGlobals: list of global arrays of fems and ints - these allow us to translate globals to ints and get dependencies and fems from inits; we have essentialy maps from fem -> int and int -> int
@@ -1850,16 +1852,16 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
        local
 	val S.Strand{name, params, spatialDim, state, stateInit, startM, updateM, stabilizeM} = strand
 
-	fun doBlock''(b) = doBlock(b, newDefs, SOME(List.map getFemPres params))
-	val codeStms : S.block = Create.createCode create
-	val codeStms' = doBlock'' codeStms
+	fun doBlock''(b) = doBlock(b, newDefs, SOME(List.map getFemPres params)) handle ex => raise ex
+	val codeStms : S.block = Create.createCode create 
+	val codeStms' = doBlock'' codeStms handle ex => raise ex
 
 	val params' = List.map cvtVar params
 	val state' = List.map cvtVar state
-	val stateInit' = doBlock'' stateInit
-	val updateM' = doBlock'' updateM
-	val startM' = Option.map doBlock'' startM
-	val stabilizeM' = Option.map doBlock'' stabilizeM
+	val stateInit' = doBlock'' stateInit handle ex => raise ex
+	val updateM' = doBlock'' updateM handle ex => raise ex
+	val startM' = Option.map doBlock'' startM handle ex => raise ex
+	val stabilizeM' = Option.map doBlock'' stabilizeM handle ex => raise ex
 
        in
        val create' = Create.Create {dim = Create.arrayDim create, code=codeStms'}
@@ -1893,7 +1895,7 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
       let
        val (prog', femTable, femDep) = analysis prog handle ex => raise ex
        val prog'' = translate (femTable, femDep) prog' handle ex => raise ex
-
+       val _ = print("woopdydo\n\n")
       in
        prog''
       end

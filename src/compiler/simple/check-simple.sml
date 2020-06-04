@@ -103,6 +103,10 @@ structure II = ImageInfo
 			     | _ => ())(*cause earlier*)
      val _ = checkUnusedVar(collectVarsExp e, defined, msgs)
 
+     val _ = if Ty.same(V.typeOf ass, S.typeOf e)
+	     then ()
+	     else (msgs := (vname ^ " allows invalid type to be assigned!") :: !msgs)
+
     in
      (case e
        of S.E_Var _ => ()
