@@ -8,6 +8,7 @@ structure CO = CheckOverload
 structure FT = FemData
 structure FO = FemOpt
 structure FN = FemName
+structure FD = FemData
 structure N = BasisNames
 structure CF = CheckTypeFile
 structure BV = BasisVars
@@ -555,6 +556,7 @@ fun newtonLoopBlock(normal, dScalar, refPosExp, dPosExp, maxN, eps, t) =
  fun faceConnectivityToCellFact(meshExp, cellExp, facetExp) =
      let
       val FT.Mesh(mesh) = meshData
+      val meshPosData = FT.MeshPos(mesh)
       val FemData.RefCellData{numFaces, ...} = FemData.refCell mesh
       val cellOffset = AST.E_Lit(Literal.intLit (2 * numFaces))
 
@@ -691,7 +693,7 @@ fun newtonLoopBlock(normal, dScalar, refPosExp, dPosExp, maxN, eps, t) =
 				     [vecTy, vecTy], vecTy)
 	  in
 	   (*meshExp,cellExpr, posExpr*)
-	   (NONE, AST.E_ExtractFemItemN([meshExp, newCellExp, newRefPos, dstFacetExpr], [meshTy, Ty.T_Int, vecTy, Ty.T_Int], posTy, (FemOpt.RefBuild, meshData), NONE))
+	   (NONE, AST.E_ExtractFemItemN([meshExp, newCellExp, newRefPos, dstFacetExpr], [meshTy, Ty.T_Int, vecTy, Ty.T_Int], posTy, (FemOpt.RefBuild, FD.posOf meshData), NONE))
 	  end
 	| buildSolveOperation(CF.PlaneParam(_, xs)) =
 	  let
@@ -715,7 +717,7 @@ fun newtonLoopBlock(normal, dScalar, refPosExp, dPosExp, maxN, eps, t) =
 					
 	   val resultVec4 = makePrim'(BV.op_inner_tt, [selectedTensor, vec4refPos], [mat4, vec4], vec4) handle exn => raise exn
 	   val newRefPos = AST.E_Tensor(List.tabulate(3, fn x => AST.E_Slice(resultVec4, [SOME(AST.E_Lit(Literal.intLit x))], Ty.realTy)), vecTy)
-	   val result =  AST.E_ExtractFemItemN([meshExp, newCellExp, newRefPos, dstFacetExpr], [meshTy, Ty.T_Int, vecTy, Ty.T_Int], posTy, (FemOpt.RefBuild, meshData), NONE)
+	   val result =  AST.E_ExtractFemItemN([meshExp, newCellExp, newRefPos, dstFacetExpr], [meshTy, Ty.T_Int, vecTy, Ty.T_Int], posTy, (FemOpt.RefBuild, FD.posOf meshData), NONE)
 	   val printStm = printSolveInfo(seqExp, srcFacetExp, dstFacetExpr, selectedTensor )
 
 	  in
@@ -793,8 +795,8 @@ fun newtonLoopBlock(normal, dScalar, refPosExp, dPosExp, maxN, eps, t) =
   fun exitPosReplace'([re, pos, vec]) =
       let
        val mesh = AST.E_ExtractFem(pos, meshData)
-       val cell = AST.E_ExtractFemItem(pos, Ty.T_Int, (FemOpt.CellIndex, meshData))
-       val refPos = AST.E_ExtractFemItem(pos, vecTy, (FemOpt.RefPos, meshData))
+       val cell = AST.E_ExtractFemItem(pos, Ty.T_Int, (FemOpt.CellIndex, FD.posOf meshData))
+       val refPos = AST.E_ExtractFemItem(pos, vecTy, (FemOpt.RefPos, FD.posOf meshData))
        val posEntryFacet = AST.E_ExtractFemItem(pos, Ty.T_Int, (FemOpt.PosEntryFacet, posData))
        val seq = AST.E_Apply((exitFuncVar, span), [refPos, vec, posEntryFacet], vec2SeqTy) (*ugg*)
        (*apply func*)
@@ -878,7 +880,7 @@ fun newtonLoopBlock(normal, dScalar, refPosExp, dPosExp, maxN, eps, t) =
        val mesh = AST.E_ExtractFem(v1, meshData)
        val cellInt = AST.E_ExtractFemItem(v1, Ty.T_Int, (FO.CellIndex, posData))
        val cellExp =  AST.E_LoadFem(cellData, SOME(mesh), SOME(cellInt))
-       val refPos = AST.E_ExtractFemItem(v1, vecTy, (FemOpt.RefPos, meshData))
+       val refPos = AST.E_ExtractFemItem(v1, vecTy, (FemOpt.RefPos, posData))
        val transformField = makeTransformFunc([cellExp])
        val posEntryFacet = AST.E_ExtractFemItem(v1, Ty.T_Int, (FemOpt.PosEntryFacet, posData))
        val worldPos =  makePrim'(BV.op_probe, [transformField, refPos], [transformFieldTy, vecTy], vecTy) handle exn => raise exn (*TODO: fix worldPos*)

@@ -1545,10 +1545,12 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 				else ([], sy)
 	     val (stms2, a') = if test2
 				then toAll(aOld, aPesDest)
-				else ([], aOld)
-			    
+			       else ([], aOld)
+	     val Ty.T_Sequence(t'', _) = t'
+	     val [Ty.TY ty] = marg
+	     val marg' = [Ty.TY t'']
 	    in
-	     (stms1@stms2, S.E_Prim(f, marg, [sy', a], t'))
+	     (stms1@stms2, S.E_Prim(f, marg', [sy', a], t'))
 	    end
 	    else if Var.same(BasisVars.at_Td, f)
 	    then let
@@ -1564,9 +1566,11 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 	     val (stms2, a') = if test2
 				then toAll(aOld, aPesDest)
 				else ([], aOld)
-			    
+	     val Ty.T_Sequence(t'', _) = t'
+	     val [Ty.TY ty] = marg
+	     val marg' = [Ty.TY t'']			    
 	    in
-	     (stms1@stms2, S.E_Prim(f, marg, [a', sy'], t'))
+	     (stms1@stms2, S.E_Prim(f, marg', [a', sy'], t'))
 	    end
 	    else if Var.same(BasisVars.at_dd, f)
 	    then let
@@ -1580,8 +1584,11 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 	     val (stms2, sy2') = if test2
 				 then toAll(sy2Old, retPres)
 				 else ([], sy2)
+	     val Ty.T_Sequence(t'', _) = t'
+	     val [Ty.TY ty] = marg
+	     val marg' = [Ty.TY t'']
 	    in
-	     (stms1@stms2, S.E_Prim(f, marg, [sy1', sy2'], t'))
+	     (stms1@stms2, S.E_Prim(f, marg', [sy1', sy2'], t'))
 	    end
 	    else none (S.E_Prim(f, marg, vs', t'))
 	   end

@@ -57,6 +57,7 @@ structure FemData : sig
 	   val extractSpace : femType -> space option
 	   val dependencyOf : femType -> femType option
 	   val cellOf : femType -> femType
+	   val posOf : femType -> femType
 
 	   (* Extract dimensional constants*)
 				      
@@ -257,6 +258,9 @@ fun cellOf data =
 (*     (case data *)
 (*       of Mesh(m) => Atom.atom (String.concat(["mesh_", Int.toString (meshDim(m)), "_", Int.toString (meshMapDim(m)),]))) *)
 
+fun posOf data = (case data
+		   of Mesh(m) => MeshPos(m)
+		    | _ => raise Fail "ooops")
 fun underlyingDim data =
     (case data
       of Mesh(m) => meshDim m
