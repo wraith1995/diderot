@@ -18,6 +18,7 @@ val tds = "transformDofShape" (*computed*)
 val transform = "transform" (*field*)
 val invTransform = "inverseTransform"
 val meshPos = "findPos"
+val meshPosHidden = "$findPos"
 val hiddenNewtonInverse = "newtonInverse"
 val cellEnter = "enter"
 val cellEnterPos = "enterPos"

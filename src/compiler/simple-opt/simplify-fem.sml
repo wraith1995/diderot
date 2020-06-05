@@ -548,6 +548,8 @@ return to Strands until Fixed
    val defTblProp = F.newProp(fn f => mkFuncDefTable 16)
    val getFnTbl = #getFn defTblProp
 
+   val needsCopyFlag = F.newFlag()
+
 												
   in
   (*operation:we need to from a f, 
@@ -565,6 +567,10 @@ return to Strands until Fixed
       in
        anyNonBase
       end
+
+  fun markForCopy(f : F.t) = (#setFn needsCopyFlag)(f, true)
+  fun markForNonCopy(f : F.t) = (#setFn needsCopyFlag)(f, false)
+  fun cleanBody(f : F.t) = Bool.not((#getFn needsCopyFlag)(f))
 
   
   fun addCall(f : F.t, call : callSite, callArgs : functionCall) : callResult =
@@ -613,9 +619,10 @@ return to Strands until Fixed
        val anyNonBase = testFunction(args, globs, F.resultTypeOf fvar) orelse reductionOverride
       in
        if Bool.not anyNonBase
-       then NONE 
+       then (markForNonCopy(fvar);NONE )
        else
 	let
+	 val _ = markForCopy(fvar)
 	 val defsTable = getFnTbl fvar
 	 val someDef = HT.find defsTable callArgs
 	 val (def, retV) = (case someDef
@@ -625,7 +632,7 @@ return to Strands until Fixed
 	 val retPres = retV
 	in
 	 (case HT.find (getCvtTbl fvar) callArgs
-	   of SOME(f') => (F.use f'; F.decCnt fvar; SOME(f', retPres))
+	   of SOME(f') => (markForCopy f'; F.use f'; F.decCnt fvar; SOME(f', retPres))
 	    | NONE =>
 	      let
 	       val retTy' = V.typeOf(cvtVar retVar)
@@ -638,7 +645,7 @@ return to Strands until Fixed
 	       val _ = newDefs := (def' :: !newDefs)
 	       val _ = HT.insert (getCvtTbl fvar) (callArgs, f')
 	      in
-	       (F.use f'; F.decCnt fvar; SOME(f', retPres))
+	       (markForCopy f'; F.use f'; F.decCnt fvar; SOME(f', retPres))
 	      end
 	 (* end case*))
 	end
@@ -1487,16 +1494,6 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 	   in
 	    if checkMerge(retPres, actualRetPres)
 	    then let
-	     val _ = print("eppp\n")
-	     val _ = print(presToString actualRetPres)
-	     val _ = print("\n")
-	     val _ = print(presToString retPres)
-	     val _ = print("\n")
-	     val _ = print("erm:")
-	     val _ = print(Bool.toString(same(actualRetPres, retPres)))
-	     val _ = print(" and ")
-	     val _ = print(Bool.toString(checkMerge(retPres, actualRetPres)))
-	     val _ = print("\n")
 	     val oldTy = cvtTy(V.typeOf v2, actualRetPres)
 	     val newTy = cvtTy(V.typeOf v2, retPres)
 	     val temp = V.new("cvttemp", Var.LocalVar, oldTy)
@@ -1915,8 +1912,18 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 	val allDefs = funcs@ (!newDefs)
 	val _ = List.app procFuncDef allDefs
 	val allDefs' = sortFuncDef allDefs
+	val funcsFilt = List.filter (fn f => F.useCount (defToName f) > 0) allDefs'
+	fun cvtVar'(v) = (case V.kindOf v
+			   of Var.GlobalVar => cvtVar v
+			    | Var.InputVar => cvtVar v
+			    | Var.ConstVar => cvtVar v
+			    | _ => v)
+	val funcs' = List.map (fn (func as S.Func{f, params, body}) => if cleanBody(f)
+								     then S.Func{f=f, params=params, body=S.mapBlock(body, cvtVar')}
+								     else func) funcsFilt
+			       
        in
-       val funcs' = List.filter (fn f => F.useCount (defToName f) > 0) allDefs'
+       val funcs' = funcs'
        end
       in
        S.Program{props=props, consts=List.map cvtVar consts, inputs=inputs, constInit=constInit', globals=globals'',

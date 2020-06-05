@@ -166,5 +166,52 @@ structure Simple =
     fun newProp initFn = PropList.newProp (fn (Block{props, ...}) => props, initFn)
     fun newFlag () = PropList.newFlag (fn (Block{props, ...}) => props)
 
+    (*type preserving variable renaming*)
+    fun mapBlock(Block{code,...}, cvtVar : SimpleVar.t -> SimpleVar.t) =
+	let
+	 fun mapBlock'(b) = mapBlock(b, cvtVar)
+	 fun mapStm (S_Var(v, NONE)) = S_Var(cvtVar v, NONE)
+	   | mapStm (S_Var(v, SOME e)) = S_Var(cvtVar v, SOME (mapExp e))
+	   | mapStm (S_Assign(v, e)) = S_Assign(cvtVar v, mapExp e)
+	   | mapStm (S_IfThenElse(v, b1, b2)) = S_IfThenElse(cvtVar v, mapBlock' b1, mapBlock' b2)
+	   | mapStm (S_Foreach(v, vs, b)) = S_Foreach(cvtVar v, cvtVar vs, mapBlock' b)
+	   | mapStm (S_New(a, vs)) = S_New(a, List.map cvtVar vs)
+	   | mapStm (S_Return(v)) = S_Return(cvtVar v)
+	   | mapStm (S_Print(vs)) = S_Print(List.map cvtVar vs)
+	   | mapStm (S_KillAll) = S_KillAll
+	   | mapStm (S_StabilizeAll) = S_StabilizeAll
+	   | mapStm (S_Die) = S_Die
+	   | mapStm (S_Stabilize) = S_Stabilize
+	   | mapStm (S_Continue) = S_Continue
+	   | mapStm (S_MapReduce _) = raise Fail "map reduce not handled"
+	 and mapExp (E_Var(v)) = E_Var(cvtVar v)
+	   | mapExp (l as E_Lit _) = l
+	   | mapExp (k as E_Kernel _) = k
+	   | mapExp (E_Select(v1, v2)) = E_Select(cvtVar v1, cvtVar v2)
+	   | mapExp (E_Apply(f, vs)) = E_Apply(f, List.map cvtVar vs)
+	   | mapExp (E_Prim(f, margs, vs, ty)) = E_Prim(f, margs, List.map cvtVar vs, ty)
+	   | mapExp (E_Tensor(vs, ty)) = E_Tensor(List.map cvtVar vs, ty)
+	   | mapExp (E_Field(vs, ty)) = E_Field(List.map cvtVar vs, ty)
+	   | mapExp (E_Seq(vs, ty)) = E_Seq(List.map cvtVar vs, ty)
+	   | mapExp (E_Tuple(vs)) = E_Tuple(List.map cvtVar vs)
+	   | mapExp (E_Project(v, i)) = E_Project(cvtVar v, i)
+	   | mapExp (E_Slice(v, erm, t)) = E_Slice(cvtVar v, erm, t)
+	   | mapExp (E_BorderCtl(bc, v)) = E_BorderCtl(BorderCtl.map cvtVar bc, cvtVar v)
+	   | mapExp (E_Coerce{dstTy, srcTy, x}) = E_Coerce{dstTy=dstTy, srcTy=srcTy, x = cvtVar x}
+	   | mapExp (l as E_LoadSeq _) = l
+	   | mapExp (l as E_LoadImage _) = l
+	   | mapExp (E_LoadFem(d, v1, v2)) = E_LoadFem(d, cvtVar v1, cvtVar v2)
+	   | mapExp (E_ExtractFem(v, d)) = E_ExtractFem(cvtVar v, d)
+	   | mapExp (E_ExtractFemItem(v, t, opt)) = E_ExtractFemItem(cvtVar v, t, opt)
+	   | mapExp (E_ExtractFemItem2(v1, v2, t, t', opt)) = E_ExtractFemItem2(cvtVar v1, cvtVar v2, t, t', opt)
+	   | mapExp (E_ExtractFemItemN(vs, ts, t, opt, NONE)) = E_ExtractFemItemN(List.map cvtVar vs, ts, t, opt, NONE)
+	   | mapExp (E_FemField(v, v', vopt, t, fld, fopt)) = E_FemField(cvtVar v, cvtVar v', Option.map cvtVar vopt, t, fld, fopt)
+	   | mapExp (E_InsideImage(v1, v2, j)) = E_InsideImage(cvtVar v1, cvtVar v2, j)
+	   | mapExp (E_FieldFn(f)) = E_FieldFn(f)
+	   | mapExp _ = raise Fail "failed mapExp"
+	in
+	 Block{code= List.map mapStm code, props=PropList.newHolder ()}
+	end
+
 
   end
