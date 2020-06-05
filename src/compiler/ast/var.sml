@@ -93,6 +93,7 @@ structure Var : sig
 
   (* return the string representation of the variable's kind *)
     val kindToString : t -> string
+    val kindToStringReal : kind -> string
 
     structure Map : ORD_MAP where type Key.ord_key = t
     structure Set : ORD_SET where type Key.ord_key = t
@@ -184,6 +185,20 @@ structure Var : sig
            | LocalVar => "local variable"
            | IterVar => "iteration variable"
           (* end case *))
+
+    fun kindToStringReal (kind) = (case kind
+					of BasisVar => "basis variable"
+					 | ConstVar => "constant"
+					 | InputVar => "input variable"
+					 | GlobalVar => "global variable"
+					 | FunVar => "function"
+					 | FunParam => "function parameter"
+					 | StrandParam => "strand parameter"
+					 | StrandStateVar => "state variable"
+					 | StrandOutputVar => "strand output variable"
+					 | LocalVar => "local variable"
+					 | IterVar => "iteration variable"
+				      (* end case *))
 
     local
       structure V =

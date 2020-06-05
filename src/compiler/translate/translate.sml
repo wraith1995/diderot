@@ -193,8 +193,8 @@ structure Translate : sig
          * just use y''.
          *)
           fun doVar (y, (env', phiMap)) = let
-                val y' = lookup env y
-                val y'' = newVar y
+                val y' = lookup env y handle ex => raise ex
+                val y'' = newVar y 
                 in
                   (insert(env', y, y''), VMap.insert(phiMap, y, (y'', [y', y''])))
                 end
@@ -329,29 +329,29 @@ print(concat["doVar (", SV.uniqueNameOf srcVar, ", ", IR.phiToString phi, ", _) 
 
   (* expression translation *)
     fun cvtExp (env : env, lhs, exp) = (case exp
-           of S.E_Var x => [IR.ASSGN(lhs, IR.VAR(lookup env x))]
+           of S.E_Var x => [IR.ASSGN(lhs, IR.VAR(lookup env x handle ex => raise ex))] 
             | S.E_Lit lit => [IR.ASSGN(lhs, IR.LIT lit)]
             | S.E_Kernel h => [IR.ASSGN(lhs, IR.OP(Op.Kernel(h, 0), []))]
-            | S.E_Select(x, fld) => [IR.ASSGN(lhs, IR.STATE(SOME(lookup env  x), getStateVar fld))]
+            | S.E_Select(x, fld) => [IR.ASSGN(lhs, IR.STATE(SOME(lookup env  x handle ex => raise ex), getStateVar fld))]
             | S.E_Apply(f, args) =>
-                [IR.ASSGN(lhs, IR.APPLY(cvtFuncVar f, List.map (lookup env) args))]
+                [IR.ASSGN(lhs, IR.APPLY(cvtFuncVar f, List.map (lookup env) args handle ex => raise ex))] 
             | S.E_Prim(f, tyArgs, args, ty) => let
-                val args' = List.map (lookup env) args
+                val args' = List.map (lookup env) args handle ex => raise ex
                 in
-                  TranslateBasis.translate (lhs, f, tyArgs, args')
+                  TranslateBasis.translate (lhs, f, tyArgs, args') handle ex => raise ex
                 end
             | S.E_Tensor(args, _) =>
                 [IR.ASSGN(lhs, IR.CONS(List.map (lookup env) args, IR.Var.ty lhs))]
             | S.E_Field(args, Ty.T_Field{diff, dim, shape}) => let
                 val rator = MkOperators.concatField(dim, List.tl shape, List.length(args))
-                val ein = IR.EINAPP(rator, List.map (lookup env) args)
+                val ein = IR.EINAPP(rator, List.map (lookup env) args) handle ex => raise ex
                 in
                   [IR.ASSGN(lhs, ein)]
                 end
-            | S.E_Seq(args, _) => [IR.ASSGN(lhs, IR.SEQ(List.map (lookup env) args, IR.Var.ty lhs))]
+            | S.E_Seq(args, _) => [IR.ASSGN(lhs, IR.SEQ(List.map (lookup env) args handle ex => raise ex, IR.Var.ty lhs))]
             | S.E_Tuple xs =>
 	      let
-	       val vars = List.map (lookup env) xs
+	       val vars = List.map (lookup env handle ex => raise ex) xs handle ex => raise ex
 	       val tys = List.map (IR.Var.ty) vars
 	      in
 	       [IR.ASSGN(lhs, IR.OP(Op.Tuple tys, vars))]
@@ -618,8 +618,8 @@ print(concat["doVar (", SV.uniqueNameOf srcVar, ", ", IR.phiToString phi, ", _) 
                 in
                   stmt_allP @ stmt_comp @ [IR.ASSGN(lhs, ein)]
                 end
-          (* end case *))
-
+          (* end case *)) handle ex => raise ex
+				       handle ex => raise ex
   (* add nodes to save the varying strand state, followed by an exit node *)
     fun saveStrandState (env, (srcState, dstState), exit) = let
      val lookup = lookup env
@@ -644,23 +644,30 @@ print(concat["doVar (", SV.uniqueNameOf srcVar, ", ", IR.phiToString phi, ", _) 
           fun cvt (env : env, cfg, []) = (cfg, env)
             | cvt (env, cfg, stm::stms) = (case stm
                  of S.S_Var(x, NONE) => let
-                      val x' = newVar x
+                  val x' = newVar x
+		  (* val _ = print("adding var: ") *)
+		  (* val _ = print(SV.uniqueNameOf x) *)
+		  (* val _ = print("\n") *)
                       in
-                        cvt (insert (env, x, x'), cfg, stms)
+                        cvt (insert (env, x, x'), cfg, stms) 
                       end
                   | S.S_Var(x, SOME e) => let
-                      val x' = newVar x
-                      val assigns = cvtExp (env, x', e)
+                   val x' = newVar x
+		   (* val _ = print("adding var: ") *)
+		   (* val _ = print(SV.uniqueNameOf x) *)
+		   (* val _ = print("\n") *)
+
+                      val assigns = cvtExp (env, x', e) handle ex => raise ex
                       in
                         recordAssign (joinStk, x, x');
                         cvt (
                           insert(env, x, x'),
                           IR.CFG.concat(cfg, IR.CFG.mkBlock assigns),
-                          stms)
+                          stms) handle ex => raise ex
                       end
                   | S.S_Assign(lhs, rhs) => let
                       val lhs' = newVar lhs
-                      val assigns = cvtExp (env, lhs', rhs)
+                      val assigns = cvtExp (env, lhs', rhs) handle ex => raise ex
                       in
                       (* check for assignment to global (i.e., constant, input, or other global) *)
 (* FIXME: for the global initialization block, we should batch up the saving of globals until
@@ -673,16 +680,16 @@ print(concat["doVar (", SV.uniqueNameOf srcVar, ", ", IR.phiToString phi, ", _) 
                             IR.CFG.concat(
                               cfg,
                               IR.CFG.mkBlock(assigns @ [IR.GASSGN(cvtGlobalVar lhs, lhs')])),
-                            stms)
+                            stms) handle ex => raise ex
                           else (
                             recordAssign (joinStk, lhs, lhs');
                             cvt (
                               insert(env, lhs, lhs'),
                               IR.CFG.concat(cfg, IR.CFG.mkBlock assigns),
-                              stms))
+                              stms)) handle ex => raise ex
                       end
                   | S.S_IfThenElse(x, b0, b1) => let
-                      val x' = lookup env x
+                      val x' = lookup env x handle ex => raise ex
                       val join as JOIN{nd=joinNd, ...} = newJoin (env, 2)
                       val (cfg0, _) = cvtBlock (state, env, (0, join)::joinStk, b0)
                       val (cfg1, _) = cvtBlock (state, env, (1, join)::joinStk, b1)
@@ -721,11 +728,11 @@ print(concat["doVar (", SV.uniqueNameOf srcVar, ", ", IR.phiToString phi, ", _) 
                         if List.null joinStk andalso not(IR.Node.isReachable joinNd)
                           then (* NOTE: this case implies that stms is empty! *)
                             (IR.CFG.appendNode(cfg, IR.Node.mkUNREACHABLE()), env)
-                          else cvt (env, cfg, stms)
+                          else cvt (env, cfg, stms) handle ex => raise ex
                       end
                   | S.S_Foreach(x, xs, b) => let
                       val x' = newVar x
-                      val xs' = lookup env xs
+                      val xs' = lookup env xs handle ex => raise ex
                     (* For any local variable y that is both live on exit of the block b and
                      * assigned to in b, we will need a phi node for y.
                      *)
@@ -745,12 +752,12 @@ print(concat["doVar (", SV.uniqueNameOf srcVar, ", ", IR.phiToString phi, ", _) 
                         IR.Node.setSucc (IR.CFG.exit body, foreachNd);
                         IR.Node.setBodyExit (foreachNd, IR.CFG.exit body);
 			(* process the rest of the block *)
-                        cvt (env, IR.CFG.concat (cfg, IR.CFG{entry=foreachNd, exit=foreachNd}), stms)
+                        cvt (env, IR.CFG.concat (cfg, IR.CFG{entry=foreachNd, exit=foreachNd}), stms) handle ex => raise ex
                       end
                   | S.S_New(strandId, args) => let
-                      val nd = IR.Node.mkNEW(strandId, List.map (lookup env) args)
+                      val nd = IR.Node.mkNEW(strandId, List.map (lookup env) args) handle ex => raise ex
                       in
-                        cvt (env, IR.CFG.appendNode (cfg, nd), stms)
+                        cvt (env, IR.CFG.appendNode (cfg, nd), stms) handle ex => raise ex
                       end
                   | S.S_KillAll => let
                       val nd = IR.Node.mkMASSIGN([], IR.OP(Op.KillAll, []))
@@ -780,12 +787,12 @@ print(concat["doVar (", SV.uniqueNameOf srcVar, ", ", IR.phiToString phi, ", _) 
                       (IR.CFG.concat (cfg, saveStrandState (env, state, IR.Node.mkSTABILIZE())), env))
                   | S.S_Return x => (
                       killPath joinStk;
-                      (IR.CFG.appendNode (cfg, IR.Node.mkRETURN(SOME(lookup env x))), env))
+                      (IR.CFG.appendNode (cfg, IR.Node.mkRETURN(SOME(lookup env x handle ex => raise ex))), env) handle ex => raise ex) 
                   | S.S_Print args => let
-                      val args = List.map (lookup env) args
+                      val args = List.map (lookup env) args handle ex => raise ex
                       val nd = IR.Node.mkMASSIGN([], IR.OP(Op.Print(List.map IR.Var.ty args), args))
                       in
-                        cvt (env, IR.CFG.appendNode (cfg, nd), stms)
+                        cvt (env, IR.CFG.appendNode (cfg, nd), stms) handle ex => raise ex
                       end
                   | S.S_MapReduce mrs => let
                       fun cvtMR (mr, (env, assigns, lhs, mrs')) = let
@@ -801,7 +808,7 @@ print(concat["doVar (", SV.uniqueNameOf srcVar, ", ", IR.phiToString phi, ", _) 
                             val srcAssign = IR.ASSGN(src, IR.OP(Op.Strands(strandTy, domain), []))
                             val result' = newVar result
                             val env = insert(env, result, result')
-                            val mr' = (reduction, cvtFuncVar f, List.map (lookup env') args)
+                            val mr' = (reduction, cvtFuncVar f, List.map (lookup env') args) handle ex => raise ex
                             in
                               (env, srcAssign :: assigns, result'::lhs, mr'::mrs')
                             end
@@ -812,23 +819,26 @@ print(concat["doVar (", SV.uniqueNameOf srcVar, ", ", IR.phiToString phi, ", _) 
                       end
                 (* end case *))
           in
-            cvt (env, IR.CFG.empty, code)
+            cvt (env, IR.CFG.empty, code) handle ex => raise ex
           end
-(*DEBUG*)handle ex => raise ex
+									  (*DEBUG*)handle ex => raise ex
 
   (* a function for generating a block of assignments to load the globals that
    * are referenced in a SimpleIR block.
    *)
     fun loadGlobals (env, blk) = let
-          fun load (x, (env, stms)) = let
+     val globs = AnalyzeSimple.globalsOfBlock blk
+     val _ = print("We will add:"^(Int.toString (VSet.numItems globs)) ^ "\n")
+
+     fun load (x, (env, stms)) = let
+      val _ = print("loading:" ^ (SV.uniqueNameOf x) ^ "\n")
                 val x' = newVar x
                 val stm = IR.ASSGN(x', IR.GLOBAL(cvtGlobalVar x))
                 val env = insert (env, x, x')
                 in
                   (env, stm::stms)
                 end
-          val globs = AnalyzeSimple.globalsOfBlock blk
-          val (env, stms) = VSet.foldr load (env, []) globs
+     val (env, stms) = VSet.foldr load (env, []) globs
           in
             (IR.CFG.mkBlock stms, env)
           end
@@ -893,9 +903,12 @@ print(concat["doVar (", SV.uniqueNameOf srcVar, ", ", IR.phiToString phi, ", _) 
   (* convert a function definition to a HighIR function *)
     fun cvtFunc (S.Func{f, params, body}) = let
         (* initialize the environment with the function's parameters *)
-          val (env, params) = initEnvFromParams params
+          val (env, params) = initEnvFromParams params handle ex => raise ex
           val (loadBlk, env) = loadGlobals (env, body)
-          val (bodyCFG, _) = cvtBlock (([], []), env, [], body)
+	  val _ = print("Doing function...")
+	  val _ = print("name: " ^ SimpleFunc.uniqueNameOf f)
+	  val _ = print("\n")
+          val (bodyCFG, _) = cvtBlock (([], []), env, [], body) handle ex => raise ex
           val cfg = IR.CFG.prependNode (IR.Node.mkENTRY(), loadBlk)
           val cfg = IR.CFG.concat(cfg, bodyCFG)
           val fdef = IR.Func{name = cvtFuncVar f, params = params, body = cfg}
@@ -934,6 +947,7 @@ print(concat["doVar (", SV.uniqueNameOf srcVar, ", ", IR.phiToString phi, ", _) 
                   cfg
                 end
           val globals' = List.map cvtGlobalVar globals
+	  val _ = print("Translating functions....\n")
           val funcs' = List.map cvtFunc funcs
         (* if the program has global reductions, then lift those functions *)
           val funcs' = if Properties.hasProp Properties.GlobalReduce props

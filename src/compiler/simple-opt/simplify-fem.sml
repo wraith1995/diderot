@@ -225,7 +225,7 @@ return to Strands until Fixed
 	      | S.S_Foreach(x, xs, blk) => let val x' = copy x (* add itter *)
 					       val xs' = rename xs
 					       val blk' = doBlock blk
-					   in (remove x; S.S_Foreach(x', xs', blk')) end
+					   in (S.S_Foreach(x', xs', blk')) end
 	      | S.S_New _ => raise Fail "new impossible in function!"
 	      | S.S_KillAll => raise Fail "kill impossible in function!"
 	      | S.S_StabilizeAll => raise Fail "stab impossible in function!"
@@ -261,7 +261,6 @@ return to Strands until Fixed
 	      | S.E_ExtractFemItem2(v1, v2, ty, outTy, data) => S.E_ExtractFemItem2(rename v1, rename v2, ty, outTy, data)
 	      | S.E_LoadFem(data, v1, v2) => S.E_LoadFem(data, rename v1, rename v2)
 	      | S.E_FemField(v1, v1', v2, ty, field, func) => S.E_FemField(rename v1,rename v1', Option.map (rename) v2, ty, field, func)
-	      (*^NOTE: no globals are in these functions*)
 	      | S.E_ExtractFemItemN(vars, tys, outTy, opt, NONE) => S.E_ExtractFemItemN(List.map rename vars, tys, outTy, opt, NONE) 
 	   (* end case *))
       in
@@ -312,12 +311,11 @@ return to Strands until Fixed
 	val deps2 = getAllDeps(f2)
 	val f1ltf2 = List.exists (fn x => F.same(x, f1)) deps2
 	val f2ltf1 = List.exists (fn x => F.same(x, f2)) deps1
+
        in
-	if f1ltf2
+	Bool.not(if f1ltf2
 	then true
-	else if f2ltf1
-	then false
-	else false
+	else false)
        end
 
   in
@@ -556,6 +554,19 @@ return to Strands until Fixed
     and info about the calls (args +glob femPress) -> SOME(function_def)	
     (SOME if we need to do something and NONE if it is already done -> how to get ret var then?)  -> function_def can be processed *)
   (*from the procced thing, we get the accepted one, which we get back here.*)
+  fun testFunction(args, globs, retTy) =
+      let
+       val femsInvolvedArgs = List.concatMap (Ty.allFems o V.typeOf) (args)
+       val femsInvolvedGlobs = List.concatMap (Ty.allFems o V.typeOf) (globs)
+       val anyFem = 0 <> (List.length (Ty.allFems retTy))
+       val anyNonBase = (List.length femsInvolvedArgs <> 0)
+			orelse (List.length femsInvolvedGlobs <> 0)
+			orelse anyFem
+      in
+       anyNonBase
+      end
+
+  
   fun addCall(f : F.t, call : callSite, callArgs : functionCall) : callResult =
       let
        val callTable = getFn f handle exn => raise exn
@@ -582,17 +593,6 @@ return to Strands until Fixed
 	  (* end case *))
        end
       end handle exn => raise exn
-  fun testFunction(args, globs, retTy) =
-      let
-       val femsInvolvedArgs = List.concatMap (Ty.allFems o V.typeOf) (args)
-       val femsInvolvedGlobs = List.concatMap (Ty.allFems o V.typeOf) (globs)
-       val anyFem = 0 <> (List.length (Ty.allFems retTy))
-       val anyNonBase = (List.length femsInvolvedArgs <> 0)
-			orelse (List.length femsInvolvedGlobs <> 0)
-			orelse anyFem
-      in
-       anyNonBase
-      end
 
   fun updateCall(f : F.t, call : callSite, callArgs : functionCall,
 		 newDef : S.func_def, retF : femPres) : unit =
@@ -604,15 +604,15 @@ return to Strands until Fixed
   fun cvtFun(fvar : F.t, args : callSite, retVar : V.t,
 	     newDefs : S.func_def list ref,
 	     cvtBody : S.block * S.func_def list ref-> S.block,
-	     cvtVar : V.t -> V.t) =
+	     cvtVar : V.t -> V.t, reductionOverride) =
       let
        val argsp = List.map getFemPres args
        val globs = getFuncGlobs fvar
        val globsp = List.map getFemPres globs
        val callArgs = (argsp, globsp)
-       val anyNonBase = testFunction(args, globs, F.resultTypeOf fvar)
+       val anyNonBase = testFunction(args, globs, F.resultTypeOf fvar) orelse reductionOverride
       in
-       if anyNonBase
+       if Bool.not anyNonBase
        then NONE 
        else
 	let
@@ -620,7 +620,7 @@ return to Strands until Fixed
 	 val someDef = HT.find defsTable callArgs
 	 val (def, retV) = (case someDef
 			     of SOME(def, SOME(v)) => (def, v)
-			      | NONE => raise Fail "impossible"
+			      | NONE => raise Fail "impossible non recorded function"
 			   (* end case*))
 	 val retPres = retV
 	in
@@ -633,7 +633,7 @@ return to Strands until Fixed
 	       val params' = List.map cvtVar params
 	       val paramsTys = List.map V.typeOf params'
 	       val body' = cvtBody(body, newDefs)
-	       val f' = F.new(F.nameOf fvar, retTy', paramsTys)
+	       val f' = F.new(F.uniqueNameOf fvar, retTy', paramsTys)
 	       val def' = S.Func{f=f', params=params', body=body'}
 	       val _ = newDefs := (def' :: !newDefs)
 	       val _ = HT.insert (getCvtTbl fvar) (callArgs, f')
@@ -674,7 +674,7 @@ return to Strands until Fixed
 	      )
 	      | doit (S.E_Apply(f, vs)) = (
 	       List.app (checkExistence ((F.nameOf f) ^ "_arg")) vs;
-	       procApply(f, vs, call) handle ex => raise ex; (*these are the only places where call is used.*)
+	       procApply(f, vs, call, false) handle ex => raise ex; (*these are the only places where call is used.*)
 	       getFemPres (List.hd call) handle ex => raise ex
 	      )
 	      | doit (S.E_Prim(v, _, vs, t)) =
@@ -892,8 +892,8 @@ return to Strands until Fixed
 		    (*QUESTION: val _ = (checkExistence "_strand") source: we generaly ingore the strand type *)
 		    (*NOTE: args are just args to the function*)
 		    (*NOTE: reduction and domain can be ignored *)
-				     (*NOTE: This is a case of an apply where args are the params and result is the callsite *)
-		    val _ = procApply(f, args, [result])
+		    (*NOTE: This is a case of an apply where args are the params and result is the callsite *)
+		    val _ = procApply(f, args, [result], true)
 		   in
 		    ()
 		   end
@@ -913,7 +913,7 @@ return to Strands until Fixed
 	    List.app g (code)
 	   end
        and procApply(f : F.t, args : V.t list,
-		     call : callSite) = let
+		     call : callSite, reductionOverride) = let
 
 	val argsp = List.map getFemPres args
 	val globs = getFuncGlobs f
@@ -922,7 +922,7 @@ return to Strands until Fixed
 	val anyNonBase = testFunction(args, globs, F.resultTypeOf f)
 	val v : V.t = List.hd call
        in
-	if anyNonBase
+	if anyNonBase orelse reductionOverride
 	then
 	 let
 	  val (fdef, possibleRet) = addCall(f, call, callArgs) 
@@ -982,7 +982,7 @@ return to Strands until Fixed
    fun analyze(b, change, news) = analyzeBlock(b, change, news, findDep, addDep, onlyOne)
 
    (*Analyze the global init - add deps here.*)
-
+   val _ = analyze(constInit, ref false, ref [])
    val _ = analyze(globInit, ref false, ref [])
 
    (*Analyze the creation block, grabing the news especially*)
@@ -1205,8 +1205,8 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
       else (case d
 	     of FD.MeshPos(m) =>
 		if isBase
-		then Ty.T_Tuple([Ty.vecTy (FD.meshMapDim m), Ty.T_Int])
-		else Ty.T_Tuple([Ty.vecTy (FD.meshMapDim m), Ty.T_Int, Ty.T_Int])
+		then Ty.T_Tuple([Ty.vecTy (FD.underlyingDim d), Ty.T_Int, Ty.T_Int])
+		else Ty.T_Tuple([Ty.vecTy (FD.underlyingDim d), Ty.T_Int, Ty.T_Int, Ty.T_Int])
 	      | FD.FuncCell(_) => if isBase
 				  then Ty.T_Int
 				  else Ty.T_Tuple([Ty.T_Int, Ty.T_Int])
@@ -1219,27 +1219,31 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 	      | FD.Func _ => raise Fail "impossible"
 	   (* end case*))
 
-  fun cvtTy(ty, pres) =
-      (case (ty, pres)
-	of (Ty.T_Bool, NOTHING) => ty
-	 | (Ty.T_Int, NOTHING) => ty
-	 | (Ty.T_String, NOTHING) => ty
-	 | (Ty.T_Tensor _, NOTHING) => ty
-	 | (Ty.T_Sequence(t', NONE), Seq(p)) => Ty.T_Sequence(cvtTy(t', p), NONE)
-	 | (Ty.T_Sequence(t', SOME(k)), Array(p)) => Ty.T_Sequence(cvtTy(t', p), SOME(k))
-	 | (Ty.T_Tuple(ts), Tuple(ps)) => Ty.T_Tuple(ListPair.map cvtTy (ts, ps))
-	 | (Ty.T_Strand _, NOTHING) => ty
-	 | (Ty.T_Kernel, NOTHING) => ty
-	 | (Ty.T_Field _, NOTHING) => ty
-	 | (Ty.T_Fem(d), Base(d', NONE)) => raise Fail "cvtTy: analysis marked base none"
-	 | (Ty.T_Fem(d), Base(d', SOME(v))) => femTy(d, true)
-	 | (Ty.T_Fem(d), ALL(d')) => femTy(d, false)
-	 | _ => raise Fail ("impossible: " ^ (Ty.toString ty) ^ " vs. " ^ (presToString pres))
-      (* end case*))
-
-
+  fun cvtTy(ty, pres) = if Bool.not(Ty.hasFem ty orelse anyFem pres)
+			then ty
+			else
+			 (case (ty, pres)
+			   of (Ty.T_Bool, NOTHING) => ty
+			    | (Ty.T_Int, NOTHING) => ty
+			    | (Ty.T_String, NOTHING) => ty
+			    | (Ty.T_Tensor _, NOTHING) => ty
+			    | (Ty.T_Sequence(t', NONE), Seq(p)) => Ty.T_Sequence(cvtTy(t', p), NONE)
+			    | (Ty.T_Sequence(t', SOME(k)), Array(p)) => Ty.T_Sequence(cvtTy(t', p), SOME(k))
+			    | (Ty.T_Tuple(ts), Tuple(ps)) => Ty.T_Tuple(ListPair.map cvtTy (ts, ps))
+			    | (Ty.T_Strand _, NOTHING) => ty
+			    | (Ty.T_Kernel, NOTHING) => ty
+			    | (Ty.T_Field _, NOTHING) => ty
+			    | (Ty.T_Fem(d), Base(d', NONE)) => raise Fail "cvtTy: analysis marked base none"
+			    | (Ty.T_Fem(d), Base(d', SOME(v))) => femTy(d, true)
+			    | (Ty.T_Fem(d), ALL(d')) => femTy(d, false)
+			    | _ => raise Fail ("impossible: " ^ (Ty.toString ty) ^ " vs. " ^ (presToString pres))
+			 (* end case*))
   local
-   val {clrFn, getFn, peekFn, setFn} = V.newProp(fn v => V.new(V.nameOf v, V.kindOf v, cvtTy(V.typeOf v, getFemPres v) handle ex=> raise ex))
+   val {clrFn, getFn, peekFn, setFn} = V.newProp(fn v => (case V.kindOf v
+							   of Var.ConstVar => v
+							    | Var.InputVar => v
+							    | _ => V.new(V.nameOf v, V.kindOf v, cvtTy(V.typeOf v, getFemPres v))
+							 (* end case*)))
   in
   val cvtVar = getFn
   end
@@ -1249,7 +1253,9 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
        val ret = ref false
        val _ = merge(pres1, pres2, ret)
       in
-       !ret
+       if same(pres1, pres2)
+       then false
+       else !ret
       end
   fun checkMerges(preses, retPres) = let
    val ret = ref false
@@ -1364,11 +1370,12 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 	      | (Ty.T_Fem(d), Base(_, NONE), _) => raise Fail "not allowed NONE"
 	      | (Ty.T_Fem(d), _, Base(_, NONE)) => raise Fail "not allowed NONE"
 	      | (Ty.T_Fem(d), ALL(d'), Base(d'', SOME v1)) => raise Fail "impossible conversion: ALL -> base; could be implemented; could be useful for apply?; if base type, then find it via indexing; if regular type, discard...."
+	      | _ => raise Fail ("impossible convert: " ^ (Ty.toString ty) ^ " and " ^ (presToString pres) ^ " and " ^ (presToString targetPres))
 	   (* end case*))
        fun toAll(v : V.t, retPres) =
 	   if checkMerge(getFemPres v, retPres)
 	   then toAll'(cvtVar v, V.typeOf v, getFemPres v,retPres)
-	   else ([], v)
+	   else ([], cvtVar v)
 
        fun toAlls(vs : V.t list, target : femPres) =
 	   let val (stmss, vs) = ListPair.unzip (List.map (fn x => toAll(x, target)) vs)
@@ -1388,7 +1395,7 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
        val S.Block{code, props} = block
        val code' = List.concatMap (fn x => cvtStm(x, newDefs, strandParams, globCvt, globDep, globDepToDep, depToV)) code
       in
-       S.Block{code=code', props=props}
+       S.Block{code=code', props=PropList.newHolder()}
       end
   and cvtStm(stm : S.stmt, newDefs : S.func_def list ref, strandParams, globCvt, globDep, globDepToDep, depToV) =
       let
@@ -1399,7 +1406,7 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 				      of SOME((stmts, vr)) => stmts@[S.S_Var(cvtVar v, SOME(vr))]
 				       | NONE => [S.S_Var(cvtVar v, NONE)]
 				    (* end case*))
-	 | doit (S.S_Assign(v, exp)) = let val (stms,exp) = cvtExp (getFemPres v, v) exp in stms@[S.S_Assign(cvtVar v, exp)] end
+	 | doit (S.S_Assign(v, exp)) = let val (stms,exp') = cvtExp (getFemPres v, v) exp in stms@[S.S_Assign(cvtVar v, exp')] end
 	 | doit (S.S_Foreach(v1, v2, block)) = [S.S_Foreach(cvtVar v1, cvtVar v2, cvtBody' block)]
 	 | doit (S.S_IfThenElse(v, b1, b2)) = [S.S_IfThenElse(cvtVar v, cvtBody' b1, cvtBody' b2)]
 	 | doit (S.S_New(a,vs)) =
@@ -1428,7 +1435,7 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 		 val args' = List.map cvtVar args
 		 val S.Func{f, params, body} = mapf
 		 val defs = ref []
-		 val test = Option.isSome(cvtFun(f, args, result, defs, (fn (x,y) => cvtBody(x,y, NONE, globCvt, globDep, globDepToDep, depToV)), cvtVar))
+		 val test = Option.isSome(cvtFun(f, args, result, defs, (fn (x,y) => cvtBody(x,y, NONE, globCvt, globDep, globDepToDep, depToV)), cvtVar, true))
 		 val mapf' = if test
 			     then let val def::vs = !defs (* our def is on top*)
 				      val _ = newDefs := vs@ (!newDefs)
@@ -1437,15 +1444,15 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 				  end
 			     else mapf
 		in
-		 ([], S.MapReduce{result=cvtVar result,
-				  reduction=reduction,
-				  mapf = mapf',
-				  source=source,
-				  args=args',
-				  domain=domain})
+		 S.MapReduce{result=cvtVar result,
+			     reduction=reduction,
+			     mapf = mapf',
+			     source=cvtVar source,
+			     args=args',
+			     domain=domain}
 		end
 	   in
-	    lst (S.S_MapReduce(mrlst))
+	    lst (S.S_MapReduce(List.map translateReduce mrlst))
 	   end
       in
        doit(stm)
@@ -1467,16 +1474,6 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 				 | _ => raise Fail "invalid femPres for base fem global"
 			      (*end case*))
 						    
-       fun maybeCvt(exp, cvtExp, currentPres, expectedPres) = if checkMerge(currentPres, expectedPres)
-       							      then let
-							       val oldTy = S.typeOf(exp)
-       							       val v = V.new("cvtTemp", Var.LocalVar, S.typeOf(cvtExp))
-       							       val tempAssign = S.S_Var(v, SOME(exp))
-       							       val (cvtStms, v') = toAll'(v, oldTy, currentPres, expectedPres)
-       							      in (tempAssign::cvtStms, S.E_Var(v')) end
-       							      else ([], exp)
-
-
        val none = fn s => ([],s)
        fun doit (S.E_Var(v)) = if checkMerge(getFemPres v, retPres)
 			       then let val (stms, v') = toAll(v, retPres)
@@ -1484,15 +1481,46 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 			       else none (S.E_Var(cvtVar v))
 	 | doit (l as S.E_Lit(_)) = none l
 	 | doit (k as S.E_Kernel _) = none k
-	 | doit (S.E_Select(v1, v2)) = maybeCvt(e, S.E_Select(v1, cvtVar v2), getFemPres v2, retPres)
+	 | doit (S.E_Select(v1, v2)) =
+	   let
+	    val actualRetPres = getFemPres v2
+	   in
+	    if checkMerge(retPres, actualRetPres)
+	    then let
+	     val _ = print("eppp\n")
+	     val _ = print(presToString actualRetPres)
+	     val _ = print("\n")
+	     val _ = print(presToString retPres)
+	     val _ = print("\n")
+	     val _ = print("erm:")
+	     val _ = print(Bool.toString(same(actualRetPres, retPres)))
+	     val _ = print(" and ")
+	     val _ = print(Bool.toString(checkMerge(retPres, actualRetPres)))
+	     val _ = print("\n")
+	     val oldTy = cvtTy(V.typeOf v2, actualRetPres)
+	     val newTy = cvtTy(V.typeOf v2, retPres)
+	     val temp = V.new("cvttemp", Var.LocalVar, oldTy)
+	     val tempAssign = S.S_Var(temp, SOME(S.E_Select(cvtVar v1, cvtVar v2)))
+	     val (cvtStms, temp') = toAll'(temp, oldTy, actualRetPres, retPres) handle ex => raise ex
+	    in (tempAssign::cvtStms, S.E_Var(temp')) end
+	    else none (S.E_Select(cvtVar v1, cvtVar v2))
+	   end
 	 | doit (S.E_Apply(f, vs)) = (* possible to all convert*)
 	   let
-	    val vs' = List.map cvtVar vs (*FIXME: func call doesn't quite make sense*)
+	    val vs' = List.map cvtVar vs 
 	    val callSite = vs
-			     (*FIXME: add return press and cvt - maybeRunAll*)
 	   in
-	    (case cvtFun(f, callSite, retVar, newDefs, cvtBody, cvtVar)
-	      of SOME(f', actualRetPres) => maybeCvt(S.E_Apply(f, vs), S.E_Apply(f', vs'), actualRetPres, retPres)
+	    (case cvtFun(f, callSite, retVar, newDefs, cvtBody, cvtVar, false)
+			(*maybe cvt doesn't make sense here...*)
+	      of SOME(f', actualRetPres) => if checkMerge(actualRetPres, retPres)
+					    then let
+					     val oldTy = cvtTy(F.resultTypeOf f, actualRetPres)
+					     val newTy = cvtTy(F.resultTypeOf f, retPres)
+					     val temp = V.new("cvtTemp", Var.LocalVar, oldTy)
+					     val tempAssign = S.S_Var(temp, SOME(S.E_Apply(f', vs')))
+					     val (cvtStms, temp') = toAll'(temp, oldTy, actualRetPres, retPres) handle ex => raise ex
+					    in (tempAssign::cvtStms, S.E_Var(temp')) end
+					    else ([], S.E_Apply(f', vs'))
 	       | NONE => none (S.E_Apply(f, vs'))
 	    (* end case*))
 	   end
@@ -1579,7 +1607,7 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 	    val innerPreses' = List.map getFemPres vs
 	    val (stmss, vs') = ListPair.unzip (ListPair.map toAll (vs, innerPreses))
 	    val stms = List.concat stmss
-	   in (stms, S.E_Tuple(vs)) end
+	   in (stms, S.E_Tuple(vs')) end
 	 | doit (S.E_Project(v,i)) =
 	   let
 	    val retPres' = (case retPres
@@ -1618,7 +1646,7 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 	 | doit (S.E_LoadFem(data, v1, v2)) =
 	   if FD.baseFem data
 	   then (case (getFemPres v1, retPres)
-		  of (Base(d', SOME(v)), Base(d'', SOME(v'))) => none (S.E_Var(cvtVar v))
+		  of (Base(d', SOME(v)), Base(d'', SOME(v'))) => none (S.E_Var(v))
 		   | (Base(d', SOME(v)), ALL(d'')) => let val (newVar, newStm)  = globCvt(d', v1)
 						      in ([newStm], S.E_Var(newVar)) end
 		   | (ALL(d'), ALL(d'')) => none (S.E_Var(cvtVar v1))
@@ -1676,7 +1704,7 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 	   else if FD.baseFem data
 	   then (case getFemPres v
 		  of Base(_, SOME(v')) =>
-		     none (S.E_ExtractFemItem(cvtVar v', ty, (opt, data)))
+		     none (S.E_ExtractFemItem(v', ty, (opt, data)))
 		   | ALL(_) =>
 		     let val (stms, newVar) = depToV(data, cvtVar v)
 		     in (stms, S.E_ExtractFemItem(newVar, ty, (opt, data)))
@@ -1714,7 +1742,7 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 	 (*RefBuild, InvalidBuild, InvalidBuildBoundary, AllBuild, *CellFaceCell*)
 	 | doit (S.E_ExtractFemItemN(vs, tys, ty, (opt, data), NONE)) = (*we never use the function here - for now*)
 	   if FO.arity opt <> (List.length vs)
-	   then raise Fail "invalid arity for fem opt"
+	   then raise Fail ("invalid arity " ^ (Int.toString (FO.arity opt)) ^ " with args =" ^ (Int.toString (List.length vs)) ^ " for fem opt: "  ^ (FO.toString (opt, data)))
 		      (*function to get the int of the fem involved...*)
 	   else
 	    let
@@ -1737,11 +1765,12 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 				    in SOME([newStm], newVar) 
 				    end
 				  | (ALL(_), ALL(_)) => SOME([], femArg')
-				  | (ALL _, NOTHING) =>
+				  | (ALL _, Array(NOTHING)) =>
 				    let val (stms, newVar) = depToV(data, cvtVar femArg) (*TODO:is this right*)
 				    in SOME(stms, newVar)
 				    end
-				  | (Base(_, SOME v), NOTHING) => SOME([], cvtVar v)
+				  | (Base(_, SOME v), Array(NOTHING)) => SOME([], cvtVar v)
+				  | (a,b) => raise Fail ("impossibe: " ^ (presToString a) ^ " vs. " ^ (presToString b))
 			       (* end case*))
 	     val startStms = nanDec :: nanVecDec :: neg1Dec :: []
 
@@ -1749,7 +1778,11 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 	     (case opt
 	       of FO.RefBuild =>
 		  let
-		   val [cell, refPos, facet] = List.map cvtVar args
+		   val [_, cell, refPos, facet] = (case List.map cvtVar vs
+						    of [mesh, cell, refTensor] => [mesh, cell, refTensor, neg1]
+						     | [mesh, cell, refTensor, facet] => [mesh, cell, refTensor, facet]
+						     | _ => raise Fail "impossible"
+						  (*end case*))
 		  in
 		   (case presRecover
 		     of NONE =>  (startStms, S.E_Tuple([refPos, cell, facet]))
@@ -1767,7 +1800,7 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 		  end
 		| FO.InvalidBuildBoundary =>
 		  let
-		   val [refPos, facet] = List.map cvtVar vs
+		   val [refPos, facet] = List.map cvtVar args
 		  in
 		   (case presRecover
 		     of NONE => (startStms, S.E_Tuple([refPos, neg1, facet]))
@@ -1776,7 +1809,7 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 		  end
 		| FO.AllBuild =>
 		  let
-		   val [refPos, cell, facet] = (case args
+		   val [refPos, cell, facet] = (case List.map cvtVar args
 						 of [cellInt, refPos, worldPos, facetIdExp] => [refPos, cellInt, facetIdExp]
 						  | [cellIntExp, refPos, worldPos] => [refPos, cellIntExp, neg1]
 						  | _ => raise Fail "invalid AllBuild config"
@@ -1801,7 +1834,7 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 	    val (stms2, v2') = acquireGlobal v2
 	    val (stms3, v1opt') = (case Option.map getFemPres v1opt
 				    of NONE => ([], NONE)
-				     | SOME(NOTHING) => ([], v1opt)
+				     | SOME(NOTHING) => ([], Option.map cvtVar v1opt)
 				     | SOME(_) => let val SOME(base) = v1opt
 						      val (stms, base') = acquireGlobal base
 						  in (stms, SOME(base')) end
@@ -1834,8 +1867,9 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
        local
 	val S.Block({code,props}) = doBlock'(globInit) handle ex => raise ex
        in
-       val globalInit' = S.Block{code=newInits@code,props=props}
+       val globalInit' = S.Block{code=newInits@code,props=PropList.newHolder()}
        end
+       val constInit' = doBlock'(constInit)
 
        val start' = Option.map doBlock' start handle ex => raise ex
        val update' = Option.map doBlock' update handle ex => raise ex
@@ -1878,7 +1912,7 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
        val funcs' = List.filter (fn f => F.useCount (defToName f) > 0) allDefs'
        end
       in
-       S.Program{props=props, consts=consts, inputs=inputs, constInit=constInit, globals=globals'',
+       S.Program{props=props, consts=List.map cvtVar consts, inputs=inputs, constInit=constInit', globals=globals'',
 		 globInit=globalInit',
 		 funcs=funcs', strand=strand', create=create', start=start', update=update'}
       end

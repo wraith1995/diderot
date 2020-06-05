@@ -362,6 +362,7 @@ fun makeMeshPosSearch(env, cxt, span, refCellClass, meshData, newtonTol, newtonA
 
      val newPosVar = Var.new(Atom.atom "xn", span, Var.LocalVar, insideVec)
      val newPosInit = AST.S_Decl((newPosVar, SOME(startPosition)))
+     val newPosReset = AST.S_Assign((newPosVar, span), startPosition)
      val newPosVarExpr = AST.E_Var((newPosVar, span))
      val initStms = newPosInit::initStms
      val updateVar = Var.new(Atom.atom "delta", span, Var.LocalVar, insideVec)
@@ -492,7 +493,7 @@ fun makeMeshPosSearch(env, cxt, span, refCellClass, meshData, newtonTol, newtonA
 	       (*TODO: rewrite as above maybe - interesting to compare these two*)
 	       val loop = AST.S_Foreach(
 		    itter1,
-		    AST.S_Block((newPosInit::tempAssignment::setupVars)@[
+		    AST.S_Block((newPosReset::tempAssignment::setupVars)@[
 				AST.S_Foreach(itter2,
 					      AST.S_Block([
 							  updateDeltaStm,
@@ -1152,7 +1153,8 @@ fun makeDescendentFemTypes (cxt, tyName, span) geometry cellAccData (env, femTyp
 		let
 		 val mesh = AST.E_ExtractFem(v1, meshData)
 		 val int = AST.E_ExtractFemItem(v1, Ty.T_Int, (FemOpt.CellIndex, cellData))
-		 val result = AST.E_ExtractFemItemN([mesh, int, v2], [meshTy, Ty.T_Int, dimSizeVec], posTy, (FemOpt.RefBuild, meshData), NONE)
+		 val intNeg = AST.E_Lit(Literal.intLit (~1))
+		 val result = AST.E_ExtractFemItemN([mesh, int, v2, intNeg], [meshTy, Ty.T_Int, dimSizeVec, Ty.T_Int], posTy, (FemOpt.RefBuild, meshData), NONE)
 		in
 		 result
 		end

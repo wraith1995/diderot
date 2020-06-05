@@ -79,13 +79,13 @@ structure II = ImageInfo
 		   (* end case *))
 	  
 
-    fun checkUnusedVar(vs, defined, msgs) = let
+    fun checkUnusedVar(vs, defined, msgs, place) = let
      val usedVars =  V.Set.addList(V.Set.empty, vs)
      val difs = V.Set.listItems (V.Set.difference(usedVars, defined))
      val msg = "[" ^ (String.concatWith ", " (List.map V.uniqueNameOf difs)) ^ "]"
      val () = if V.Set.isSubset(usedVars, defined)
 	      then ()
-	      else msgs := ("contains undefined vars:" ^ msg) :: !msgs
+	      else msgs := (place ^ " contains undefined vars:" ^ msg) :: !msgs
 
     in
      ()
@@ -101,7 +101,7 @@ structure II = ImageInfo
 					      then ()
 					      else msgs := (vname ^ " allows femfield with no base field") :: !msgs
 			     | _ => ())(*cause earlier*)
-     val _ = checkUnusedVar(collectVarsExp e, defined, msgs)
+     val _ = checkUnusedVar(collectVarsExp e, defined, msgs, vname)
 
      val _ = if Ty.same(V.typeOf ass, S.typeOf e)
 	     then ()
@@ -203,9 +203,9 @@ structure II = ImageInfo
        of S.S_Var(v, NONE) => (addVar(v))
 	| S.S_Var(v, SOME e) => (checkExp'(v, e); addVar(v))
 	| S.S_Assign(v, e) => (checkExp'(v,e); addVar(v))
-	| S.S_IfThenElse(v, b1, b2) => (checkUnusedVar([v], defined, msgs); doBlock' b1; doBlock' b2; defined)
+	| S.S_IfThenElse(v, b1, b2) => (checkUnusedVar([v], defined, msgs, "if"); doBlock' b1; doBlock' b2; defined)
 	| S.S_Foreach(v, vs, b) =>
-	  (checkUnusedVar([vs], defined, msgs); doBlock(b, msgs, params, V.Set.add(defined,v), allowGlobal, retTy); defined) (*remove itter*)
+	  (checkUnusedVar([vs], defined, msgs, "itter"); doBlock(b, msgs, params, V.Set.add(defined,v), allowGlobal, retTy); defined) (*remove itter*)
 	| S.S_New(_, vs) => (case params
 			      of NONE => (msgs := " invalid new statement outside strand" :: !msgs;defined)
 			       | SOME(vs') => if ListPair.all (fn (x,y) => Ty.same(V.typeOf x, V.typeOf y)) (vs, vs')
@@ -233,7 +233,7 @@ structure II = ImageInfo
 					    then defined
 					    else (msgs := ((V.uniqueNameOf ret) ^ " has invalid return type.") :: !msgs; defined)
 			    (* end case*))
-	| S.S_Print(vs) => (checkUnusedVar(vs, defined, msgs); defined)
+	| S.S_Print(vs) => (checkUnusedVar(vs, defined, msgs, "print"); defined)
 	| S.S_MapReduce(maps) => List.foldr checkReduce defined maps
      (*end case*))
     end
@@ -253,8 +253,9 @@ structure II = ImageInfo
 	 val errMsgs = ref []
 	 val defined = V.Set.empty
 	 val defined = V.Set.addList(defined, List.map Inputs.varOf inputs)
+	 val defined = V.Set.addList(defined, consts)
+	 val defined = doBlock(constInit, errMsgs, NONE, defined, false, NONE)
 	 val defined = V.Set.addList(defined, globals)
-
 	 val defined = doBlock(globInit, errMsgs, NONE, defined, false, NONE)
 
 	 val _ = List.map (fn S.Func{f, params, body} => doBlock(body, errMsgs, NONE, V.Set.addList(defined,params), false, SOME(F.resultTypeOf f))) funcs

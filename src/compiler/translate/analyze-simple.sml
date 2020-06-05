@@ -134,7 +134,10 @@ structure AnalyzeSimple : sig
           val globals = ref VSet.empty
           fun addGlobal x = (globals := VSet.add(!globals, x))
           fun addVar (x, vs) = let
-                fun addGlobal x = (globals := VSet.add(!globals, x); vs)
+           fun addGlobal x = ((* print(" and added a global\n"); *)globals := VSet.add(!globals, x); vs)
+	   (* val _ = print("anal saw:"^(SimpleVar.uniqueNameOf x)) *)
+	   (* val _ = print("with kind of:" ^(Var.kindToStringReal(SimpleVar.kindOf x))) *)
+	   (* val _ = print("\n") *)
                 in
                   case (SV.kindOf x, cxt)
                    of (SV.ConstVar, ConstInit) => vs
@@ -215,7 +218,7 @@ structure AnalyzeSimple : sig
                 val liveOut = VSet.union(VSet.subtract(liveOut, x), liveIn)
                 val assigns = VSet.union(VSet.subtract(assigns, x), assignsIn)
                 in
-(* QUESTION: do we want to modify the properties of b? *)
+		 (* QUESTION: do we want to modify the properties of b? *)
                   (liveOut, assigns)
                 end
             | doStm (S.S_New(_, xs), (live, assigns)) = (addList (xs, live), assigns)
@@ -231,8 +234,12 @@ structure AnalyzeSimple : sig
                 end
             | doStm (_, acc) = acc
           val (bnd, assigns) = doBlock (blk, VSet.empty)
-          in
-            setGlobalsOfBlock (blk, !globals)
+    in
+     (print("finally adding globals:");
+      print("[");
+      print(String.concatWith "," (List.map SimpleVar.uniqueNameOf (VSet.listItems (!globals))));
+      print("]\n");
+      setGlobalsOfBlock (blk, !globals))
           end
 
     fun analyze prog = let
@@ -261,7 +268,7 @@ structure AnalyzeSimple : sig
                 (* end case *))
               else ();
             analyzeBlock ConstInit constInit;
-            List.app (fn (S.Func{f, body, ...}) => analyzeBlock UserFunc body) funcs;
+            List.app (fn (S.Func{f, body, ...}) => (print("anal:"^(SimpleFunc.uniqueNameOf f) ^"\n");analyzeBlock UserFunc body)) funcs;
             analyzeBlock GlobalInit globInit;
             analyzeBlock StateInit stateInit;
             Option.app (analyzeBlock StartMeth) startM;

@@ -42,9 +42,12 @@ structure SimpleOpt : sig
                 then checkAfter ("contraction (2)", SimpleContract.transform prog)
                      else prog
           val prog = checkAfter ("simplify fields", SimplifyFields.transform prog)
+	  val prog = checkAfter ("simplify variables", SimplifyVars.transform prog)
 	  val prog = checkAfter ("simplify fem vars", SimplifyFem.transform prog)
 	  val prof = checkAfter ("contraction (3)", SimpleContract.transform prog)
-          val prog = checkAfter ("simplify variables", SimplifyVars.transform prog)
+								
+
+
           val prog = CheckForBSP.check prog
           in
             prog
