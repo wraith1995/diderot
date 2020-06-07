@@ -9,7 +9,8 @@
 
 structure Derivative : sig
 
-    val mkApply : Ein.ein_exp * Ein.ein_exp * Ein.param_kind list * Ein.index_id  * (BasisDataArray.t -> BasisDataArray.t) -> Ein.ein_exp option
+	   val mkApply : Ein.ein_exp * Ein.ein_exp * Ein.param_kind list * Ein.index_id  * (BasisDataArray.t -> BasisDataArray.t) -> Ein.ein_exp option
+	   val rewriteIx : Ein.index_id * Ein.ein_exp  -> Ein.ein_exp
 
   end  = struct
 
@@ -168,6 +169,7 @@ structure Derivative : sig
             | E.Eps2 (i, j) => E.Eps2(change i, change j)
             | E.Field(id2, alpha) => E.Field(id2, List.map (fn e => change(e)) alpha)
             | E.Lift e1  => E.Lift(rewriteIx(vk, e1))
+	    | E.Identity(dim, mu) => E.Identity(dim, change mu)
 	    (*I've corected this rule from previous code: *)
 	    (* The previous version only tackled the alpha index *)
 	    (* This version searches all indicies because it is possible this could be a gradient of a vector field*)
@@ -206,13 +208,12 @@ structure Derivative : sig
             in SOME(d) end
 				
             | E.Conv(id, _, _, _) => let
-                val E.IMG(d, _) = List.nth(params, id)
+             val E.IMG(d, _) = List.nth(params, id)
             in SOME(d) end
+	    | E.Identity(d, _) => SOME(d)
 	    | E.Fem(_,_, fem, _, _, _) =>
 	      let
 	       val E.FEM(data) = List.nth(params, fem)
-
-
 	       val d = FemData.underlyingDim data
 	      in
 	       SOME(d)
@@ -250,6 +251,12 @@ structure Derivative : sig
             | E.Eps2 _ => SOME zero
             | E.Field _ => NONE
             | E.Lift _ => SOME zero
+	    | E.Identity(dim, mu) =>
+	      (case dx
+		of [d2] => SOME(E.Delta(d2, mu)) (*Question: Is this right or should there be a lift? What about order?*)
+		 | [] => raise Fail "impossible"
+		 | _ => SOME zero
+	      (*end case*))
             | E.Conv(v, alpha, h, d2) => SOME(E.Conv(v, alpha, h, d2@dx))
 	    | E.Fem((E.Plain(bda, n, f)), id1, id2, id3, alpha, dxes)  => SOME(E.Fem(E.Plain( getBasisDerivative(bda), n, f), id1, id2, id3, alpha, dxes@dx))
 	    | E.Fem((E.Invert(bda, n, f)), id1, id2, id3, [mu1], [])  =>

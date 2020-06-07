@@ -75,6 +75,7 @@ structure Apply : sig
                   | E.Field(id, mx) => E.Field(mapParam id, mapAlpha mx)
                   | E.Lift e1 => E.Lift(apply e1)
                   | E.Conv (v, mx, h, ux) => E.Conv(mapParam v, mapAlpha mx, mapParam h, mapAlpha ux)
+		  | E.Identity(d, mu) => E.Identity(d, mapMu mu)
 		  | E.Fem(femEin, param1, param2, param3, alpha1, alpha2) => E.Fem(femEin,
 										   mapParam param1, mapParam param2, mapParam param3,
 										   mapAlpha alpha1, mapAlpha alpha2)
@@ -160,6 +161,7 @@ structure Apply : sig
                   | E.Zero(mx) => b
                   | E.Lift e1 => E.Lift(apply (e1, shape))
                   | E.Conv(v, mx, h, ux) => E.Conv(mapId(v, origId, 0), mx, mapId(h, origId, 0), ux)
+		  | E.Identity(dim, mu) => E.Identity(dim, mu)
 		  | E.Fem(femEin, index, indexS, dofS, shape, dx) => E.Fem(femEin,
 									   mapId(index, origId,0),
 									   mapId(indexS, origId,0),

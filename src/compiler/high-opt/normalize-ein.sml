@@ -32,6 +32,7 @@ structure NormalizeEin : sig
     val cntEpsToDeltas          = ST.newCounter "high-opt:eps-to-deltas"
     val cntNegDelta             = ST.newCounter "high-opt:neg-delta"
     val cntReduceDelta          = ST.newCounter "high-opt:reduce-delta"
+    val cntIdentityProbe        = ST.newCounter "high-opt:identity-probe"
     val firstCounter            = cntNullSum
     val lastCounter             = cntReduceDelta
     val cntRounds               = ST.newCounter "high-opt:normalize-round"
@@ -172,6 +173,7 @@ structure NormalizeEin : sig
                   | E.Field _ => body
                   | E.Lift e1 => E.Lift(rewrite e1)
                   | E.Conv _ => body
+		  | E.Identity _ => body
 		  | E.Fem _ => body
                   | E.Partial _ => body
                   | E.Apply(E.Partial [], e1) => e1
@@ -217,6 +219,17 @@ inductively prove no problenm -- also, just force the rewrite!*)
                         | e => e
                         (*end case*))
                     end
+		  | E.Probe(E.Identity(dim, mu1), e2) => (*Id(e2) -> Id * e2 \sum_i=(0,dim-1) delta_ij e_2_i...*)
+		    let
+		     val e2' = rewrite e2
+		     val newSumRange = !sumX + 1
+		     val e2'' = Derivative.rewriteIx(newSumRange, e2') (*Quesiton: valid use?*)
+		     val _ = incSum()
+		     val ret = E.Sum([(newSumRange, 0, dim - 1)], E.Opn(E.Prod, [E.Delta(E.V newSumRange, mu1), e2'']))
+		     val _ = ST.tick cntIdentityProbe
+		    in
+		     ret
+		    end
                   | E.Probe(e1, e2) => mkProbe(rewrite e1, rewrite e2)
                 (************** Sum **************)
                   | E.If(E.Compare(op1, e1, e2), e3, e4) => E.If(E.Compare(op1, rewrite e1, rewrite e2), rewrite e3, rewrite e4)

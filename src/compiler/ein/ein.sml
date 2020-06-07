@@ -89,8 +89,8 @@ structure Ein =
     (* High-IL Terms *)
       | Field of param_id * alpha
       | Lift of ein_exp
-      | Identity of int * mu
-      | Conv of param_id * alpha * param_id * alpha
+      | Identity of int * mu (*just a shape result index...*)
+      | Conv of param_id * alpha * param_id * alpha (*data and kernels - shape and dx*)
       | Fem of femEin * param_id * param_id * param_id * alpha * alpha (* basis information, index, index source, dofs source, shape of result indexing, dxes indexing*)
       | Partial of alpha
       | Apply of ein_exp * ein_exp

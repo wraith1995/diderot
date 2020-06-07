@@ -118,59 +118,66 @@ structure EpsUtil : sig
                   | E.Delta(i, j) => if (a = j)
                       then appDel(true, alpha, i::beta, mu, nu)
                       else appDel(changed, a::alpha, beta, mu, d1::nu)
-                (* end case *))
+							     (* end case *))
           fun distribute (changed, [], rest, mu) = (changed, E.Opn(E.Prod, eps@mu@(List.rev rest)))
-            | distribute (changed, p1::ps, rest, mu) = (case p1
-                 of E.Tensor(id, alpha) => let
-                      val (changed, alpha_betas, nu) = appDel(changed, alpha, [], mu, [])
-                      in
-                        distribute(changed, ps, E.Tensor(id, alpha_betas)::rest, nu)
-                      end
-                  | E.Field(id, alpha) => let
-                      val (changed, alpha_betas, nu) = appDel(changed, alpha, [], mu, [])
-                      in
-                        distribute(changed, ps, E.Field(id, alpha_betas)::rest, nu)
-                      end
-                  | E.Conv(v, alpha, h, dx) => let
-                      val (changed, alpha_betas, nu1) = appDel(changed, alpha, [] ,mu, [])
-                      val (changed, dx_betas, nu2) = appDel(changed, dx, [], nu1, [])
-                      in
-                        distribute(changed, ps, E.Conv(v,alpha_betas, h ,dx_betas)::rest, nu2)
-                  end
-		  | E.Fem(femEin, index, indexS, dofS, shape, dx) => let
-		   val (changed, shape_betas, nu1) = appDel(changed, shape, [], mu, [])
-		   val (changed, dx_betas, nu2) = appDel(changed, dx, [], nu1, [])
-		  in
-		   distribute(changed, ps, E.Fem(femEin, index, indexS, dofS, shape_betas, dx_betas)::rest, nu2)
-		  end
-		     
-                  | E.Probe(probe, t) => let
-		   val (alpha, dx, new) = (case probe
-					    of E.Conv(v, alpha, h, dx) => (alpha, dx, SOME(fn (x,y) => E.Conv(v, x, h, y)))
-					     | E.Fem(femEin, index, indexS, dofS, shape, dx) => (shape, dx, SOME(fn (x,y) => E.Fem(femEin, index, indexS, dofS, x, y)))
-					     | _ => ([], [], NONE)
-					  (* end case*))
-                   val (changed, alpha_betas, nu1) = appDel(changed, alpha, [], mu, [])
-                   val (changed, dx_betas, nu2) = appDel(changed, dx, [], nu1, [])
-                  in
-		   (case new
-		     of  SOME(f) => distribute(changed, ps, E.Probe(f (alpha_betas, dx_betas),t)::rest, nu2)
-		       | NONE => distribute(changed, ps, p1::rest, mu)
-		   (*end case*))
-                   
-                  end
-                  | E.Apply(E.Partial d, e) => let
-                      val (changed, d_betas, nu) = appDel(changed,d,[],mu,[])
-                      in
-                        distribute(changed, ps, E.Apply(E.Partial d_betas,e)::rest, nu)
-                      end
-                  | _ => distribute(changed, ps, p1::rest, mu)
-                (* end case *))
-          in
-            distribute (false, es, [], dels)
-          end
+            | distribute (changed, p1::ps, rest, mu) =
+	      (case p1
+		of E.Tensor(id, alpha) => let
+		 val (changed, alpha_betas, nu) = appDel(changed, alpha, [], mu, [])
+		in
+		 distribute(changed, ps, E.Tensor(id, alpha_betas)::rest, nu)
+		end
+		 | E.Field(id, alpha) => let
+		  val (changed, alpha_betas, nu) = appDel(changed, alpha, [], mu, [])
+		 in
+		  distribute(changed, ps, E.Field(id, alpha_betas)::rest, nu)
+		 end
+		 | E.Conv(v, alpha, h, dx) => let
+		  val (changed, alpha_betas, nu1) = appDel(changed, alpha, [] ,mu, [])
+		  val (changed, dx_betas, nu2) = appDel(changed, dx, [], nu1, [])
+		 in
+		  distribute(changed, ps, E.Conv(v,alpha_betas, h ,dx_betas)::rest, nu2)
+		 end
+		 | E.Identity(dim, mu') =>  let
+		  val (changed, [mu''], nu1) = appDel(changed, [mu'], [], mu, [])
+		 in
+		  distribute(changed, ps, E.Identity(dim, mu'')::rest, nu1)
+		 end
+		 | E.Fem(femEin, index, indexS, dofS, shape, dx) => let
+		  val (changed, shape_betas, nu1) = appDel(changed, shape, [], mu, [])
+		  val (changed, dx_betas, nu2) = appDel(changed, dx, [], nu1, [])
+		 in
+		  distribute(changed, ps, E.Fem(femEin, index, indexS, dofS, shape_betas, dx_betas)::rest, nu2)
+		 end
+								      
+                 | E.Probe(probe, t) => let
+		  val (alpha, dx, new) = (case probe
+					   of E.Conv(v, alpha, h, dx) => (alpha, dx, SOME(fn (x,y) => E.Conv(v, x, h, y)))
+					    | E.Fem(femEin, index, indexS, dofS, shape, dx) => (shape, dx, SOME(fn (x,y) => E.Fem(femEin, index, indexS, dofS, x, y)))
+					    | E.Identity(dim, mu) => ([mu], [], SOME(fn ([x],y) => E.Identity(dim, x)))
+					    | _ => ([], [], NONE)
+					 (* end case*))
+                  val (changed, alpha_betas, nu1) = appDel(changed, alpha, [], mu, [])
+                  val (changed, dx_betas, nu2) = appDel(changed, dx, [], nu1, [])
+                 in
+		  (case new
+		    of  SOME(f) => distribute(changed, ps, E.Probe(f (alpha_betas, dx_betas),t)::rest, nu2)
+		      | NONE => distribute(changed, ps, p1::rest, mu)
+		  (*end case*))
+                    
+                 end
+                 | E.Apply(E.Partial d, e) => let
+                  val (changed, d_betas, nu) = appDel(changed,d,[],mu,[])
+                 in
+                  distribute(changed, ps, E.Apply(E.Partial d_betas,e)::rest, nu)
+                 end
+                 | _ => distribute(changed, ps, p1::rest, mu)
+              (* end case *))
+    in
+     distribute (false, es, [], dels)
+    end
 
-  (* matchEps (ids, mus)
+    (* matchEps (ids, mus)
    * checks if two different indices in 'ids' both appear in 'mus'. The parameters are
    *    ids     -- ein indices in epsilon
    *    mus     -- ein indeces in differentiation
