@@ -9,7 +9,7 @@
 
 structure Derivative : sig
 
-    val mkApply : Ein.ein_exp * Ein.ein_exp * Ein.param_kind list * Ein.index_id -> Ein.ein_exp option
+    val mkApply : Ein.ein_exp * Ein.ein_exp * Ein.param_kind list * Ein.index_id  * (BasisDataArray.t -> BasisDataArray.t) -> Ein.ein_exp option
 
   end  = struct
 
@@ -240,7 +240,7 @@ structure Derivative : sig
         (* end case*))
         
   (* rewrite Apply nodes *)
-    fun mkApply (E.Partial dx, e:Ein.ein_exp, params, sumX) = (case e
+    fun mkApply (E.Partial dx, e:Ein.ein_exp, params, sumX, getBasisDerivative) = (case e
            of E.Const _ => SOME zero
             | E.ConstR _ => SOME zero
             | E.Tensor _ => err "Tensor without Lift"
@@ -251,7 +251,7 @@ structure Derivative : sig
             | E.Field _ => NONE
             | E.Lift _ => SOME zero
             | E.Conv(v, alpha, h, d2) => SOME(E.Conv(v, alpha, h, d2@dx))
-	    | E.Fem((E.Plain(bda, n, f)), id1, id2, id3, alpha, dxes)  => SOME(E.Fem(E.Plain( BasisDataArray.D(bda), n, f), id1, id2, id3, alpha, dxes@dx))
+	    | E.Fem((E.Plain(bda, n, f)), id1, id2, id3, alpha, dxes)  => SOME(E.Fem(E.Plain( getBasisDerivative(bda), n, f), id1, id2, id3, alpha, dxes@dx))
 	    | E.Fem((E.Invert(bda, n, f)), id1, id2, id3, [mu1], [])  =>
 	      let
 	       (*QUESTION: What to do about 1D? THIS CODE f***s shit up*)
@@ -262,7 +262,7 @@ structure Derivative : sig
 				  
 	       val mu2 = List.hd dx
 	       val dx' = List.tl dx
-	       fun probeAtIndex(mu1, mu2) = E.Fem(E.Plain( BasisDataArray.D(bda), n, f), id1, id2, id3, [mu2], [mu1])
+	       fun probeAtIndex(mu1, mu2) = E.Fem(E.Plain( getBasisDerivative(bda), n, f), id1, id2, id3, [mu2], [mu1])
 	       val dim = BasisDataArray.domainDim bda
 	       val _ = if dim <> 2 andalso dim <> 3
 		       then raise Fail "One d and higher than 3d fields not yet supported"
@@ -296,7 +296,7 @@ structure Derivative : sig
 	      in
 	       (case dx'
 		of [] => SOME(inv)
-		 | _ => mkApply(E.Partial dx', inv, params, finalSumX))
+		 | _ => mkApply(E.Partial dx', inv, params, finalSumX, getBasisDerivative))
 	      end
             | E.Partial _ => err("Apply of Partial")
             | E.Apply(E.Partial d2, e2) => SOME(E.Apply(E.Partial(dx@d2), e2))

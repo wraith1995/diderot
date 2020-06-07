@@ -129,11 +129,19 @@ structure NormalizeEin : sig
                 in return xexp end
             | _                  => probe
             (* end case *))
-        end
-        
+    end
+
   (* rewrite body of EIN *)
     fun transform (ein as Ein.EIN{params, index, body}) = let
-          (* DEBUG val _ = print(String.concat["\ntransform", EinPP.expToString(body)])*)
+     (* DEBUG val _ = print(String.concat["\ntransform", EinPP.expToString(body)])*)
+     val basisTable = HashTable.mkTable(BasisDataArray.hash, BasisDataArray.same) (256, Fail "basis D not found")
+     fun getBasisDerivative(B : BasisDataArray.t) : BasisDataArray.t =
+	 (case HashTable.find basisTable B
+	   of SOME(b) => b
+	    | NONE =>
+	      let val b = BasisDataArray.D(B) in (HashTable.insert basisTable (B,b); b) end
+	 (* end case*))
+
           fun filterProd args = (case EinFilter.mkProd args
                  of SOME e => (ST.tick cntFilter; e)
                   | NONE => mkProd args
@@ -168,7 +176,7 @@ structure NormalizeEin : sig
                   | E.Apply(E.Partial d1, e1) => let
                       val e1 = rewrite e1
                       in
-                        case (incSum();Derivative.mkApply(E.Partial d1, e1, params, !sumX))
+                        case (incSum();Derivative.mkApply(E.Partial d1, e1, params, !sumX, getBasisDerivative))
                          of SOME e => (ST.tick cntApplyPartial; e)
                           | NONE => E.Apply(E.Partial d1, e1)
                         (* end case *)
