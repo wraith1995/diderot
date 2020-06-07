@@ -29,6 +29,7 @@ structure Keywords300 : sig
             ("foreach",         T.KW_foreach),
             ("function",        T.KW_function),
             ("identity",        T.KW_identity),
+	    ("Id",              T.KW_Id),
             ("if",              T.KW_if),
             ("image",           T.KW_image),
             ("in",              T.KW_in),

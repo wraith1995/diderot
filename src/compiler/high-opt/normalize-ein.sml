@@ -131,17 +131,19 @@ structure NormalizeEin : sig
             (* end case *))
     end
 
+    val basisTable : (BasisDataArray.t, BasisDataArray.t) HashTable.hash_table = HashTable.mkTable(BasisDataArray.hash, BasisDataArray.same) (256, Fail "basis D not found")
+    fun getBasisDerivative(B : BasisDataArray.t) : BasisDataArray.t =
+	(case HashTable.find basisTable B
+	  of SOME(b) => b
+	   | NONE =>
+	     let val b = BasisDataArray.D(B) in (HashTable.insert basisTable (B,b); b) end
+	(* end case*))
+
+
+
   (* rewrite body of EIN *)
     fun transform (ein as Ein.EIN{params, index, body}) = let
      (* DEBUG val _ = print(String.concat["\ntransform", EinPP.expToString(body)])*)
-     val basisTable = HashTable.mkTable(BasisDataArray.hash, BasisDataArray.same) (256, Fail "basis D not found")
-     fun getBasisDerivative(B : BasisDataArray.t) : BasisDataArray.t =
-	 (case HashTable.find basisTable B
-	   of SOME(b) => b
-	    | NONE =>
-	      let val b = BasisDataArray.D(B) in (HashTable.insert basisTable (B,b); b) end
-	 (* end case*))
-
           fun filterProd args = (case EinFilter.mkProd args
                  of SOME e => (ST.tick cntFilter; e)
                   | NONE => mkProd args

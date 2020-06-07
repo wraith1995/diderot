@@ -108,10 +108,12 @@ structure EinFilter : sig
     fun isScalar e = (case e
         of E.Field(_, [])                    => true
          | E.Conv(_, [], _, [])              => true
+	 | E.Identity(d, _)                  => d=1  
 	 | E.Fem(_,_,_,_,[],[])              => true
          | E.Probe(E.Field(_, []) ,_)        => true
          | E.Probe(E.Conv(_, [], _, []), _)  => true
 	 | E.Probe(E.Fem(_,_,_,_,[],[]), _)  => true
+	 | E.Probe(E.Identity(d, _), _)      => d=1  
          | E.Tensor(id,[])                   => true
          | E.Const _                         => true
          | E.ConstR _                        => true
@@ -128,6 +130,13 @@ structure EinFilter : sig
                  of E.Opn(E.Prod, p)                 => part (p@es, pre, eps, dels, post)
                   | E.Field(_, [])                   => part (es, e::pre, eps, dels, post)
                   | E.Conv(_, [], _, [])             => part (es, e::pre, eps, dels, post)
+		  | E.Identity(d, mu)                => if d=1
+							then part (es, e::pre, eps, dels, post)
+							else part (es, pre, eps, dels, e::post)
+		  | E.Probe(E.Identity(d, mu),_)     => if d=1
+							then part (es, e::pre, eps, dels, post)
+							else part (es, pre, eps, dels, e::post)
+								  
 		  | E.Fem(_,_,_,_,[],[])             => part (es, e::pre, eps, dels, post)
                   | E.Probe(E.Field(_, []) ,_)       => part (es, e::pre, eps, dels, post)
                   | E.Probe(E.Conv(_, [], _, []), _) => part (es, e::pre, eps, dels, post)
@@ -202,10 +211,16 @@ structure EinFilter : sig
                  of E.Opn(E.Prod, p)                => filter (p@es, pre, post)
                   | E.Field(_,[])                   => filter (es, e::pre, post)
                   | E.Conv(_,[],_,[])               => filter (es, e::pre, post)
+                  | E.Identity(d, mu)               => if d=1
+						       then filter (es, e::pre, post)
+						       else filter (es, pre, e::post)
 		  | E.Fem(_,_,_,_,[],[])            => filter (es, e::pre, post)
                   | E.Probe(E.Field(_,[]),_)        => filter (es, e::pre, post)
                   | E.Probe(E.Conv(_,[],_,[]),_)    => filter (es, e::pre, post)
 		  | E.Probe(E.Fem(_,_,_,_,[],[]),_) => filter (es, e::pre, post)
+                  | E.Probe(E.Identity(d, mu), _)   => if d=1
+						       then filter (es, e::pre, post)
+						       else filter (es, pre, e::post)
                   | E.Tensor(id,[])                 => filter (es, e::pre, post)
                   | E.Const _                       => filter (es, e::pre, post)
                   | E.ConstR _                      => filter (es, e::pre, post)

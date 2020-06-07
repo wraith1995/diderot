@@ -125,6 +125,7 @@ structure MkOperators : sig
     val modulateFF : shape * dim -> Ein.ein
 
     val identity : dim -> Ein.ein
+    val identityFld : dim -> Ein.ein
     val zeros : shape -> Ein.ein
     val sliceT : bool list * int list * Ein.index_bind list * int list -> Ein.ein
     val sliceF : bool list * int list * Ein.index_bind list * int -> Ein.ein
@@ -1037,7 +1038,8 @@ structure MkOperators : sig
 
     fun identity dim = E.EIN{
             params = [], index = [dim, dim], body = E.Delta(E.V 0, E.V 1)
-          }
+        }
+    fun identityFld dim = E.EIN{params=[], index = [dim], body = E.Identity(dim, E.V 0)}
 
     fun zeros shape = E.EIN{
             params = [], index = shape, body = E.Zero (specialize(shape, 0))

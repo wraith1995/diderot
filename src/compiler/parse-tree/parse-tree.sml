@@ -148,6 +148,7 @@ structure ParseTree =
       | E_Kernel of var * dim                   (* kernel '#' dim *)
       | E_Lit of Literal.t
       | E_Id of expr                            (* identity matrix *)
+      | E_IdFld of expr                            (* identity matrix *)
       | E_Zero of expr list                     (* zero tensor *)
       | E_NaN of expr list                      (* NaN tensor *)
       | E_Sequence of expr list                 (* sequence construction *)

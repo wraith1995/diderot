@@ -619,7 +619,22 @@ structure CheckExpr : sig
                   if Unify.equalType(Ty.T_Tensor(checkShape(env, cxt, [d, d])), rngTy)
                     then (AST.E_Prim(BV.identity, tyArgs, [], rngTy), rngTy)
                     else raise Fail "impossible"
-                end
+            end
+	    (*identityFld*)
+	    | PT.E_IdFld d => let
+                val (tyArgs, Ty.T_Fun(_, rngTy)) =
+                    TU.instantiate(Var.typeOf(BV.identityFld))
+				  (*checkShape(env, cxt, [d, d])*)
+		val dimCheck = (case checkDim(env, cxt, d)
+				 of SOME(i) => Ty.DimConst (IntInf.toInt i)
+				  | NONE => Ty.DimConst (~1) (*error later*)
+			       (*end case*))
+		val shapeCheck = checkShape(env, cxt, [d])
+                in
+                 if Unify.equalType(Ty.T_Field{diff=Ty.DiffConst NONE, dim=dimCheck, shape=shapeCheck}, rngTy)
+                 then (AST.E_Prim(BV.identityFld, tyArgs, [], rngTy), rngTy)
+                 else raise Fail "impossible"
+            end
             | PT.E_Zero dd => let
                 val (tyArgs, Ty.T_Fun(_, rngTy)) =
                       TU.instantiate(Var.typeOf(BV.zero))

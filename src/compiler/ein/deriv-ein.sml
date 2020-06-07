@@ -11,7 +11,9 @@
 
 structure DerivativeEin : sig
 
-(* FIXME: add comment explaining function and arguments *)
+(* FIXME: add comment explaining function and arguments
+   NOTE: used for cfexp
+ *)
     val differentiate : Ein.mu list * Ein.ein_exp -> Ein.ein_exp
 
   end  = struct

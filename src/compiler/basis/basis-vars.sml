@@ -960,6 +960,13 @@ structure BasisVars =
   (* identity matrix *)
     val identity = polyVar (Atom.atom "$id", allNK (fn dv => [] --> matrix(Ty.DimVar dv)))
 
+  (* identity field*)
+    val identityFld = polyVar (Atom.atom "$idfld",
+			       allNK (fn dv => [] --> Ty.T_Field{diff=Ty.DiffConst(NONE),
+								 dim=Ty.DimVar dv,
+								 shape=Ty.Shape [Ty.DimVar dv]}))
+			   
+
   (* zero tensor *)
     val zero = polyVar (Atom.atom "$zero", all ([SK],
           fn [Ty.SHAPE dd] => [] --> Ty.T_Tensor(Ty.ShapeVar dd)))

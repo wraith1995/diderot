@@ -70,7 +70,7 @@ structure Types =
 
   (* tensor shapes *)
     and shape
-      = Shape of dim list
+	= Shape of dim list
       | ShapeVar of shape_var
       | ShapeExt of shape * dim         (* extension of shape (i.e., for D operator) *)
 

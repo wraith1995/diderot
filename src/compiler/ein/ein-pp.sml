@@ -54,6 +54,11 @@ structure EinPP : sig
                 in
                   concat ["V", i2s img, alpha, "⊛", beta, "H", i2s kern]
             end
+	    | E.Identity(i, mu)	=>
+	      let
+	      in
+	       concat ["Id_", i2s i, "_", index2s mu]
+	      end
 	    | E.Fem(E.Plain(basis,len, stamp), cell, index, dofs, coeffShape, dxes) =>
 	      let
 	       val basisLength = Int.toString len

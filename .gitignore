@@ -72,3 +72,6 @@ src/compiler/parser/diderot.grm.sml
 src/compiler/parser/diderot.lex.sml
 src/compiler/target-cpu/fragments.gmk
 src/compiler/target-cpu/fragments.sml
+
+#emacs:
+*.~undo-tree~

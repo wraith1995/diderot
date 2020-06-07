@@ -348,6 +348,9 @@ structure ParseTreePP : sig
             | PT.E_Id e => (
                 prNode (strm, "Id");
                 nest strm (fn strm => expr (strm, e)))
+	    | PT.E_IdFld e => (
+             prNode (strm, "Id");
+             nest strm (fn strm => expr (strm, e)))
             | PT.E_Zero es => (
                 prNode (strm, "Zero");
                 nest strm (fn strm => prList expr (strm, es)))

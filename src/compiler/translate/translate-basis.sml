@@ -385,7 +385,9 @@ structure TranslateBasis : sig
                 (BV.i2r,                simpleOp Op.IntToReal),
 		(BV.floor,              simpleOp Op.FloorToInt),
                 (BV.identity,           fn (y, [Ty.DIM d], xs) =>
-                                          [assignEin(y, Mk.identity d, xs)]),
+                                           [assignEin(y, Mk.identity d, xs)]),
+		(BV.identityFld,        fn (y, [Ty.DIM d], xs) =>
+		                           [assignEin(y, Mk.identityFld d, xs)]),
                 (BV.zero,               fn (y, [Ty.SHAPE dd], []) =>
                                           [assignEin(y, Mk.zeros dd, [])]),
 (*
