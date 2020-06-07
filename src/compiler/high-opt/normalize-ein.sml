@@ -33,9 +33,10 @@ structure NormalizeEin : sig
     val cntNegDelta             = ST.newCounter "high-opt:neg-delta"
     val cntReduceDelta          = ST.newCounter "high-opt:reduce-delta"
     val cntIdentityProbe        = ST.newCounter "high-opt:identity-probe"
-    val firstCounter            = cntNullSum
-    val lastCounter             = cntReduceDelta
     val cntRounds               = ST.newCounter "high-opt:normalize-round"
+    val firstCounter            = cntNullSum
+    val lastCounter             = cntIdentityProbe
+
 
     fun err str = raise Fail(String.concat["Ill-formed EIN Operator",str])
 
@@ -144,7 +145,7 @@ structure NormalizeEin : sig
 
   (* rewrite body of EIN *)
     fun transform (ein as Ein.EIN{params, index, body}) = let
-     (* DEBUG val _ = print(String.concat["\ntransform", EinPP.expToString(body)])*)
+     val _ = print(String.concat["\ntransform: ", EinPP.expToString(body)])
           fun filterProd args = (case EinFilter.mkProd args
                  of SOME e => (ST.tick cntFilter; e)
                   | NONE => mkProd args
@@ -219,16 +220,15 @@ inductively prove no problenm -- also, just force the rewrite!*)
                         | e => e
                         (*end case*))
                     end
-		  | E.Probe(E.Identity(dim, mu1), e2) => (*Id(e2) -> Id * e2 \sum_i=(0,dim-1) delta_ij e_2_i...*)
+		  | E.Probe(E.Identity(dim, mu1), e as E.Tensor(tid, [])) => (*Id(e2) -> Id * e2 \sum_i=(0,dim-1) delta_ij e_2_i...*)
 		    let
-		     val e2' = rewrite e2
+		     val _ = print("inner:" ^ (EinPP.expToString e) ^ "\n")
 		     val newSumRange = !sumX + 1
-		     val e2'' = Derivative.rewriteIx(newSumRange, e2') (*Quesiton: valid use?*)
 		     val _ = incSum()
-		     val ret = E.Sum([(newSumRange, 0, dim - 1)], E.Opn(E.Prod, [E.Delta(E.V newSumRange, mu1), e2'']))
-		     val _ = ST.tick cntIdentityProbe
+		     val ret = mkSum([(newSumRange, 0, dim - 1)], E.Opn(E.Prod, [E.Delta(mu1, E.V newSumRange), E.Tensor(tid, [E.V newSumRange])]))
+		     val new = print("inner':" ^ (EinPP.expToString ret))
 		    in
-		     ret
+		     (ST.tick cntIdentityProbe; ret)
 		    end
                   | E.Probe(e1, e2) => mkProbe(rewrite e1, rewrite e2)
                 (************** Sum **************)
@@ -378,7 +378,7 @@ inductively prove no problenm -- also, just force the rewrite!*)
 (*DEBUG*)val start = ST.count cntRounds
           fun loop (body, total, changed) = let
                 val body' = rewrite body
-                (* DEBUG val _ =print(String.concat["\n\n ==> X:", EinPP.expToString(body),"\n ==> Y:", EinPP.expToString(body')])*)
+		val _ =print(String.concat["\n\n ==> X:", EinPP.expToString(body),"\n ==> Y:", EinPP.expToString(body'), "\n"])
                 val totalTicks = ST.sum{from = firstCounter, to = lastCounter}
                 in
                   ST.tick cntRounds;
@@ -388,9 +388,11 @@ inductively prove no problenm -- also, just force the rewrite!*)
                   else if changed (* nothing changed - if any changes happened at all, provide result*)
                     then SOME(Ein.EIN{params=params, index=index, body=body'})
                     else NONE
-                end
+          end
+	  val einRet = loop(body, ST.sum{from = firstCounter, to = lastCounter}, false)
+	  val _ = Option.app (fn x => print(String.concat(["ret:", EinPP.toString x, "\n"]))) einRet
           in
-            loop(body, ST.sum{from = firstCounter, to = lastCounter}, false)
+            einRet
           end
 
   end

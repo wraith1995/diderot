@@ -133,8 +133,10 @@ structure SimplifyFields : sig
                                 mkTest (imgs, S.E_InsideImage(pos, img, s), [])
                               end
                         (* end case *)
-                      end
-                    else unionArgs (List.filter isField args)
+                  end
+		  else if Var.same(rator, B.identityFld)
+		  then (bindImages(lhs, VMap.empty); NONE)
+                  else unionArgs (List.filter isField args)
               | S.E_Tensor _ => NONE
               | S.E_Field(args, _) => unionArgs (List.filter isField args)
               | S.E_Seq _ => NONE

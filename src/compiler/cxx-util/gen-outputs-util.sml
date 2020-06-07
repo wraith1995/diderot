@@ -192,8 +192,8 @@ structure GenOutputsUtil : sig
                   CL.mkReturn(SOME(CL.mkVar "true"))
                 ]
           val outDecls = if List.exists (isDyn o #ty) outputs
-                then [CL.mkDecl(nrrdPtrTy, "nLengths", NONE), CL.mkDecl(nrrdPtrTy, "nData", NONE)]
-                else [CL.mkDecl(nrrdPtrTy, "nData", NONE)]
+                then [CL.mkDecl(nrrdPtrTy, "nLengths_0", NONE), CL.mkDecl(nrrdPtrTy, "nData_0", NONE)]
+                else [CL.mkDecl(nrrdPtrTy, "nData_0", NONE)]
           val prDecls = outDecls @ [CL.mkDecl(filePtrTy, "outS", NONE)]
           fun nrrdNew v = CL.mkAssign(v, CL.mkApply("nrrdNew", []))
           fun nrrdNuke v = CL.mkCall("nrrdNuke", [v])

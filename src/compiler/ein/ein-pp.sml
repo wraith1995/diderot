@@ -57,7 +57,7 @@ structure EinPP : sig
 	    | E.Identity(i, mu)	=>
 	      let
 	      in
-	       concat ["Id_", i2s i, "_", index2s mu]
+	       concat ["Id_", i2s i, "_{", index2s mu, "}"]
 	      end
 	    | E.Fem(E.Plain(basis,len, stamp), cell, index, dofs, coeffShape, dxes) =>
 	      let
