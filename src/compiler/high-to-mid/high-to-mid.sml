@@ -171,11 +171,11 @@ structure HighToMid : sig
 	      | SrcOp.LoadFem(ty) => assign (DstOp.LoadFem(cvtTy ty))
 	      | SrcOp.ExtractFemItem(ty, opt) => assign (DstOp.ExtractFemItem(cvtTy ty, opt))
 	      | SrcOp.ExtractFem(ty, inTy) => assign (DstOp.ExtractFem(cvtTy ty, cvtTy inTy))
-	      | SrcOp.ExtractFemItem2(ty, ty', opt) =>
-		(case FemOpt.splitDataOpt opt
-		  of SOME(_) => let val [arg1,arg2] = Env.renameList(env, args) in FemOptSplit.indexedDataLowering(y, opt, arg1, arg2) end
-		   | NONE => assign (DstOp.ExtractFemItem2(cvtTy ty, cvtTy ty', opt))
-		(* end case *))
+	      | SrcOp.ExtractFemItem2(ty, ty', opt) => assign (DstOp.ExtractFemItem2(cvtTy ty, cvtTy ty', opt))
+		(* (case FemOpt.splitDataOpt opt *)
+		(*   of SOME(_) => let val [arg1,arg2] = Env.renameList(env, args) in FemOptSplit.indexedDataLowering(y, opt, arg1, arg2) end *)
+		(*    | NONE => assign (DstOp.ExtractFemItem2(cvtTy ty, cvtTy ty', opt)) *)
+		(* (* end case *)) *)
 	      | SrcOp.ExtractFemItemN(tys, outTy, opt, stamp, name, paramTys, fTy) =>
 		let
 		 val tys' = List.map cvtTy tys

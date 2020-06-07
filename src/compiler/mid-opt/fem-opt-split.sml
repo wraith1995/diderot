@@ -25,15 +25,6 @@ structure FemOptSplit : sig
           AvailRHS.addAssign(avail, pre, ty, IR.OP(opss, args))
 
 
-    fun imul' (avail, pre, a, b) = assignOp (avail, pre, Ty.IntTy, Op.IMul, [a, b])
-    fun iadd' (avail, pre, a, b) = assignOp (avail, pre, Ty.IntTy, Op.IAdd, [a, b])
-    fun ilit' (avail, pre, n) =
-          AvailRHS.addAssign (avail, pre, Ty.IntTy, IR.LIT(Literal.Int(IntLit.fromInt n)))
-    fun imul (avail, a, b) = imul' (avail, "mulRes", a, b)
-    fun iadd (avail, a, b) = iadd' (avail, "addRes", a, b)
-    fun ilit (avail, n) = ilit' (avail, "ilit", n)
-
-
     fun indexArrayLoad	(avail, len, opt, indexSource, indexVar) = 
 	let
 	 (* extract fem data*)

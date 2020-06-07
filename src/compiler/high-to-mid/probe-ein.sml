@@ -267,7 +267,11 @@ structure ProbeEin : sig
 	 val dofParam = E.TEN(true, dofShape)
 	 val dofAlpha = sumIndexVar :: alpha
 	 val dofExpression = E.Tensor(dofParamId, dofAlpha)
-	 val _ = FemOptSplit.indexedDataLoweringAvail(avail, dofVar, intOpt, dofSrcVar, indexSrcVar, indexVar)
+	 val extractOp = Op.ExtractFemItemN([IR.Var.ty dofSrcVar, IR.Var.ty indexSrcVar, IR.Var.ty indexVar],
+					    dofTensorTy, intOpt, Stamp.zero, "none", [], Ty.IntTy)
+	 val opArgs = [dofSrcVar, indexSrcVar, indexVar]
+	 val _ = AvailRHS.addAssignToList(avail, (dofVar, IR.OP(extractOp, opArgs)))
+	 (* val _ = FemOptSplit.indexedDataLoweringAvail(avail, dofVar, intOpt, dofSrcVar, indexSrcVar, indexVar) *)
 						     
 	 val basisShape = BasisDataArray.shape basisArray
 	 val basisOpt = IR.OP(Op.EvaluateBasis(basisArray), [posVar])

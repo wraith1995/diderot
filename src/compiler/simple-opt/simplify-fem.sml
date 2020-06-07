@@ -1802,6 +1802,19 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 	   then raise Fail ("invalid arity " ^ (Int.toString (FO.arity opt)) ^ " with args =" ^ (Int.toString (List.length vs)) ^ " for fem opt: "  ^ (FO.toString (opt, data)))
 		      (*function to get the int of the fem involved...*)
 	   else
+	    (case opt
+	      of FO.ExtractDofs =>
+		 let
+		  val [data1, data2, int1] = vs
+		  val acquireGlobals = List.map acquireGlobal [data1, data2]
+		  val acquireGlobalsStms = List.concatMap (fn (x,y) => x) acquireGlobals
+		  val acquireGlobalsVars = List.map (fn (x,y) => y) acquireGlobals
+		  val [Ty.T_Fem(dataty1), Ty.T_Fem(dataTy2), Ty.T_Int] = tys
+									   
+		 in
+		  (acquireGlobalsStms, S.E_ExtractFemItemN(acquireGlobalsVars@[cvtVar int1], tys, ty, (opt, data), NONE))
+		 end
+	       | _ => 
 	    let
 	     val femArg :: args = vs
 	     val femArg' = cvtVar femArg
@@ -1885,6 +1898,7 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 		| _ => raise Fail "impossible FO"
 	     (* end case*))
 	    end
+	    (* end case *))
 	 | doit (S.E_FemField(v1, v2, v1opt, ty, fo, NONE)) =
 	   let
 	    val (stms1, v1') = acquireGlobal v1

@@ -1026,7 +1026,9 @@ fun makeDescendentFemTypes (cxt, tyName, span) geometry cellAccData (env, femTyp
 					     let
 					      val getMesh =  AST.E_ExtractFem(v, femType)
 					      val getCellInt= AST.E_ExtractFemItem(v, Ty.T_Int, (FemOpt.CellIndex, FT.MeshCell(m)))
-					      val getTensor = AST.E_ExtractFemItem2(getMesh, getCellInt, Ty.T_Int, transformDofsTy, (FemOpt.ExtractDofs, FT.Mesh(m)))
+					      val getTensor = AST.E_ExtractFemItemN([getMesh, getMesh ,getCellInt],
+										    [Ty.T_Fem(femType, NONE), Ty.T_Fem(femType, NONE), Ty.T_Int],
+										    transformDofsTy, (FemOpt.ExtractDofs, FT.Mesh(m)), NONE)
 					     in
 					      getTensor
 					     end
@@ -1240,12 +1242,16 @@ fun makeDescendentFemTypes (cxt, tyName, span) geometry cellAccData (env, femTyp
 					 of [v] =>
 					    let
 					     val getFunc = AST.E_ExtractFem(v, femType)
+					     val depFemType = Option.valOf (FemData.dependencyOf femType)
+					     val getSpace = AST.E_ExtractFem(getFunc, depFemType)
 					     (* val getSpace = AST.E_ExtractFem(getFunc,space) *)
 					     (*might want to extract it now.*)
 					     val getCellInt= AST.E_ExtractFemItem(v, Ty.T_Int, (FemOpt.CellIndex, funcCellData))
 					     (* val getIndexi = AST.E_ExtractFemItem2(getSpace, (getCellInt), Ty.T_Int, dofIndexSeq, (FemOpt.ExtractIndices, space)) *)
 										 (* val getTensor = AST.E_ExtractFemItem2(getFunc, (getIndexi), dofIndexSeq, funcDofsTy, (FemOpt.ExtractDofsSeq, femType)) *)
-					     val getTensor = AST.E_ExtractFemItem2(getFunc, (getCellInt), Ty.T_Int, funcDofsTy, (FemOpt.ExtractDofs, femType))
+					     val getTensor = AST.E_ExtractFemItemN([getFunc, getSpace, getCellInt],
+										   [Ty.T_Fem(femType, NONE), Ty.T_Fem(depFemType, NONE), Ty.T_Int],
+										   funcDofsTy, (FemOpt.ExtractDofs, femType), NONE)
 										  
 					    in
 					     getTensor

@@ -24,6 +24,7 @@ structure Timers =
     val timeMidContract = PhaseTimer.newPhase (timeMid, "Mid IR contraction")
     val timeMidVN = PhaseTimer.newPhase (timeMid, "Mid IR value numbering")
     val timeMidBorderCtl = PhaseTimer.newPhase (timeMid, "Mid IR border control")
+    val timeMidDofExpand = PhaseTimer.newPhase (timeMid, "Mid IR dof expand")
     val timeMidCheck = PhaseTimer.newPhase (timeMid, "Mid IR checking")
     val timeMidToLow = PhaseTimer.newPhase (timeCompiler, "Mid to Low translation")
     val timeLow = PhaseTimer.newPhase (timeCompiler, "Low IR optimization")

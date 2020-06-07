@@ -22,6 +22,9 @@ is
   ../mid-ir/sources.cm
   ../options/sources.cm
 
+  avail-rhs.sml
+  fem-opt-split.sml
+  fem-opt-split-rewrite.sml
   border-ctl.sml
   dom-tree.sml
   mid-contract.sml

@@ -18,6 +18,9 @@ local
   ../mid-ir/sources.mlb
   ../options/sources.mlb
 
+  avail-rhs.sml
+  fem-opt-split.sml
+  fem-opt-split-rewrite.sml
   dom-tree.sml
   border-ctl.sml
   mid-contract.sml
