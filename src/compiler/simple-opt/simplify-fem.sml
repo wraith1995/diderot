@@ -493,12 +493,29 @@ return to Strands until Fixed
    rr
   end handle ex => raise ex
   val defaultFemPres = (fn x => (getFn x; ()))
-
+  fun testParam x = (case getFemPres x
+		      of Base(_, SOME _) => (case V.typeOf x
+					      of Ty.T_Fem(d) => Bool.not(FD.baseFem d)
+					       | _ => true
+					    (* end case *))
+		       | _ => true
+		    (* end case *))
   fun getPropString v =
       (case peekFn v
 	of NONE => "error"
 	 | SOME(t) => presToString(t)
       (* end case*))
+  end
+
+  (* function to handle femField case where fictional vars are needed to handle the accompany function*)
+  local
+   val {clrFn, getFn, peekFn, setFn} = V.newProp(fn v => (v,v))
+  in
+  fun defineInOut(v, (ficIn, ficOut)) = setFn(v, (ficIn, ficOut))
+  fun getInOut v = (case peekFn v
+		     of SOME((a,b)) => (a,b)
+		      | NONE => raise Fail "no In Out set"
+		   (* end case*))
   end
 
   (*Function to manage inputs*)
@@ -637,7 +654,8 @@ return to Strands until Fixed
 	      let
 	       val retTy' = V.typeOf(cvtVar retVar)
 	       val S.Func{f, params, body} = def
-	       val params' = List.map cvtVar params
+	       val filterParams = List.filter testParam params
+	       val params' = List.map cvtVar filterParams
 	       val paramsTys = List.map V.typeOf params'
 	       val body' = cvtBody(body, newDefs)
 	       val f' = F.new(F.uniqueNameOf fvar, retTy', paramsTys)
@@ -813,11 +831,45 @@ return to Strands until Fixed
 								  if retHasFem
 								  then raise Fail "impossible"
 								  else nonFemRet)
-	      | doit (S.E_FemField(v1, v2, v3o, t, fof, func)) = (checkExistence "_FField_1" v1;
-								  checkExistence "_FField_2" v2;
-								  Option.app (checkExistence "_FField_3") v3o;
-								  (*NOTE: function here is FEM free modulo a mesh arg!*)
-								  nonFemRet)
+	      | doit (S.E_FemField(v1, v2, v3o, t, fof, func)) =
+		(checkExistence "_FField_1" v1;
+		 checkExistence "_FField_2" v2;
+		 Option.app (checkExistence "_FField_3") v3o;
+		 let
+		  val Ty.T_Fem(femData) = V.typeOf v1
+		  val dim  = FD.underlyingDim femData
+		  val fictionalEvalTy = Ty.vecTy dim
+		  val fictionalEvalVar = V.new("fiction", Var.LocalVar, fictionalEvalTy)
+		  val _ = defaultFemPres fictionalEvalVar
+
+		  val outVarTy = Option.map F.resultTypeOf func
+		  val outVarFiction = Option.map
+					(fn x => [V.new("fiction", Var.LocalVar, x)]) outVarTy
+					
+		 in
+		  (case (func, fof, v3o, Option.map (V.typeOf) v3o)
+		    of (NONE, _, _, _) => ()
+		     | (SOME(f), FemOpt.RefField, SOME(v3), SOME(Ty.T_Fem(mesh))) =>
+		       (defineInOut(List.hd call, (fictionalEvalVar, List.hd (Option.valOf outVarFiction)));
+			procApply(f, [v3, fictionalEvalVar],
+				  Option.valOf outVarFiction,
+				  false))
+		     | (SOME(f), FemOpt.InvTransform, SOME(v3),SOME(Ty.T_Fem(mesh))) =>
+		       (defineInOut(List.hd call, (fictionalEvalVar, List.hd (Option.valOf outVarFiction)));
+			procApply(f, [v3, fictionalEvalVar],
+				  Option.valOf outVarFiction,
+				  false))
+		     | (SOME(f), FemOpt.InvTransform, SOME(v3), SOME(Ty.T_Int)) =>
+		       (defineInOut(List.hd call, (fictionalEvalVar, List.hd (Option.valOf outVarFiction)));
+			procApply(f, [fictionalEvalVar, v3, v1],
+				  Option.valOf outVarFiction,
+				  false)
+			)
+		     | _ => raise Fail "impossible"
+		  (*end case*))
+		 end;
+		 (*NOTE: function here is FEM free modulo a mesh arg!*)
+		 nonFemRet)
 	      | doit (S.E_ExtractFemItemN(vs, tys, t, fo, NONE)) = ((List.app (checkExistence "_FFIN") vs);
 								    if Bool.not retHasFem
 								    then nonFemRet
@@ -1479,7 +1531,7 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 				of Base(_, SOME(v')) => ([],v')
 				 | ALL(f) => depToV(f, cvtVar v)
 				 | _ => raise Fail "invalid femPres for base fem global"
-			      (*end case*))
+			      (*end case*))				
 						    
        val none = fn s => ([],s)
        fun doit (S.E_Var(v)) = if checkMerge(getFemPres v, retPres)
@@ -1504,7 +1556,8 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 	   end
 	 | doit (S.E_Apply(f, vs)) = (* possible to all convert*)
 	   let
-	    val vs' = List.map cvtVar vs 
+	    val filteredVs = List.filter testParam vs
+	    val vs' = List.map cvtVar filteredVs
 	    val callSite = vs
 	   in
 	    (case cvtFun(f, callSite, retVar, newDefs, cvtBody, cvtVar, false)
@@ -1832,7 +1885,7 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 		| _ => raise Fail "impossible FO"
 	     (* end case*))
 	    end
-	 | doit (S.E_FemField(v1, v2, v1opt, ty, fo, funcopt)) =
+	 | doit (S.E_FemField(v1, v2, v1opt, ty, fo, NONE)) =
 	   let
 	    val (stms1, v1') = acquireGlobal v1
 	    val (stms2, v2') = acquireGlobal v2
@@ -1844,8 +1897,34 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 						  in (stms, SOME(base')) end
 				  )
 	   in
+	    (stms1@stms2@stms3, S.E_FemField(v1', v2', v1opt', ty, fo, NONE))
+	   end
+	 | doit (S.E_FemField(v1, v2, SOME(v3), ty, fo, SOME(func))) =
+	   let
+	    val (stms1, v1') = acquireGlobal v1
+	    val (stms2, v2') = acquireGlobal v2
+	    val (stms3, v1opt') = (case Option.map getFemPres (SOME(v3))
+				    of NONE => ([], NONE)
+				     | SOME(NOTHING) => ([], Option.map cvtVar (SOME(v3)))
+				     | SOME(_) => let val SOME(base) = SOME(v3)
+						      val (stms, base') = acquireGlobal base
+						  in (stms, SOME(base')) end
+				  )
+
+	    local
+	     val (fakeIn, fakeOut) = getInOut retVar
+	     val args = (case V.typeOf v3
+			  of Ty.T_Int => [fakeIn, v3, v1]
+			   | _ => [v3, fakeIn])
+	     val result = fakeOut
+	     val SOME(f', _) = cvtFun(func, args, result, newDefs, cvtBody, cvtVar, false)
+	    in
+	    val funcopt = SOME(f')
+	    end
+	   in
 	    (stms1@stms2@stms3, S.E_FemField(v1', v2', v1opt', ty, fo, funcopt))
 	   end
+
 	     
 	 | doit _ = raise Fail "impossible STM"
 

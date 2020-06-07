@@ -378,29 +378,44 @@ structure ProbeEin : sig
             AvailRHS.addAssignToList (avail, einapp)
     end
 
-    fun callNewtonFunc(env, avail, n, func, posVar, cellIntVar, meshVar) =
+    fun callNewtonFunc(env, avail, n, func : Stamp.t, posVar, cellIntVar, meshVar : IR.var) =
 	let
 	 (*we need to find the function*)
 	 val Ty.FemData(data) = IR.Var.ty meshVar
 	 val FemData.Mesh(meshData) = data
 	 val meshPosData = FemData.MeshPos(meshData)
-	 val meshPosTy = Ty.FemData(meshPosData)    
+	 val meshPosTy = Ty.FemData(meshPosData)
+	 val dim = FemData.underlyingDim data
 
-	 val tempName = Atom.toString (FemData.functionNameMake' data (FemName.hiddenNewtonInverse) func)
-	 val paramTys = [HTy.TensorTy([n]), HTy.IntTy, HTy.FemData data]
+	 val (srcFunc, dstFunc) = Env.findSrcFV (env, func)
+	 val IR.FV{paramTys, ty,...} = dstFunc
+
+	 val params = (case paramTys
+			of [Ty.TensorTy([n]), Ty.IntTy, Ty.IntTy] => (case IR.Var.getDef meshVar
+								       of IR.OP(Op.Subscript _, [v, idx]) => [posVar, cellIntVar, idx]
+									| _ => raise Fail "impossible"
+									(* end case*))
+			 | [Ty.TensorTy([n]), Ty.IntTy] => [posVar, cellIntVar]
+		      (*end case*))
+
+			
+
+	 (* val tempName = Atom.toString (FemData.functionNameMake' data (FemName.hiddenNewtonInverse) func) *)
+	 (* val paramTys = [HTy.TensorTy([n]), HTy.IntTy, HTy.FemData data] *)
 			  
-	 val newFuncFV = HIR.FV{id=func, name = tempName, ty = HTy.FemData(meshPosData),
-				useCnt = ref 1,
-				paramTys = paramTys,
-				props = PropList.newHolder ()}
-	 val targetFV = Env.renameFV(env, newFuncFV)
-	 val meshPosResult = AvailRHS.addAssign(avail, "callNewtonPos", meshPosTy, IR.APPLY(targetFV, [posVar, cellIntVar, meshVar]))
+	 (* val newFuncFV = HIR.FV{id=func, name = tempName, ty = HTy.FemData(meshPosData), *)
+	 (* 			useCnt = ref 1, *)
+	 (* 			paramTys = paramTys, *)
+	 (* 			props = PropList.newHolder ()} *)
+	 (* val targetFV = Env.renameFV(env, newFuncFV) 
+	    [posVar, cellIntVar, meshVar]		     
+	    meshPosTy
+	  *)
+	 val meshPosResult = AvailRHS.addAssign(avail, "callNewtonPos", ty, IR.APPLY(dstFunc, params))
 	 val newPosVar = AvailRHS.addAssign(avail, "refPos",
-					    Ty.TensorTy([n]),
-					    IR.OP(
-					     Op.ExtractFemItem( Ty.TensorTy([n]),
-								(FemOpt.RefPos, data)),
-					     [meshPosResult]))
+					    Ty.TensorTy([dim]),
+					    IR.OP(Op.Select(ty, 0),
+					    [meshPosResult]))
 	in
 	 newPosVar
 	end
@@ -409,27 +424,38 @@ structure ProbeEin : sig
 	let
 	 val Ty.FemData(data) = IR.Var.ty meshVar (*check meshData*)
 	 val FemData.Mesh(meshData) = data
-	 val tempName = Atom.toString (FemData.functionNameMake' data (FemName.meshPos) func)
-	 val paramTys = [HTy.FemData data, HTy.TensorTy([n])]
-	 val newFuncFV = HIR.FV({id=func, name = tempName, ty = HTy.FemData (FemData.MeshPos(meshData)),
-				 useCnt = ref (1) : int ref,
-				 paramTys = paramTys,
-				 props = PropList.newHolder ()})
-	 val targetFV = Env.renameFV(env, newFuncFV)
+	 val n = FemData.underlyingDim data
+	 (* val tempName = Atom.toString (FemData.functionNameMake' data (FemName.meshPos) func) *)
+	 (* val paramTys = [HTy.FemData data, HTy.TensorTy([n])] *)
+	 (* val newFuncFV = HIR.FV({id=func, name = tempName, ty = HTy.FemData (FemData.MeshPos(meshData)), *)
+	 (* 			 useCnt = ref (1) : int ref, *)
+	 (* 			 paramTys = paramTys, *)
+	 (* 			 props = PropList.newHolder ()}) *)
+	 (* val targetFV = Env.renameFV(env, newFuncFV) *)
+	 val (srcFunc, dstFunc) = Env.findSrcFV (env, func)
+	 val IR.FV{paramTys, ty,...} = dstFunc
+
+	 val params = (case paramTys
+			of [Ty.IntTy, Ty.TensorTy([n])] => (case IR.Var.getDef meshVar
+								       of IR.OP(Op.Subscript _, [v, idx]) => [idx, posVar]
+									| _ => raise Fail "impossible"
+								     (* end case*))
+			 | [Ty.TensorTy([n])] => [posVar]
+		      (*end case*))
+
 	 val meshPosResult = AvailRHS.addAssign(avail, "callFindPos",
-						Ty.FemData(FemData.MeshPos(meshData)),
-						IR.APPLY(targetFV, [meshVar, posVar]))
+						ty,
+						IR.APPLY(dstFunc, params))
 	 val intVar = AvailRHS.addAssign(avail, "intPos",
 					 Ty.IntTy,
 					 IR.OP(
-					  Op.ExtractFemItem(Ty.IntTy, (FemOpt.CellIndex, data)),
+					  Op.Select(ty, 1),
 					  [meshPosResult]))
 	 val newPosVar = AvailRHS.addAssign(avail, "refPos",
-					 Ty.TensorTy([n]),
-					 IR.OP(
-					  Op.ExtractFemItem( Ty.TensorTy([n]),
-							     (FemOpt.RefPos, data)),
-					  [meshPosResult]))
+					    Ty.TensorTy([n]),
+					    IR.OP(
+					     Op.Select(ty, 0),
+					     [meshPosResult]))
 	in
 	 (intVar, newPosVar)
 	end

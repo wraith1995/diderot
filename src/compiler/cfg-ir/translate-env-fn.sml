@@ -41,7 +41,7 @@ signature TRANSLATE_ENV =
    * func_def to the DstIR func_def.
    *)
     val renameFV : (t * SrcIR.func) -> DstIR.func
-
+    val findSrcFV : t * Stamp.t -> SrcIR.func * DstIR.func
     val insertNd : (t * Stamp.t * DstIR.node) -> unit
     val findNd : t -> Stamp.t -> DstIR.node option
 
@@ -129,20 +129,30 @@ functor TranslateEnvFn (Params : TRANSLATE_ENV_PARAMS) : TRANSLATE_ENV =
                 end
           (* end case *))
 
-    fun renameFV (env as E{fvMap, funcs, ...}, f) = (case SrcFV.Tbl.find fvMap f
-           of SOME(SrcFunc mkFunc) => let
-              (* need to map the function variable and then translate the definition *)
-                val (resTy, paramTys) = SrcFV.ty f
-                val f' = DstIR.Func.new (SrcFV.name f, cvtTy resTy, List.map cvtTy paramTys)
-                val fdef = mkFunc(env, f')
-                in
-                  SrcFV.Tbl.insert fvMap (f, DstFunc f');
-                  funcs := fdef :: !funcs;
-                  f'
-                end
-            | SOME(DstFunc f') => f'
-            | NONE => raise Fail("renameFV: unregistered function " ^ SrcIR.Func.toString f)
-          (* end case *))
+    fun renameFV (env as E{fvMap, funcs, ...}, f) =
+	(case SrcFV.Tbl.find fvMap f
+          of SOME(SrcFunc mkFunc) => let
+           (* need to map the function variable and then translate the definition *)
+           val (resTy, paramTys) = SrcFV.ty f
+           val f' = DstIR.Func.new (SrcFV.name f, cvtTy resTy, List.map cvtTy paramTys)
+           val fdef = mkFunc(env, f')
+          in
+           SrcFV.Tbl.insert fvMap (f, DstFunc f');
+           funcs := fdef :: !funcs;
+           f'
+          end
+           | SOME(DstFunc f') => f'
+           | NONE => raise Fail("renameFV: unregistered function " ^ SrcIR.Func.toString f)
+	(* end case *))
+
+    fun findSrcFV (env as E{fvMap, funcs, ...}, stamp) =
+	let
+	 val f : SrcIR.func = SrcIR.FV{id=stamp, name = "", ty = SrcIR.Ty.intTy, paramTys = [SrcIR.Ty.intTy], useCnt = ref 0, props=PropList.newHolder()}
+	 val fvarsList : SrcIR.Func.Tbl.Key.hash_key list =  (List.map (fn (x,y) => x)) (SrcIR.Func.Tbl.listItemsi fvMap)
+	 val SOME(f') = List.find (fn x => SrcIR.Func.same(f,x)) fvarsList
+	in
+	 (f', renameFV(env, f'))
+	end
 
     fun insertNd (E{ndMap, ...}, id, nd) = Stamp.Tbl.insert ndMap (id, nd)
 
