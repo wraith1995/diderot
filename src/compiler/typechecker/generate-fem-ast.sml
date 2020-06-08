@@ -535,7 +535,7 @@ fun makeNewtonInversesBody(env, cxt, span, refCellClass, meshData, newtonTol, ne
      val invVar = makeInvVar(dim)
      val newPosVar = Var.new(Atom.atom "xn", span, AST.LocalVar, insideVec)
      val newPosVarExpr = AST.E_Var((newPosVar, span))
-     val initPos = AST.S_Assign((newPosVar, span), startPosition)
+     val initPos = AST.S_Decl((newPosVar), SOME(startPosition))
      val updateVar = Var.new(Atom.atom "delta", span, AST.LocalVar, insideVec)
      val itterVar = Var.new(Atom.atom "itter", span, AST.IterVar, Ty.T_Int)
      val itterRange = makePrim'(BV.range,
@@ -584,7 +584,7 @@ fun makeNewtonInversesBody(env, cxt, span, refCellClass, meshData, newtonTol, ne
 	   val probeDAssign = AST.S_Decl((matVar, SOME(probeD)))
 	   val dotFields = makePrim'(BV.op_inner_tf,  [AST.E_Var(matVar, span), transformFieldModPos], [insideMat, transformFieldTy], transformFieldTy)
 	   val probeUpdate = makePrim'(BV.op_probe, [dotFields, newPosVarExpr], [transformFieldTy, insideVec], insideVec)
-	   val updateDeltaStm = AST.S_Assign((updateVar, span), probeUpdate)
+	   val updateDeltaStm = AST.S_Decl(updateVar, SOME(probeUpdate))
 	   val updateCurrentPosExpr = makePrim'(BV.sub_tt, [AST.E_Var(newPosVar,span), AST.E_Var(updateVar, span)], [insideVec, insideVec], insideVec)
 	   val updateCurrentPosStm = AST.S_Assign((newPosVar,span), updateCurrentPosExpr)
 

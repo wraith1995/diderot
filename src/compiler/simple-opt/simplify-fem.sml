@@ -456,6 +456,12 @@ return to Strands until Fixed
    tyToFemPresSeq' t handle ex => raise ex
   end
 
+  local
+   val {clrFn, getFn, peekFn, setFn} = V.newProp(fn v => false)
+  in
+  val isUsedFemData = getFn
+  val useFemData = fn x => (setFn(x, true))
+  end
   (*Propery for mapping vars to their symbolic fem info; inputs handled specially*)
   local
    val {clrFn, getFn, peekFn, setFn} = V.newProp(fn v => tyToFemPres(V.typeOf(v)))
@@ -516,6 +522,8 @@ return to Strands until Fixed
 		     of SOME((a,b)) => (a,b)
 		      | NONE => raise Fail "no In Out set"
 		   (* end case*))
+  val testInOut = peekFn
+		     
   end
 
   (*Function to manage inputs*)
@@ -780,7 +788,7 @@ return to Strands until Fixed
 		(List.app (checkExistence ("_loadFem")) [v1, v2];
 		 if FD.baseFem f (*v1 is the dest data; v2 is the dep; *)
 		 then ((case getFemPres v2
-			 of Base(f', SOME(v2')) => (addDep(v1, v2'); valid (Base(f, SOME(v1))) handle exn => raise exn) 
+			 of Base(f', SOME(v2')) => (useFemData(v1);addDep(v1, v2'); valid (Base(f, SOME(v1))) handle exn => raise exn) 
 			  | Base(f', NONE) => raise Fail "base fem load not set; impossible!" 
 			  | ALL(f') => raise Fail "base fem load unable to trace!" (*Should be impossible*)
 			  | _ => raise Fail ("impossible: " ^ (V.uniqueNameOf v2))
@@ -845,9 +853,14 @@ return to Strands until Fixed
 		  val outVarTy = Option.map F.resultTypeOf func
 		  val outVarFiction = Option.map
 					(fn x => [V.new("fiction", Var.LocalVar, x)]) outVarTy
+
+		  val (fictionalEvalVar, outVarFiction) = (case testInOut (List.hd call)
+							    of NONE => (fictionalEvalVar, outVarFiction)
+							     | SOME(ficEvalVar, ficOutVar) => (ficEvalVar, SOME([ficOutVar]))
+							  (*end case*))
 					
 		 in
-		  (case (func, fof, v3o, Option.map (V.typeOf) v3o)
+		  ((case (func, fof, v3o, Option.map (V.typeOf) v3o)
 		    of (NONE, _, _, _) => ()
 		     | (SOME(f), FemOpt.RefField, SOME(v3), SOME(Ty.T_Fem(mesh))) =>
 		       (defineInOut(List.hd call, (fictionalEvalVar, List.hd (Option.valOf outVarFiction)));
@@ -866,7 +879,7 @@ return to Strands until Fixed
 				  false)
 			)
 		     | _ => raise Fail "impossible"
-		  (*end case*))
+		   (*end case*)))
 		 end;
 		 (*NOTE: function here is FEM free modulo a mesh arg!*)
 		 nonFemRet)
@@ -1088,7 +1101,7 @@ return to Strands until Fixed
    val _ = doGlobal(ref false)
 
 		    
-   fun loop(change : bool ref, d) = if d > 50 then raise Fail "way too much looping" (*debug*)
+   fun loop(change : bool ref, d) = if d > 500 then print( "way too much looping") (*debug*)
 			 else
 			  if Bool.not (!change)
 			  then ()
@@ -1147,7 +1160,7 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 			
   fun buildGlobalFemTables(femTable : (FD.femType, V.t list) HT.hash_table, femDep : SimpleVar.t VTbl.hash_table) =
       let
-       fun findDep ( v1 : V.t) : V.t option = VTbl.find femDep v1
+       fun findDep ( v1 : V.t) : V.t option = VTbl.find femDep v1 handle ex => raise ex
        val initsAndVarTbl = HT.mapi (fn (d, vs) =>
 				     let
 				      val n = List.length vs
@@ -1186,10 +1199,17 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 				      let
 				       val d' = Option.valOf (FD.dependencyOf d)
 				       val n = List.length vs
-
-				       val deps = List.map (fn v => VTbl.lookup femDep v) vs
-				       val ty = Ty.T_Sequence(Ty.T_Fem(d'), SOME(n))
-				       val depNums = List.map (fn x => Option.valOf (femGlobToI(d', x)) handle ex => raise ex) deps
+				       val _ = print(String.concatWith "," (List.map V.uniqueNameOf vs) )
+				       val _ = print("\n")
+				       val deps = List.map (fn v => VTbl.find femDep v) vs handle ex => raise ex
+				       val depsFilt = List.map (Option.valOf) (List.filter Option.isSome deps)
+				       val ty = Ty.T_Sequence(Ty.T_Fem(d'), SOME(List.length depsFilt))
+				       val depNums = List.map (fn x =>
+								  (case x
+								    of SOME(x') => Option.valOf (femGlobToI(d', x'))
+								     | NONE => (~1) (*NOTE: should be impossible to hit b/c no uses*)
+							      (* end case*))) deps
+								    
 				       val ty' = Ty.T_Sequence(Ty.T_Int, SOME(n))
 
 
@@ -1198,7 +1218,7 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 				       val ises = List.tabulate(n, fn x => V.new("globFemI_"^(Int.toString x), Var.LocalVar, Ty.T_Int))
 				       val isesAssign = ListPair.map (fn (x,y) => S.S_Var(x, SOME(S.E_Lit(Literal.intLit y)))) (ises, depNums)
 				      in
-				       ((globD, S.S_Assign(globD, S.E_Seq(deps, ty))),
+				       ((globD, S.S_Assign(globD, S.E_Seq(depsFilt, ty))),
 					(globI, isesAssign@[S.S_Var(globI, SOME(S.E_Seq(ises, ty')))]))
 				      end
 				  ) filteredTable
@@ -1211,13 +1231,13 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 
        fun femItoDepIImpl(fem, dFem, v) = 
 	   let
-	    val depVar = HT.lookup globDepTable fem
+	    val depVar = HT.lookup globDepTable fem handle ex => raise ex
 	    val ((_, _), (idxi, _)) = depVar
 	    val accExp = S.E_Prim(BasisVars.subscript, [], [idxi, v], Ty.T_Int)
 	    val accVar = V.new("depIndex", Var.LocalVar, Ty.T_Int)
 	    val getI = S.S_Var(accVar, SOME(accExp))
 
-	    val (depArray, _) = HT.lookup initsAndVarTbl dFem
+	    val (depArray, _) = HT.lookup initsAndVarTbl dFem handle ex => raise ex
 	    val accExp' = S.E_Prim(BasisVars.subscript, [], [depArray, accVar], Ty.T_Fem(dFem))
 	    val accVar' = V.new("depFem", Var.LocalVar, Ty.T_Fem(dFem))
 	    val getD = S.S_Var(accVar', SOME(accExp'))
@@ -1227,14 +1247,14 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
        fun globDepToDep(fem, var) =
 	   let
 	    val dep = Option.valOf (FD.dependencyOf fem)
-	    val (_, depInt, stms) = femItoDepIImpl(fem, dep, var)
+	    val (_, depInt, stms) = femItoDepIImpl(fem, dep, var) handle ex => raise ex
 	   in
 	    (stms, depInt)
 	   end
 
        fun intGlobToVar(fem, var) = (*given an idx, produce the glob assocaited to it*)
 	   let
-	    val (femTable, _) = HT.lookup initsAndVarTbl fem
+	    val (femTable, _) = HT.lookup initsAndVarTbl fem handle ex => raise ex
 	    val accExp = S.E_Prim(BasisVars.subscript, [], [femTable, var], Ty.T_Fem(fem))
 	    val accVar = V.new("depFem", Var.LocalVar, Ty.T_Fem(fem))
 	    val getD = S.S_Var(accVar, SOME(accExp))
@@ -1954,11 +1974,12 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 
        (*setup new globals to manage fems*)
        val (newGlobals, newInits,
-	    globCvt, findDep, globDepToDep, depToV) = buildGlobalFemTables tbs
+	    globCvt, findDep, globDepToDep, depToV) = buildGlobalFemTables tbs handle ex => raise ex
+       val _ = print("building....\n")
        fun doBlock(block : S.block, newDefs : S.func_def list ref, params)
 	   = cvtBody(block, newDefs, params, globCvt, findDep, globDepToDep, depToV) handle ex => raise ex
        val newDefs = ref []
-       fun doBlock'(b) = doBlock(b, newDefs, NONE)
+       fun doBlock'(b) = doBlock(b, newDefs, NONE) handle ex => raise ex
        val globals' = List.map cvtVar globals
        val globals'' = newGlobals@globals'
        local
@@ -1966,7 +1987,7 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
        in
        val globalInit' = S.Block{code=newInits@code,props=PropList.newHolder()}
        end
-       val constInit' = doBlock'(constInit)
+       val constInit' = doBlock'(constInit) handle ex => raise ex
 
        val start' = Option.map doBlock' start handle ex => raise ex
        val update' = Option.map doBlock' update handle ex => raise ex
@@ -2027,6 +2048,7 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
   fun analysisOnly prog =
       let
        val (prog', femTable, femDep) = analysis prog handle ex => raise ex
+									(*modify program for new defs...*)
       in
        prog'
       end
