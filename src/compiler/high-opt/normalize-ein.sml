@@ -9,12 +9,14 @@
 structure NormalizeEin : sig
 
   (* normalize an Ein function; if there are no changes, then NONE is returned. *)
-    val transform : Ein.ein -> Ein.ein option
+    val transform : HighIR.var list  -> Ein.ein -> Ein.ein option
 
   end = struct
 
     structure E = Ein
     structure ST = Stats
+    structure IR = HighIR
+    structure Ty = HighTypes
 
   (********** Counters for statistics **********)
     val cntNullSum              = ST.newCounter "high-opt:null-sum"
@@ -33,9 +35,13 @@ structure NormalizeEin : sig
     val cntNegDelta             = ST.newCounter "high-opt:neg-delta"
     val cntReduceDelta          = ST.newCounter "high-opt:reduce-delta"
     val cntIdentityProbe        = ST.newCounter "high-opt:identity-probe"
-    val cntRounds               = ST.newCounter "high-opt:normalize-round"
+    val cntCompCancel           = ST.newCounter "high-opt:cntcompCancel"
+    val cntInnerLoop            = ST.newCounter "high-opt:inner-loop"
     val firstCounter            = cntNullSum
-    val lastCounter             = cntIdentityProbe
+    val lastCounter'            = cntCompCancel
+    val lastCounter             = cntInnerLoop
+    val cntRounds               = ST.newCounter "high-opt:normalize-round"
+
 
 
     fun err str = raise Fail(String.concat["Ill-formed EIN Operator",str])
@@ -144,8 +150,8 @@ structure NormalizeEin : sig
 
 
   (* rewrite body of EIN *)
-    fun transform (ein as Ein.EIN{params, index, body}) = let
-     val _ = print(String.concat["\ntransform: ", EinPP.expToString(body)])
+    fun transform vars (ein as Ein.EIN{params, index, body}) = let
+     (* val _ = print(String.concat["\ntransform: ", EinPP.expToString(body)]) *)
           fun filterProd args = (case EinFilter.mkProd args
                  of SOME e => (ST.tick cntFilter; e)
                   | NONE => mkProd args
@@ -193,24 +199,109 @@ structure NormalizeEin : sig
                   | E.Img _ => err "Img before Expand"
                   | E.Krn _ => err "Krn before Expand"
                   | E.Poly _ => err "Poly before Expand"
-                (************** Composition **************)
+                  (************** Composition **************)
                   | E.Comp(E.Comp(a, es1), es2) => (ST.tick cntProbe; rewrite (E.Comp(a, es1@es2)))
                   | E.Comp(a, (E.Comp(b, es1), m)::es2) =>  (ST.tick cntProbe; rewrite (E.Comp(a, ((b, m)::es1)@es2)))
-                  | E.Comp(e1, es)                  =>
+                  | E.Comp(e1, es)  =>
                     let
-                    val e1' = rewrite e1
-                    val es' = List.map (fn (e2, n2)=> (rewrite e2, n2)) es
-		    (*chance here - find field nodes - replace with identity field - identity field - derivative is zero - probe is identity
-inductively prove no problenm -- also, just force the rewrite!*)
-				       (*Plan: loop these rewrites to make sure they finish everything*)
-				       (*Then look for field functions - in first - looks for inputs - list
-					For each input, try to detech match with output if it is a transform
-				        Replace the desired inputs with an identity field (Probe is just x)
-				        Derivative is identity matrix (deltas_ij)
-					Later add identity field at top
-				        fields in functions... (close over arguments, not in loop context,etc)
-					*)
-                    in  E.Comp(e1', es') end
+		    (* Rewrite e1 and es fully:*)
+		     val needRewrite = ref false
+		     fun getOpt(a,b) = (case a
+					 of SOME(a') => (needRewrite := true; a')
+					  | NONE => b)
+                     val e1' = innerLoop(e1, ST.sum{from = firstCounter, to = lastCounter'}, false)
+		     val e1'' = getOpt(e1', e1)
+                     val es' = List.map (fn (e2, n2)=> (innerLoop(e2, ST.sum{from = firstCounter, to = lastCounter'}, false), n2)) es
+		     val es'' = ListPair.map (fn ((e2, n2), (e2', n2')) => (getOpt(e2', e2), n2)) (es, es')
+		     (* If any rewrites occur, we try to rewrite the whole thing further*)
+		     val E.Comp(e1''', es''') = if !needRewrite
+						then (case innerLoop(E.Comp(e1'', es''), ST.sum{from = firstCounter, to = lastCounter'}, false)
+						       of SOME(a) => a
+							| NONE => E.Comp(e1'', es'')
+						     (* end case*))
+						else E.Comp(e1'', es'')
+
+		     (*We now setup the cancellation: this function will, based on eIN, 
+		       replace field ins in eOut with an identity or a comp!
+		     This will return: 
+		     -the resulting eOut
+		     -a flag for if any comp replaces happened
+		     -a flag for if any identity replaces happened
+		     -a flag if eIn couldn't result in any cancells
+		      *)
+		     fun tryCancel(eOut : E.ein_exp, eIn : E.ein_exp, eInBind : E.index_bind list) =
+			 let
+			  val fail = ref false
+			  val aRet = ref false
+			  fun sucRet e = (aRet := true; e)
+			  fun failRet e = (fail := true; E.Comp(e, [(eIn, eInBind)]))
+			  fun vTy x = IR.Var.ty (List.nth(vars, x))
+			  fun vS(x,y) = x=y orelse IR.Var.same(List.nth(vars, x), List.nth(vars, y))
+			  fun findInvert(mesh, index, indexSource, dofSource) e = (*T^-1 \circ T*)
+			      (case e
+				of (E.Fem(E.Invert(_, _, NONE), index', indexSource', dofSource', [acc], []))
+				   => if vS(index, index') andalso vS(indexSource', indexSource)
+					 andalso vS(dofSource, dofSource')
+				      then sucRet(E.Identity(FemData.meshDim mesh, acc))
+				      else failRet e
+				 | (E.Fem(E.Invert(_, _, SOME _), index', indexSource', dofSource', [acc], [])) =>
+				   if vS(indexSource', indexSource) andalso vS(dofSource, dofSource')
+				   then sucRet(E.Identity(FemData.meshDim mesh, acc))
+				   else failRet e
+				 | _ => failRet e
+			      (* end case*))
+			  fun findPlain(mesh, index, indexSource, dofSource) e = (*T \circ T^-1 - general T^-1 we should add?*)
+			      (case e
+				of E.Fem(E.Plain(_, _, _), index', indexSource', dofSource', [acc], [])
+				   => if vS(index, index') andalso vS(indexSource', indexSource)
+					 andalso vS(dofSource, dofSource')
+				      then sucRet(E.Identity(FemData.meshDim mesh, acc))
+				      else failRet e
+				 | _ => failRet e
+			      (* end case*))
+			  val f : (Ein.ein_exp -> Ein.ein_exp) option =
+			      (case eIn
+				of E.Fem(femEin, index, indexSource, dofSource, [E.V _], []) =>
+				   (case (femEin, vTy indexSource) 
+				     of (E.Plain(_, _, _), Ty.FemData(FemData.Mesh mesh))
+					=> SOME(findInvert(mesh, index, indexSource, dofSource))
+				      | (E.Invert(_, _, _), Ty.FemData(FemData.Mesh mesh)) =>
+					SOME(findPlain(mesh, index, indexSource, dofSource))
+				      | _ => NONE
+				   (* end case*))
+				 | _ => NONE
+			      (* end ase*))
+			  val eOut' = Option.map (fn f' => EinUtil.mapInNodes(eOut, f')) f
+			  val possibleReplace = Option.isSome f
+							      
+			 in
+			  (Option.getOpt(eOut', eOut), !fail, !aRet, possibleReplace)
+			 end
+		     (*We do the canellation directly with this function, marking it here:*)
+		     fun doCompLefts(e1::e2::es) =
+			 let
+			  val (e1e, e1b) = e1
+			  val (e2e, e2b) = e2
+			  val (e1e', anyFail, anyReplace, nothing) = tryCancel(e1e, e2e, e2b)
+			  val _ = if Bool.not anyFail andalso Bool.not anyReplace
+				  then raise Fail "ill-formed comp"
+				  else ()
+			 in
+			  if nothing orelse anyFail (*Question: might be a good idea to allow any-fail*)
+			  then e1::doCompLefts(e2::es)
+			  else (ST.tick cntCompCancel; (e1e', e1b) :: doCompLefts(e2::es))
+			 end
+		       | doCompLefts ([e]) = [e]
+		       | doCompLefts ([]) = []
+		     val allEs = (e1''', []) :: es'''
+		     val allEs' = doCompLefts(allEs)
+		     (*We produce the resulting ein here:*)
+		     val compRet = (case allEs'
+				     of [] => raise Fail "impossible: fail comp cancel somehow."
+				      | [(r,rbind)] => r
+				      | (r,rbind)::rs => E.Comp(r,rs)
+				   (*end case*))
+                    in  compRet end
                   | E.Probe(E.Comp(e1, es), x)  =>
                     let
                     val e1' = rewrite e1
@@ -222,11 +313,11 @@ inductively prove no problenm -- also, just force the rewrite!*)
                     end
 		  | E.Probe(E.Identity(dim, mu1), e as E.Tensor(tid, [])) => (*Id(e2) -> Id * e2 \sum_i=(0,dim-1) delta_ij e_2_i...*)
 		    let
-		     val _ = print("inner:" ^ (EinPP.expToString e) ^ "\n")
+		     (* val _ = print("inner:" ^ (EinPP.expToString e) ^ "\n") *)
 		     val newSumRange = !sumX + 1
 		     val _ = incSum()
 		     val ret = mkSum([(newSumRange, 0, dim - 1)], E.Opn(E.Prod, [E.Delta(mu1, E.V newSumRange), E.Tensor(tid, [E.V newSumRange])]))
-		     val new = print("inner':" ^ (EinPP.expToString ret))
+		     (* val new = print("inner':" ^ (EinPP.expToString ret)) *)
 		    in
 		     (ST.tick cntIdentityProbe; ret)
 		    end
@@ -374,11 +465,22 @@ inductively prove no problenm -- also, just force the rewrite!*)
                           | _ => filterProd [e',e2]
                         (* end case *)
                       end
-                (* end case *))
-(*DEBUG*)val start = ST.count cntRounds
+			     (* end case *))
+	  and innerLoop(exp, total, changed) =
+	      let
+	       val exp' = rewrite exp
+	       val totalTicks = ST.sum{from = firstCounter, to = lastCounter'}
+	      in
+	       if totalTicks > total
+	       then innerLoop(exp', totalTicks, true)
+	       else if changed
+	       then (ST.tick cntInnerLoop; SOME(exp'))
+	       else NONE
+	      end
+(* (*DEBUG*)val start = ST.count cntRounds *)
           fun loop (body, total, changed) = let
                 val body' = rewrite body
-		val _ =print(String.concat["\n\n ==> X:", EinPP.expToString(body),"\n ==> Y:", EinPP.expToString(body'), "\n"])
+		(* val _ =print(String.concat["\n\n ==> X:", EinPP.expToString(body),"\n ==> Y:", EinPP.expToString(body'), "\n"]) *)
                 val totalTicks = ST.sum{from = firstCounter, to = lastCounter}
                 in
                   ST.tick cntRounds;
@@ -390,7 +492,7 @@ inductively prove no problenm -- also, just force the rewrite!*)
                     else NONE
           end
 	  val einRet = loop(body, ST.sum{from = firstCounter, to = lastCounter}, false)
-	  val _ = Option.app (fn x => print(String.concat(["ret:", EinPP.toString x, "\n"]))) einRet
+	  (* val _ = Option.app (fn x => print(String.concat(["ret:", EinPP.toString x, "\n"]))) einRet *)
           in
             einRet
           end

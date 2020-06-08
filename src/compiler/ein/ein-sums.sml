@@ -69,7 +69,7 @@ structure EinSums : sig
 		                          => NONE
 	      | E.Probe(E.Identity(d, mu), E.Tensor(_, []))
 		                          => NONE
-              | E.Probe(e1, e2)           => sort [e1, e2]
+              | E.Probe(e1, e2)           => sort [e1, e2] (*Question: Is this possible?*)
               | E.Value _                 => NONE
               | E.Img _                   => raise Fail "Img used pre expansion"
               | E.Krn _                   => raise Fail "Krn used pre expansion"

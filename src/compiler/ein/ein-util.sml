@@ -18,6 +18,8 @@ structure EinUtil : sig
     val iterPP: Ein.ein_exp list -> Ein.ein_exp
     val iterAA: Ein.ein_exp list -> Ein.ein_exp
 
+    (*Used to replace on the inputs to an ein_exp with another; used to do cancellations in Comp*)
+    val mapInNodes : Ein.ein_exp * (Ein.ein_exp -> Ein.ein_exp) -> Ein.ein_exp
   end = struct
 
     structure E = Ein
@@ -238,4 +240,43 @@ structure EinUtil : sig
             iterA (es, [])
           end
 
+
+
+
+    fun mapInNodes(exp : E.ein_exp, f : E.ein_exp -> E.ein_exp) =
+	let
+	 fun mapper (e as E.Const _) = e
+	   | mapper (e as E.ConstR _ ) = e
+	   | mapper (e as E.Tensor _) = e
+	   | mapper (e as E.Zero _) = e
+	   | mapper (e as E.Delta _) = e
+	   | mapper (e as E.Epsilon _) = e
+	   | mapper (e as E.Eps2 _) = e
+	   | mapper (e as E.Field(i, alpha)) = raise Fail "field arguments impossible post arg substitution" 
+	   | mapper (E.Lift(e)) = E.Lift(mapper e) (*Question: can't only tensor exps be in here... probably safe*)
+	   | mapper (e as E.Identity _) = f e
+	   | mapper (e as E.Conv _) = f e
+	   | mapper (e as E.Fem _ ) = f e
+	   | mapper (e as E.Partial _) = raise Fail "can't map through Partials"
+	   | mapper (e as E.Apply _) = raise Fail "can't mapp through apply partials"
+	   | mapper (E.Comp(e1, e2s)) = let val (last, binds):: rest = List.rev e2s
+					  val e2s' = List.rev ((mapper last, binds) :: rest)
+				      in E.Comp(e1, e2s') end
+	   | mapper (E.Probe(e1,e2)) = E.Probe(e1, mapper e2)
+	   | mapper (E.OField _) = raise Fail "impossible: disallow OField"
+	   | mapper (e as E.Value _) = e
+	   | mapper (e as E.Img _) = e
+	   | mapper (e as E.Krn _) = e
+	   | mapper (e as E.Poly _) = raise Fail "impossible: disallow Poly"
+	   | mapper (E.If(c, e1, e2)) = E.If(c, mapper e1, mapper e2)
+	   | mapper (E.Sum(sx, e')) = E.Sum(sx, mapper e')
+	   | mapper (E.Op1(u, e')) = E.Op1(u, mapper e')
+	   | mapper (E.Op2(u, e1, e2)) = E.Op2(u, mapper e1, mapper e2)
+	   | mapper (E.Op3(u, e1, e2, e3)) = E.Op3(u, mapper e1, mapper e2, mapper e3)
+	   | mapper (E.Opn(u, es)) = E.Opn(u, List.map mapper es)
+	   (* | mapper _ = raise Fail "impossible" *)
+				       
+	in
+	 mapper exp
+	end
   end

@@ -47,7 +47,7 @@ structure Normalize : sig
             | getEinRHS _ = NONE
           in
             case V.ty x
-             of HighTypes.KernelTy => getEinRHS(V.getDef x)
+             of HighTypes.KernelTy => getEinRHS(V.getDef x) (*NOTE to self: this ensures that all fld/kernel args are removed*)
               | HighTypes.FieldTy => getEinRHS(V.getDef x)
               | _ => getEinRHS(V.getLocalDef x)
             (* end case *)
@@ -56,9 +56,9 @@ structure Normalize : sig
  (* doNormalize : EIN -> EIN
   * Orders EIN, normalizes it, then cleans the summation
   *)
-    fun doNormalize e' = let
+    fun doNormalize args e' = let
           val ordered = Reorder.transform e'
-          val rtn = case NormalizeEin.transform ordered
+          val rtn = case NormalizeEin.transform args ordered
              of NONE => ordered
               | SOME e => EinSums.clean e
             (* end case *)
@@ -105,7 +105,7 @@ structure Normalize : sig
     fun doRHS (lhs, IR.EINAPP(ein, args)) = let
           fun rewrite (false, _, _, [], _) = NONE
             | rewrite (true, origEinOp, _, [], origArgs) =
-                SOME[(lhs, IR.EINAPP(doNormalize origEinOp, origArgs))]
+                SOME[(lhs, IR.EINAPP(doNormalize origArgs origEinOp, origArgs))]
             | rewrite (changed, origEinOp, place,  newLHS::xs, origArgs) = (
                 case getEinApp newLHS
                  of NONE => rewrite (changed, origEinOp, place+1, xs, origArgs@[ newLHS])
