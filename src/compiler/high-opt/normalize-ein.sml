@@ -267,12 +267,12 @@ structure NormalizeEin : sig
 					=> SOME(findInvert(mesh, index, indexSource, dofSource))
 				      | (E.Invert(_, _, _), Ty.FemData(FemData.Mesh mesh)) =>
 					SOME(findPlain(mesh, index, indexSource, dofSource))
-				      | _ => NONE
+				      | _ => (NONE)
 				   (* end case*))
-				 | _ => NONE
+				 | _ => (NONE)
 			      (* end ase*))
 			  val eOut' = Option.map (fn f' => EinUtil.mapInNodes(eOut, f')) f
-			  val possibleReplace = Option.isSome f
+			  val possibleReplace = Bool.not (Option.isSome f)
 							      
 			 in
 			  (Option.getOpt(eOut', eOut), !fail, !aRet, possibleReplace)
@@ -284,12 +284,12 @@ structure NormalizeEin : sig
 			  val (e2e, e2b) = e2
 			  val (e1e', anyFail, anyReplace, nothing) = tryCancel(e1e, e2e, e2b)
 			  val _ = if Bool.not anyFail andalso Bool.not anyReplace
-				  then raise Fail "ill-formed comp"
+				  then raise Fail "impossible:ill-formed comp"
 				  else ()
 			 in
 			  if nothing orelse anyFail (*Question: might be a good idea to allow any-fail*)
 			  then e1::doCompLefts(e2::es)
-			  else (ST.tick cntCompCancel; (e1e', e1b) :: doCompLefts(e2::es))
+			  else (ST.tick cntCompCancel; (e1e', e1b) :: doCompLefts(es))
 			 end
 		       | doCompLefts ([e]) = [e]
 		       | doCompLefts ([]) = []
