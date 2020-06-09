@@ -43,7 +43,7 @@ def writePointsToVtk(data, vtkFile, normals=None, scalars=None):
         polygon.GetPointData().SetNormals(pointNormalsArray)
     if scalars is not None:
         scalarArray.SetNumberOfTuples(countAdded)
-        for (idx, datam) in enumerate(scalars):
+        for (idx, datam) in enumerate(scalars.T):
             scalarArray.SetTuple(idx, tuple([datam]))
         polygon.GetPointData().SetScalars(scalarArray)
     polygonMapper = vtk.vtkPolyDataMapper()

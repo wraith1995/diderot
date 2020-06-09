@@ -36,7 +36,7 @@ function tensor[dim] nV(position{mesh_t} x){
   if(x.isValid()){
     cell{mesh_t} c = x.mc;
     tensor[dim] ref = x.refPos();
-    tensor[dim] val = data.funcCell(c).refField(ref);
+    tensor[dim] val = (data.funcCell(c)).refField(ref);
     return(val/|val|);
   }
   else

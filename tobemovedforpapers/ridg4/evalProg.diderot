@@ -15,25 +15,6 @@ field(dim)[] F = data.F;
 refCell{mesh_t} simplex = meshData.refcell();
 
 
-
-function vec3 grad(vec3 s){
-  real x = s[0];
-  real y = s[1];
-  real z = s[2];
-  vec3 g = [(y)^(2), 2*x*y, 2*z];
-  return g;
-}
-
-function tensor[3,3] hess(vec3 s){
-  real x = s[0];
-  real y = s[1];
-  real z = s[2];
-  tensor[3,3] hess = [[0, 2*y, 0], [2*y, 2*x, 0], [0, 0, 2]];
-
-  return hess;
-}
-
-
 input int timeSteps=32;
 input real timeEps = 0.0000001;
 //input tensor[dim, dim] flowMat = identity(dim);
@@ -130,7 +111,7 @@ input vec3[] ipos ("Initial point positions");
 input int fDim = 2;
 
 function bool insideTest(position{mesh_t} pos){
-  return(pos.isValid() && |pos.worldPos()| <= 4.0 && 3.0 <=  |pos.worldPos()|);
+  return(pos.isValid());// && |pos.worldPos()| <= 4.0 && 3.0 <=  |pos.worldPos()|);
 }
 
 
@@ -146,26 +127,15 @@ function vec3 fStep(position{mesh_t} pos) {
     cell{func_t} f = data.funcCell(c);
     vec3 g = ∇(f.transformedRefField)(x);
     tensor[dim, dim] H = ∇⊗∇(f.transformedRefField)(x);
-    /* if(|g - grad(pos.worldPos())| > 0.001){ */
-      
-    /*   print("smesh:", pos.refPos, "\n"); */
-    /*   print("Fucking error 1\n"); */
-    /*   print("World Pos:", pos.worldPos(), "\n"); */
-    /*   print("g:",g,"\n"); */
-    /*   print("grad:",grad(pos.worldPos()),"\n"); */
-    /* } else {print("fine\n");} */
-    /* if(|H - hess(pos.worldPos())| > 0.001){ */
-    /*   print("Fucking error 2\n"); */
-    /*   print("World Pos:", pos.worldPos(), "\n"); */
-    /*   print("H:", H, "\n"); */
-    /*   print("hess:", hess(pos.worldPos()),"\n"); */
-    /* } */
+
     vec3[3] E = evecs(H);
     real[3] L = evals(H);
     vec3 up =  -(1/L[2])*E[2]⊗E[2]•g;
-    if(posNanCheck(up)){
-      return([∞, ∞, ∞]);
-    } else {  return up;}
+    /* if(posNanCheck(up)){ */
+    /*   return([∞, ∞, ∞]); */
+    /* } else { */
+      return up;
+      //}
   } else {return([∞, ∞, ∞]);}
 }
 
@@ -179,9 +149,6 @@ function tensor[3,3] fPerp(position{mesh_t} pos) {
     vec3 E2 = evecs(H)[2];
     mat3 m =  identity[3] - E2⊗E2;
     real t = m : m;
-    if(!(t == t)){
-      return(zeros[3,3]);
-    }
     return m;
   } else {return(zeros[dim, dim]);}
 }
@@ -276,6 +243,20 @@ function int pcIter(){
   if (pcp>0 && iter>0 && 0 == iter % pcp) {return (((iter/pcp)%2)*2 - 1);}
   else {return 0;}
 }
+
+initialize {
+  print("fStrTh=", fStrTh, "\n");
+  print("fBias=", fBias, "\n");
+  print("tipd=", tipd, "\n");
+  print("fsEps=", fsEps, "\n");
+  print("geoEps=", geoEps, "\n");
+  print("mvmtEps=", mvmtEps, "\n");
+  print("rpcEps=",rpcEps,"\n");
+  print("pcmvEps=",pcmvEps,"\n");
+  print("sfs=",sfs,"\n");
+  print("hist=",hist,"\n");
+  print("pcp=",pcp,"\n");
+};
 
 // Strands first find feature, then interact w/ or make neighbors
 strand point (position{mesh_t} p0, real hh0) {

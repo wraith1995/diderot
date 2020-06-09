@@ -18,7 +18,7 @@ TEEMLIB = $(TEEMPATH)/include
 
 DIDEROTFLAGS = --debug --log --dump-pt --dump-ast --dump-simple --dump-high --dump-mid --dump-low --dump-tree --double --namespace=$(NAMESPACE) --target=parallel
 INCLUDES = -I$(DIDEROTINCLUDE) -I/usr/local/include -I$(TEEMLIB) -I$(PYTHONINCLUDE)
-LDFLAGS = -L$(DIDEROTLIB) -L/usr/local/lib -L/opt/local/lib -L/usr/lib
+LDFLAGS = -L$(DIDEROTLIB) -L/usr/local/lib -L/opt/local/lib -L/usr/lib --no-undefined
 LIBS = -lteem -lpng -lz -lbz2
 CPPFLAGS = $(INCLUDES) -g O2 -fPIC
 CXXFLAGS = $(INCLUDES) -g -fPIC

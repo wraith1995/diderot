@@ -10,7 +10,18 @@ type femFunction{fns_t} func_t = file("evalProg.json");
 
 input mesh_t meshData;
 input fns_t space = fns_t(meshData);
+
+
+  
 input func_t data = func_t(space);
+
+
+input cell{mesh_t} s = meshData.invalidCell;
+input cell{func_t} s1 = data.invalidCell;
+input cell{mesh_t}[] s2 = {meshData.invalidCell};
+//Fix dumb tensor bs.
+input position{mesh_t} s3 = meshData.invalidPos;
+input position{mesh_t}[] s4 = {meshData.invalidPos};
 
 field(dim)[] F = data.F;
 refCell{mesh_t} simplex = meshData.refcell();
@@ -21,6 +32,7 @@ input real rad = 0.01;
 input real eps = 0.01;
 input real v0 = 0.0;
 input tensor[dim][] ipos;
+
 //overload these functions with pos
 //overload -, + with dumb things
 //change var labels
@@ -30,7 +42,7 @@ function tensor[dim] fStep(position{mesh_t} y){
     tensor[dim]  x = y.refPos;
     cell{mesh_t} c = y.mc;
     cell{func_t} f = data.funcCell(c);
-    tensor[dim] ret = (v0 - (f.refField)(x)) * ∇(f.transformedRefField)(x) /(∇(f.transformedRefField)(x)  • ∇(f.transformedRefField)(x));
+    tensor[dim] ret = zeros[dim];//(v0 - (f.refField)(x)) * ∇(f.transformedRefField)(x) /(∇(f.transformedRefField)(x)  • ∇(f.transformedRefField)(x));
     return ret;
   } else {return [∞,∞,∞];}
 }
@@ -40,7 +52,7 @@ function tensor[dim, dim] fPerp(position{mesh_t} y){
     tensor[dim] x = y.refPos;
     cell{mesh_t} c = y.mc;
     cell{func_t} f = data.funcCell(c);
-    vec3 norm = normalize(∇(f.transformedRefField)(x));
+    vec3 norm = zeros[dim];//normalize(∇(f.transformedRefField)(x));
     return identity[dim] - norm ⊗ norm;
    
   } else return(zeros[dim, dim]);
@@ -50,7 +62,7 @@ function real fStrength(position{mesh_t} y){
     cell{mesh_t} c = y.mc;
     cell{func_t} f = data.funcCell(c);
     
-    return |∇(f.transformedRefField)((y.refPos))|;
+    return 0.0;//|∇(f.transformedRefField)((y.refPos))|;
   } else {return(0.0);}
 }
 //
@@ -63,6 +75,7 @@ function tensor[dim] frc(tensor[dim] x) = phi'(|x|/rad) * (1/rad) * x/|x|;
 input int timeSteps=32;
 input real timeEps = 0.0000001;
 //input tensor[dim, dim] flowMat = identity(dim);
+
 
 overload position{mesh_t} + (position{mesh_t} x, tensor[dim] dPos)
 {
@@ -78,7 +91,7 @@ overload position{mesh_t} + (position{mesh_t} x, tensor[dim] dPos)
   // NOTE: This could be replaced by a while loop over time,
   // but I don't want to add while loops
   foreach (int i in 0..timeSteps ){ //for loop
-    tensor[dim] deltaP =  inv(∇⊗(cmp.mc.transform)(cmp.refPos)) • dPos; //project velocity
+    tensor[dim] deltaP =  zeros[dim];//inv(∇⊗(cmp.mc.transform)(cmp.refPos)) • dPos; //project velocity
     tensor[dim] normDetaP = deltaP/|deltaP|;
     //time * (DT(x))^{-1} •( dpos )
     tensor[dim] newPos = cmp.refPos + time * deltaP;
@@ -128,14 +141,20 @@ overload tensor[dim] - (position{mesh_t} x, position{mesh_t} y)
   else {  print("Alt\n");return(zeros[dim]);}
 }
 
+
+
 strand particle(position{mesh_t}  pos0, real hh0){
   output position{mesh_t} pos = pos0;
   real hh = hh0;
   tensor[dim] step = zeros[dim];
+  tensor[] r = F(step);
   bool found = false;
   int nfs = 0;
   int test = 1;
   int testp = 0;
+  start {
+    print("smesh;",r);
+  }
   update {
     if(!pos.isValid || fStrength(pos) == 0 || hh == 0){
       die;
@@ -193,8 +212,14 @@ strand particle(position{mesh_t}  pos0, real hh0){
 	  new particle(pos + 0.5 * rad * normalize(es), hh);
 	}
       }
-    }
+  }
+  stabilize {
+    print("shes\n");
+  }
 }
+start {
+  print("poooooop\n");
+};
 update {
   int num = sum {P.test | P in particle.all};
   int numFound = sum {P.testp | P in particle.all};

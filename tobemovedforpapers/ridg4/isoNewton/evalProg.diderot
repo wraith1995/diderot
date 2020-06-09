@@ -32,6 +32,8 @@ function real fStrength(position{mesh_t} pos) {
     vec3 g = ∇(f.transformedRefField)(x);
     tensor[dim, dim] H = ∇⊗∇(f.transformedRefField)(x);
     real str = -evals(H)[2]/(fBias + |g|);
+    print("stren=",str,"@", x, "\n");
+    print("via=", H, "\n");
     return str;
   } else {return(0.0);}
 }
@@ -53,7 +55,7 @@ strand normal(position{mesh_t}  pos0, tensor[dim] xp){
   output vec3 ref = nan[3];
   update {
     if(pos0.isValid){
-      //      normal = findNormal(pos0);
+      normal = findNormal(pos0);
       stren = fStrength(pos0);
       val = fVal(pos0);
       ref = pos0.refPos;

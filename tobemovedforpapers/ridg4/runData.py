@@ -19,7 +19,6 @@ import functools
 from render import render
 from load import buildFiredrakeTetMesh
 from runNormals import getNormals
-
 m = Mesh("lin_meshfiles/cs1.msh")
 
 meshDatas = buildFiredrakeTetMesh("meshfiles/cs1.msh", 3, linearGmshBackup="lin_meshfiles/cs1.msh")
@@ -29,7 +28,7 @@ mesh = curvedMesh
 
 fStrTh = 24.0
 fBias = 0.1
-tipd = 0.1
+tipd = 0.5
 fsEps = 0.1
 geoEps = 0.1
 mvmtEps = 0.1
@@ -49,11 +48,17 @@ dim = mesh.geometric_dimension()
 space = FunctionSpace(mesh, "Lagrange", 6)
 f = Function(space)
 
+
+
 x,y,z = SpatialCoordinate(mesh)
 #f = interpolate(y*y*x + z*z, space)
 f = interpolate(z*z*(sin(x*x + y*y + z*z)), space)
-getNormals(f, "test1.nrrd")
-exit(0)
+#getNormals(f, "pos_0.nrrd")
+#render("pos", "normedp", dim=3, normalsFile="normals", scalarsFile="stren")
+#exit(0)
+
+#getNormals(f, "test1.nrrd")
+#exit(0)
 #render("pos", "normedpp", dim=3, normalsFile="normals", scalarsFile="stren")
 
 
@@ -76,16 +81,17 @@ else:
 (preFemArgs, femArgs) = fb.passAll(f, intTy, floatTy, geometric=True)
 
 
-numPoints =20000
-newXc = np.random.uniform(low=-4.0, high=4, size=numPoints)
-newYc = np.random.uniform(low=-4.0, high=4, size=numPoints)
-newZc = np.random.uniform(low=-4.0, high=4, size=numPoints)
-points = list(map(list, zip(*(newXc, newYc, newZc)[0:dim])))
 pointsNrrd = "points.nrrd"
-dataPoints = np.array(points, dtype="float64")
-kindString = "{0}-vector".format(dim)
-#nu.writeSequence(dataPoints, pointsNrrd, dataKind=kindString)
-# print(preFemArgs)
+# numPoints = 30000
+# newXc = np.random.uniform(low=-4.0, high=4, size=numPoints)
+# newYc = np.random.uniform(low=-4.0, high=4, size=numPoints)
+# newZc = np.random.uniform(low=-4.0, high=4, size=numPoints)
+# points = list(map(list, zip(*(newXc, newYc, newZc)[0:dim])))
+# dataPoints = np.array(points, dtype="float64")
+# kindString = "{0}-vector".format(dim)
+# nu.writeSequence(dataPoints, pointsNrrd, dataKind=kindString)
+
+# # print(preFemArgs)
 programNameArg = "evalProg"
 nameSpaceArg = "evalProg"
 outFileName = "pos"
@@ -94,12 +100,12 @@ program = passing.Library(library, nameSpace=nameSpaceArg)
 inputs = {"meshData": [femArgs[0]], "space": [femArgs[1]], "data": [femArgs[2]],
           "fStrTh": [floatTy(fStrTh)], "fBias": [floatTy(fBias)], "fsEps": [floatTy(fsEps)],
           "geoEps": [floatTy(geoEps)], "mvmtEps": [floatTy(mvmtEps)], "rpcEps": [floatTy(rpcEps)],
-          "pcmvEps": [floatTy(pcmvEps)], "tipd": [floatTy(tipd)]}
+          "pcmvEps": [floatTy(pcmvEps)], "tipd": [floatTy(tipd)], "hist" : [floatTy(hist)]}
 outputs = [("_pos", 1, outFileName)]
 namedInputs = {"ipos": pointsNrrd}
 program.go(inputs, outputs, namedInputs=namedInputs, verbose=True, workers=None, shutdown=False)
 getNormals(f, "pos_0.nrrd")
-render("pos", "normedp", dim=3, normalsFile="normals", scalars="stren")
+render("pos", "normedp", dim=3, normalsFile="normals", scalarsFile="stren")
 exit(0)
 #render(outFileName, outFileName, dim=dim)
 #File(outFileName + ".pvd").write(f)

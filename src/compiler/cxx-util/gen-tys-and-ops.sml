@@ -798,8 +798,8 @@ structure GenTysAndOps : sig
 								     val vp = CL.E_Var("p_" ^ (Int.toString idx))
 								    in CL.E_Apply(v,[vp]) end)
 						
-		     val constr =  CL.D_Constr(["inline"], [CL.SC_Type(CL.T_Named name)], name, params, SOME(inits, CL.mkBlock([])))
-		     val defaultConstr =  CL.D_Constr([], [CL.SC_Type(CL.T_Named name)], name, [], NONE)
+		     val constr =  CL.D_Constr([], [CL.SC_Type(CL.T_Named name)], name, params, SOME(inits, CL.mkBlock([])))
+		     val defaultConstr =  CL.D_Constr([], [CL.SC_Type(CL.T_Named name)], name, [], SOME([], CL.mkBlock([])))
 
 					      (*tuple parse*)
 					      
