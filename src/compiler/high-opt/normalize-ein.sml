@@ -152,6 +152,7 @@ structure NormalizeEin : sig
   (* rewrite body of EIN *)
     fun transform vars (ein as Ein.EIN{params, index, body}) = let
      (* val _ = print(String.concat["\ntransform: ", EinPP.expToString(body)]) *)
+     val compDepth = ref 0
           fun filterProd args = (case EinFilter.mkProd args
                  of SOME e => (ST.tick cntFilter; e)
                   | NONE => mkProd args
@@ -204,6 +205,9 @@ structure NormalizeEin : sig
                   | E.Comp(a, (E.Comp(b, es1), m)::es2) =>  (ST.tick cntProbe; rewrite (E.Comp(a, ((b, m)::es1)@es2)))
                   | E.Comp(e1, es)  =>
                     let
+
+		     val _ = print(" Start comp " ^ (Int.toString(!compDepth)) ^ ":"^(EinPP.expToString(E.Comp(e1,es)))^"\n")
+		     val _ = compDepth := (!compDepth) + 1
 		    (* Rewrite e1 and es fully:*)
 		     val needRewrite = ref false
 		     fun getOpt(a,b) = (case a
@@ -213,6 +217,7 @@ structure NormalizeEin : sig
 		     val e1'' = getOpt(e1', e1)
                      val es' = List.map (fn (e2, n2)=> (innerLoop(e2, ST.sum{from = firstCounter, to = lastCounter'}, false), n2)) es
 		     val es'' = ListPair.map (fn ((e2, n2), (e2', n2')) => (getOpt(e2', e2), n2)) (es, es')
+
 		     (* If any rewrites occur, we try to rewrite the whole thing further*)
 		     val E.Comp(e1''', es''') = if !needRewrite
 						then (case innerLoop(E.Comp(e1'', es''), ST.sum{from = firstCounter, to = lastCounter'}, false)
@@ -278,29 +283,62 @@ structure NormalizeEin : sig
 			  (Option.getOpt(eOut', eOut), !fail, !aRet, possibleReplace)
 			 end
 		     (*We do the canellation directly with this function, marking it here:*)
+		     val cancelRef = ref false
 		     fun doCompLefts(e1::e2::es) =
 			 let
 			  val (e1e, e1b) = e1
 			  val (e2e, e2b) = e2
 			  val (e1e', anyFail, anyReplace, nothing) = tryCancel(e1e, e2e, e2b)
 			  val _ = if Bool.not anyFail andalso Bool.not anyReplace
-				  then raise Fail "impossible:ill-formed comp"
+				  then raise Fail ("impossible:ill-formed comp: " ^ (EinPP.expToString(e1e)) ^ " and " ^ (EinPP.expToString(e2e)) ^"\n")
 				  else ()
 			 in
 			  if nothing orelse anyFail (*Question: might be a good idea to allow any-fail*)
 			  then e1::doCompLefts(e2::es)
-			  else (ST.tick cntCompCancel; (e1e', e1b) :: doCompLefts(es))
+			  else (cancelRef := true; ST.tick cntCompCancel; (e1e', e1b) :: doCompLefts(es))
 			 end
 		       | doCompLefts ([e]) = [e]
 		       | doCompLefts ([]) = []
 		     val allEs = (e1''', []) :: es'''
 		     val allEs' = doCompLefts(allEs)
+			     
+		     (*Now we prep to filter identities*)
+		     val filterId = ref false
+		     fun filterIdentities(alles) =
+			 let
+			  val n = List.length alles
+			  fun filterFn((E.Identity(_, E.V _), _)) = false
+			    | filterFn _ = true
+			  val alles' = List.filter filterFn alles
+			  val possibleId = List.find (Bool.not o filterFn) alles
+			  val _ = filterId := (n <> 1 andalso n <> (List.length alles'))
+			 in
+			  (case alles'
+			    of [] => (case possibleId
+				       of SOME(pid)=> [pid]
+					| _ => raise Fail "impossible:empy alles with no identity"
+				     (* end case *))
+			     | es => es
+			  (* end case *))
+			 end
+		     val allEs'' = filterIdentities(allEs')
 		     (*We produce the resulting ein here:*)
-		     val compRet = (case allEs'
+		     val compRet = (case allEs''
 				     of [] => raise Fail "impossible: fail comp cancel somehow."
 				      | [(r,rbind)] => r
 				      | (r,rbind)::rs => E.Comp(r,rs)
 				   (*end case*))
+
+
+		     (* val compRet = if !cancelRef orelse !filterId *)
+		     (* 		   then *)
+		     (* 		    Option.getOpt(innerLoop(E.Comp(e1'', es''), ST.sum{from = firstCounter, to = lastCounter'}, false), *)
+		     (* 				  compRet) *)
+				     (* 		   else compRet *)
+		     val _ = compDepth := (!compDepth) - 1
+		     val _ = print("End comp " ^ (Int.toString(!compDepth)) ^ ":" ^ (EinPP.expToString(compRet))^"\n")
+
+
                     in  compRet end
                   | E.Probe(E.Comp(e1, es), x)  =>
                     let
