@@ -75,7 +75,7 @@ structure TreeTypeOf : sig
                 ]
             | Op.EigenVals2x2 => Ty.SeqTy(Ty.realTy, SOME 2)
             | Op.EigenVals3x3 => Ty.SeqTy(Ty.realTy, SOME 3)
-            | Op.Select(ty as Ty.TupleTy tys, i) => List.nth(tys, i-1)
+            | Op.Select(ty as Ty.TupleTy tys, i) => (List.nth(tys, i) handle ex => raise ex)
             | Op.Subscript(Ty.SeqTy(Ty.TensorTy(shp as _::_), _)) => Ty.TensorRefTy shp
             | Op.Subscript(Ty.SeqTy(elemTy, _)) => elemTy
             | Op.MkDynamic(ty, n) => Ty.SeqTy(ty, NONE)
@@ -138,7 +138,7 @@ structure TreeTypeOf : sig
             | IR.E_Cons(_, ty) => ty
             | IR.E_Seq(_, ty) => ty
             | IR.E_Pack(layout, _) => Ty.TensorTy[#wid layout]
-            | IR.E_VLoad(layout, _, i) => Ty.nthVec(layout, i)
+            | IR.E_VLoad(layout, _, i) => (Ty.nthVec(layout, i) handle ex => raise ex)
           (* end case *))
 
   end
