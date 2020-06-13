@@ -138,10 +138,10 @@ structure EpsUtil : sig
 		 in
 		  distribute(changed, ps, E.Conv(v,alpha_betas, h ,dx_betas)::rest, nu2)
 		 end
-		 | E.Identity(dim, mu') =>  let
+		 | E.Identity(dim, mu', opt) =>  let
 		  val (changed, [mu''], nu1) = appDel(changed, [mu'], [], mu, [])
 		 in
-		  distribute(changed, ps, E.Identity(dim, mu'')::rest, nu1)
+		  distribute(changed, ps, E.Identity(dim, mu'', opt)::rest, nu1)
 		 end
 		 | E.Fem(femEin, index, indexS, dofS, shape, dx) => let
 		  val (changed, shape_betas, nu1) = appDel(changed, shape, [], mu, [])
@@ -154,7 +154,7 @@ structure EpsUtil : sig
 		  val (alpha, dx, new) = (case probe
 					   of E.Conv(v, alpha, h, dx) => (alpha, dx, SOME(fn (x,y) => E.Conv(v, x, h, y)))
 					    | E.Fem(femEin, index, indexS, dofS, shape, dx) => (shape, dx, SOME(fn (x,y) => E.Fem(femEin, index, indexS, dofS, x, y)))
-					    | E.Identity(dim, mu) => ([mu], [], SOME(fn ([x],y) => E.Identity(dim, x)))
+					    | E.Identity(dim, mu, opt) => ([mu], [], SOME(fn ([x],y) => E.Identity(dim, x, opt)))
 					    | _ => ([], [], NONE)
 					 (* end case*))
                   val (changed, alpha_betas, nu1) = appDel(changed, alpha, [], mu, [])

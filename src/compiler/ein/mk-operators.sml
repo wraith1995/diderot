@@ -1039,7 +1039,7 @@ structure MkOperators : sig
     fun identity dim = E.EIN{
             params = [], index = [dim, dim], body = E.Delta(E.V 0, E.V 1)
         }
-    fun identityFld dim = E.EIN{params=[], index = [dim], body = E.Identity(dim, E.V 0)}
+    fun identityFld dim = E.EIN{params=[], index = [dim], body = E.Identity(dim, E.V 0, NONE)}
 
     fun zeros shape = E.EIN{
             params = [], index = shape, body = E.Zero (specialize(shape, 0))

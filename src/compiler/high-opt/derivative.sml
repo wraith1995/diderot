@@ -169,7 +169,7 @@ structure Derivative : sig
             | E.Eps2 (i, j) => E.Eps2(change i, change j)
             | E.Field(id2, alpha) => E.Field(id2, List.map (fn e => change(e)) alpha)
             | E.Lift e1  => E.Lift(rewriteIx(vk, e1))
-	    | E.Identity(dim, mu) => E.Identity(dim, change mu)
+	    | E.Identity(dim, mu, opt) => E.Identity(dim, change mu, opt)
 	    (*I've corected this rule from previous code: *)
 	    (* The previous version only tackled the alpha index *)
 	    (* This version searches all indicies because it is possible this could be a gradient of a vector field*)
@@ -210,7 +210,7 @@ structure Derivative : sig
             | E.Conv(id, _, _, _) => let
              val E.IMG(d, _) = List.nth(params, id)
             in SOME(d) end
-	    | E.Identity(d, _) => SOME(d)
+	    | E.Identity(d, _, opt) => SOME(d)
 	    | E.Fem(_,_, fem, _, _, _) =>
 	      let
 	       val E.FEM(data) = List.nth(params, fem)
@@ -251,14 +251,20 @@ structure Derivative : sig
             | E.Eps2 _ => SOME zero
             | E.Field _ => NONE
             | E.Lift _ => SOME zero
-	    | E.Identity(dim, mu) =>
+	    | E.Identity(dim, mu, opt) =>
 	      (case dx
 		of [d2] => SOME(E.Delta(d2, mu)) (*Question: Is this right or should there be a lift? What about order?*)
 		 | [] => raise Fail "impossible"
 		 | _ => SOME zero
 	      (*end case*))
             | E.Conv(v, alpha, h, d2) => SOME(E.Conv(v, alpha, h, d2@dx))
-	    | E.Fem((E.Plain(bda, n, f)), id1, id2, id3, alpha, dxes)  => SOME(E.Fem(E.Plain( getBasisDerivative(bda), n, f), id1, id2, id3, alpha, dxes@dx))
+	    | E.Fem((E.Plain(bda, n, f)), id1, id2, id3, alpha, dxes)  =>
+	      let
+	       val dCount = List.length dx
+	       val bda' = (List.foldr (op o) (fn x => x ) (List.tabulate(dCount, fn x => getBasisDerivative)))(bda)
+	      in
+	       SOME(E.Fem(E.Plain( bda', n, f), id1, id2, id3, alpha, dxes@dx))
+	      end
 	    | E.Fem((E.Invert(bda, n, f)), id1, id2, id3, [mu1], [])  =>
 	      let
 	       (*QUESTION: What to do about 1D? THIS CODE f***s shit up*)
@@ -269,6 +275,7 @@ structure Derivative : sig
 				  
 	       val mu2 = List.hd dx
 	       val dx' = List.tl dx
+	       (*Should this be a comp....*)
 	       fun probeAtIndex(mu1, mu2) = E.Fem(E.Plain( getBasisDerivative(bda), n, f), id1, id2, id3, [mu2], [mu1])
 	       val dim = BasisDataArray.domainDim bda
 	       val _ = if dim <> 2 andalso dim <> 3

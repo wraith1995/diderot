@@ -54,10 +54,17 @@ structure EinPP : sig
                 in
                   concat ["V", i2s img, alpha, "⊛", beta, "H", i2s kern]
             end
-	    | E.Identity(i, mu)	=>
+	    | E.Identity(i, mu, opt)	=>
 	      let
+	       val marker = (case opt
+		 of NONE => ""
+		  | SOME(s, i) => if s
+				  then "world_" ^ (i2s i)
+				  else "ref_" ^ (i2s i)
+	       (* end case*))
+		 
 	      in
-	       concat ["Id_", i2s i, "_{", index2s mu, "}"]
+	       concat ["Id_", i2s i, "_{", index2s mu, "}_", marker]
 	      end
 	    | E.Fem(E.Plain(basis,len, stamp), cell, index, dofs, coeffShape, dxes) =>
 	      let

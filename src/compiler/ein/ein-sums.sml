@@ -57,7 +57,7 @@ structure EinSums : sig
               | E.Lift e1                 => findSx (c, e1)
               | E.Conv(v, [], h, [])      => NONE
 	      | E.Fem(_,_,_,_, [], [])    => NONE
-	      | E.Identity(d, mu)         => findIndex(c, [mu]) (*Question: should id scalar be NONE?*)
+	      | E.Identity(d, mu, _)         => findIndex(c, [mu]) (*Question: should id scalar be NONE?*)
               | E.Conv(_ , alpha, _ , dx) => findIndex (c, alpha@dx)
 	      | E.Fem(_,_,_,_, alpha, dx)   => findIndex (c, alpha@dx)
               | E.Partial (shape)         => findIndex (c, shape)
@@ -67,7 +67,7 @@ structure EinSums : sig
                                           => NONE
 	      | E.Probe(E.Fem(_,_,_,_, [], []), E.Tensor(_, []))
 		                          => NONE
-	      | E.Probe(E.Identity(d, mu), E.Tensor(_, []))
+	      | E.Probe(E.Identity(d, mu, _), E.Tensor(_, []))
 		                          => NONE
               | E.Probe(e1, e2)           => sort [e1, e2] (*Question: Is this possible?*)
               | E.Value _                 => NONE

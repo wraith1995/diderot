@@ -247,11 +247,11 @@ structure NormalizeEin : sig
 				of (E.Fem(E.Invert(_, _, NONE), index', indexSource', dofSource', [acc], []))
 				   => if vS(index, index') andalso vS(indexSource', indexSource)
 					 andalso vS(dofSource, dofSource')
-				      then sucRet(E.Identity(FemData.meshDim mesh, acc))
+				      then sucRet(E.Identity(FemData.meshDim mesh, acc, NONE))
 				      else failRet e
 				 | (E.Fem(E.Invert(_, _, SOME _), index', indexSource', dofSource', [acc], [])) =>
 				   if vS(indexSource', indexSource) andalso vS(dofSource, dofSource')
-				   then sucRet(E.Identity(FemData.meshDim mesh, acc))
+				   then sucRet(E.Identity(FemData.meshDim mesh, acc, NONE))
 				   else failRet e
 				 | _ => failRet e
 			      (* end case*))
@@ -260,7 +260,7 @@ structure NormalizeEin : sig
 				of E.Fem(E.Plain(_, _, _), index', indexSource', dofSource', [acc], [])
 				   => if vS(index, index') andalso vS(indexSource', indexSource)
 					 andalso vS(dofSource, dofSource')
-				      then sucRet(E.Identity(FemData.meshDim mesh, acc))
+				      then sucRet(E.Identity(FemData.meshDim mesh, acc, NONE))
 				      else failRet e
 				 | _ => failRet e
 			      (* end case*))
@@ -307,7 +307,7 @@ structure NormalizeEin : sig
 		     fun filterIdentities(alles) =
 			 let
 			  val n = List.length alles
-			  fun filterFn((E.Identity(_, E.V _), _)) = false
+			  fun filterFn((E.Identity(_, E.V _, _), _)) = false
 			    | filterFn _ = true
 			  val alles' = List.filter filterFn alles
 			  val possibleId = List.find (Bool.not o filterFn) alles
@@ -349,7 +349,7 @@ structure NormalizeEin : sig
                         | e => e
                         (*end case*))
                     end
-		  | E.Probe(E.Identity(dim, mu1), e as E.Tensor(tid, [])) => (*Id(e2) -> Id * e2 \sum_i=(0,dim-1) delta_ij e_2_i...*)
+		  | E.Probe(E.Identity(dim, mu1, _), e as E.Tensor(tid, [])) => (*Id(e2) -> Id * e2 \sum_i=(0,dim-1) delta_ij e_2_i...*)
 		    let
 		     (* val _ = print("inner:" ^ (EinPP.expToString e) ^ "\n") *)
 		     val newSumRange = !sumX + 1

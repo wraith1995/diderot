@@ -485,10 +485,13 @@ structure ProbeEin : sig
 		  (a,b, callNewtonFunc(env, avail, BasisDataArray.domainDim a, f , prePosVar, preIndexVar, dofSrcVar), true, preIndexVar)
 		| (E.Invert(a,b, NONE), E.INT) =>
 		  (a, b, prePosVar, true, preIndexVar)
+		(*Handle big F:*)
 		| (E.Invert(a,b, SOME(f)), E.FEM(ms as FemData.Mesh(meshDef))) =>
-		  let val (newInt, newPos) = callMeshPosFunc(avail, env, BasisDataArray.domainDim a, f, prePosVar, preIndexVar, meshDef) in  (a, b, prePosVar, true, newInt) end
+		  let val (newInt, newPos) = callMeshPosFunc(avail, env, BasisDataArray.domainDim a, f, prePosVar, preIndexVar, meshDef) in
+		   (a, b, prePosVar, true, newInt) end
 		| (E.Plain(a,b, SOME(f)), E.FEM(ms as FemData.Mesh(meshDef))) =>
-		  let val (newInt, newPos) = callMeshPosFunc(avail, env, BasisDataArray.domainDim a, f, prePosVar, preIndexVar, meshDef) in  (a, b, newPos, false, newInt) end
+		  let val (newInt, newPos) = callMeshPosFunc(avail, env, BasisDataArray.domainDim a, f, prePosVar, preIndexVar, meshDef) in
+		   (a, b, newPos, false, newInt) end
 	     (*end case*))
 	 val dim = BasisDataArray.domainDim basisArray
 	 val finRhs =

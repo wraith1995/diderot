@@ -109,6 +109,14 @@ structure FloatEin : sig
        
    (* handle a single composition
     * sx- outside summation, sx2-wrapped around probe
+    * params - outer paramters to ein
+    * args - args - actual variable args from the ir
+    * avail - avail
+    * innerVar - the previously evaluated comp - first one is built at start
+    * A - the ein_exp for the current comop
+    * index - the index associated to A in the subein - could be associated to otuer ein
+    * index2 - the size of the previous argument - used to create new params for this.
+    * fld -  the entire field we use - used to figure out CFExp stuff - ignored for pure comp
     *)
     fun compSingle (name, params, sx, sx2, args, avail, innerVar, A, index, index2, fld) = 
         let
@@ -119,16 +127,16 @@ structure FloatEin : sig
           val exp_pos = E.Tensor(id2, [])
           val exp_fld = (case fld
                 of E.OField(E.CFExp tterm, _, dx) => E.OField(E.CFExp tterm, A, dx)
-                | _ => A
+                | _ => A (*uses correct sub exp*)
             (*end case*))
-          val exp_probe = mkProbe(E.Probe(exp_fld, exp_pos))
+          val exp_probe = mkProbe(E.Probe(exp_fld, exp_pos)) (*gives exp basically for probe -id for cop*)
           val outerExp2 = (case sx2
                 of [] => exp_probe
                 | _ => E.Sum(sx2, exp_probe)
             (* end case*))
-          val (tshape2, sizes2, body2) = CleanIndex.clean(outerExp2, index, sx)
-          val einapp2 = CleanParams.clean (body2, newP2, sizes2, args2)
-          val lhs = AvailRHS.addAssign (avail, concat[name, "l"], Ty.tensorTy sizes2, einapp2)
+          val (tshape2, sizes2, body2) = CleanIndex.clean(outerExp2, index, sx) (*just rewrites indecies for the shape - body of comp ignored*)
+          val einapp2 = CleanParams.clean (body2, newP2, sizes2, args2) (*simplifies the params*)
+          val lhs = AvailRHS.addAssign (avail, concat[name, "l"], Ty.tensorTy sizes2, einapp2) (*does the probe*)
           (*replacement*)
           val Re = E.Tensor(id2, tshape2)
           in

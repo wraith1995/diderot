@@ -66,7 +66,9 @@ structure EinUtil : sig
                 | (E.Conv(fid1, alpha1, tid1, ix1), E.Conv(fid2, alpha2, tid2, ix2)) =>
                     (fid1 = fid2) andalso (tid1 = tid2) andalso
                     sameIndex (alpha1, alpha2) andalso sameIndex (ix1, ix2)
-		| (E.Identity(d1, mu1), E.Identity(d2, mu2)) => d1=d2 andalso sameIndex([mu1], [mu2])
+		| (E.Identity(d1, mu1, NONE), E.Identity(d2, mu2, NONE)) => d1=d2 andalso sameIndex([mu1], [mu2])
+		| (E.Identity(d1, mu1, SOME(b,idx)), E.Identity(d2, mu2, SOME(b',idx'))) =>
+		  d1=d2 andalso sameIndex([mu1], [mu2]) andalso b=b' andalso idx=idx'
 		| (E.Fem(femEin1, cell1, index1, dof1, shape1, dxes1),E.Fem(femEin2, cell2, index2, dof2, shape2, dxes2)) =>
 		  cell1=cell2 andalso index1=index2 andalso dof1=dof2
 		  andalso sameIndex(shape1,shape2) andalso sameIndex(dxes1,dxes2)
@@ -206,7 +208,10 @@ structure EinUtil : sig
 		       | E.Invert(bda,_,SOME(s)) => 0w197 + BasisDataArray.hash bda + Stamp.hash s
 		       | E.Invert(bda,_,NONE) => 0w197 + BasisDataArray.hash bda
 		    (*end case*))
-		| E.Identity(d, mu) => 0w199 + hashAlpha [mu] + (Word.fromInt d)
+		| E.Identity(d, mu, NONE) => 0w199 + hashAlpha [mu] + (Word.fromInt d)
+		| E.Identity(d, mu, SOME(b, d')) => 0w199 + hashAlpha [mu] + (Word.fromInt d) + (Word.fromInt d') + (if b
+														     then 0w211
+														     else 0w223)
               (* end case *)
             end
         in
