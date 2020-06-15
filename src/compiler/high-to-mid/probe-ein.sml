@@ -479,17 +479,25 @@ structure ProbeEin : sig
 	     (case (femEin, indexInt)
 	       of (E.Plain(a,b, NONE), E.INT) =>
 		  (a,b, prePosVar, false, preIndexVar)
-		| (E.Plain(a,b, SOME(f)), E.INT)=>
+		| (E.Plain(a,b, SOME(_, f)), E.INT)=>
 		  (a,b, callNewtonFunc(env, avail, BasisDataArray.domainDim a, f, prePosVar, preIndexVar, dofSrcVar), false, preIndexVar) (*TODO: determine if this is a mesh or not...*)
-		| (E.Invert(a,b, SOME(f)), E.INT) =>
-		  (a,b, callNewtonFunc(env, avail, BasisDataArray.domainDim a, f , prePosVar, preIndexVar, dofSrcVar), true, preIndexVar)
-		| (E.Invert(a,b, NONE), E.INT) =>
+		| (E.Invert(a,b, SOME(_, f), w), E.INT) =>
+		  (a,b, if w
+			then prePosVar
+			else callNewtonFunc(env, avail, BasisDataArray.domainDim a, f , prePosVar, preIndexVar, dofSrcVar),
+		   true, preIndexVar)
+		| (E.Invert(a,b, NONE, _), E.INT) =>
 		  (a, b, prePosVar, true, preIndexVar)
 		(*Handle big F:*)
-		| (E.Invert(a,b, SOME(f)), E.FEM(ms as FemData.Mesh(meshDef))) =>
-		  let val (newInt, newPos) = callMeshPosFunc(avail, env, BasisDataArray.domainDim a, f, prePosVar, preIndexVar, meshDef) in
-		   (a, b, prePosVar, true, newInt) end
-		| (E.Plain(a,b, SOME(f)), E.FEM(ms as FemData.Mesh(meshDef))) =>
+		| (E.Invert(a,b, SOME(f, _), w), E.FEM(ms as FemData.Mesh(meshDef))) =>
+		  let val (newInt, newPos) = callMeshPosFunc(avail, env, BasisDataArray.domainDim a, f, prePosVar, preIndexVar, meshDef)
+		  in
+		   (a, b, if w
+			  then prePosVar
+			  else newPos,
+		    true, newInt)
+		  end
+		| (E.Plain(a,b, SOME(f, _)), E.FEM(ms as FemData.Mesh(meshDef))) =>
 		  let val (newInt, newPos) = callMeshPosFunc(avail, env, BasisDataArray.domainDim a, f, prePosVar, preIndexVar, meshDef) in
 		   (a, b, newPos, false, newInt) end
 	     (*end case*))

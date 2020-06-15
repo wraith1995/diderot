@@ -57,8 +57,10 @@ structure Stats :> sig
 
     fun tick i = (
           if (! logTicks) then Log.msg["++ ", A.sub(names, i), "\n"] else ();
-          A.update(counters, i, A.sub(counters, i)+1))
-    fun bump (i, n) = A.update(counters, i, A.sub(counters, i)+n)
+          let val c = A.sub(counters, i) + 1 handle ex => raise ex
+	  in A.update(counters, i, c)
+	  end; ())
+    fun bump (i, n) = A.update(counters, i, A.sub(counters, i)+n) handle ex => raise ex
     fun count i = A.sub(counters, i)
     fun name i = A.sub(names, i)
     fun reset i = A.update(counters, i, 0)
@@ -67,7 +69,7 @@ structure Stats :> sig
           if (to < from)
             then 0
             else ArraySlice.foldl
-              (fn (n, s) => n+s) 0
+              (fn (n, s) => n+s handle ex => raise ex) 0
                 (ArraySlice.slice(counters, from, SOME((to-from)+1)))
 
     fun sumAll () = sum{from = 0, to = (!nextCounter - 1)}

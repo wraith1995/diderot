@@ -74,18 +74,19 @@ structure EinUtil : sig
 		  andalso sameIndex(shape1,shape2) andalso sameIndex(dxes1,dxes2)
 		  andalso
 		  (case (femEin1, femEin2)
-		    of (E.Plain(bda1,n1, SOME(s1)), E.Plain(bda2,n2, SOME(s2))) =>
+		    of (E.Plain(bda1,n1, SOME(s1, s1')), E.Plain(bda2,n2, SOME(s2, s2'))) =>
 		       (n1=n2)
 		       andalso (BasisDataArray.same ( bda1, bda2))
-		       andalso Stamp.same(s1,s2)
+		       andalso Stamp.same(s1,s2) andalso Stamp.same(s1', s2')
 		    |  (E.Plain(bda1,n1, NONE), E.Plain(bda2,n2, NONE)) => 
 		       (n1=n2)
 		       andalso (BasisDataArray.same ( bda1, bda2))
-		    | (E.Invert(bda1,n1, s1), E.Invert(bda2,n2, s2)) =>
+		    | (E.Invert(bda1,n1, s1, w1), E.Invert(bda2,n2, s2, w2)) =>
 		       (n1=n2)
 		       andalso (BasisDataArray.same ( bda1, bda2))
+		       andalso (w1=w2)
 		       andalso (case (s1,s2)
-				 of (SOME(s1'),SOME(s2')) => Stamp.same(s1',s2')
+				 of (SOME(s1',s1''),SOME(s2',s2'')) => Stamp.same(s1',s2') andalso Stamp.same(s1'', s2'')
 				  | (NONE, NONE) => true
 				  | _ => false (* end case*))
 		    | _ => false
@@ -202,11 +203,15 @@ structure EinUtil : sig
 		| E.Fem(femEin1,_,_,_,shape1,dxes1) =>
 		  0w191 + hashAlpha shape1 + hashAlpha dxes1
 		  + (case femEin1
-		      of E.Plain(bda, n, SOME(s)) =>
-			 0w193 + BasisDataArray.hash bda + Stamp.hash s
+		      of E.Plain(bda, n, SOME(s, s')) =>
+			 0w193 + BasisDataArray.hash bda + Stamp.hash s + Stamp.hash s'
 		       | E.Plain(bda, _, _) => 0w193 + BasisDataArray.hash bda
-		       | E.Invert(bda,_,SOME(s)) => 0w197 + BasisDataArray.hash bda + Stamp.hash s
-		       | E.Invert(bda,_,NONE) => 0w197 + BasisDataArray.hash bda
+		       | E.Invert(bda,_,SOME(s,s'),w) => 0w197 + BasisDataArray.hash bda + Stamp.hash s + Stamp.hash s' + (if w
+															   then 0w227
+															   else 0w0)
+		       | E.Invert(bda,_,NONE, w) => 0w197 + BasisDataArray.hash bda + (if w
+										       then 0w227
+										       else 0w0)
 		    (*end case*))
 		| E.Identity(d, mu, NONE) => 0w199 + hashAlpha [mu] + (Word.fromInt d)
 		| E.Identity(d, mu, SOME(b, d')) => 0w199 + hashAlpha [mu] + (Word.fromInt d) + (Word.fromInt d') + (if b

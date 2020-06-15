@@ -72,21 +72,24 @@ structure EinPP : sig
 	       val basisString = "Basis(" ^ ")"
 	       val alpha = if null coeffShape then "" else multiIndex2s coeffShape
                val beta = if null dxes then "" else "dx" ^ multiIndex2s dxes
-	       val s = Option.getOpt(Option.map Stamp.toString stamp, "noFunc")
+	       val s = Option.getOpt(Option.map (fn (x,y)=> (Stamp.toString x) ^ " and " ^ (Stamp.toString y)) stamp, "noFunc")
 				  
 	      in
 	       concat ["femV(",s,", ", i2s cell,", ", i2s index,", ", i2s dofs,")", alpha,  "⊛", basisString, beta]
 	      end
-	    | E.Fem(E.Invert(basis,len, stamp), cell, index, dofs, coeffShape, dxes) =>
+	    | E.Fem(E.Invert(basis,len, stamp, world), cell, index, dofs, coeffShape, dxes) =>
 	      let
 	       val basisLength = Int.toString len
 	       val basisString = "Basis(" ^ ")"
 	       val alpha = if null coeffShape then "" else multiIndex2s coeffShape
                val beta = if null dxes then "" else "dx" ^ multiIndex2s dxes
-	       val s = Option.getOpt(Option.map Stamp.toString stamp, "NoStamp")
+	       val s = Option.getOpt(Option.map (fn (x,y)=> (Stamp.toString x) ^ " and " ^ (Stamp.toString y)) stamp, "NoStamp")
+	       val ws = if world
+			   then "->world"
+			   else "->ref"
 				  
 	      in
-	       concat ["femInvV(",s,", ", i2s cell,", ", i2s index,", ", i2s dofs,")", alpha,  "⊛", basisString, beta]
+	       concat ["femInvV(", s, ws, ", ", i2s cell,", ", i2s index,", ", i2s dofs,")", alpha,  "⊛", basisString, beta]
 	      end
             | E.Partial alpha => "∂/∂x" ^ multiIndex2s alpha
             | E.Apply(e1, e2) => concat [ expToString e1, "@(", expToString e2, ")"]

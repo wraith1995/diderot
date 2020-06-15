@@ -523,7 +523,7 @@ print(concat["doVar (", SV.uniqueNameOf srcVar, ", ", IR.phiToString phi, ", _) 
 	       val shapeVars = List.tabulate(List.length shape, fn x => E.V x )
 	       val func' = cvtFuncVar funcVar
 	       val IR.FV{id=stamp,...} =  func'
-	       val femEin = E.Plain(basis, spaceDim, SOME(stamp))
+	       val femEin = E.Plain(basis, spaceDim, SOME(stamp, stamp)) (*FIXME: should be alt in case we need int one later*)
 	       val rator = E.EIN{
 		    params = [E.FEM(meshData), E.FEM(spaceData), E.FEM(funcData)],
 		    index = shape,
@@ -542,7 +542,11 @@ print(concat["doVar (", SV.uniqueNameOf srcVar, ", ", IR.phiToString phi, ", _) 
 	       val spaceDim = FemData.meshMapDim m
 	       val func' = cvtFuncVar func
 	       val IR.FV{id=stamp,...} =  func'
-	       val femEin = E.Invert((FemData.meshBasis m), spaceDim, SOME(stamp))
+	       val femEin = (case  SimpleVar.typeOf index
+			      of Ty.T_Fem(FemData.Mesh _) => E.Invert((FemData.meshBasis m), spaceDim, SOME(stamp, stamp), true)
+			       | Ty.T_Int => E.Invert((FemData.meshBasis m), spaceDim, SOME(stamp, stamp), false)
+			       | _ => raise Fail "impossible"
+			    (*end case*))
 	       val param1 = (case SimpleVar.typeOf index
 			      of Ty.T_Fem(meshData as FemData.Mesh(m)) => E.FEM(meshData)
 			       | Ty.T_Int => E.INT
@@ -565,7 +569,7 @@ print(concat["doVar (", SV.uniqueNameOf srcVar, ", ", IR.phiToString phi, ", _) 
 	       val data = FemData.Mesh(m)
 	       val dim = FemData.meshDim m
 	       val spaceDim = FemData.meshMapDim m
-	       val femEin = E.Invert((FemData.meshBasis m), spaceDim, NONE)
+	       val femEin = E.Invert((FemData.meshBasis m), spaceDim, NONE, false)
 
 	       val rator = E.EIN{
 		    params = [E.INT, E.FEM(data), E.FEM(data)],
