@@ -161,10 +161,17 @@ structure NormalizeEin : sig
                  of SOME e => e
                   | NONE => mkProd args
                 (* end case *))
-         val sumX = ref (length index)
-         fun incSum() = sumX:= (!sumX+2)
+          val sumX = ref (length index)
+	  val debug = true
+          fun incSum() = (sumX:= (!sumX+2) handle ex => raise ex; if debug
+								  then print("new sumX:"^(Int.toString (!sumX))^"\n")
+								  else ())
          fun addSum((v, _, _)::sx) =
-            sumX:= (!sumX)+v
+             ((sumX:= (!sumX)+v handle ex => (print("adding sum:"^(Int.toString v)^" to " ^ (Int.toString (!sumX))^"\n"); raise ex));
+	      if debug
+	      then print("raised sumX by "^ (Int.toString v)^" to "^(Int.toString (!sumX))^"\n")
+	      else ()
+	     )
           fun rewrite body = (case body
                  of E.Const _ => body
                   | E.ConstR _ => body
@@ -188,11 +195,11 @@ structure NormalizeEin : sig
                   | E.Apply(E.Partial d1, e1) => let
                       val e1 = rewrite e1
                       in
-                        case (incSum();Derivative.mkApply(E.Partial d1, e1, params, !sumX, getBasisDerivative))
+                        (case (Derivative.mkApply(E.Partial d1, e1, params, sumX, getBasisDerivative) handle ex=>raise ex) 
                          of SOME e => (ST.tick cntApplyPartial; e)
                           | NONE => E.Apply(E.Partial d1, e1)
-                        (* end case *)
-                      end
+                        (* end case *)) handle ex => raise ex
+                      end 
                   | E.Apply _ => err "Ill-formed Apply expression"
                 (************** Field Terms **************)
                   | E.OField(ofld, e, alpha) => E.OField(ofld, rewrite e, alpha)
@@ -206,16 +213,16 @@ structure NormalizeEin : sig
                   | E.Comp(e1, es)  =>
                     let
 
-		     val _ = print(" Start comp " ^ (Int.toString(!compDepth)) ^ ":"^(EinPP.expToString(E.Comp(e1,es)))^"\n")
-		     val _ = compDepth := (!compDepth) + 1
+		     (* val _ = print(" Start comp " ^ (Int.toString(!compDepth)) ^ ":"^(EinPP.expToString(E.Comp(e1,es)))^"\n") *)
+		     (* val _ = compDepth := (!compDepth) + 1 handle ex => raise ex *)
 		    (* Rewrite e1 and es fully:*)
 		     val needRewrite = ref false
 		     fun getOpt(a,b) = (case a
 					 of SOME(a') => (needRewrite := true; a')
 					  | NONE => b)
-                     val e1' = innerLoop(e1, ST.sum{from = firstCounter, to = lastCounter'}, false)
+                     val e1' = innerLoop(e1, ST.sum{from = firstCounter, to = lastCounter'}, false) handle ex => raise ex
 		     val e1'' = getOpt(e1', e1)
-                     val es' = List.map (fn (e2, n2)=> (innerLoop(e2, ST.sum{from = firstCounter, to = lastCounter'}, false), n2)) es
+                     val es' = List.map (fn (e2, n2)=> (innerLoop(e2, ST.sum{from = firstCounter, to = lastCounter'}, false), n2)) es handle ex => raise ex
 		     val es'' = ListPair.map (fn ((e2, n2), (e2', n2')) => (getOpt(e2', e2), n2)) (es, es')
 
 		     (* If any rewrites occur, we try to rewrite the whole thing further*)
@@ -225,6 +232,7 @@ structure NormalizeEin : sig
 							| NONE => E.Comp(e1'', es'')
 						     (* end case*))
 						else E.Comp(e1'', es'')
+		     val compRet = E.Comp(e1''', es''')
 
 		     (*We now setup the cancellation: this function will, based on eIN, 
 		       replace field ins in eOut with an identity or a comp!
@@ -234,100 +242,100 @@ structure NormalizeEin : sig
 		     -a flag for if any identity replaces happened
 		     -a flag if eIn couldn't result in any cancells
 		      *)
-		     fun tryCancel(eOut : E.ein_exp, eIn : E.ein_exp, eInBind : E.index_bind list) =
-			 let
-			  val fail = ref false
-			  val aRet = ref false
-			  fun sucRet e = (aRet := true; e)
-			  fun failRet e = (fail := true; E.Comp(e, [(eIn, eInBind)]))
-			  fun vTy x = IR.Var.ty (List.nth(vars, x))
-			  fun vS(x,y) = x=y orelse IR.Var.same(List.nth(vars, x), List.nth(vars, y))
-			  fun findInvert(mesh, index, indexSource, dofSource) e = (*T^-1 \circ T*)
-			      (case e
-				of (E.Fem(E.Invert(_, _, NONE), index', indexSource', dofSource', [acc], []))
-				   => if vS(index, index') andalso vS(indexSource', indexSource)
-					 andalso vS(dofSource, dofSource')
-				      then sucRet(E.Identity(FemData.meshDim mesh, acc, NONE))
-				      else failRet e
-				 | (E.Fem(E.Invert(_, _, SOME _), index', indexSource', dofSource', [acc], [])) =>
-				   if vS(indexSource', indexSource) andalso vS(dofSource, dofSource')
-				   then sucRet(E.Identity(FemData.meshDim mesh, acc, NONE))
-				   else failRet e
-				 | _ => failRet e
-			      (* end case*))
-			  fun findPlain(mesh, index, indexSource, dofSource) e = (*T \circ T^-1 - general T^-1 we should add?*)
-			      (case e
-				of E.Fem(E.Plain(_, _, _), index', indexSource', dofSource', [acc], [])
-				   => if vS(index, index') andalso vS(indexSource', indexSource)
-					 andalso vS(dofSource, dofSource')
-				      then sucRet(E.Identity(FemData.meshDim mesh, acc, NONE))
-				      else failRet e
-				 | _ => failRet e
-			      (* end case*))
-			  val f : (Ein.ein_exp -> Ein.ein_exp) option =
-			      (case eIn
-				of E.Fem(femEin, index, indexSource, dofSource, [E.V _], []) =>
-				   (case (femEin, vTy indexSource) 
-				     of (E.Plain(_, _, _), Ty.FemData(FemData.Mesh mesh))
-					=> SOME(findInvert(mesh, index, indexSource, dofSource))
-				      | (E.Invert(_, _, _), Ty.FemData(FemData.Mesh mesh)) =>
-					SOME(findPlain(mesh, index, indexSource, dofSource))
-				      | _ => (NONE)
-				   (* end case*))
-				 | _ => (NONE)
-			      (* end ase*))
-			  val eOut' = Option.map (fn f' => EinUtil.mapInNodes(eOut, f')) f
-			  val possibleReplace = Bool.not (Option.isSome f)
+		     (* fun tryCancel(eOut : E.ein_exp, eIn : E.ein_exp, eInBind : E.index_bind list) = *)
+		     (* 	 let *)
+		     (* 	  val fail = ref false *)
+		     (* 	  val aRet = ref false *)
+		     (* 	  fun sucRet e = (aRet := true; e) *)
+		     (* 	  fun failRet e = (fail := true; E.Comp(e, [(eIn, eInBind)])) *)
+		     (* 	  fun vTy x = IR.Var.ty (List.nth(vars, x)) *)
+		     (* 	  fun vS(x,y) = x=y orelse IR.Var.same(List.nth(vars, x), List.nth(vars, y)) *)
+		     (* 	  fun findInvert(mesh, index, indexSource, dofSource) e = (*T^-1 \circ T*) *)
+		     (* 	      (case e *)
+		     (* 		of (E.Fem(E.Invert(_, _, NONE), index', indexSource', dofSource', [acc], [])) *)
+		     (* 		   => if vS(index, index') andalso vS(indexSource', indexSource) *)
+		     (* 			 andalso vS(dofSource, dofSource') *)
+		     (* 		      then sucRet(E.Identity(FemData.meshDim mesh, acc, NONE)) *)
+		     (* 		      else failRet e *)
+		     (* 		 | (E.Fem(E.Invert(_, _, SOME _), index', indexSource', dofSource', [acc], [])) => *)
+		     (* 		   if vS(indexSource', indexSource) andalso vS(dofSource, dofSource') *)
+		     (* 		   then sucRet(E.Identity(FemData.meshDim mesh, acc, NONE)) *)
+		     (* 		   else failRet e *)
+		     (* 		 | _ => failRet e *)
+		     (* 	      (* end case*)) *)
+		     (* 	  fun findPlain(mesh, index, indexSource, dofSource) e = (*T \circ T^-1 - general T^-1 we should add?*) *)
+		     (* 	      (case e *)
+		     (* 		of E.Fem(E.Plain(_, _, _), index', indexSource', dofSource', [acc], []) *)
+		     (* 		   => if vS(index, index') andalso vS(indexSource', indexSource) *)
+		     (* 			 andalso vS(dofSource, dofSource') *)
+		     (* 		      then sucRet(E.Identity(FemData.meshDim mesh, acc, NONE)) *)
+		     (* 		      else failRet e *)
+		     (* 		 | _ => failRet e *)
+		     (* 	      (* end case*)) *)
+		     (* 	  val f : (Ein.ein_exp -> Ein.ein_exp) option = *)
+		     (* 	      (case eIn *)
+		     (* 		of E.Fem(femEin, index, indexSource, dofSource, [E.V _], []) => *)
+		     (* 		   (case (femEin, vTy indexSource)  *)
+		     (* 		     of (E.Plain(_, _, _), Ty.FemData(FemData.Mesh mesh)) *)
+		     (* 			=> SOME(findInvert(mesh, index, indexSource, dofSource)) *)
+		     (* 		      | (E.Invert(_, _, _), Ty.FemData(FemData.Mesh mesh)) => *)
+		     (* 			SOME(findPlain(mesh, index, indexSource, dofSource)) *)
+		     (* 		      | _ => (NONE) *)
+		     (* 		   (* end case*)) *)
+		     (* 		 | _ => (NONE) *)
+		     (* 	      (* end ase*)) *)
+		     (* 	  val eOut' = Option.map (fn f' => EinUtil.mapInNodes(eOut, f')) f *)
+		     (* 	  val possibleReplace = Bool.not (Option.isSome f) *)
 							      
-			 in
-			  (Option.getOpt(eOut', eOut), !fail, !aRet, possibleReplace)
-			 end
-		     (*We do the canellation directly with this function, marking it here:*)
-		     val cancelRef = ref false
-		     fun doCompLefts(e1::e2::es) =
-			 let
-			  val (e1e, e1b) = e1
-			  val (e2e, e2b) = e2
-			  val (e1e', anyFail, anyReplace, nothing) = tryCancel(e1e, e2e, e2b)
-			  val _ = if Bool.not anyFail andalso Bool.not anyReplace
-				  then raise Fail ("impossible:ill-formed comp: " ^ (EinPP.expToString(e1e)) ^ " and " ^ (EinPP.expToString(e2e)) ^"\n")
-				  else ()
-			 in
-			  if nothing orelse anyFail (*Question: might be a good idea to allow any-fail*)
-			  then e1::doCompLefts(e2::es)
-			  else (cancelRef := true; ST.tick cntCompCancel; (e1e', e1b) :: doCompLefts(es))
-			 end
-		       | doCompLefts ([e]) = [e]
-		       | doCompLefts ([]) = []
-		     val allEs = (e1''', []) :: es'''
-		     val allEs' = doCompLefts(allEs)
+		     (* 	 in *)
+		     (* 	  (Option.getOpt(eOut', eOut), !fail, !aRet, possibleReplace) *)
+		     (* 	 end *)
+		     (* (*We do the canellation directly with this function, marking it here:*) *)
+		     (* val cancelRef = ref false *)
+		     (* fun doCompLefts(e1::e2::es) = *)
+		     (* 	 let *)
+		     (* 	  val (e1e, e1b) = e1 *)
+		     (* 	  val (e2e, e2b) = e2 *)
+		     (* 	  val (e1e', anyFail, anyReplace, nothing) = tryCancel(e1e, e2e, e2b) *)
+		     (* 	  val _ = if Bool.not anyFail andalso Bool.not anyReplace *)
+		     (* 		  then raise Fail ("impossible:ill-formed comp: " ^ (EinPP.expToString(e1e)) ^ " and " ^ (EinPP.expToString(e2e)) ^"\n") *)
+		     (* 		  else () *)
+		     (* 	 in *)
+		     (* 	  if nothing orelse anyFail (*Question: might be a good idea to allow any-fail*) *)
+		     (* 	  then e1::doCompLefts(e2::es) *)
+		     (* 	  else (cancelRef := true; ST.tick cntCompCancel; (e1e', e1b) :: doCompLefts(es)) *)
+		     (* 	 end *)
+		     (*   | doCompLefts ([e]) = [e] *)
+		     (*   | doCompLefts ([]) = [] *)
+		     (* val allEs = (e1''', []) :: es''' *)
+		     (* val allEs' = doCompLefts(allEs) *)
 			     
-		     (*Now we prep to filter identities*)
-		     val filterId = ref false
-		     fun filterIdentities(alles) =
-			 let
-			  val n = List.length alles
-			  fun filterFn((E.Identity(_, E.V _, _), _)) = false
-			    | filterFn _ = true
-			  val alles' = List.filter filterFn alles
-			  val possibleId = List.find (Bool.not o filterFn) alles
-			  val _ = filterId := (n <> 1 andalso n <> (List.length alles'))
-			 in
-			  (case alles'
-			    of [] => (case possibleId
-				       of SOME(pid)=> [pid]
-					| _ => raise Fail "impossible:empy alles with no identity"
-				     (* end case *))
-			     | es => es
-			  (* end case *))
-			 end
-		     val allEs'' = filterIdentities(allEs')
-		     (*We produce the resulting ein here:*)
-		     val compRet = (case allEs''
-				     of [] => raise Fail "impossible: fail comp cancel somehow."
-				      | [(r,rbind)] => r
-				      | (r,rbind)::rs => E.Comp(r,rs)
-				   (*end case*))
+		     (* (*Now we prep to filter identities*) *)
+		     (* val filterId = ref false *)
+		     (* fun filterIdentities(alles) = *)
+		     (* 	 let *)
+		     (* 	  val n = List.length alles *)
+		     (* 	  fun filterFn((E.Identity(_, E.V _, _), _)) = false *)
+		     (* 	    | filterFn _ = true *)
+		     (* 	  val alles' = List.filter filterFn alles *)
+		     (* 	  val possibleId = List.find (Bool.not o filterFn) alles *)
+		     (* 	  val _ = filterId := (n <> 1 andalso n <> (List.length alles')) *)
+		     (* 	 in *)
+		     (* 	  (case alles' *)
+		     (* 	    of [] => (case possibleId *)
+		     (* 		       of SOME(pid)=> [pid] *)
+		     (* 			| _ => raise Fail "impossible:empy alles with no identity" *)
+		     (* 		     (* end case *)) *)
+		     (* 	     | es => es *)
+		     (* 	  (* end case *)) *)
+		     (* 	 end *)
+		     (* val allEs'' = filterIdentities(allEs') *)
+		     (* (*We produce the resulting ein here:*) *)
+		     (* val compRet = (case allEs'' *)
+		     (* 		     of [] => raise Fail "impossible: fail comp cancel somehow." *)
+		     (* 		      | [(r,rbind)] => r *)
+		     (* 		      | (r,rbind)::rs => E.Comp(r,rs) *)
+		     (* 		   (*end case*)) *)
 
 
 		     (* val compRet = if !cancelRef orelse !filterId *)
@@ -335,8 +343,8 @@ structure NormalizeEin : sig
 		     (* 		    Option.getOpt(innerLoop(E.Comp(e1'', es''), ST.sum{from = firstCounter, to = lastCounter'}, false), *)
 		     (* 				  compRet) *)
 				     (* 		   else compRet *)
-		     val _ = compDepth := (!compDepth) - 1
-		     val _ = print("End comp " ^ (Int.toString(!compDepth)) ^ ":" ^ (EinPP.expToString(compRet))^"\n")
+		     (* val _ = compDepth := (!compDepth) - 1 *)
+		     (* val _ = print("End comp " ^ (Int.toString(!compDepth)) ^ ":" ^ (EinPP.expToString(compRet))^"\n") *)
 
 
                     in  compRet end
@@ -352,7 +360,7 @@ structure NormalizeEin : sig
 		  | E.Probe(E.Identity(dim, mu1, _), e as E.Tensor(tid, [])) => (*Id(e2) -> Id * e2 \sum_i=(0,dim-1) delta_ij e_2_i...*)
 		    let
 		     (* val _ = print("inner:" ^ (EinPP.expToString e) ^ "\n") *)
-		     val newSumRange = !sumX + 1
+		     val newSumRange = !sumX + 1 handle ex => raise ex
 		     val _ = incSum()
 		     val ret = mkSum([(newSumRange, 0, dim - 1)], E.Opn(E.Prod, [E.Delta(mu1, E.V newSumRange), E.Tensor(tid, [E.V newSumRange])]))
 		     (* val new = print("inner':" ^ (EinPP.expToString ret)) *)
@@ -506,30 +514,32 @@ structure NormalizeEin : sig
 			     (* end case *))
 	  and innerLoop(exp, total, changed) =
 	      let
-	       val exp' = rewrite exp
-	       val totalTicks = ST.sum{from = firstCounter, to = lastCounter'}
+	       val exp' = rewrite exp handle ex => raise ex
+	       val totalTicks = ST.sum{from = firstCounter, to = lastCounter'} handle ex => raise ex
 	      in
 	       if totalTicks > total
-	       then innerLoop(exp', totalTicks, true)
+	       then innerLoop(exp', totalTicks, true) handle ex => raise ex
 	       else if changed
 	       then (ST.tick cntInnerLoop; SOME(exp'))
 	       else NONE
 	      end
 (* (*DEBUG*)val start = ST.count cntRounds *)
           fun loop (body, total, changed) = let
+	   val _ = ST.report()
                 val body' = rewrite body
-		(* val _ =print(String.concat["\n\n ==> X:", EinPP.expToString(body),"\n ==> Y:", EinPP.expToString(body'), "\n"]) *)
+		val _ =print(String.concat["\n\n ==> X:", EinPP.expToString(body),"\n ==> Y:", EinPP.expToString(body'), "\n"])
                 val totalTicks = ST.sum{from = firstCounter, to = lastCounter}
+		val _ = print("Total Ticks:"^(Int.toString totalTicks) ^"\n")
                 in
                   ST.tick cntRounds;
 		  (* (*DEBUG*)if (ST.count cntRounds - start > 50) then raise Fail "too many steps" else (); *)
                   if (totalTicks > total) (* something changed *)
-                    then loop(body', totalTicks, true) (* keep going *)
+                    then loop(body', totalTicks, true) handle ex => raise ex (* keep going *)
                   else if changed (* nothing changed - if any changes happened at all, provide result*)
                     then SOME(Ein.EIN{params=params, index=index, body=body'})
                     else NONE
           end
-	  val einRet = loop(body, ST.sum{from = firstCounter, to = lastCounter}, false)
+	  val einRet = loop(body, ST.sum{from = firstCounter, to = lastCounter}, false) handle ex => raise ex
 	  (* val _ = Option.app (fn x => print(String.concat(["ret:", EinPP.toString x, "\n"]))) einRet *)
           in
             einRet

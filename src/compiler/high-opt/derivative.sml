@@ -9,7 +9,7 @@
 
 structure Derivative : sig
 
-	   val mkApply : Ein.ein_exp * Ein.ein_exp * Ein.param_kind list * Ein.index_id  * (BasisDataArray.t -> BasisDataArray.t) -> Ein.ein_exp option
+	   val mkApply : Ein.ein_exp * Ein.ein_exp * Ein.param_kind list * Ein.index_id ref  * (BasisDataArray.t -> BasisDataArray.t) -> Ein.ein_exp option
 	   val rewriteIx : Ein.index_id * Ein.ein_exp  -> Ein.ein_exp
 
   end  = struct
@@ -262,10 +262,11 @@ structure Derivative : sig
 	      let
 	       val dCount = List.length dx
 	       val bda' = (List.foldr (op o) (fn x => x ) (List.tabulate(dCount, fn x => getBasisDerivative)))(bda)
+	       val _ = print("D:"^(Int.toString dCount)^"\n")
 	      in
 	       SOME(E.Fem(E.Plain( bda', n, f), id1, id2, id3, alpha, dxes@dx))
 	      end
-	    | E.Fem((E.Invert(bda, n, f)), id1, id2, id3, [mu1], [])  =>
+	    | E.Fem((E.Invert(bda, n, f, w)), id1, id2, id3, [mu1], [])  =>
 	      let
 	       (*QUESTION: What to do about 1D? THIS CODE f***s shit up*)
 
@@ -276,12 +277,31 @@ structure Derivative : sig
 	       val mu2 = List.hd dx
 	       val dx' = List.tl dx
 	       (*Should this be a comp....*)
-	       fun probeAtIndex(mu1, mu2) = E.Fem(E.Plain( getBasisDerivative(bda), n, f), id1, id2, id3, [mu2], [mu1])
 	       val dim = BasisDataArray.domainDim bda
+	       val indexBind = [dim]
+	       val _ = if w andalso Bool.not(Option.isSome f)
+		       then raise Fail "impossible derivative of FEM"
+		       else ()
+	       val (probeAtIndex, doCompose) = if w andalso Option.isSome f
+				  then (*from F*)
+				   (fn (mu1,mu2) =>
+				       E.Fem(E.Plain( getBasisDerivative(bda), n, f), id1, id2, id3, [mu2], [mu1]),
+				    fn b => E.Comp(b, [(E.Fem(E.Invert(bda, n, f, true), id1, id2, id3, [E.V 0], []), indexBind)]))
+				  else if Option.isSome f (* from invT, should return ref and derivative expects*)
+				  then ((fn (mu1,mu2) =>
+					    E.Fem(E.Plain( getBasisDerivative(bda), n, NONE), id1, id2, id3, [mu2], [mu1])
+					),
+					fn b => E.Comp(b,[(E.Fem(E.Invert(bda, n, f, false), id1, id2, id3, [E.V 0], []), indexBind)]))
+				  else (*from trf - no way to run and no expectation as already in ref*)
+				   ((fn (mu1,mu2) =>
+					E.Fem(E.Plain( getBasisDerivative(bda), n, NONE), id1, id2, id3, [mu2], [mu1])
+				    ), fn b => E.Comp(b, [(E.Fem(E.Invert(bda, n, NONE, false), id1, id2, id3, [E.V 0], []), indexBind)]))
+	      
+
 	       val _ = if dim <> 2 andalso dim <> 3
 		       then raise Fail "One d and higher than 3d fields not yet supported"
 		       else ()
-	       val sumStart = sumX
+	       val sumStart = !sumX
 	       val sumItter = List.tabulate(dim, fn x => x +  sumStart + 1)
 	       val sumMus = List.map E.V sumItter
 	       val sumRanges = List.map (fn x => (x, 0, dim - 1 )) sumItter (*QUESTION: dim - 1correct?*)
@@ -294,23 +314,24 @@ structure Derivative : sig
 	       val detAcces = List.map probeAtIndex (ListPair.zip(accRanges, sumMus))
 	       val det = E.Sum(sumRanges, E.Opn(E.Prod, eps::detAcces))
 	       (* fix sum indecies*)
-	       val sumStartAdj = sumX + dim
+	       val sumStartAdj = (!sumX) + dim
 	       val adjSumItter1 = List.tabulate(dim - 1, fn x => x + sumStartAdj + 1)
 	       val adjSumItter2 = List.tabulate(dim - 1, fn x => x + sumStartAdj + dim + 1)
 	       val adjSumMus1 = List.map E.V adjSumItter1
 	       val adjSumMus2 = List.map E.V adjSumItter2
 	       val adjSumRanges = List.map (fn x => (x, 0, dim - 1)) (List.@(adjSumItter1, adjSumItter2))
 	       val finalSumX = sumStartAdj + 2 * (dim - 1) (*TODO: fix me*)
+	       val _ = sumX := finalSumX
 	       val eps1 = makeEps (List.@(adjSumMus1, [mu1]))
 	       val eps2 = makeEps (List.@(adjSumMus2, [mu2]))
 	       val adjAccess = List.map probeAtIndex (ListPair.zip(adjSumMus1, adjSumMus2))
 	       val adj = E.Op2(E.Div, E.Sum(adjSumRanges, E.Opn(E.Prod, eps1::eps2::adjAccess)), E.Const(fact (dim - 1)))
 
-	       val inv = E.Op2(E.Div, adj, det)
+	       val inv = doCompose(E.Op2(E.Div, adj, det))
 	      in
 	       (case dx'
 		of [] => SOME(inv)
-		 | _ => mkApply(E.Partial dx', inv, params, finalSumX, getBasisDerivative))
+		 | _ => mkApply(E.Partial dx', inv, params, sumX, getBasisDerivative))
 	      end
             | E.Partial _ => err("Apply of Partial")
             | E.Apply(E.Partial d2, e2) => SOME(E.Apply(E.Partial(dx@d2), e2))
@@ -329,7 +350,8 @@ structure Derivative : sig
 	       (* a vector field by the act of pushing the derivatives to convo and taken into account properly when a prob of convo is expanded in high to mid.*)
 	       (* With these assumptions, the chain rule reduces to the tensor-vector case every time.*)
 	       val (d0::dn) = dx
-               val vk = 100+sumX (* FIX ME: fresh index*)
+               val vk = 1+(!sumX )
+	       val _ = sumX := 1 + !sumX
                val e3 = E.Comp(E.Apply(E.Partial[E.V vk], e1), [(e2, n)])
                val e4 = E.Apply(E.Partial[d0], rewriteIx(vk, e2)) 
                val SOME(dim) = findDim(e1, params)
