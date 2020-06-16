@@ -37,6 +37,19 @@ function real fStrength(position{mesh_t} pos) {
     return str;
   } else {return(0.0);}
 }
+function real erm(position{mesh_t} pos){
+  cell{mesh_t} c = pos.mc;
+  tensor[dim,dim,dim] Herm = ∇⊗∇⊗c.inverseTransform(pos.refPos);
+  print(Herm);
+  if(Herm[0,0,0] > 1){
+    return 0.0;
+  }
+  else if(Herm[0,0,0] > 1){print("poop");}
+  else{print("yay");}
+  return 1.0;
+    
+
+}
 
 function real fVal(position{mesh_t} pos) {
   if(pos.isValid){
@@ -48,21 +61,47 @@ function real fVal(position{mesh_t} pos) {
   } else {return(0.0);}
 }
 
+function vec3 fStep(position{mesh_t} pos) {
+  if(pos.isValid){
+    vec3 x = pos.refPos;
+    cell{mesh_t} c = pos.mc;
+    cell{func_t} f = data.funcCell(c);
+    vec3 g = ∇(f.transformedRefField)(x);
+    tensor[dim, dim] H = ∇⊗∇(f.transformedRefField)(x);
+
+    vec3[3] E = evecs(H);
+    real[3] L = evals(H);
+    vec3 up =  -(1/L[2])*E[2]⊗E[2]•g;
+    /* if(posNanCheck(up)){ */
+    /*   return([∞, ∞, ∞]); */
+    /* } else { */
+      return up;
+      //}
+  } else {return([∞, ∞, ∞]);}
+}
+
+
 strand normal(position{mesh_t}  pos0, tensor[dim] xp){
   output tensor[dim] normal = zeros[dim];
   output real stren = nan;
   output real val = nan;
   output vec3 ref = nan[3];
+  output vec3 step = nan[3];
+  output real mv = nan;
   update {
+    real a = erm(pos0);
+    print(a);
     if(pos0.isValid){
       normal = findNormal(pos0);
       stren = fStrength(pos0);
       val = fVal(pos0);
       ref = pos0.refPos;
+      step = fStep(pos0);
+      mv = |step|;
       //print("Ratios:", temp1/temp2, temp1/temp3, temp2/temp3, "\n");
       //      print(pos0.mc, ",");
     }
-    //    else {print("Error at input pos:", xp, "\n");}
+    else {print("Error at input pos:", xp, "\n");}
     
     stabilize;
   }
