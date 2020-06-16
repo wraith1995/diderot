@@ -959,7 +959,7 @@ fun makeMeshPos(env, cxt, span, meshData, transformVars, dumb, extraFuns, extraR
 
  fun femOpt opt = (opt, meshPosData)
 
- fun valid([v]) = makePrim'(BV.neq_ii, [AST.E_ExtractFemItem(v, Ty.T_Int, femOpt FO.CellIndex), AST.E_Lit(Literal.Real(RealLit.m_one))], [Ty.T_Int, Ty.T_Int], Ty.T_Bool)
+ fun valid([v]) = makePrim'(BV.neq_ii, [AST.E_ExtractFemItem(v, Ty.T_Int, femOpt FO.CellIndex), AST.E_Lit(Literal.intLit (~1))], [Ty.T_Int, Ty.T_Int], Ty.T_Bool)
  val results = makeFunctionRegistration(FemName.valid, [meshPosTy], Ty.T_Bool, valid)::results
 
  fun cell([v]) =
