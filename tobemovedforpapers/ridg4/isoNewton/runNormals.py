@@ -33,6 +33,10 @@ def getNormals(f, pointsNrrdFile):
     program = passing.Library(library, nameSpace=nameSpaceArg)
     inputs = {"meshData": [femArgs[0]], "space": [femArgs[1]], "data": [femArgs[2]]}
     namedInputs = {"ipos": pointsNrrdFile}
-    outputs = [("ref", 1, outFileName), ("stren", 1, outFileName1)]
+    outputs = [("ref", 1, "ref"),
+               ("normal", 1, outFileName),
+               ("stren", 1, outFileName1),
+               ("step", 1, "step"),
+               ("mv", 1, "mv")]
     program.go(inputs, outputs, namedInputs=namedInputs, verbose=True, workers=None, shutdown=False)
 
