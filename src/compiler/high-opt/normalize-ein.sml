@@ -242,54 +242,69 @@ structure NormalizeEin : sig
 		     -a flag for if any identity replaces happened
 		     -a flag if eIn couldn't result in any cancells
 		      *)
-		     (* fun tryCancel(eOut : E.ein_exp, eIn : E.ein_exp, eInBind : E.index_bind list) = *)
-		     (* 	 let *)
-		     (* 	  val fail = ref false *)
-		     (* 	  val aRet = ref false *)
-		     (* 	  fun sucRet e = (aRet := true; e) *)
-		     (* 	  fun failRet e = (fail := true; E.Comp(e, [(eIn, eInBind)])) *)
-		     (* 	  fun vTy x = IR.Var.ty (List.nth(vars, x)) *)
-		     (* 	  fun vS(x,y) = x=y orelse IR.Var.same(List.nth(vars, x), List.nth(vars, y)) *)
-		     (* 	  fun findInvert(mesh, index, indexSource, dofSource) e = (*T^-1 \circ T*) *)
-		     (* 	      (case e *)
-		     (* 		of (E.Fem(E.Invert(_, _, NONE), index', indexSource', dofSource', [acc], [])) *)
-		     (* 		   => if vS(index, index') andalso vS(indexSource', indexSource) *)
-		     (* 			 andalso vS(dofSource, dofSource') *)
-		     (* 		      then sucRet(E.Identity(FemData.meshDim mesh, acc, NONE)) *)
-		     (* 		      else failRet e *)
-		     (* 		 | (E.Fem(E.Invert(_, _, SOME _), index', indexSource', dofSource', [acc], [])) => *)
-		     (* 		   if vS(indexSource', indexSource) andalso vS(dofSource, dofSource') *)
-		     (* 		   then sucRet(E.Identity(FemData.meshDim mesh, acc, NONE)) *)
-		     (* 		   else failRet e *)
-		     (* 		 | _ => failRet e *)
-		     (* 	      (* end case*)) *)
-		     (* 	  fun findPlain(mesh, index, indexSource, dofSource) e = (*T \circ T^-1 - general T^-1 we should add?*) *)
-		     (* 	      (case e *)
-		     (* 		of E.Fem(E.Plain(_, _, _), index', indexSource', dofSource', [acc], []) *)
-		     (* 		   => if vS(index, index') andalso vS(indexSource', indexSource) *)
-		     (* 			 andalso vS(dofSource, dofSource') *)
-		     (* 		      then sucRet(E.Identity(FemData.meshDim mesh, acc, NONE)) *)
-		     (* 		      else failRet e *)
-		     (* 		 | _ => failRet e *)
-		     (* 	      (* end case*)) *)
-		     (* 	  val f : (Ein.ein_exp -> Ein.ein_exp) option = *)
-		     (* 	      (case eIn *)
-		     (* 		of E.Fem(femEin, index, indexSource, dofSource, [E.V _], []) => *)
-		     (* 		   (case (femEin, vTy indexSource)  *)
-		     (* 		     of (E.Plain(_, _, _), Ty.FemData(FemData.Mesh mesh)) *)
-		     (* 			=> SOME(findInvert(mesh, index, indexSource, dofSource)) *)
-		     (* 		      | (E.Invert(_, _, _), Ty.FemData(FemData.Mesh mesh)) => *)
-		     (* 			SOME(findPlain(mesh, index, indexSource, dofSource)) *)
-		     (* 		      | _ => (NONE) *)
-		     (* 		   (* end case*)) *)
-		     (* 		 | _ => (NONE) *)
-		     (* 	      (* end ase*)) *)
-		     (* 	  val eOut' = Option.map (fn f' => EinUtil.mapInNodes(eOut, f')) f *)
-		     (* 	  val possibleReplace = Bool.not (Option.isSome f) *)
-							      
-		     (* 	 in *)
-		     (* 	  (Option.getOpt(eOut', eOut), !fail, !aRet, possibleReplace) *)
-		     (* 	 end *)
+		     fun tryCancel(eOut : E.ein_exp, eIn : E.ein_exp, eInBind : E.index_bind list) =
+		     	 let
+		     	  val fail = ref false
+		     	  val aRet = ref false
+		     	  fun sucRet e = (aRet := true; e)
+		     	  fun failRet e = (fail := true; E.Comp(e, [(eIn, eInBind)]))
+		     	  fun vTy x = IR.Var.ty (List.nth(vars, x))
+		     	  fun vS(x,y) = x=y orelse IR.Var.same(List.nth(vars, x), List.nth(vars, y))
+		     	  fun findInvert(mesh, index, indexSource, dofSource) e = (*T^-1 \circ T_i*)
+		     	      (case e
+		     		of (E.Fem(E.Invert(_, _, NONE, w), index', indexSource', dofSource', [acc], [])) (*trf case - w is false*)
+		     		   => if vS(index, index') andalso vS(indexSource', indexSource)
+		     			 andalso vS(dofSource, dofSource') andalso (if w
+										    then raise Fail "impossible"
+										    else true)
+		     		      then sucRet(E.Identity(FemData.meshDim mesh, acc, SOME(false, index)))
+		     		      else failRet e
+		     		 | (E.Fem(E.Invert(_, _, SOME _, w), index', indexSource', dofSource', [acc], [])) => (*Tinv or tF*)
+		     		   if vS(indexSource', indexSource) andalso vS(dofSource, dofSource')
+				      andalso (case (vTy index')
+						of HighTypes.FemData(FemData.Mesh _) => true
+											andalso if w
+												then true
+												else raise Fail "invalid global invert"
+						 (*true except on boundary, which we ignore - w is true here.*)
+						 | HighTypes.IntTy => vS(index', index)
+								      andalso if w
+									      then raise Fail "invalid local invert producing world space"
+									      else true
+						 (*T_j^-1 \circ T_i \neq id unless i=j - w is false here*)
+						 | _ => raise Fail "impossible"
+					      (*end case*))
+		     		   then sucRet(E.Identity(FemData.meshDim mesh, acc, SOME(false, index)))
+		     		   else failRet e
+		     		 | _ => failRet e
+		     	      (* end case*))
+		     	  fun findPlain(mesh, index, indexSource, dofSource) e = (*T_i \circ T^-1*)
+		     	      (case e
+		     		of E.Fem(E.Plain(_, _, NONE), index', indexSource', dofSource', [acc], []) (*T_i - the only case*)
+		     		   => if vS(index, index') andalso vS(indexSource', indexSource)
+					 (*index test exludes Global inverse, which is impossible anyway as that only lives in F*)
+		     			 andalso vS(dofSource, dofSource')
+		     		      then sucRet(E.Identity(FemData.meshDim mesh, acc, SOME(true, index)))
+		     		      else failRet e
+		     		 | _ => failRet e
+		     	      (* end case*))
+		     	  val f : (Ein.ein_exp -> Ein.ein_exp) option =
+		     	      (case eIn
+		     		of E.Fem(femEin, index, indexSource, dofSource, [E.V _], []) =>
+		     		   (case (femEin, vTy indexSource)
+		     		     of (E.Plain(_, _, _), Ty.FemData(FemData.Mesh mesh))
+		     			=> SOME(findInvert(mesh, index, indexSource, dofSource))
+		     		      | (E.Invert(_, _, _, _), Ty.FemData(FemData.Mesh mesh)) =>
+		     			SOME(findPlain(mesh, index, indexSource, dofSource))
+		     		      | _ => NONE
+		     		   (* end case*))
+		     		 | _ => NONE
+		     	      (* end ase*))
+		     	  val eOut' = Option.map (fn f' => EinUtil.mapInNodes(eOut, f')) f
+		     	  val possibleReplace = Bool.not (Option.isSome f)
+		     	 in
+		     	  (Option.getOpt(eOut', eOut), !fail, !aRet, possibleReplace)
+		     	 end
 		     (* (*We do the canellation directly with this function, marking it here:*) *)
 		     (* val cancelRef = ref false *)
 		     (* fun doCompLefts(e1::e2::es) = *)
