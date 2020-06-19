@@ -20,6 +20,7 @@ structure EinUtil : sig
 
     (*Used to replace on the inputs to an ein_exp with another; used to do cancellations in Comp*)
     val mapInNodes : Ein.ein_exp * (Ein.ein_exp -> Ein.ein_exp) -> Ein.ein_exp
+    val analyzeInNodes : Ein.ein_exp * (Ein.ein_exp -> 'a option) * ('a * 'a -> 'a) -> 'a option
   end = struct
 
     structure E = Ein
@@ -252,6 +253,45 @@ structure EinUtil : sig
 
 
 
+    fun analyzeInNodes(exp : E.ein_exp, f: E.ein_exp -> 'a option, disamg : 'a * 'a -> 'a) =
+	let
+	 fun combine(n,[]) = n
+	   | combine (n, a::aa) = (case n
+				    of NONE => combine(mapper a, aa)
+				     | SOME(t) => (case mapper a
+						    of NONE => combine(n, aa)
+						     | SOME(t') => combine(SOME(disamg(t, t')), aa)))
+	 and mapper (e as E.Const _) = NONE
+	   | mapper (e as E.ConstR _ ) = NONE
+	   | mapper (e as E.Tensor _) = NONE
+	   | mapper (e as E.Zero _) = NONE
+	   | mapper (e as E.Delta _) = NONE
+	   | mapper (e as E.Epsilon _) = NONE
+	   | mapper (e as E.Eps2 _) = NONE
+	   | mapper (e as E.Field(i, alpha)) = raise Fail "field arguments impossible post arg substitution" 
+	   | mapper (E.Lift(e)) = mapper e (*Question: can't only tensor exps be in here... probably safe*)
+	   | mapper (e as E.Identity _) = f e
+	   | mapper (e as E.Conv _) = f e
+	   | mapper (e as E.Fem _ ) = f e
+	   | mapper (e as E.Partial _) = raise Fail "can't map through Partials"
+	   | mapper (e as E.Apply _) = raise Fail "can't mapp through apply partials"
+	   | mapper (E.Comp(e1, e2s)) = let val (last, binds):: rest = List.rev e2s
+					in mapper last end
+	   | mapper (E.Probe(e1,e2)) = mapper e2
+	   | mapper (E.OField _) = raise Fail "impossible: disallow OField"
+	   | mapper (e as E.Value _) = NONE
+	   | mapper (e as E.Img _) = NONE
+	   | mapper (e as E.Krn _) = NONE
+	   | mapper (e as E.Poly _) = raise Fail "impossible: disallow Poly"
+	   | mapper (E.If(c, e1, e2)) = combine(NONE, [e1,e2])
+	   | mapper (E.Sum(sx, e')) =  mapper e'
+	   | mapper (E.Op1(u, e')) =  mapper e'
+	   | mapper (E.Op2(u, e1, e2)) = combine(NONE, [e1,e2])
+	   | mapper (E.Op3(u, e1, e2, e3)) = combine(NONE, [e1,e2, e3])
+	   | mapper (E.Opn(u, es)) = combine(NONE, es)
+	in
+	 mapper exp
+	end
 
     fun mapInNodes(exp : E.ein_exp, f : E.ein_exp -> E.ein_exp) =
 	let

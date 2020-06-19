@@ -232,7 +232,10 @@ structure NormalizeEin : sig
 							| NONE => E.Comp(e1'', es'')
 						     (* end case*))
 						else E.Comp(e1'', es'')
-		     val compRet = E.Comp(e1''', es''')
+		     (*Some helpers:*)
+		     fun vTy x = IR.Var.ty (List.nth(vars, x))
+		     fun vS(x,y) = x=y orelse IR.Var.same(List.nth(vars, x), List.nth(vars, y))
+
 
 		     (*We now setup the cancellation: this function will, based on eIN, 
 		       replace field ins in eOut with an identity or a comp!
@@ -248,8 +251,6 @@ structure NormalizeEin : sig
 		     	  val aRet = ref false
 		     	  fun sucRet e = (aRet := true; e)
 		     	  fun failRet e = (fail := true; E.Comp(e, [(eIn, eInBind)]))
-		     	  fun vTy x = IR.Var.ty (List.nth(vars, x))
-		     	  fun vS(x,y) = x=y orelse IR.Var.same(List.nth(vars, x), List.nth(vars, y))
 		     	  fun findInvert(mesh, index, indexSource, dofSource) e = (*T^-1 \circ T_i*)
 		     	      (case e
 		     		of (E.Fem(E.Invert(_, _, NONE, w), index', indexSource', dofSource', [acc], [])) (*trf case - w is false*)
@@ -294,8 +295,11 @@ structure NormalizeEin : sig
 		     		   (case (femEin, vTy indexSource)
 		     		     of (E.Plain(_, _, _), Ty.FemData(FemData.Mesh mesh))
 		     			=> SOME(findInvert(mesh, index, indexSource, dofSource))
-		     		      | (E.Invert(_, _, _, _), Ty.FemData(FemData.Mesh mesh)) =>
-		     			SOME(findPlain(mesh, index, indexSource, dofSource))
+		     		      | (E.Invert(_, _, _, w), Ty.FemData(FemData.Mesh mesh)) =>
+					(*can't be w as world invert only before global F*)
+					if w
+					then NONE
+		     			else SOME(findPlain(mesh, index, indexSource, dofSource))
 		     		      | _ => NONE
 		     		   (* end case*))
 		     		 | _ => NONE
@@ -305,54 +309,177 @@ structure NormalizeEin : sig
 		     	 in
 		     	  (Option.getOpt(eOut', eOut), !fail, !aRet, possibleReplace)
 		     	 end
-		     (* (*We do the canellation directly with this function, marking it here:*) *)
-		     (* val cancelRef = ref false *)
-		     (* fun doCompLefts(e1::e2::es) = *)
-		     (* 	 let *)
-		     (* 	  val (e1e, e1b) = e1 *)
-		     (* 	  val (e2e, e2b) = e2 *)
-		     (* 	  val (e1e', anyFail, anyReplace, nothing) = tryCancel(e1e, e2e, e2b) *)
-		     (* 	  val _ = if Bool.not anyFail andalso Bool.not anyReplace *)
-		     (* 		  then raise Fail ("impossible:ill-formed comp: " ^ (EinPP.expToString(e1e)) ^ " and " ^ (EinPP.expToString(e2e)) ^"\n") *)
-		     (* 		  else () *)
-		     (* 	 in *)
-		     (* 	  if nothing orelse anyFail (*Question: might be a good idea to allow any-fail*) *)
-		     (* 	  then e1::doCompLefts(e2::es) *)
-		     (* 	  else (cancelRef := true; ST.tick cntCompCancel; (e1e', e1b) :: doCompLefts(es)) *)
-		     (* 	 end *)
-		     (*   | doCompLefts ([e]) = [e] *)
-		     (*   | doCompLefts ([]) = [] *)
-		     (* val allEs = (e1''', []) :: es''' *)
-		     (* val allEs' = doCompLefts(allEs) *)
-			     
-		     (* (*Now we prep to filter identities*) *)
-		     (* val filterId = ref false *)
-		     (* fun filterIdentities(alles) = *)
-		     (* 	 let *)
-		     (* 	  val n = List.length alles *)
-		     (* 	  fun filterFn((E.Identity(_, E.V _, _), _)) = false *)
-		     (* 	    | filterFn _ = true *)
-		     (* 	  val alles' = List.filter filterFn alles *)
-		     (* 	  val possibleId = List.find (Bool.not o filterFn) alles *)
-		     (* 	  val _ = filterId := (n <> 1 andalso n <> (List.length alles')) *)
-		     (* 	 in *)
-		     (* 	  (case alles' *)
-		     (* 	    of [] => (case possibleId *)
-		     (* 		       of SOME(pid)=> [pid] *)
-		     (* 			| _ => raise Fail "impossible:empy alles with no identity" *)
-		     (* 		     (* end case *)) *)
-		     (* 	     | es => es *)
-		     (* 	  (* end case *)) *)
-		     (* 	 end *)
-		     (* val allEs'' = filterIdentities(allEs') *)
-		     (* (*We produce the resulting ein here:*) *)
-		     (* val compRet = (case allEs'' *)
-		     (* 		     of [] => raise Fail "impossible: fail comp cancel somehow." *)
-		     (* 		      | [(r,rbind)] => r *)
-		     (* 		      | (r,rbind)::rs => E.Comp(r,rs) *)
-		     (* 		   (*end case*)) *)
+		     (*We do the canellation directly with this function, marking it here:*)
+		     val cancelRef = ref false
+		     fun doCompLefts(e1::e2::es) =
+		     	 let
+		     	  val (e1e, e1b) = e1
+		     	  val (e2e, e2b) = e2
+		     	  val (e1e', anyFail, anyReplace, nothing) = tryCancel(e1e, e2e, e2b)
+		     	  val _ = if Bool.not anyFail andalso Bool.not anyReplace
+		     		  then raise Fail ("impossible:ill-formed comp: " ^ (EinPP.expToString(e1e)) ^ " and " ^ (EinPP.expToString(e2e)) ^"\n")
+		     		  else ()
+		     	 in
+		     	  if nothing orelse anyFail (*Question: might be a good idea to allow any-fail*)
+		     	  then e1::doCompLefts(e2::es)
+		     	  else (cancelRef := true; ST.tick cntCompCancel; (e1e', e1b) :: doCompLefts(es))
+		     	 end
+		       | doCompLefts ([e]) = [e]
+		       | doCompLefts ([]) = []
+		     val allEs = (e1''', []) :: es'''
+		     val allEs' = doCompLefts(allEs)
+		     (*Now we look at the remaining outs and see if any ins are ids
+		     Some cancellations still expect a world space on the other side (any plain with an f in front of it - 
+		     we must correct that.)	
+		     If the cancellation expects a ref space, but get's world then we will do nothing, but print a warning
+		      *)
+		     fun doAnalyzeIds(eOut : E.ein_exp, eIn : E.ein_exp) = 
+			 let
+			  val change = ref false
+			  fun sucRet e = (change := true; e)
+			  datatype inout = World | Ref | Amb
+			  fun disamg (World, World) = World
+			    | disamg (Ref, Ref) = Ref
+			    | disamg (Amb, _) = Amb
+			    | disamg (_, Amb) = Amb
+			    | disamg (World, Ref) = Amb
+			    | disamg (Ref, World) = Amb
+			  (*What is the in asking for?*)
+			  fun intTy (E.Conv _) = NONE
+			    | intTy (E.Identity(_, _, NONE)) = NONE
+			    | intTy (E.Identity(_, _, SOME(b, _))) =
+			      SOME(if b
+				   then World
+				   else Ref)
+			    | intTy (E.Fem(femEin, _, _, _, _, _)) = SOME(case femEin
+									   of E.Invert(_, _, NONE, w) => Ref
+									    | E.Invert(_, _, SOME _, w) => World
+									    | E.Plain(_, _, NONE) => Ref
+									    | E.Plain(_, _, SOME _) => World
+									 (*end case*))
+			  (*what is the out of an e making?*)
+			  fun outTy (E.Conv _) = NONE
+			    | outTy (E.Identity(_, _, NONE)) = NONE
+			    | outTy (E.Identity(_, E.V _, SOME(b, _))) =
+			      SOME(if b
+				   then World
+				   else Ref)
+			    | outTy (E.Fem(femEin, index, indexSrc, _, [E.V _], [])) = (*dx must be none*)
+			      (case femEin
+			      	of E.Invert(_, _, NONE, b) => SOME(Ref) (*ID and accepts ref only*)
+			      	 | E.Invert(_,  _, SOME _, b) => SOME(if b then World else Ref)
+				 (*Correct - b marks if we just pass on world eval or if we need to run 
+				   through a newton function before passing it on*)
+			      	 | E.Plain(_, _, NONE) => (case vTy indexSrc
+			      				    of HighTypes.FemData(FemData.Mesh _) => SOME(World)
+			      				     | _ => NONE
+			      				  (*end case*))
+							    
+			      	 | E.Plain(_, _, SOME _) => (case vTy indexSrc
+			      				      of HighTypes.FemData(FemData.Mesh _) => SOME(World)
+			      				       | _ => NONE
+			      				    (* end case*))
+			      (* end case*))
+			    | outTy _ = NONE
+			  fun getIdParam (E.Identity(_, _, SOME(_, idx))) = idx
+			    | getIdParam (E.Fem(femEin, index, _, _, _, _)) = index
+
+			  fun doAnalysisEOut(e) = EinUtil.analyzeInNodes(e, intTy, disamg)
+			  fun doAnalysisIn(e) = outTy e
+						      
+
+			  val nothing = (false, false)
+			  val (switchToRef, switchToWorld) =
+			      (case (doAnalysisEOut(eOut), doAnalysisIn(eIn))
+				of (NONE, _) => nothing
+				 | (_, NONE) => nothing
+				 | (SOME s, SOME s') => (case (s, disamg(s, s'))
+							  of (World, Ref) => (true, false)
+							   | (Ref, World) => (false, true)
+							   | _ => nothing
+							(* end case*))
+			      (* end case*))
+			  fun remapWorldToRef(E.Fem(femEin, a, b, c, alpha1, alpha2), replaceIdx) =
+			      (case femEin
+				of E.Plain(_, _, NONE) => raise Fail "impossible alreay ref"
+				 | E.Plain(a', b', SOME k) => E.Fem(E.Plain(a', b', NONE), replaceIdx, b, c, alpha1, alpha2)
+				 | E.Invert(_, _, NONE, _) => raise Fail "impossible already ref"
+				 | E.Invert(a', b', SOME f, w) =>
+				   if w
+				   then E.Fem(E.Invert(a', b', NONE, false), replaceIdx, b, c, alpha1, alpha2)
+				   else raise Fail "already takes ref"
+			      (* end case*))
+			    | remapWorldToRef(e, _) = e
+						    
+			  val _ = if switchToWorld
+				  then
+				   print("WARNING:============\nWarning:"^(EinPP.expToString(eIn) ^ " vs " ^ (EinPP.expToString(eOut))^"\n"))
+				  else ()
+			  (*Grab the input code*)
+			  val (eOut', eIn') = if switchToRef
+					      then (EinUtil.mapInNodes(eOut, fn x => remapWorldToRef( x ,(getIdParam eIn))), NONE)
+					      else (eOut, SOME(eIn))
+
+			  val eIn'' = (case eIn'
+					of NONE => NONE
+					 | SOME(E.Identity(_, _, SOME(b, _))) => NONE)
+
+			  val eOut'' = (case eOut'
+					 of E.Identity(_, E.V _, _) => NONE
+					  | _ => SOME(eOut'))
+								       
+			 in
+			  (eOut'', eIn'')
+			 end
+		     fun filterIds(e1::e2::es) =
+			 let
+			  val (e1e, e1b) = e1
+		     	  val (e2e, e2b) = e2
+			  val (e1e', e2e') = doAnalyzeIds(e1e, e2e)
+			 in
+			  (case e1e'
+			    of NONE => filterIds(e2::es)
+			     | SOME(e1e'') => (case e2e'
+						of NONE => (e1e'', e1b)::filterIds(es) (*we made f\circ id to f*)
+						 | SOME(e2e'') => (e1e'', e1b)::filterIds(e2::es)
+					      (* end case *))
+			  (* end case*))
+			 end
+		       | filterIds ([e]) = [e]
+		       | filterIds ([]) = []
+
+		     val didCancel = !cancelRef
+		     val compRet = if didCancel
+				   then
+				    let
+				     val allEs'' = filterIds(allEs')
+				     fun filterFn((E.Identity(_, E.V _, _), _)) = false
+				       | filterFn _ = true
 
 
+				     val allEs''' = List.filter filterFn allEs''
+				     val allEs'''' = if List.length allEs''' = 0 (*first 1 must be an id so use it.*)
+						     then (case List.hd (allEs')
+							    of (E.Identity(a, b, _), bind) => [(E.Identity(a,b, NONE), bind)]
+							     | _ => raise Fail "impossible: all cancled without leading ID"
+							  (* end case*))
+						     else allEs'''
+				    in
+				     
+				     (case allEs''''
+		     		       of [] => raise Fail "impossible: fail comp cancel somehow."
+		     			| [(r,rbind)] => r
+		     			| (r,rbind)::rs => E.Comp(r,rs)
+		     		     (*end case*))
+				    end
+				   else E.Comp(e1''', es''')
+
+		     val compRet = if didCancel
+				   then
+				    Option.getOpt(innerLoop(E.Comp(e1'', es''),
+							    ST.sum{from = firstCounter, to = lastCounter'},
+							    false), compRet)
+				   else compRet
 		     (* val compRet = if !cancelRef orelse !filterId *)
 		     (* 		   then *)
 		     (* 		    Option.getOpt(innerLoop(E.Comp(e1'', es''), ST.sum{from = firstCounter, to = lastCounter'}, false), *)
