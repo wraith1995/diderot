@@ -375,7 +375,7 @@ structure EinUtil : sig
 	   | mapper (e as E.Epsilon _) = e
 	   | mapper (e as E.Eps2 _) = e
 	   | mapper (e as E.Field(i, alpha)) = raise Fail "field arguments impossible post arg substitution" 
-	   | mapper (E.Lift(e)) = mapper e (*Question: can't only tensor exps be in here... probably safe*)
+	   | mapper (E.Lift(e)) = E.Lift(mapper e) (*Question: can't only tensor exps be in here... probably safe*)
 	   | mapper (e as E.Identity _) = e
 	   | mapper (e as E.Conv _) = e
 	   | mapper (e as E.Fem _ ) =  e
@@ -400,7 +400,7 @@ structure EinUtil : sig
 		      | _ => E.Comp(e1, e2s')
 		   (* end case*))
 	     end
-	   | mapper (E.Probe(e1,e2)) = mapper e2
+	   | mapper (E.Probe(e1,e2)) = E.Probe(mapper e1, mapper e2)
 	   | mapper (E.OField _) = raise Fail "impossible: disallow OField"
 	   | mapper (e as E.Value _) = e
 	   | mapper (e as E.Img _) = e
