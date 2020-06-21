@@ -326,7 +326,6 @@ structure Derivative : sig
 	       val eps2 = makeEps (List.@(adjSumMus2, [mu2]))
 	       val adjAccess = List.map probeAtIndex (ListPair.zip(adjSumMus1, adjSumMus2))
 	       val adj = E.Op2(E.Div, E.Sum(adjSumRanges, E.Opn(E.Prod, eps1::eps2::adjAccess)), E.Const(fact (dim - 1)))
-
 	       val inv = doCompose(E.Op2(E.Div, adj, det))
 	      in
 	       (case dx'

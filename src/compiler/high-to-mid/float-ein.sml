@@ -17,6 +17,11 @@ structure FloatEin : sig
     structure Ty = MidTypes
     structure E = Ein
 
+    val debug = true
+    fun printd(x) = if debug
+		    then print(x)
+		    else ()
+
     fun cut (name, origProbe, params, index, sx, argsOrig, avail, newvx) = let
      val _ = print("CUT CALLED" ^ (Int.toString newvx))
         (* clean and rewrite current body *)
@@ -136,6 +141,8 @@ structure FloatEin : sig
             (* end case*))
           val (tshape2, sizes2, body2) = CleanIndex.clean(outerExp2, index, sx) (*just rewrites indecies for the shape - body of comp ignored*)
           val einapp2 = CleanParams.clean (body2, newP2, sizes2, args2) (*simplifies the params*)
+	  val MidIR.EINAPP(einapp2', _) = einapp2
+	  val _ = printd(String.concat ["\ncomp-makes-app:", EinPP.toString einapp2', "\n"])
           val lhs = AvailRHS.addAssign (avail, concat[name, "l"], Ty.tensorTy sizes2, einapp2) (*does the probe*)
           (*replacement*)
           val Re = E.Tensor(id2, tshape2)
@@ -174,6 +181,8 @@ structure FloatEin : sig
                 "Inner", 
                 Ty.tensorTy indexA, 
                 IR.EINAPP(innerExp, args))
+
+	   val _ = printd(String.concat ["\ncomp-makes-app:", EinPP.toString innerExp, "\n"])
             (*other  composition *)
            val (Re, sizes, lhs) = iter(indexA, innerVar, List.tl(es'), avail)
            in
@@ -185,15 +194,25 @@ structure FloatEin : sig
     * cleans the index and params of subexpression
     * creates new param and replacement tensor for the original ein_exp
     *)
-    fun lift (name, e, params, index, sx, args, avail) = let
-          val (tshape, sizes, body) = CleanIndex.clean(e, index, sx)
+    fun lift (name, e : Ein.ein_exp, params : Ein.param_kind list,
+	      index : Ein.index_bind list,
+	      sx, args, avail) = let
+     val _ = printd("entering lift:\n")
+     val _ = printd("finding body:"^(EinPP.expToString(e))^"\n")
+     val _ = printd("finding index:"^(EinPP.indexToString(index))^"\n")
+     val (tshape, sizes, body) = CleanIndex.clean(e, index, sx)
+     val _ = printd("resulting sizes:"^(EinPP.indexToString(sizes))^"\n")
           val id = length params
           val Re = E.Tensor(id, tshape)
           val einapp = CleanParams.clean (body, params, sizes, args)
+	  val MidIR.EINAPP(einapp', _) = einapp
+	  val _ = printd("einapp ret:"^(EinPP.toString einapp')^"\n")
           val lhs = AvailRHS.addAssign (
                 avail,
                 concat[name, "_l_", Int.toString id], Ty.tensorTy sizes,
-                CleanParams.clean (body, params, sizes, args))
+                einapp)
+	  val _ = printd("einapp var:"^(V.name lhs)^"\n")
+	  val _ = printd("exiting lift\n")
           in
             (Re, params @ [E.TEN(true, sizes)], args @ [lhs])
           end

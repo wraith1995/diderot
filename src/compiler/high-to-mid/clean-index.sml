@@ -54,7 +54,15 @@ structure CleanIndex : sig
 
     val clean : Ein.ein_exp * int list * Ein.sumrange list -> Ein.mu list * int list * Ein.ein_exp
 
-  end = struct
+	  end = struct
+
+val debug = true
+fun printd(x) = if debug
+		then print(x)
+		else ()
+
+fun intlist sx = "[" ^(String.concatWith "," (List.map Int.toString sx)) ^ "]"
+
 
     structure E = Ein
     structure ISet = IntRedBlackSet
@@ -195,7 +203,9 @@ structure CleanIndex : sig
                   | add (_::r, i, s) = add (r, i+1, ISet.add(s, i))
                 in
                   add (index, 0, ISet.empty)
-                end
+          end
+	  val outerAlphaList = ISet.listItems outerAlpha
+	  val _ = printd("\nOuterAlphaList:"^(intlist outerAlphaList)^"\n")
         (* getT: filters eShape to create tShape
         * getT(eshape, accumulator)
         * for every i in eshape if it is in outerAlpha then i::tshape
@@ -205,9 +215,12 @@ structure CleanIndex : sig
             | getT ((e as E.V v)::rest, es) =
                 if ISet.member(outerAlpha, v)
                   then getT (rest, e::es)
-                  else getT (rest, es)
+                else getT (rest, es)
+	  val eshape = eShape e
+	  val _ = printd("\neshape:"^(EinPP.multiIndex2sList eshape)^"\n")
+	  val retSet = getT (eshape, [])
           in
-            getT (eShape e, [])
+	   retSet
           end
 
   (* sizeMapp: creates a map for index_id to dimension*)
@@ -313,18 +326,18 @@ structure CleanIndex : sig
           * ashape ISet.set  : all the indices mentioned in body
           * tshape (mu list) : shape of tensor replacement
           *)
-(* DEBUG val _ = print (String.concat["\n\n clean: ",EinPP.expToString(e)])*)
+     val _ = printd (String.concat["\n\n clean: ",EinPP.expToString(e)])
            val ashape = aShape e
-           (*val _ = print(shapeToString ("ashape",ashape))*)
+
            val tshape = tShape(index, sx, e)
-(* DEBUG val _ = print(shapeToString (" tshape",  tshape))*)
+	   val _ = printd((shapeToString (" tshape:[",  tshape))^"]")
          (* Create sizeMapp: index_id to dimension index_id is bound to*)
            val sizeMapp = mkSizeMapp (index, sx)
          (* Find size of e by looking up tshape in the sizeMapp.
           * sizes (int list) : TensorType of tensor replacement
           *)
            val sizes = List.map (fn E.V e1 => lookupId (e1, sizeMapp))  tshape
-(* DEBUG val _ =   print(nToString("sizes ",sizes ))*)
+	   val _ =   printd((nToString("sizes [",sizes ))^"]")
          (* Create indexMapp: Mapps the index variables e  => e'*)
            val indexMapp = mkIndexMapp (index, sx, ashape, tshape)
          (* Rewrite subexpression: e  =>e' *)
@@ -333,5 +346,4 @@ structure CleanIndex : sig
            in
              (tshape, sizes, e')
            end
-
   end (* CleanIndex *)

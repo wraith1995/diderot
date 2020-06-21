@@ -465,8 +465,16 @@ structure ProbeEin : sig
 	end
 
     (* fun resolveFunctionCallFromStamp() *)
-    fun replaceFemProbe ( avail, env, (y, IR.EINAPP(Ein.EIN{params, index, body}, args)), probe, sx) =
+    fun replaceFemProbe ( avail, env, (y, IR.EINAPP(lam as Ein.EIN{params, index, body}, args)), probe, sx) =
 	let
+	 val debug = true
+	 fun printd(x) = if debug
+			 then print(x)
+			 else ()
+
+	 val _ = printd("enterFemProbeInfo:\n")
+	 val _ = print("ein:" ^(EinPP.toString lam) ^ "\n")
+	 val _ = printd("exitFemProbeInfo\n")
 	 val E.Probe(E.Fem(femEin, indexVarId, indexSrcId, dofSrcId, alpha, dx), E.Tensor(tid, _)) = probe
 	 val prePosVar = List.nth(args, tid)
 	 val indexInt = List.nth(params, indexVarId)

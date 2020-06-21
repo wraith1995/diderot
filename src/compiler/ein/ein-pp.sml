@@ -14,12 +14,17 @@ structure EinPP : sig
 
     val expToString : Ein.ein_exp -> string
 
+    val indexToString : Ein.index_bind list -> string
+
+    val multiIndex2sList : Ein.alpha -> string
+
   end = struct
 
     structure E = Ein
 
     val i2s = Int.toString
     val shp2s = String.concatWithMap " " i2s
+    val indexToString = fn x => "[" ^ (shp2s x) ^ "]"
 
     fun ti2s (id, E.T) = "t_"^Int.toString id
       | ti2s (id, E.F) = "f_"^Int.toString id
@@ -29,6 +34,10 @@ structure EinPP : sig
 
     fun multiIndex2s [] = ""
       | multiIndex2s alpha = concat ["_{", String.concatWithMap "," index2s alpha, "}"]
+
+
+    fun multiIndex2sList [] = ""
+      | multiIndex2sList alpha = concat ["[", String.concatWithMap "," index2s alpha, "]"]				    
 
     fun delta (a, b) = concat["δ_{", index2s a, ",", index2s b,"}"]
     fun deltaKrn (a, b) = concat["δ_{", index2s a, ",", index2s b,"}"]
@@ -43,7 +52,7 @@ structure EinPP : sig
             | E.Tensor(id, alpha) => concat["T", i2s id, multiIndex2s alpha]
             | E.Zero(alpha) => concat["Z", multiIndex2s alpha]
             | E.Delta ix => delta ix
-            | E.Epsilon(ix, jx, kx) => concat["ϵ_{i", index2s ix, ",i", index2s jx, ",i", index2s kx, "}"]
+            | E.Epsilon(ix, jx, kx) => concat["ϵ_{i=", index2s ix, ",i=", index2s jx, ",i=", index2s kx, "}"]
             | E.Eps2(ix, jx) => concat["ϵ_{i", index2s ix, ",i", index2s jx, "}"]
             | E.Field(id, []) => "F" ^ i2s id
             | E.Field(id, alpha) => concat["F", i2s id, multiIndex2s alpha]

@@ -42,7 +42,10 @@ structure NormalizeEin : sig
     val lastCounter             = cntInnerLoop
     val cntRounds               = ST.newCounter "high-opt:normalize-round"
 
-
+    val debug = true
+    fun printd x = if debug
+		   then print(x)
+		   else ()
 
     fun err str = raise Fail(String.concat["Ill-formed EIN Operator",str])
 
@@ -50,6 +53,8 @@ structure NormalizeEin : sig
 
     fun mkProd exps = E.Opn(E.Prod, exps)
     fun mkDiv (e1, e2) = E.Op2(E.Div, e1, e2)
+
+    fun checkForFields e = EinUtil.detectInNodes(e, fn x => true)
 
   (* build a normalized summation *)
     fun mkSum ([], b) = (ST.tick cntNullSum; b)
@@ -104,10 +109,13 @@ structure NormalizeEin : sig
             (* end case *)
           end
 
+
     (* rewrite expression with composition operation *)
     fun mkComp(F, es, x) = let
         fun return e = (ST.tick cntProbe; e)
-        fun setInnerProbe e = E.Probe(E.Comp(e, es), x)
+        fun setInnerProbe e = if checkForFields e
+			      then E.Probe(E.Comp(e, es), x)
+			      else e
         val probe = setInnerProbe F
         in (case F
             of E.Tensor _        => err "Tensor without Lift"
@@ -151,7 +159,8 @@ structure NormalizeEin : sig
 
   (* rewrite body of EIN *)
     fun transform vars (ein as Ein.EIN{params, index, body}) = let
-     (* val _ = print(String.concat["\ntransform: ", EinPP.expToString(body)]) *)
+     val _ = printd(String.concat(["\nein-enter:", EinPP.toString ein, "\n"]))
+     (* val _ = printd(String.concat["\ntransform: ", EinPP.expToString(body)]) *)
      val compDepth = ref 0
           fun filterProd args = (case EinFilter.mkProd args
                  of SOME e => (ST.tick cntFilter; e)
@@ -164,12 +173,12 @@ structure NormalizeEin : sig
           val sumX = ref (length index)
 	  val debug = true
           fun incSum() = (sumX:= (!sumX+2) handle ex => raise ex; if debug
-								  then print("new sumX:"^(Int.toString (!sumX))^"\n")
+								  then printd("new sumX:"^(Int.toString (!sumX))^"\n")
 								  else ())
          fun addSum((v, _, _)::sx) =
-             ((sumX:= (!sumX)+v handle ex => (print("adding sum:"^(Int.toString v)^" to " ^ (Int.toString (!sumX))^"\n"); raise ex));
+             ((sumX:= (!sumX)+v handle ex => (printd("adding sum:"^(Int.toString v)^" to " ^ (Int.toString (!sumX))^"\n"); raise ex));
 	      if debug
-	      then print("raised sumX by "^ (Int.toString v)^" to "^(Int.toString (!sumX))^"\n")
+	      then printd("raised sumX by "^ (Int.toString v)^" to "^(Int.toString (!sumX))^"\n")
 	      else ()
 	     )
           fun rewrite body = (case body
@@ -211,11 +220,12 @@ structure NormalizeEin : sig
                   | E.Comp(E.Comp(a, es1), es2) => (ST.tick cntProbe; rewrite (E.Comp(a, es1@es2)))
                   | E.Comp(a, (E.Comp(b, es1), m)::es2) =>  (ST.tick cntProbe; rewrite (E.Comp(a, ((b, m)::es1)@es2)))
                   | E.Comp(e1, es)  =>
-                    let
+		    let
+		     val _ = compDepth := (!compDepth) + 1 handle ex => raise ex
+		     val _ = printd(" Start comp " ^ (Int.toString(!compDepth)) ^ ":"^(EinPP.expToString(E.Comp(e1,es)))^"\n")
 
-		     (* val _ = print(" Start comp " ^ (Int.toString(!compDepth)) ^ ":"^(EinPP.expToString(E.Comp(e1,es)))^"\n") *)
-		     (* val _ = compDepth := (!compDepth) + 1 handle ex => raise ex *)
-		    (* Rewrite e1 and es fully:*)
+
+		     (* Rewrite e1 and es fully:*)
 		     val needRewrite = ref false
 		     fun getOpt(a,b) = (case a
 					 of SOME(a') => (needRewrite := true; a')
@@ -232,9 +242,18 @@ structure NormalizeEin : sig
 							| NONE => E.Comp(e1'', es'')
 						     (* end case*))
 						else E.Comp(e1'', es'')
+
+		    in
+		     if Bool.not (checkForFields e1''')
+		     then ((compDepth := (!compDepth) - 1 ); ST.tick cntProbe; e1''')
+		     else
+                    let
+
 		     (*Some helpers:*)
 		     fun vTy x = IR.Var.ty (List.nth(vars, x))
 		     fun vS(x,y) = x=y orelse IR.Var.same(List.nth(vars, x), List.nth(vars, y))
+
+		     val _ = printd(" entering cancel comp comp " ^ (Int.toString(!compDepth)) ^ ":"^(EinPP.expToString(E.Comp(e1''', es''')))^"\n")
 
 
 		     (*We now setup the cancellation: this function will, based on eIN, 
@@ -253,14 +272,14 @@ structure NormalizeEin : sig
 		     	  fun failRet e = (fail := true; E.Comp(e, [(eIn, eInBind)]))
 		     	  fun findInvert(mesh, index, indexSource, dofSource) e = (*T^-1 \circ T_i*)
 		     	      (case e
-		     		of (E.Fem(E.Invert(_, _, NONE, w), index', indexSource', dofSource', [acc], [])) (*trf case - w is false*)
+		     		of (E.Fem(E.Invert(_, _, NONE, w), index', indexSource', dofSource', [acc as E.V _], [])) (*trf case - w is false*)
 		     		   => if vS(index, index') andalso vS(indexSource', indexSource)
 		     			 andalso vS(dofSource, dofSource') andalso (if w
 										    then raise Fail "impossible"
 										    else true)
 		     		      then sucRet(E.Identity(FemData.meshDim mesh, acc, SOME(false, index)))
 		     		      else failRet e
-		     		 | (E.Fem(E.Invert(_, _, SOME _, w), index', indexSource', dofSource', [acc], [])) => (*Tinv or tF*)
+		     		 | (E.Fem(E.Invert(_, _, SOME _, w), index', indexSource', dofSource', [acc as E.V _], [])) => (*Tinv or tF*)
 		     		   if vS(indexSource', indexSource) andalso vS(dofSource, dofSource')
 				      andalso (case (vTy index')
 						of HighTypes.FemData(FemData.Mesh _) => true
@@ -281,7 +300,7 @@ structure NormalizeEin : sig
 		     	      (* end case*))
 		     	  fun findPlain(mesh, index, indexSource, dofSource) e = (*T_i \circ T^-1*)
 		     	      (case e
-		     		of E.Fem(E.Plain(_, _, NONE), index', indexSource', dofSource', [acc], []) (*T_i - the only case*)
+		     		of E.Fem(E.Plain(_, _, NONE), index', indexSource', dofSource', [acc as E.V _], []) (*T_i - the only case*)
 		     		   => if vS(index, index') andalso vS(indexSource', indexSource)
 					 (*index test exludes Global inverse, which is impossible anyway as that only lives in F*)
 		     			 andalso vS(dofSource, dofSource')
@@ -327,7 +346,19 @@ structure NormalizeEin : sig
 		       | doCompLefts ([e]) = [e]
 		       | doCompLefts ([]) = []
 		     val allEs = (e1''', []) :: es'''
+		     val _ = if debug
+			     then
+			      (printd("Debug pre cancel:");
+			       List.app (fn (x, _) => printd(" o " ^ (EinPP.expToString x) ^ " o ")) allEs;
+			       printd("\n"))
+			     else ()
 		     val allEs' = doCompLefts(allEs)
+		     val _ = if debug
+			     then
+			      (printd("Debug Comp post cancel:");
+			      List.app (fn (x, _) => printd(" o " ^ (EinPP.expToString x) ^ " o ")) allEs';
+			      printd("\n"))
+			     else ()
 		     (*Now we look at the remaining outs and see if any ins are ids
 		     Some cancellations still expect a world space on the other side (any plain with an f in front of it - 
 		     we must correct that.)	
@@ -413,7 +444,10 @@ structure NormalizeEin : sig
 						    
 			  val _ = if switchToWorld
 				  then
-				   print("WARNING:============\nWarning:"^(EinPP.expToString(eIn) ^ " vs " ^ (EinPP.expToString(eOut))^"\n"))
+				   printd("WARNING:============\nWarning:"^(EinPP.expToString(eIn) ^ " vs " ^ (EinPP.expToString(eOut))^"\n"))
+				  else ()
+			  val _ = if switchToRef
+				  then printd("Doing Ref to world Switch")
 				  else ()
 			  (*Grab the input code*)
 			  val (eOut', eIn') = if switchToRef
@@ -449,21 +483,27 @@ structure NormalizeEin : sig
 		       | filterIds ([]) = []
 
 		     val didCancel = !cancelRef
-		     val compRet = if didCancel
+
+
+				       
+		     val compRet' = if didCancel (*Flaw: Identity needs to be replaced properly filter does not work... need check and find*)
 				   then
 				    let
+				     val _ = printd("Attempting to remove IDS\n");
 				     val allEs'' = filterIds(allEs')
 				     fun filterFn((E.Identity(_, E.V _, _), _)) = false
 				       | filterFn _ = true
 
 
 				     val allEs''' = List.filter filterFn allEs''
+				     val _ = printd("Reduced compositions down to :"^(Int.toString(List.length allEs'''))^"\n")
 				     val allEs'''' = if List.length allEs''' = 0 (*first 1 must be an id so use it.*)
 						     then (case List.hd (allEs')
 							    of (E.Identity(a, b, _), bind) => [(E.Identity(a,b, NONE), bind)]
 							     | _ => raise Fail "impossible: all cancled without leading ID"
 							  (* end case*))
 						     else allEs'''
+				     val _ = printd("Reduced compositions down to :"^(Int.toString(List.length allEs''''))^"\n")
 				    in
 				     
 				     (case allEs''''
@@ -472,24 +512,28 @@ structure NormalizeEin : sig
 		     			| (r,rbind)::rs => E.Comp(r,rs)
 		     		     (*end case*))
 				    end
-				   else E.Comp(e1''', es''')
+				    else E.Comp(e1''', es''')
 
-		     val compRet = if didCancel
-				   then
-				    Option.getOpt(innerLoop(E.Comp(e1'', es''),
-							    ST.sum{from = firstCounter, to = lastCounter'},
-							    false), compRet)
-				   else compRet
+		     val _ = printd("ID removal comp " ^ (Int.toString(!compDepth)) ^ ":" ^ (EinPP.expToString(compRet'))^"\n")					       
+
+		     val compRet'' = EinUtil.cleanIds compRet'
+
+		     (* val compRet = if didCancel *)
+		     (* 		   then *)
+		     (* 		    Option.getOpt(innerLoop(E.Comp(e1''', es'''), *)
+		     (* 					    ST.sum{from = firstCounter, to = lastCounter'}, *)
+		     (* 					    false), compRet) *)
+		     (* 		   else compRet *)
 		     (* val compRet = if !cancelRef orelse !filterId *)
 		     (* 		   then *)
 		     (* 		    Option.getOpt(innerLoop(E.Comp(e1'', es''), ST.sum{from = firstCounter, to = lastCounter'}, false), *)
 		     (* 				  compRet) *)
 				     (* 		   else compRet *)
-		     (* val _ = compDepth := (!compDepth) - 1 *)
-		     (* val _ = print("End comp " ^ (Int.toString(!compDepth)) ^ ":" ^ (EinPP.expToString(compRet))^"\n") *)
-
-
-                    in  compRet end
+		     
+		     val _ = printd("End comp " ^ (Int.toString(!compDepth)) ^ ":" ^ (EinPP.expToString(compRet''))^"\n")
+		     val _ = compDepth := (!compDepth) - 1
+                    in  compRet'' end
+		    end
                   | E.Probe(E.Comp(e1, es), x)  =>
                     let
                     val e1' = rewrite e1
@@ -501,11 +545,11 @@ structure NormalizeEin : sig
                     end
 		  | E.Probe(E.Identity(dim, mu1, _), e as E.Tensor(tid, [])) => (*Id(e2) -> Id * e2 \sum_i=(0,dim-1) delta_ij e_2_i...*)
 		    let
-		     (* val _ = print("inner:" ^ (EinPP.expToString e) ^ "\n") *)
+		     (* val _ = printd("inner:" ^ (EinPP.expToString e) ^ "\n") *)
 		     val newSumRange = !sumX + 1 handle ex => raise ex
 		     val _ = incSum()
 		     val ret = mkSum([(newSumRange, 0, dim - 1)], E.Opn(E.Prod, [E.Delta(mu1, E.V newSumRange), E.Tensor(tid, [E.V newSumRange])]))
-		     (* val new = print("inner':" ^ (EinPP.expToString ret)) *)
+		     (* val new = printd("inner':" ^ (EinPP.expToString ret)) *)
 		    in
 		     (ST.tick cntIdentityProbe; ret)
 		    end
@@ -668,10 +712,11 @@ structure NormalizeEin : sig
 (* (*DEBUG*)val start = ST.count cntRounds *)
           fun loop (body, total, changed) = let
 	   val _ = ST.report()
+	   val _ =printd(String.concat["\n\n ==> X:", EinPP.expToString(body), "\n"])
                 val body' = rewrite body
-		val _ =print(String.concat["\n\n ==> X:", EinPP.expToString(body),"\n ==> Y:", EinPP.expToString(body'), "\n"])
+		val _ =printd(String.concat["\n\n ==> X:", EinPP.expToString(body),"\n ==> Y:", EinPP.expToString(body'), "\n"])
                 val totalTicks = ST.sum{from = firstCounter, to = lastCounter}
-		val _ = print("Total Ticks:"^(Int.toString totalTicks) ^"\n")
+		val _ = printd("Total Ticks:"^(Int.toString totalTicks) ^"\n")
                 in
                   ST.tick cntRounds;
 		  (* (*DEBUG*)if (ST.count cntRounds - start > 50) then raise Fail "too many steps" else (); *)
@@ -682,7 +727,7 @@ structure NormalizeEin : sig
                     else NONE
           end
 	  val einRet = loop(body, ST.sum{from = firstCounter, to = lastCounter}, false) handle ex => raise ex
-	  (* val _ = Option.app (fn x => print(String.concat(["ret:", EinPP.toString x, "\n"]))) einRet *)
+	  (* val _ = Option.app (fn x => printd(String.concat(["ret:", EinPP.toString x, "\n"]))) einRet *)
           in
             einRet
           end

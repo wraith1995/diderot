@@ -21,6 +21,8 @@ structure EinUtil : sig
     (*Used to replace on the inputs to an ein_exp with another; used to do cancellations in Comp*)
     val mapInNodes : Ein.ein_exp * (Ein.ein_exp -> Ein.ein_exp) -> Ein.ein_exp
     val analyzeInNodes : Ein.ein_exp * (Ein.ein_exp -> 'a option) * ('a * 'a -> 'a) -> 'a option
+    val detectInNodes : Ein.ein_exp * (Ein.ein_exp -> bool) -> bool
+    val cleanIds : Ein.ein_exp -> Ein.ein_exp
   end = struct
 
     structure E = Ein
@@ -328,5 +330,89 @@ structure EinUtil : sig
 				       
 	in
 	 mapper exp
+	end
+
+    fun detectInNodes(e, f) =
+	let
+	 fun mapper (e as E.Const _) = false
+	   | mapper (e as E.ConstR _ ) = false
+	   | mapper (e as E.Tensor _) = false
+	   | mapper (e as E.Zero _) = false
+	   | mapper (e as E.Delta _) = false
+	   | mapper (e as E.Epsilon _) = false
+	   | mapper (e as E.Eps2 _) = false
+	   | mapper (e as E.Field(i, alpha)) = raise Fail "field arguments impossible post arg substitution" 
+	   | mapper (E.Lift(e)) = mapper e (*Question: can't only tensor exps be in here... probably safe*)
+	   | mapper (e as E.Identity _) = f e
+	   | mapper (e as E.Conv _) = f e
+	   | mapper (e as E.Fem _ ) = f e
+	   | mapper (e as E.Partial _) = raise Fail "can't map through Partials"
+	   | mapper (e as E.Apply _) = raise Fail "can't mapp through apply partials"
+	   | mapper (E.Comp(e1, e2s)) = let val (last, binds):: rest = List.rev e2s
+					in mapper last end
+	   | mapper (E.Probe(e1,e2)) = mapper e2
+	   | mapper (E.OField _) = raise Fail "impossible: disallow OField"
+	   | mapper (e as E.Value _) = false
+	   | mapper (e as E.Img _) = false
+	   | mapper (e as E.Krn _) = false
+	   | mapper (e as E.Poly _) = raise Fail "impossible: disallow Poly"
+	   | mapper (E.If(c, e1, e2)) = mapper e1 orelse mapper e2
+	   | mapper (E.Sum(sx, e')) =  mapper e'
+	   | mapper (E.Op1(u, e')) =  mapper e'
+	   | mapper (E.Op2(u, e1, e2)) = mapper e1 orelse mapper e2
+	   | mapper (E.Op3(u, e1, e2, e3)) = mapper e1 orelse mapper e2 orelse mapper e3
+	   | mapper (E.Opn(u, es)) = List.foldr (fn (x,y) => mapper x orelse y) false es
+	in
+	 mapper e
+	end
+    fun cleanIds(e) =
+	let
+	 fun mapper (e as E.Const _) = e
+	   | mapper (e as E.ConstR _ ) = e
+	   | mapper (e as E.Tensor _) = e
+	   | mapper (e as E.Zero _) = e
+	   | mapper (e as E.Delta _) = e
+	   | mapper (e as E.Epsilon _) = e
+	   | mapper (e as E.Eps2 _) = e
+	   | mapper (e as E.Field(i, alpha)) = raise Fail "field arguments impossible post arg substitution" 
+	   | mapper (E.Lift(e)) = mapper e (*Question: can't only tensor exps be in here... probably safe*)
+	   | mapper (e as E.Identity _) = e
+	   | mapper (e as E.Conv _) = e
+	   | mapper (e as E.Fem _ ) =  e
+	   | mapper (e as E.Partial _) = raise Fail "can't map through Partials"
+	   | mapper (e as E.Apply _) = raise Fail "can't mapp through apply partials"
+	   | mapper (E.Comp(e1, e2s)) =
+	     let
+	      fun filterFn((E.Identity(_, E.V _, _), _)) = false
+		| filterFn _ = true
+
+	      val e2s' = List.filter filterFn (List.map (fn (x, y) => (mapper x, y)) e2s)
+
+	     in
+	      if (Bool.not o filterFn) (e1, [])
+	      then (case e2s'
+		     of [] => e1
+		      | (e,_)::[] => e
+		      | (e,_)::es => E.Comp(e, es)
+		   (* end case*))
+	      else (case e2s'
+		     of [] => e1
+		      | _ => E.Comp(e1, e2s')
+		   (* end case*))
+	     end
+	   | mapper (E.Probe(e1,e2)) = mapper e2
+	   | mapper (E.OField _) = raise Fail "impossible: disallow OField"
+	   | mapper (e as E.Value _) = e
+	   | mapper (e as E.Img _) = e
+	   | mapper (e as E.Krn _) = e
+	   | mapper (e as E.Poly _) = raise Fail "impossible: disallow Poly"
+	   | mapper (E.If(c, e1, e2)) = (E.If(c, mapper e1, mapper e2))
+	   | mapper (E.Sum(sx, e')) =  E.Sum(sx, mapper e')
+	   | mapper (E.Op1(u, e')) =  E.Op1(u, mapper e')
+	   | mapper (E.Op2(u, e1, e2)) = (E.Op2(u, mapper e1, mapper e2))
+	   | mapper (E.Op3(u, e1, e2, e3)) =(E.Op3(u, mapper e1, mapper e2, mapper e3))
+	   | mapper (E.Opn(u, es)) = (E.Opn(u, List.map mapper es))
+	in
+	 mapper e
 	end
   end
