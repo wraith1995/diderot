@@ -43,7 +43,7 @@ structure Stats :> sig
     val nextCounter = ref 0
     val reportStats = ref false
 
-    type counter = int
+    type counter = int64
 
     fun newCounter name = let
           val n = !nextCounter

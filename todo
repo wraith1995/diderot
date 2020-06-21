@@ -63,6 +63,7 @@ Accomodate field language
 --make inside use correct diagnostic (valid, meshpos, etc)
 --Order inside with above
 --border control (error)
+--inside -- composition
 ===========================
 Affine, interval, bspline (see below)
 ========================

@@ -44,7 +44,7 @@ MKFRAGS =	$(SRCDIR)/compiler/gen/fragments/mkfrags.sh
 #
 INSTALL_SMLNJ_WRAPPER = @INSTALL_SMLNJ_WRAPPER@
 ML_BUILD =		@ML_BUILD@
-ML_BUILD_FLAGS =	-Ctdp.instrument=true \$$smlnj-tdp/back-trace.cm
+ML_BUILD_FLAGS =	-64 -Ctdp.instrument=true -CSMLofNJ.Internals.TDP.mode=true
 ML_MAKEDEPEND =		@ML_MAKEDEPEND@
 ML_MAKEDEPEND_FLAGS =
 

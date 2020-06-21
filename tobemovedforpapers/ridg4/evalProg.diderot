@@ -111,7 +111,7 @@ input vec3[] ipos ("Initial point positions");
 input int fDim = 2;
 
 function bool insideTest(position{mesh_t} pos){
-  return(pos.isValid());// && |pos.worldPos()| <= 4.0 && 3.0 <=  |pos.worldPos()|);
+  return(pos.isValid());// && 3.2 <=  |pos.worldPos()|;
 }
 
 

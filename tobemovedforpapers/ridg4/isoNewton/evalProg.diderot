@@ -45,7 +45,7 @@ function real erm(position{mesh_t} pos){
     return 0.0;
   }
   else if(Herm[0,0,0] > 1){print("poop");}
-  else{print("yay");}
+  else{print("yay\n");}
   return 1.0;
     
 
@@ -89,8 +89,6 @@ strand normal(position{mesh_t}  pos0, tensor[dim] xp){
   output vec3 step = nan[3];
   output real mv = nan;
   update {
-    real a = erm(pos0);
-    print(a);
     if(pos0.isValid){
       normal = findNormal(pos0);
       stren = fStrength(pos0);

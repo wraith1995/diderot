@@ -44,7 +44,7 @@ MKFRAGS =	$(SRCDIR)/compiler/gen/fragments/mkfrags.sh
 #
 INSTALL_SMLNJ_WRAPPER = /home/teocollin/gitcode/diderot/bin/install-sml-wrapper.sh
 ML_BUILD =		/home/teocollin/installs/smlnj/bin/ml-build
-ML_BUILD_FLAGS =	-Ctdp.instrument=true \$$smlnj-tdp/back-trace.cm
+ML_BUILD_FLAGS =	-64 -Ctdp.instrument=true -CSMLofNJ.Internals.TDP.mode=true
 ML_MAKEDEPEND =		/home/teocollin/installs/smlnj/bin/ml-makedepend
 ML_MAKEDEPEND_FLAGS =
 

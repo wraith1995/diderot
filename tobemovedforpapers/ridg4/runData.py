@@ -26,14 +26,22 @@ linMesh = meshDatas[-1]
 curvedMesh = meshDatas[0]
 mesh = curvedMesh
 
-fStrTh = 24.0
+fStrTh = 26.0
 fBias = 0.1
 tipd = 0.5
-fsEps = 0.1
+fsEps = 0.01
 geoEps = 0.1
-mvmtEps = 0.1
+mvmtEps = 0.01
 rpcEps = 0.01
 pcmvEps = 0.3
+# fStrTh = 26.0
+# fBias = 0.1
+# tipd = 0.5
+# fsEps = 0.01
+# geoEps = 0.1
+# mvmtEps = 0.01
+# rpcEps = 0.01
+# pcmvEps = 0.3
 
 verb = 0
 sfs = 0.5
@@ -53,6 +61,7 @@ f = Function(space)
 x,y,z = SpatialCoordinate(mesh)
 #f = interpolate(y*y*x + z*z, space)
 f = interpolate(z*z*(sin(x*x + y*y + z*z)), space)
+#f = interpolate(z*(sin(x*x + y*y + z*z)), space)
 #getNormals(f, "pos_0.nrrd")
 #render("pos", "normedp", dim=3, normalsFile="normals", scalarsFile="stren")
 #exit(0)
@@ -82,7 +91,7 @@ else:
 
 
 pointsNrrd = "points.nrrd"
-# numPoints = 30000
+# numPoints = 20000
 # newXc = np.random.uniform(low=-4.0, high=4, size=numPoints)
 # newYc = np.random.uniform(low=-4.0, high=4, size=numPoints)
 # newZc = np.random.uniform(low=-4.0, high=4, size=numPoints)
