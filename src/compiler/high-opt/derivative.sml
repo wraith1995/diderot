@@ -14,7 +14,9 @@ structure Derivative : sig
 
   end  = struct
 
-    structure E = Ein
+structure E = Ein
+
+val debug = true
 
     fun err str=raise Fail (String.concat["Ill-formed EIN Operator: ", str])
 
@@ -322,6 +324,10 @@ structure Derivative : sig
 	       val adjSumRanges = List.map (fn x => (x, 0, dim - 1)) (List.@(adjSumItter1, adjSumItter2))
 	       val finalSumX = sumStartAdj + 2 * (dim - 1) (*TODO: fix me*)
 	       val _ = sumX := finalSumX
+	       val _ = if debug
+		       then print("sumX:"^(Int.toString (!sumX))^"\n")
+		       else ()
+
 	       val eps1 = makeEps (List.@(adjSumMus1, [mu1]))
 	       val eps2 = makeEps (List.@(adjSumMus2, [mu2]))
 	       val adjAccess = List.map probeAtIndex (ListPair.zip(adjSumMus1, adjSumMus2))
@@ -351,6 +357,10 @@ structure Derivative : sig
 	       val (d0::dn) = dx
                val vk = 1+(!sumX )
 	       val _ = sumX := 1 + !sumX
+	       val _ = if debug
+		       then print("sumX:"^(Int.toString (!sumX))^"\n")
+		       else ()
+
                val e3 = E.Comp(E.Apply(E.Partial[E.V vk], e1), [(e2, n)])
                val e4 = E.Apply(E.Partial[d0], rewriteIx(vk, e2)) 
                val SOME(dim) = findDim(e1, params)

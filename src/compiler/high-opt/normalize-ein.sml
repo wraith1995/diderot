@@ -171,12 +171,15 @@ structure NormalizeEin : sig
                   | NONE => mkProd args
                 (* end case *))
           val sumX = ref (length index)
+	  val indexInBody = EinUtil.collectIndicies body
+	  val maxIndex = List.foldr (Int.max) (!sumX) indexInBody  (*THIS:ensures that we never duplicate any pre-exisitng indexes*)
+	  val _ = sumX := maxIndex (*by incrementing incSum correctly everywhere, we will ensure whenever we create a new index, it has not been used already*)
 	  val debug = true
           fun incSum() = (sumX:= (!sumX+2) handle ex => raise ex; if debug
 								  then printd("new sumX:"^(Int.toString (!sumX))^"\n")
 								  else ())
          fun addSum((v, _, _)::sx) =
-             ((sumX:= (!sumX)+v handle ex => (printd("adding sum:"^(Int.toString v)^" to " ^ (Int.toString (!sumX))^"\n"); raise ex));
+             ((sumX:= (!sumX)+(List.length sx)+1 handle ex => (printd("adding sum:"^(Int.toString v)^" to " ^ (Int.toString (!sumX))^"\n"); raise ex));
 	      if debug
 	      then printd("raised sumX by "^ (Int.toString v)^" to "^(Int.toString (!sumX))^"\n")
 	      else ()

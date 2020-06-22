@@ -23,6 +23,8 @@ structure EinUtil : sig
     val analyzeInNodes : Ein.ein_exp * (Ein.ein_exp -> 'a option) * ('a * 'a -> 'a) -> 'a option
     val detectInNodes : Ein.ein_exp * (Ein.ein_exp -> bool) -> bool
     val cleanIds : Ein.ein_exp -> Ein.ein_exp
+
+    val collectIndicies : Ein.ein_exp -> int list
   end = struct
 
     structure E = Ein
@@ -414,5 +416,57 @@ structure EinUtil : sig
 	   | mapper (E.Opn(u, es)) = (E.Opn(u, List.map mapper es))
 	in
 	 mapper e
+	end
+
+    structure ISet = IntRedBlackSet
+    fun collectIndicies(e) =
+	let
+	 val start = ISet.empty
+	 fun addIdx (E.V e, set) = ISet.add(set, e)
+	   | addIdx (E.C _, set) = set
+	 fun addAlpha(set, alpha) = List.foldl addIdx set alpha
+	 fun mapper (E.Const _, set) = set
+	   | mapper (E.ConstR _, set) = set
+	   | mapper (E.Tensor(_, alpha), set) = addAlpha(set, alpha)
+	   | mapper (E.Zero(alpha), set) = addAlpha(set, alpha)
+	   | mapper (E.Delta(a,b), set) = addAlpha(set, [a, b])
+	   | mapper (E.Epsilon(a,b,c), set) = addAlpha(set, [a, b, c])
+	   | mapper (E.Eps2(a,b), set) = addAlpha(set, [a, b])
+	   | mapper (E.Field(_, alpha), set) = addAlpha(set, alpha)
+	   | mapper (E.Lift e, set) = mapper(e, set)
+	   | mapper (E.Identity(_, a, _), set) = addAlpha(set, [a])
+	   | mapper (E.Conv(_, alpha, _, dx), set) = addAlpha(set, List.@(alpha, dx))
+	   | mapper (E.Fem(_, _, _, _, alpha, dx), set) = addAlpha(set, List.@(alpha, dx))
+	   | mapper (E.Partial(alpha), set) = addAlpha(set, alpha)
+	   | mapper (E.Apply(e1, e2), set) = mapper(e2,  mapper(e1, set))
+	   | mapper (E.Comp(e, es), set) =
+	     let
+	      val set1 = mapper(e, set)
+	      val (es', bindsIGUess) = ListPair.unzip es (*CHECK ME: go over the use of this bind in compfloat*)
+	      val set' = List.foldr (mapper) set1 es'
+	     in
+	      set'
+	     end
+	   | mapper (E.Probe(e1, e2), set) = mapper(e2, mapper(e1, set))
+	   | mapper (E.OField _, set) = raise Fail "OField disallowed"
+	   | mapper (E.Value _, set) = set
+	   | mapper (E.Img(_, alpha, _, _), set) = raise Fail "unexpected Mid-IL term"
+	   | mapper (E.Krn _, set) = raise Fail "unexpected Mid-IL term"
+	   | mapper (E.Poly _, set) = raise Fail "Poly disallowed"
+	   | mapper (E.If(_, e1, e2), set) = List.foldr mapper set [e1, e2]
+	   | mapper (E.Sum(sx, e), set) =
+	     let
+	      val sx' = List.map (fn (x, _, _) => x ) sx
+	      val set' = ISet.addList(set, sx')
+	     in
+	      mapper(e, set)
+	     end
+	   | mapper (E.Op1(_, e), set) = mapper(e, set)
+	   | mapper (E.Op2(_, e1, e2), set) = List.foldr mapper set [e1, e2]
+	   | mapper (E.Op3(_, e1, e2, e3), set) = List.foldr mapper set [e1, e2, e3]
+	   | mapper (E.Opn(_, es), set) = List.foldl mapper set es
+					  
+	in
+	 ISet.listItems(mapper(e, start))
 	end
   end
