@@ -1036,7 +1036,7 @@ fun makeDescendentFemTypes (cxt, tyName, span) geometry cellAccData (env, femTyp
 					(* end case*))
 
 	   val transform = Atom.atom FemName.transform
-	   val transform' = Atom.atom FemName.transform
+	   val transform' = Atom.atom FemName.transform'
 	   val dimConst = Ty.DimConst(mapDim)
 	   val inf = Ty.DiffConst(NONE)
 	   val transformFieldTy = Ty.T_Field({diff=inf, dim = dimConst, shape=Ty.Shape([dimConst])})
@@ -1314,7 +1314,7 @@ fun makeDescendentFemTypes (cxt, tyName, span) geometry cellAccData (env, femTyp
 					  val getCellInt= AST.E_ExtractFemItem(v, Ty.T_Int, (FemOpt.CellIndex, funcCellData))
 					  (*get mesh cell env, get the function, make the fields*)
 					  val SOME(meshCellEnv) = Env.findTypeEnv(env, meshCellEnvName)
-					  val SOME(newtonMethod) = TypeEnv.findMethod(meshCellEnv, FT.functionNameMake mesh (FemName.hiddenNewtonInverse ))
+					  val SOME(newtonMethod) = TypeEnv.findMethod(meshCellEnv, FT.functionNameMake mesh (FemName.hiddenNewtonInverse))
 					  (*get the basis*)
 					  val field1 = AST.E_FemField(getFunc,getSpace, SOME(getCellInt), refFieldTy, FO.RefField, NONE )
 					  val field2 = AST.E_FemField(getMesh, getMesh, SOME(getCellInt), transformFieldTy, FemOpt.InvTransform, SOME(newtonMethod, span))
