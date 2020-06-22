@@ -304,17 +304,75 @@ structure CheckExpr : sig
                                     S "type error for field application\n",
                                     S "  expected: ", TYS[fldTy, domTy], S "\n",
                                     S "  found:    ", TYS[ty1, ty2]
-                                  ])
-                            in
-                              if Unify.equalType(fldTy, ty1)
-                                then (case Util.coerceType(domTy, (e2', ty2))
-                                   of SOME e2' => (AST.E_Prim(BV.op_probe, tyArgs, [e1', e2'], rngTy), rngTy)
-                                    | NONE => tyError()
-                                  (* end case *))
-                                else tyError()
-                            end
+						 ])
+			    fun innerTyError (exp, fon) = err (cxt, [S "type error for field application of probe to pos\n",
+								     S " expected: ", TYS exp, S "\n",
+								     S " found: ", TYS fon]
+							      )
+
+
+			    val preCompose = (case ty2
+					       of Ty.T_Tensor _ => NONE
+						| Ty.T_Fem(data as FemData.MeshPos(m), a) =>
+						  let
+						   val mesh = FemData.Mesh(m)
+						   val meshTy = Ty.T_Fem(mesh, a)
+						   val meshData = AST.E_ExtractFem(e2', mesh)
+						   val cellInt = AST.E_ExtractFemItem(e2', Ty.T_Int, (FemOpt.CellIndex, data))
+						   val dim = FemData.underlyingDim data
+						   val transformFieldTy = Ty.vecField(NONE, dim)
+						   val vecTy = Ty.vecTy dim
+						   val femT = AST.E_FemField(meshData, meshData, SOME(cellInt), transformFieldTy,
+									     FemOpt.Transform, NONE)
+						   val (tyArgs', Ty.T_Fun([fldTy1, fldTy2], fldTy3)) =
+						       TU.instantiate(Var.typeOf BV.comp)
+						   fun tye () = innerTyError([fldTy1, ty2], [ty1, ty2])
+								     
+						   val (origField, _) = if Unify.equalType(ty1, fldTy1)
+									then (case Util.coerceType(fldTy1, (e1', ty1))
+									       of SOME(e1') => (e1', fldTy1)
+										| NONE => tye ()
+									     (* end case *))
+									else tye ()
+						   val (otherField, _) = if Unify.equalType(transformFieldTy, fldTy2)
+									 then (case Util.coerceType(fldTy2, (femT, transformFieldTy))
+										of SOME(ofield) => (ofield, fldTy2)
+										 | NONE => bogusExpTy (*error above*)
+									      (* end case*))
+									 else bogusExpTy (*error above*)
+						   val compose = AST.E_Prim(BV.comp, tyArgs', [origField, otherField], fldTy3)
+
+						   val getRefPos = AST.E_ExtractFemItem(e2', vecTy, (FemOpt.RefPos, data))
+
+						   val (doProbe, retTy) =
+						       if Unify.equalType(fldTy, fldTy3)
+						       then (case Util.coerceType(domTy, (getRefPos, vecTy))
+							      of SOME(getRefPos') => (AST.E_Prim(BV.op_probe, tyArgs,
+												[compose, getRefPos'],
+												rngTy), rngTy)
+							       | NONE => bogusExpTy (*error above*)
+									   
+							    (* end case *))
+						       else bogusExpTy (*error above*)
+						  in
+						   SOME(doProbe, retTy)
+						  end
+						| _ => NONE
+					     (* end case *))
+                       in
+			if Option.isSome preCompose
+			then Option.valOf preCompose
+			else
+                         if Unify.equalType(fldTy, ty1)
+                         then (case Util.coerceType(domTy, (e2', ty2))
+                                of SOME e2' => (AST.E_Prim(BV.op_probe, tyArgs, [e1', e2'], rngTy), rngTy)
+                                 | NONE => tyError()
+                              (* end case *))
+                         else tyError()
+                       end
+					      
                         | _ => err(cxt, [S "badly formed field application"])
-                      (* end case *))
+					       (* end case *))
                 in
                  case stripMark(#2 cxt, e)
 		  of (span, PT.E_Select(exp, field)) => (*QUESTION: Is it possible the select is hidden behind something?*)

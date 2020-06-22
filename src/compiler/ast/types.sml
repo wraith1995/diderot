@@ -107,6 +107,10 @@ structure Types =
     val mat3Ty = matTy 3
     val mat4Ty = matTy 4
 
+    fun vecField(diffInt, dimInt) = T_Field {diff=DiffConst(diffInt),
+					     dim=DimConst(dimInt),
+					     shape=Shape([DimConst(dimInt)])}
+
   (* smart constructors for building normalized forms *)
     fun shapeExt (Shape dd, d) = Shape(dd @ [d])
       | shapeExt (shape, d) = ShapeExt(shape, d)
