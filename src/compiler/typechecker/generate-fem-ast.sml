@@ -1036,6 +1036,7 @@ fun makeDescendentFemTypes (cxt, tyName, span) geometry cellAccData (env, femTyp
 					(* end case*))
 
 	   val transform = Atom.atom FemName.transform
+	   val transform' = Atom.atom FemName.transform
 	   val dimConst = Ty.DimConst(mapDim)
 	   val inf = Ty.DiffConst(NONE)
 	   val transformFieldTy = Ty.T_Field({diff=inf, dim = dimConst, shape=Ty.Shape([dimConst])})
@@ -1100,9 +1101,10 @@ fun makeDescendentFemTypes (cxt, tyName, span) geometry cellAccData (env, femTyp
 
 	   val (hiddenFuncAtom, hiddenFuncVar, newtonFunc) = newtonResult
 
-	   val invTransformSpec =
+	   val (invTransformSpec, invTransformSpec') =
 	       let
 		val invTransformField = Atom.atom FemName.invTransform
+		val invTransformField' = Atom.atom FemName.invTransform'
 		val invTransformFieldFuncTy = Ty.T_Fun([cellTy],transformFieldTy)
 		fun makeInvTransformFieldFunc vars = (case vars
 						       of [v] =>
@@ -1115,7 +1117,8 @@ fun makeDescendentFemTypes (cxt, tyName, span) geometry cellAccData (env, femTyp
 							| _ => raise Fail "impossible for this to be get past typechecker"
 						     )
 	       in
-		(invTransformField, makeInvTransformFieldFunc, invTransformFieldFuncTy)
+		((invTransformField, makeInvTransformFieldFunc, invTransformFieldFuncTy),
+		 (invTransformField', makeInvTransformFieldFunc, invTransformFieldFuncTy))
 	       end
 
 	   local
@@ -1165,8 +1168,9 @@ fun makeDescendentFemTypes (cxt, tyName, span) geometry cellAccData (env, femTyp
 	   val refMeshPosTriple = (refMeshPosAtom, refMeshPosBuild, refMeshFunTy)
 	   end
 	   val transformSpec = (transform, makeTransformFieldFunc, transformFieldFunc)
-	   val transformFuncs = [(transformDofs, makeTransformDofs, transformsDofsFunTy), transformSpec,
-				 invTransformSpec, insideCellTriple,validCellTriple, refMeshPosTriple]
+	   val transformSpec' = (transform', makeTransformFieldFunc, transformFieldFunc)
+	   val transformFuncs = [(transformDofs, makeTransformDofs, transformsDofsFunTy), transformSpec, transformSpec',
+				 invTransformSpec, invTransformSpec', insideCellTriple,validCellTriple, refMeshPosTriple]
 	   val cellMethods = [(hiddenFuncAtom, hiddenFuncVar)]
 	   (* TODO: The naming in this area of the compiler is really inconsistent*)
 
@@ -1260,6 +1264,7 @@ fun makeDescendentFemTypes (cxt, tyName, span) geometry cellAccData (env, femTyp
 
 
 	   val refField = Atom.atom FemName.refField
+	   val refField' = Atom.atom FemName.refField'
 	   val dimConst = Ty.DimConst(mapDim)
 	   val rangeShape = Ty.Shape((List.map Ty.DimConst funcRangeShape))
 	   val inf = Ty.DiffConst(NONE)
@@ -1277,6 +1282,7 @@ fun makeDescendentFemTypes (cxt, tyName, span) geometry cellAccData (env, femTyp
 					  | _ => raise Fail "impossible argument to method got passed type checking")
 
 	   val transformRefFieldFunc = Atom.atom (FemName.trf)
+	   val transformRefFieldFunc' = Atom.atom (FemName.trf')
 	   val transformFieldTy = Ty.T_Field({diff = inf, dim = dimConst, shape = Ty.Shape([dimConst])})
 	   fun makeTransformRefFieldFunc vars = (case vars
 						  of [v] =>
@@ -1298,10 +1304,34 @@ fun makeDescendentFemTypes (cxt, tyName, span) geometry cellAccData (env, femTyp
 						   | _ => raise Fail "impossible that this got past the typechecker"
 						)
 
+	   val finvt = Atom.atom (FemName.finvt)
+	   fun makeFinvtFunc vars = (case vars
+				      of [v] =>
+					 let
+					  val getFunc = AST.E_ExtractFem(v, femType)
+					  val getSpace = AST.E_ExtractFem(getFunc, space)
+					  val getMesh = AST.E_ExtractFem(getSpace, mesh)
+					  val getCellInt= AST.E_ExtractFemItem(v, Ty.T_Int, (FemOpt.CellIndex, funcCellData))
+					  (*get mesh cell env, get the function, make the fields*)
+					  val SOME(meshCellEnv) = Env.findTypeEnv(env, meshCellEnvName)
+					  val SOME(newtonMethod) = TypeEnv.findMethod(meshCellEnv, FT.functionNameMake mesh (FemName.hiddenNewtonInverse ))
+					  (*get the basis*)
+					  val field1 = AST.E_FemField(getFunc,getSpace, SOME(getCellInt), refFieldTy, FO.RefField, NONE )
+					  val field2 = AST.E_FemField(getMesh, getMesh, SOME(getCellInt), transformFieldTy, FemOpt.InvTransform, SOME(newtonMethod, span))
+					  val field = makePrim'(BV.comp, [field1, field2], [refFieldTy, transformFieldTy], refFieldTy)
+					 in
+					  field
+					 end
+				       | _ => raise Fail "impossible that this got past the typechecker"
+				    )
+
 
 	   val transformFuncs = [(functionDofs, makeFunctionDofs, functionDofsFunTy),
-				 (refField, makeRefFieldFunc, refFieldFunc),
-				 (transformRefFieldFunc, makeTransformRefFieldFunc, refFieldFunc)]
+				 (refField, makeRefFieldFunc, refFieldFunc), (refField', makeRefFieldFunc, refFieldFunc),
+				 (transformRefFieldFunc, makeTransformRefFieldFunc, refFieldFunc),
+				 (transformRefFieldFunc', makeTransformRefFieldFunc, refFieldFunc),
+				 (finvt, makeFinvtFunc, refFieldFunc)
+				]
 	   val env' = Env.insertNamedType(env, cxt, cellName, cellTy, constants, methods, transformFuncs)
 	  in
 	   (env', [])
