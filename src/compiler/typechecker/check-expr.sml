@@ -311,7 +311,7 @@ structure CheckExpr : sig
 							      )
 
 
-			    val preCompose = (case ty2
+			    val preCompose = (case TU.prune ty2
 					       of Ty.T_Tensor _ => NONE
 						| Ty.T_Fem(data as FemData.MeshPos(m), a) =>
 						  let
