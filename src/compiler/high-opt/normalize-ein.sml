@@ -42,7 +42,7 @@ structure NormalizeEin : sig
     val lastCounter             = cntInnerLoop
     val cntRounds               = ST.newCounter "high-opt:normalize-round"
 
-    val debug = true
+    val debug = false
     fun printd x = if debug
 		   then print(x)
 		   else ()
@@ -174,7 +174,6 @@ structure NormalizeEin : sig
 	  val indexInBody = EinUtil.collectIndicies body
 	  val maxIndex = List.foldr (Int.max) (!sumX) indexInBody  (*THIS:ensures that we never duplicate any pre-exisitng indexes*)
 	  val _ = sumX := maxIndex (*by incrementing incSum correctly everywhere, we will ensure whenever we create a new index, it has not been used already*)
-	  val debug = true
           fun incSum() = (sumX:= (!sumX+2) handle ex => raise ex; if debug
 								  then printd("new sumX:"^(Int.toString (!sumX))^"\n")
 								  else ())

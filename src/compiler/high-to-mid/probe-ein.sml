@@ -467,7 +467,7 @@ structure ProbeEin : sig
     (* fun resolveFunctionCallFromStamp() *)
     fun replaceFemProbe ( avail, env, (y, IR.EINAPP(lam as Ein.EIN{params, index, body}, args)), probe, sx) =
 	let
-	 val debug = true
+	 val debug = false
 	 fun printd(x) = if debug
 			 then print(x)
 			 else ()

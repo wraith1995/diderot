@@ -16,7 +16,7 @@ structure Derivative : sig
 
 structure E = Ein
 
-val debug = true
+val debug = false
 
     fun err str=raise Fail (String.concat["Ill-formed EIN Operator: ", str])
 

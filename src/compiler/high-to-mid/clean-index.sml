@@ -56,7 +56,7 @@ structure CleanIndex : sig
 
 	  end = struct
 
-val debug = true
+val debug = false
 fun printd(x) = if debug
 		then print(x)
 		else ()
