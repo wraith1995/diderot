@@ -305,7 +305,7 @@ structure CheckExpr : sig
                                     S "  expected: ", TYS[fldTy, domTy], S "\n",
                                     S "  found:    ", TYS[ty1, ty2]
 						 ])
-			    fun innerTyError (exp, fon) = err (cxt, [S "type error for field application of probe to pos\n",
+			    fun innerTyError (exp, fon, s) = err (cxt, [S ("type error " ^ s ^ " for field application of probe to pos\n"),
 								     S " expected: ", TYS exp, S "\n",
 								     S " found: ", TYS fon]
 							      )
@@ -326,7 +326,8 @@ structure CheckExpr : sig
 									     FemOpt.Transform, NONE)
 						   val (tyArgs', Ty.T_Fun([fldTy1, fldTy2], fldTy3)) =
 						       TU.instantiate(Var.typeOf BV.comp)
-						   fun tye () = innerTyError([fldTy1, ty2], [ty1, ty2])
+						   fun tye () = innerTyError([fldTy1, ty2], [ty1, ty2], "1")
+
 								     
 						   val (origField, _) = if Unify.equalType(ty1, fldTy1)
 									then (case Util.coerceType(fldTy1, (e1', ty1))
@@ -334,12 +335,12 @@ structure CheckExpr : sig
 										| NONE => tye ()
 									     (* end case *))
 									else tye ()
-						   val (otherField, _) = if Unify.equalType(transformFieldTy, fldTy2)
-									 then (case Util.coerceType(fldTy2, (femT, transformFieldTy))
-										of SOME(ofield) => (ofield, fldTy2)
-										 | NONE => bogusExpTy (*error above*)
-									      (* end case*))
-									 else bogusExpTy (*error above*)
+						   fun tye1 () = innerTyError([fldTy2, transformFieldTy], [transformFieldTy, ty2], "2")
+						   fun tye2 () = innerTyError([fldTy2, transformFieldTy], [transformFieldTy, ty2], "3")
+						   val (otherField, _) =  (case Util.coerceType(fldTy2, (femT, transformFieldTy))
+									    of SOME(ofield) => (ofield, fldTy2)
+									     | NONE => tye1() 
+									  (* end case*))
 						   val compose = AST.E_Prim(BV.comp, tyArgs', [origField, otherField], fldTy3)
 
 						   val getRefPos = AST.E_ExtractFemItem(e2', vecTy, (FemOpt.RefPos, data))
@@ -350,10 +351,10 @@ structure CheckExpr : sig
 							      of SOME(getRefPos') => (AST.E_Prim(BV.op_probe, tyArgs,
 												[compose, getRefPos'],
 												rngTy), rngTy)
-							       | NONE => bogusExpTy (*error above*)
+							       | NONE => tye2() (*error above*)
 									   
 							    (* end case *))
-						       else bogusExpTy (*error above*)
+						       else tye2() (*error above*)
 						  in
 						   SOME(doProbe, retTy)
 						  end

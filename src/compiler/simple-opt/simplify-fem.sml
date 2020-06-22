@@ -428,10 +428,14 @@ return to Strands until Fixed
     | tyToFemPres (Ty.T_Fem(f)) = if FD.baseFem f
 				  then Base(f, NONE)
 				  else Base(Option.valOf(FD.dependencyOf(f)), NONE)
+    | tyToFemPres (Ty.T_Image _) = NOTHING
+    | tyToFemPres (Ty.T_Kernel) = NOTHING
 
   fun tyToFemPresSeq onlyOne (t) = let
   fun tyToFemPresSeq' (Ty.T_Bool) = NOTHING
     | tyToFemPresSeq' (Ty.T_Int) = NOTHING
+    | tyToFemPresSeq' (Ty.T_Image _) = NOTHING
+    | tyToFemPresSeq' (Ty.T_Kernel) = NOTHING
     | tyToFemPresSeq' (Ty.T_String) = NOTHING
     | tyToFemPresSeq' (Ty.T_Tensor _) = NOTHING
     | tyToFemPresSeq' (Ty.T_Sequence(t, SOME k)) = Array(tyToFemPresSeq' t)

@@ -172,6 +172,7 @@ structure II = ImageInfo
 	  )
 	| S.E_InsideImage _ => ()
 	| S.E_FieldFn _ => ()
+	| S.E_Kernel _ => ()
      (*end case*))
     end
 
