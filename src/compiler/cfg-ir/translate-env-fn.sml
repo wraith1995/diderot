@@ -45,6 +45,9 @@ signature TRANSLATE_ENV =
     val insertNd : (t * Stamp.t * DstIR.node) -> unit
     val findNd : t -> Stamp.t -> DstIR.node option
 
+    val getPosVars : t -> ((SrcIR.state_var * DstIR.state_var) * (SrcIR.state_var * DstIR.state_var)) option
+    val invertVar : t * DstIR.var -> (SrcIR.var * DstIR.var) option
+				       
   end
 
 functor TranslateEnvFn (Params : TRANSLATE_ENV_PARAMS) : TRANSLATE_ENV =
@@ -101,7 +104,31 @@ functor TranslateEnvFn (Params : TRANSLATE_ENV_PARAMS) : TRANSLATE_ENV =
                  SrcIR.Var.Tbl.insert vMap (x, x');
                  x'
                end
-         (* end case *))
+				   (* end case *))
+    fun getPosVars (E{svMap, ...}) : ((SrcIR.state_var * DstIR.state_var) * (SrcIR.state_var * DstIR.state_var)) option =
+	let
+	 val items = SrcIR.StateVar.Tbl.listItemsi svMap
+	 val pos = List.find (fn (x,y) => "pos" = SrcIR.StateVar.name x) items
+	 val pos' = List.find (fn (x,y) => "_pos" = SrcIR.StateVar.name x) items
+			      
+	in
+	 (case (pos, pos')
+	   of (SOME(pos), SOME(pos')) => SOME(pos, pos')
+	    | (NONE, NONE) => NONE
+	    | _ => raise Fail "invalid pos setup!"
+	 (* end case*))
+	end
+
+    fun invertVar(E{vMap, ...}, x) =
+	let
+	 val items = SrcIR.Var.Tbl.listItemsi vMap
+	 val item = List.find (fn (a,b) => DstIR.Var.same(b, x)) items
+	in
+	 item
+	end
+	
+
+				     
 
     fun renameList (env, xs) = List.map (fn x => rename (env, x)) xs
 

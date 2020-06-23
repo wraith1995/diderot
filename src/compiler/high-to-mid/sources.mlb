@@ -28,6 +28,7 @@ local
   coord-space-transform.sml
   float-ein.sml
   probe-ein.sml
+  detect-pos.sml
   handle-ein.sml
   high-to-mid.sml
 

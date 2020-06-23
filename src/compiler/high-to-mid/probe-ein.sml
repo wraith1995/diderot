@@ -638,7 +638,7 @@ structure ProbeEin : sig
    *)
     fun expand env avail (e as (_, IR.EINAPP(Ein.EIN{body, ...}, _))) = (case body
            of (E.Probe(E.Conv(_, _, _, []) ,_)) =>
-                replaceProbe (avail, env, e, body, [])
+              replaceProbe (avail, env, e, body, [])
             | (E.Probe(E.Conv(_, alpha, _, dx) ,_)) =>
               liftProbe (avail, e, body, []) (*scans dx for contant*)
 	    | (p as E.Probe(E.Fem _, _)) =>
@@ -652,6 +652,7 @@ structure ProbeEin : sig
             | (E.Sum(sx, E.Opn(E.Prod, [eps, E.Probe p]))) =>
                 replaceProbe (avail, env, e, E.Probe p, sx)
             | _ => AvailRHS.addAssignToList (avail, e)
-          (* end case *))
+									(* end case *))
+      | expand env avail e = AvailRHS.addAssignToList (avail, e) (* FIXME: add stateVar check to make this more defensive*)
 
   end (* ProbeEin *)

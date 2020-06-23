@@ -30,6 +30,7 @@ is
   coord-space-transform.sml
   float-ein.sml
   high-to-mid.sml
+  detect-pos.sml
   handle-ein.sml
   probe-ein.sml
   translate-ofield.sml

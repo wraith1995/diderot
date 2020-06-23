@@ -17,7 +17,6 @@ structure HighToMid : sig
     structure SrcIR = HighIR
     structure SrcTy = HighTypes
     structure SrcOp = HighOps
-    structure SrcSV = SrcIR.StateVar
     structure VTbl = SrcIR.Var.Tbl
     structure DstIR = MidIR
     structure DstTy = MidTypes

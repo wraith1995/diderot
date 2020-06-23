@@ -30,6 +30,8 @@ structure HandleEin : sig
           val newbies = iter(newbies, [])
         (* **************** translate of fields ************* *)
           val newbies = List.foldr (fn (e, acc) => TranslateOField.transform e @ acc) [] newbies
+          (* **************** catch T(pos) -> _pos ************* *)
+	  val newbies = List.map (fn x => DetectPos.removePos(env, x)) newbies
         (* ************** ProbeEIN *********** *)
           val avail = AvailRHS.new()
           val _ = List.app (ProbeEin.expand env avail) (newbies) handle exn => raise exn;
