@@ -29,6 +29,7 @@ Library
   functor SSAFn
   functor SSAPPFn
   functor TranslateEnvFn
+  functor TranslateScopedFn
   functor TranslateFn
   functor UnusedElimFn
   functor ValueNumberingFn
@@ -63,6 +64,7 @@ is
   ssa-sig.sml
   ssa-types-sig.sml
   translate-env-fn.sml
+  scoped-translate-fn.sml
   translate-fn.sml
   unused-elim-fn.sml
   value-numbering-fn.sml

@@ -655,7 +655,9 @@ structure BasisVars =
                 in
                   [Ty.T_Tensor(Ty.Shape[d]), field(k, d, dd)]
                     --> Ty.T_Bool
-                end))
+            end))
+
+    (* val fn_inside_pos = polyVar(N.fn_inside, ) *)
 
     val fn_length = polyVar (N.fn_length, all([TK],
             fn [Ty.TYPE tv] => [dynSeq(Ty.T_Var tv)] --> Ty.T_Int))

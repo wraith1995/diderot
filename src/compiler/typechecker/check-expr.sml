@@ -466,9 +466,7 @@ structure CheckExpr : sig
                                             then checkSpatialQuery (env, cxt, e', tyArgs, rngTy)
                                           else (e', rngTy)
 				      | (e' as AST.E_Apply(_,_,_), rngTy) => (e', rngTy)
-                                      | badResult => if Atom.same(Atom.atom "sphere", f)
-						     then (print("SPHERE!\n");badResult)
-						     else badResult
+                                      | badResult => badResult
                                 (* end case *))
                                 | Env.UserFun f' => checkFunApp((#1 cxt, span), f') args tys
 				| Env.OverloadUserFun(ovldList) => resolveOverload ((#1 cxt, span), f, tys, args, ovldList)

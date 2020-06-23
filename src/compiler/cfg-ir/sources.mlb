@@ -44,6 +44,7 @@ local
   rewrite-fn.sml
   translate-env-fn.sml
   translate-fn.sml
+  scoped-translate-fn.sml
   unused-elim-fn.sml
   value-numbering-fn.sml
 
@@ -71,6 +72,7 @@ in
   functor SSAPPFn
   functor TranslateEnvFn
   functor TranslateFn
+  functor TranslateScopedFn  
   functor UnusedElimFn
   functor ValueNumberingFn
 
