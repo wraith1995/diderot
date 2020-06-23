@@ -35,12 +35,12 @@ structure Util : sig
 
     val deFemInput : AST.expr * Types.ty -> AST.expr list * AST.expr
     val reFem: Var.t * AST.expr list * Types.ty * Types.ty -> AST.expr
-							 
 
-				   (* seperate types*)
-
-				   (*seperate consts*)
-
+    val getNewPosVar : Var.t -> SimpleVar.t option
+    val markStatePosVar : SimpleVar.t * SimpleVar.t -> unit
+    val getStatePosVar : SimpleVar.t -> SimpleVar.t
+    val makePosAssign : Var.t * SimpleVar.t -> Simple.stmt list option
+    val cvtWorldPos : SimpleVar.t * SimpleVar.t * bool -> Simple.stmt list
   end = struct
 
     structure S = Simple
@@ -398,6 +398,158 @@ structure Util : sig
 	in
 	 doit(AST.E_Var(srcVar, span), inputTy, targetTy, TU.hasFem targetTy)
 	end
+
+    local
+     structure STy = SimpleTypes
+
+     fun cvtSimple(x : SimpleVar.t) : SimpleVar.t = raise Fail "no worldpos set for this one"
+
+     val {setFn, peekFn, ...} = SimpleVar.newProp cvtSimple
+     val {setFn = markStatePosVar, getFn=getStatePosVar, ...} = SimpleVar.newProp cvtSimple
+						  
+     fun newTemp (ty as STy.T_Image _) = SimpleVar.new ("img", SimpleVar.LocalVar, ty)
+       | newTemp ty = SimpleVar.new ("_t", SimpleVar.LocalVar, ty)
+
+     fun createV(v, e) = S.S_Var(v, SOME(e))
+						  
+
+     fun cvtWorldPos(posVar : SimpleVar.t, worldPosAssign : SimpleVar.t, assign : bool) =
+	 (case (peekFn posVar)
+	   of SOME(unpos) =>
+	      if assign
+	      then [S.S_Assign(worldPosAssign, S.E_Var(unpos))]
+	      else [S.S_Var(worldPosAssign, SOME(S.E_Var(unpos)))]
+	    | NONE =>
+	      let
+	       val STy.T_Fem(ms as FemData.MeshPos(meshData)) = SimpleVar.typeOf posVar
+	       val x' = posVar
+	       val meshHolder = FemData.Mesh(meshData)
+	       val meshCellHolder = FemData.MeshCell(meshData)
+	       val meshTy = STy.T_Fem(meshHolder)
+	       val dim = FemData.meshDim (meshData)
+	       val newTensor = STy.T_Tensor([dim])
+					   
+	       val refPosTemp = newTemp newTensor;
+	       val meshTemp = newTemp meshTy;
+	       val cellTemp = newTemp STy.T_Int
+	       val negOneTemp = newTemp STy.T_Int
+	       val boolTemp = newTemp STy.T_Bool
+	       val assignTemp = newTemp newTensor
+
+	       val fieldTy = STy.T_Field({diff=NONE, dim=dim, shape=[dim]});
+	       val fieldTemp = newTemp fieldTy;
+
+	       val getCell = createV(cellTemp, S.E_ExtractFemItem(x', STy.T_Int, (FemOpt.CellIndex, ms)))
+	       val getMesh = createV(meshTemp, S.E_ExtractFem(x', meshHolder))
+	       val fieldAssign = createV(fieldTemp, S.E_FemField(meshTemp, meshTemp, SOME(cellTemp), fieldTy, FemOpt.Transform, NONE))
+	       val getRefCell = createV(refPosTemp, S.E_ExtractFemItem(x', newTensor, (FemOpt.RefPos, ms)))
+	       val metaArgs = [STy.DIFF(NONE), STy.DIM(dim), STy.SHAPE([dim])]
+	       val worldPos = createV(assignTemp, S.E_Prim(BasisVars.op_probe, metaArgs, [fieldTemp, refPosTemp], newTensor))
+	       val worldPosReplace = if assign
+				     then S.S_Assign(worldPosAssign, S.E_Var(assignTemp))
+				     else S.S_Var(worldPosAssign, SOME(S.E_Var(assignTemp)))
+
+	       val stms = [getCell, getRefCell, getMesh, fieldAssign, worldPos, worldPosReplace]
+
+	      in
+	       stms
+	      end
+	 )
+			          
+     fun cvt x =
+	 let
+	  val kind = Var.kindOf x
+	  val name = Var.nameOf x
+	  val ty = Var.monoTypeOf x
+	  val dim = (case ty
+		      of Ty.T_Tensor(Ty.Shape([Ty.DimConst(d)])) => SOME(d)
+		       | Ty.T_Fem(FemData.MeshPos(meshData), _) => SOME(FemData.meshDim meshData)
+		       | _ => NONE
+		    (*end case*))
+	 in if (kind = Var.StrandStateVar
+		orelse kind = Var.StrandOutputVar)
+	       andalso name = FemName.pos
+	       andalso Option.isSome dim
+	    then SOME(SimpleVar.new ("_pos", kind, STy.T_Tensor([Option.valOf dim])))
+	    else NONE
+	 end
+     val {getFn=getNewPosVar, ...} = Var.newProp cvt
+
+     fun makePosAssign(x, x') =
+	 (case getNewPosVar x
+	   of NONE => NONE
+	    | SOME(x'') => (case SimpleVar.typeOf x'
+			     of STy.T_Tensor([d])
+				=> (setFn(x',x''); SOME([S.S_Assign(x'',S.E_Var(x'))]))
+			      | STy.T_Fem(ms as FemData.MeshPos(meshData)) =>
+				let
+				 val meshHolder = FemData.Mesh(meshData)
+				 val meshCellHolder = FemData.MeshCell(meshData)
+				 val meshTy = STy.T_Fem(meshHolder)
+				 val dim = FemData.meshDim (meshData)
+				 val newTensor = STy.T_Tensor([dim])
+							     
+				 val refPosTemp = newTemp newTensor;
+				 val meshTemp = newTemp meshTy;
+				 val cellTemp = newTemp STy.T_Int
+				 val negOneTemp = newTemp STy.T_Int
+				 val boolTemp = newTemp STy.T_Bool
+				 val assignTemp = newTemp newTensor
+				 val startAssign = S.S_Var(assignTemp, NONE)
+
+				 val fieldTy = STy.T_Field({diff=NONE, dim=dim, shape=[dim]});
+				 val fieldTemp = newTemp fieldTy;
+
+				 val getCell = createV(cellTemp, S.E_ExtractFemItem(x', STy.T_Int, (FemOpt.CellIndex, ms)))
+				 val getMesh = createV(meshTemp, S.E_ExtractFem(x', meshHolder))
+				 val fieldAssign = createV(fieldTemp, S.E_FemField(meshTemp, meshTemp, SOME(cellTemp), fieldTy, FemOpt.Transform, NONE))
+				 val getRefCell = createV(refPosTemp, S.E_ExtractFemItem(x', newTensor, (FemOpt.RefPos, ms)))
+				 val negOneAsssign = createV(negOneTemp, S.E_Lit(Literal.intLit (~1)))
+				 val getValid = createV(boolTemp, S.E_Prim(BV.neq_ii, [], [cellTemp, negOneTemp], STy.T_Bool))
+
+				 (* S.E_ExtractFemItem(x', STy.T_Bool, (FemOpt.Valid, ms))) *)
+							  
+				 val inf = S.E_Lit(Literal.Real(RealLit.posInf))
+				 val infinityInits = List.tabulate(dim, fn x =>
+									   let val v = newTemp STy.realTy
+									   in (v, createV(v, inf)) end)
+				 val inits = List.map (fn (x,y) => y) infinityInits
+						      
+				 val infity = S.E_Tensor(List.map (fn (x, y) => x) infinityInits, newTensor)
+				 val badAssign = S.S_Assign(assignTemp, infity)
+				 val metaArgs = [STy.DIFF(NONE), STy.DIM(dim), STy.SHAPE([dim])]
+				 val worldPos = S.S_Assign(assignTemp, S.E_Prim(BasisVars.op_probe, metaArgs, [fieldTemp, refPosTemp], newTensor))
+
+
+				 val ifStm = S.S_IfThenElse(boolTemp,
+							    S.Block{props = PropList.newHolder(), code =  [getRefCell, getMesh, fieldAssign, worldPos]},
+							    S.Block{props = PropList.newHolder(), code =  [badAssign]})
+				 val actualFin = createV(x'', S.E_Var(assignTemp))
+
+
+							   (*test valid*)
+							   (*var ret;*)
+							   (*build if condition*)
+							   (**)
+				 val _ = setFn(x',x'');
+
+				in
+				 (* SOME([fin, fieldAssign, getRefCell, getMesh, getCell]) *)
+				 SOME([actualFin, ifStm, getValid]@inits@[getCell, startAssign, negOneAsssign])
+				end
+			   (*end case*))
+			     
+	 (*end case*))
+	   
+    in
+    val getNewPosVar = getNewPosVar
+    val makePosAssign = makePosAssign
+    val cvtWorldPos = cvtWorldPos
+
+    val markStatePosVar = markStatePosVar
+    val getStatePosVar = getStatePosVar
+    end
+	  
 
 
   end

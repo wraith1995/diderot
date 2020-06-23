@@ -23,6 +23,7 @@ is
   ../inputs/sources.cm
   ../options/sources.cm
   ../simple/sources.cm
+  ../simplify/sources.cm
   
   simple-pp.sml
   check-for-bsp.sml
@@ -33,3 +34,4 @@ is
   simplify-fields.sml
   simplify-vars.sml
   simplify-fem.sml
+  simplify-fem-exp.sml

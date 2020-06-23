@@ -9,7 +9,7 @@
 library
 
   structure Simplify
-
+  structure Util
 is
 
   $/basis.cm

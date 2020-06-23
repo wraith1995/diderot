@@ -160,95 +160,9 @@ structure Simplify : sig
     val {getFn = cvtFunc, ...} = Var.newProp cvt
     end
 
-    local
-     fun cvt x =
-	 let
-	  val kind = Var.kindOf x
-	  val name = Var.nameOf x
-	  val ty = Var.monoTypeOf x
-	  val dim = (case ty
-		      of Ty.T_Tensor(Ty.Shape([Ty.DimConst(d)])) => SOME(d)
-		       | Ty.T_Fem(FemData.MeshPos(meshData), _) => SOME(FemData.meshDim meshData)
-		       | _ => NONE
-		    (*end case*))
-	 in if (kind = Var.StrandStateVar
-		orelse kind = Var.StrandOutputVar)
-	       andalso name = FemName.pos
-	       andalso Option.isSome dim
-	    then SOME(SimpleVar.new ("_pos", kind, STy.T_Tensor([Option.valOf dim])))
-	    else NONE
-	 end
-     val {getFn=getNewPosVar, ...} = Var.newProp cvt
-     fun makePosAssign(x, x') =
-	 (case getNewPosVar x
-	   of NONE => NONE
-	    | SOME(x'') => (case SimpleVar.typeOf x'
-			     of STy.T_Tensor([d])
-				=> SOME([S.S_Assign(x'',S.E_Var(x'))])
-			      | STy.T_Fem(ms as FemData.MeshPos(meshData)) =>
-				let
-				 val meshHolder = FemData.Mesh(meshData)
-				 val meshCellHolder = FemData.MeshCell(meshData)
-				 val meshTy = STy.T_Fem(meshHolder)
-				 val dim = FemData.meshDim (meshData)
-				 val newTensor = STy.T_Tensor([dim])
-							     
-				 val refPosTemp = newTemp newTensor;
-				 val meshTemp = newTemp meshTy;
-				 val cellTemp = newTemp STy.T_Int
-				 val negOneTemp = newTemp STy.T_Int
-				 val boolTemp = newTemp STy.T_Bool
-				 val assignTemp = newTemp newTensor
-				 val startAssign = S.S_Var(assignTemp, NONE)
-
-				 val fieldTy = STy.T_Field({diff=NONE, dim=dim, shape=[dim]});
-				 val fieldTemp = newTemp fieldTy;
-
-				 val getCell = S.S_Assign(cellTemp, S.E_ExtractFemItem(x', STy.T_Int, (FemOpt.CellIndex, ms)))
-				 val getMesh = S.S_Assign(meshTemp, S.E_ExtractFem(x', meshHolder))
-				 val fieldAssign = S.S_Assign(fieldTemp, S.E_FemField(meshTemp, meshTemp, SOME(cellTemp), fieldTy, FemOpt.Transform, NONE))
-				 val getRefCell = S.S_Assign(refPosTemp, S.E_ExtractFemItem(x', newTensor, (FemOpt.RefPos, ms)))
-				 val negOneAsssign = S.S_Assign(negOneTemp, S.E_Lit(Literal.intLit (~1)))
-				 val getValid = S.S_Assign(boolTemp, S.E_Prim(BV.neq_ii, [], [cellTemp, negOneTemp], STy.T_Bool))
-
-							   (* S.E_ExtractFemItem(x', STy.T_Bool, (FemOpt.Valid, ms))) *)
-							  
-				 val inf = S.E_Lit(Literal.Real(RealLit.posInf))
-				 val infinityInits = List.tabulate(dim, fn x =>
-									   let val v = newTemp STy.realTy
-									   in (v, S.S_Assign(v, inf)) end)
-				 val inits = List.map (fn (x,y) => y) infinityInits
-						      
-				 val infity = S.E_Tensor(List.map (fn (x, y) => x) infinityInits, newTensor)
-				 val badAssign = S.S_Assign(assignTemp, infity)
-				 val metaArgs = [STy.DIFF(NONE), STy.DIM(dim), STy.SHAPE([dim])]
-				 val worldPos = S.S_Assign(assignTemp, S.E_Prim(BasisVars.op_probe, metaArgs, [fieldTemp, refPosTemp], newTensor))
-
-
-				 val ifStm = S.S_IfThenElse(boolTemp,
-							    S.Block{props = PropList.newHolder(), code =  [getRefCell, getMesh, fieldAssign, worldPos]},
-							    S.Block{props = PropList.newHolder(), code =  [badAssign]})
-				 val actualFin = S.S_Assign(x'', S.E_Var(assignTemp))
-
-
-						     (*test valid*)
-						     (*var ret;*)
-						     (*build if condition*)
-						     (**)
-
-				in
-				 (* SOME([fin, fieldAssign, getRefCell, getMesh, getCell]) *)
-				 SOME([actualFin, ifStm, getValid]@inits@[getCell, startAssign, negOneAsssign])
-				end
-			   (*end case*))
-			     
-	 (*end case*))
-	   
-    in
-    val getNewPosVar = getNewPosVar
-    val makePosAssign = makePosAssign
-    end
-
+    val getNewPosVar = Util.getNewPosVar
+    val makePosAssign = Util.makePosAssign
+    
 
   (* a property to map AST variables to SimpleAST variables *)
     local
@@ -326,8 +240,12 @@ structure Simplify : sig
             | AST.S_Decl(x, SOME e) => let
                 val (stms, e') = simplifyExp (cxt, e, stms)
                 val x' = cvtLHS (x, e')
-                in
-                  S.S_Var(x', SOME e') :: stms
+		val checkReplacement = makePosAssign(x, x')
+            in
+	     (case checkReplacement
+	       of SOME(stms') => stms'@(S.S_Var(x', SOME e') :: stms)
+		| NONE => (S.S_Var(x', SOME e') :: stms)
+	     (* end case *))
                 end
 (* FIXME: we should also define a "boolean negate" operation on AST expressions so that we can
  * handle both cases!
@@ -859,7 +777,8 @@ structure Simplify : sig
 	     val x'' = getNewPosVar x
 	     val x''' = (case x''
 			  of NONE => [x']
-			   | SOME umm => [umm,x'])
+			   | SOME umm => (Util.markStatePosVar(x', umm);[umm,x'])
+			(* end case*))
 	     val transformStm = makePosAssign(x, x')
                 in
                  (case optE
