@@ -38,6 +38,7 @@ structure MidOptimizer : sig
     fun optimize prog = let
           val prog = transform (Ctl.midVN, Timers.timeMidVN, "value numbering (1)", VN.transform, prog)
           val prog = transform (Ctl.midContract, Timers.timeMidContract, "contraction (1)", MidContract.transform, prog)
+	  val prog = transform (Ctl.midContract, Timers.timeMidContract, "contraction (1)", AddCache.translate, prog)
 	  val prog = transform' (Timers.timeMidDofExpand, "timeMidDofExpand", FemOptSplitRewrite.transform, prog)
           val prog = transform' (Timers.timeMidBorderCtl, "border control", BorderCtl.transform, prog)
           in

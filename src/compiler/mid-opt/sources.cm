@@ -28,4 +28,5 @@ is
   border-ctl.sml
   dom-tree.sml
   mid-contract.sml
+  add-cache.sml
   mid-opt.sml

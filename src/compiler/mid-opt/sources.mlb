@@ -24,6 +24,7 @@ local
   dom-tree.sml
   border-ctl.sml
   mid-contract.sml
+  add-cache.sml
   mid-opt.sml
 
 in
