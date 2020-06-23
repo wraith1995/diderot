@@ -250,9 +250,11 @@ structure AnalyzeSimple : sig
           in
           (* if the program has communication then the "pos" variable is shared *)
             if Properties.hasProp Properties.StrandCommunication props
-              then (case List.find (fn x => (SV.nameOf x = "pos")) state
-                 of SOME x => markSharedStateVar x
-                  | NONE => let
+              then (case (List.find (fn x => (SV.nameOf x = "pos")) state, List.find (fn x => (SV.nameOf x = "_pos")) state)
+                     of (SOME x, SOME x') => (markSharedStateVar x; markSharedStateVar x')
+		      | (SOME _, NONE ) => raise Fail "impossible pos var without _pos var"
+		      | (NONE, SOME _ ) => raise Fail "impossible _pos var without pos var"
+                      | (NONE, NONE) => let
                       fun pr s = TextIO.output(TextIO.stdErr, concat s)
                       in
                         pr ["**** impossible: missing 'pos' state variable\n"];
