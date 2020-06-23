@@ -20,6 +20,7 @@ structure FemOpt : sig
 			      | CellData of Atom.atom (* get a particular bit of data attached to a cell*)
 			      | NearbyCellQuery of Atom.atom (* geom data structure querry *)
 			      | RefPos (* get the ref pos of a pos *)
+			      | WorldPos (* get the world pos of a pos *)
 			      | PosEntryFacet (* gets the facet from a ref pos*)
 			      (* pos constructors: *)
 			      | RefBuild (* takes mesh, cell, ref pos *)
@@ -70,6 +71,7 @@ datatype femOpts = Cells | RefCell | NumCell | StartCell (* Globals for mesh *)
 		   | CellData of Atom.atom (* get a particular bit of data attached to a cell*)
 		   | NearbyCellQuery of Atom.atom (* geom data structure querry *)
 		   | RefPos (* get the ref pos of a pos *)
+		   | WorldPos (* get the world pos of a pos*)
 		   | PosEntryFacet (* gets the facet from a ref pos*)
 		   (* pos constructors: *)
 		   | RefBuild (* takes mesh, cell, ref pos *)
@@ -109,6 +111,7 @@ fun toStringOpt v =
        | ExtractDofsSeq => "ExtractDofsSeq"
        | RefCell => "RefCell"
        | RefPos => "RefPos"
+       | WorldPos => "WorldPos"
        | RefBuild => "RefBuild"
        | InvalidBuild => "InvalidBuild"
        | InvalidBuildBoundary => "InvalidBuildBoundary"
@@ -135,6 +138,7 @@ fun arity (NumCell) = 1
   | arity (ExtractDof) = 2
   | arity (RefCell) = 1
   | arity (RefPos) = 1
+  | arity (WorldPos) = 1 
   | arity (RefBuild) = 4
   | arity (InvalidBuild) = 1 (* still uses N*)
   | arity (InvalidBuildBoundary) = 3
@@ -166,6 +170,7 @@ fun hash (NumCell, d) = 0w1 + FT.hash d
   | hash (StartCell, d) = 0w107 + FT.hash d
   | hash (PosEntryFacet, d) = 0w109 + FT.hash d
   | hash (CellData(a), d) = 0w113 + 0w127 * (Atom.hash a) + FT.hash d
+  | hash (WorldPos, d) = 0w131 + FT.hash d
 
 fun sameR ((a1,s1), (a2,s2)) = (case (a1, a2)
 				 of (SOME(a1'), SOME(a2')) => Atom.same(a1', a2')
@@ -189,6 +194,7 @@ fun same ((v1, d1),(v2, d2)) = FT.same(d1,d2) andalso
        | (ExtractDofsSeq,ExtractDofsSeq) => true
        | (RefCell,RefCell) => true
        | (RefPos, RefPos) => true
+       | (WorldPos, WorldPos) => true
        | (RefBuild, RefBuild) => true
        | (InvalidBuild, InvalidBuild) => true
        | (AllBuild, AllBuild) => true
@@ -268,6 +274,7 @@ fun stageRange (Cells, _) = (PST, SIMPLE)
   | stageRange (ExtractIndex, _) = (LOW, CXX)
   | stageRange (ExtractDof, _) = (LOW, CXX)
   | stageRange (RefPos, _) = (PST, CXX)
+  | stageRange (WorldPos, _) = (PST, SIMPLE)
   | stageRange _ = raise Fail "NYI"
       
 end

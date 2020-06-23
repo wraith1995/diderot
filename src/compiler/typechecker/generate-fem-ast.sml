@@ -283,8 +283,8 @@ fun dnT(env, cxt, span, mesh, m) =
 
 
      val dumbWordPos = Ty.T_Fun([meshPosTy], dimT)
-     val dumbWorldPosName = FemData.functionNameMake mesh (FemName.worldPos)
-     val dumWorldPosOutSideName = Atom.atom (FemName.worldPos)
+     val dumbWorldPosName = FemData.functionNameMake mesh (FemName.worldPosHidden)
+     val dumWorldPosOutSideName = Atom.atom (FemName.worldPosHidden)
      val dumbWorldPosFunVar = Var.new(dumWorldPosOutSideName, span, AST.FunVar, dumbWordPos)
      val dumbBody = AST.S_Return(AST.E_Apply(
 				   (firstFun, span),
@@ -972,7 +972,9 @@ fun makeMeshPos(env, cxt, span, meshData, transformVars, dumb, extraFuns, extraR
  val results = makeFunctionRegistration(FemName.cell, [meshPosTy], cellTy, cell)::results
 
  fun refPos([v]) = AST.E_ExtractFemItem(v, vecTy, femOpt FO.RefPos) (*go for it*)
+ fun worldPos([v]) = AST.E_ExtractFemItem(v, vecTy, femOpt FO.WorldPos) (*go for it*)
  val results = makeFunctionRegistration(FemName.refPos, [meshPosTy], vecTy, refPos)::results
+ val results = makeFunctionRegistration(FemName.worldPos, [meshPosTy], vecTy, worldPos)::results
 
  val hiddenFuns = results
  val methods = [(fn (x,y,z) => (x,y)) dumb]

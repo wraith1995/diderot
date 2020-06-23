@@ -60,6 +60,7 @@ val space = "space"
 val cell = "mc"
 val refPos = "refPos"
 val worldPos = "worldPos"
+val worldPosHidden = "$worldPos"
 val valid = "isValid"
 
 val posExit = "exit"
