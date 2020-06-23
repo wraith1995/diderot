@@ -37,8 +37,6 @@ structure Util : sig
     val reFem: Var.t * AST.expr list * Types.ty * Types.ty -> AST.expr
 
     val getNewPosVar : Var.t -> SimpleVar.t option
-    val markStatePosVar : SimpleVar.t * SimpleVar.t -> unit
-    val getStatePosVar : SimpleVar.t -> SimpleVar.t
     val makePosAssign : Var.t * SimpleVar.t -> Simple.stmt list option
     val cvtWorldPos : SimpleVar.t * SimpleVar.t * bool -> Simple.stmt list
   end = struct
@@ -480,7 +478,7 @@ structure Util : sig
 	   of NONE => NONE
 	    | SOME(x'') => (case SimpleVar.typeOf x'
 			     of STy.T_Tensor([d])
-				=> (setFn(x',x''); SOME([S.S_Assign(x'',S.E_Var(x'))]))
+				=> (SOME([S.S_Assign(x'',S.E_Var(x'))]))
 			      | STy.T_Fem(ms as FemData.MeshPos(meshData)) =>
 				let
 				 val meshHolder = FemData.Mesh(meshData)
@@ -524,14 +522,13 @@ structure Util : sig
 				 val ifStm = S.S_IfThenElse(boolTemp,
 							    S.Block{props = PropList.newHolder(), code =  [getRefCell, getMesh, fieldAssign, worldPos]},
 							    S.Block{props = PropList.newHolder(), code =  [badAssign]})
-				 val actualFin = createV(x'', S.E_Var(assignTemp))
+				 val actualFin = S.S_Assign(x'', S.E_Var(assignTemp))
 
 
 							   (*test valid*)
 							   (*var ret;*)
 							   (*build if condition*)
 							   (**)
-				 val _ = setFn(x',x'');
 
 				in
 				 (* SOME([fin, fieldAssign, getRefCell, getMesh, getCell]) *)

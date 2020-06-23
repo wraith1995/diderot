@@ -777,7 +777,7 @@ structure Simplify : sig
 	     val x'' = getNewPosVar x
 	     val x''' = (case x''
 			  of NONE => [x']
-			   | SOME umm => (Util.markStatePosVar(x', umm);[umm,x'])
+			   | SOME umm => ([umm,x'])
 			(* end case*))
 	     val transformStm = makePosAssign(x, x')
                 in
