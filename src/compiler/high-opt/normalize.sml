@@ -60,13 +60,12 @@ structure Normalize : sig
           val ordered = Reorder.transform e'
           val rtn = case NormalizeEin.transform args ordered
              of NONE => ordered
-              | SOME e => (print(String.concat(["\nein-ordered:", EinPP.toString e, "\n"]));
-			   let val cleaned = EinSums.clean e
-			   in (print(String.concat(["\nein-cleaned:", EinPP.toString cleaned, "\n"])); cleaned)
-			   end)
+              | SOME e => let val cleaned = EinSums.clean e
+			   in cleaned
+			   end
             (* end case *)
           in
-           (print(String.concat(["\nein-exit:", EinPP.toString rtn, "\n"]));rtn)
+	   rtn
           end
 
 (* FIXME: what does this function do? *)

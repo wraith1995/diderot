@@ -17,7 +17,7 @@ structure FloatEin : sig
     structure Ty = MidTypes
     structure E = Ein
 
-    val debug = true
+    val debug = false
     fun printd(x) = if debug
 		    then print(x)
 		    else ()
