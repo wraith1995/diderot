@@ -21,6 +21,7 @@ is
   ../inputs/sources.cm
   ../mid-ir/sources.cm
   ../options/sources.cm
+  ../fields/sources.cm
 
   avail-rhs.sml
   fem-opt-split.sml

@@ -6,7 +6,7 @@
  * All rights reserved.
  *)
 
-(* tracking available LowIR rhs expressions *)
+(* tracking available MidIR rhs expressions *)
 structure AvailRHS = AvailRHSFn (
     val phase = "mid-opt"
     structure IR = MidIR)

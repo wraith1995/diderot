@@ -44,7 +44,15 @@ structure Ctl =
             obscurity = 5,
             help = "disable inlining of user-defined functions",
             default = true
-          }
+        }
+    val dofCache = C.genControl {
+         name = "caching",
+         pri = [2, 0, 0],
+         obscurity = 5,
+         help = "disable caching of dofs",
+         default = true
+        }
+			      
     val highVN = C.genControl {
             name = "high-vn",
             pri = [2, 1, 0],
@@ -88,7 +96,7 @@ structure Ctl =
             default = true
           }
     val optimizeControls = [
-            inline, highVN, midVN, midContract, lowVN, lowContract, treeContract
+            inline, highVN, midVN, dofCache, midContract, lowVN, lowContract, treeContract
           ]
 
     val dumpPT = C.genControl {

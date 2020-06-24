@@ -107,11 +107,16 @@ Translate  : ImageInfo.t : 1 : 1 : Pulls translation vector from image.
 # If V has the type "image(d)[shp]", then n has type "int[n]" and the resulting tensor
 # has the type "tensor[shp,s^d]".
 LoadVoxels : ImageInfo.t * int : 1 : 2 : load a cube of voxels
+LoadVoxelsBase : ImageInfo.t * int : 1 : 2 : load a cube of voxels
 #
 # LoadVoxelsWithCtl<I,s,ctl>(V,n) -- like LoadVoxels, but it also uses the specified
 # index control to deal with out-of-bounds indices.
 LoadVoxelsWithCtl : ImageInfo.t * int * idxctl : 1 : 2 : load a cube of voxels
+LoadVoxelsBaseWithCtl : ImageInfo.t * int * idxctl : 1 : 2 : load a cube of voxels
 #
+
+
+
 # Inside<I,s>(x,V) -- tests to see if the image-space position x is inside the domain of V.
 # I is the image info for V, s is the size of the sample to be loaded (see LoadVoxels)
 Inside : ImageInfo.t * int : 1 : 2 :
@@ -154,3 +159,8 @@ ExtractFemItemN : tys * ty * FemOpt.femOption * Stamp.t * string * tys * ty : 1 
 #
 # unlifted math functions
 MathFn : MathFns.t : 1 : * : math function
+# caching things
+Check : int : 1 : 1 : check if cache int has the arg value
+Load : int * int * ty * int : 1 : 0 : load int number x at given sizes to value ty of size int
+!Save : int * int * ty * int : 0 : 2 : save int number x at given sizes to value ty of size int
+

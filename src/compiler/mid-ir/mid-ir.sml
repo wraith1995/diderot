@@ -98,7 +98,9 @@ structure MidOps =
       | Transform of ImageInfo.t
       | Translate of ImageInfo.t
       | LoadVoxels of ImageInfo.t * int
+      | LoadVoxelsBase of ImageInfo.t * int
       | LoadVoxelsWithCtl of ImageInfo.t * int * idxctl
+      | LoadVoxelsBaseWithCtl of ImageInfo.t * int * idxctl
       | Inside of ImageInfo.t * int
       | IndexInside of ImageInfo.t * int
       | ImageDim of ImageInfo.t * int
@@ -117,6 +119,9 @@ structure MidOps =
       | StabilizeAll
       | Print of tys
       | MathFn of MathFns.t
+      | Check of int
+      | Load of int * int * ty * int
+      | Save of int * int * ty * int
 
     fun resultArity IAdd = 1
       | resultArity ISub = 1
@@ -168,7 +173,9 @@ structure MidOps =
       | resultArity (Transform _) = 1
       | resultArity (Translate _) = 1
       | resultArity (LoadVoxels _) = 1
+      | resultArity (LoadVoxelsBase _) = 1
       | resultArity (LoadVoxelsWithCtl _) = 1
+      | resultArity (LoadVoxelsBaseWithCtl _) = 1
       | resultArity (Inside _) = 1
       | resultArity (IndexInside _) = 1
       | resultArity (ImageDim _) = 1
@@ -187,6 +194,9 @@ structure MidOps =
       | resultArity StabilizeAll = 0
       | resultArity (Print _) = 0
       | resultArity (MathFn _) = 1
+      | resultArity (Check _) = 1
+      | resultArity (Load _) = 1
+      | resultArity (Save _) = 0
 
     fun arity IAdd = 2
       | arity ISub = 2
@@ -238,7 +248,9 @@ structure MidOps =
       | arity (Transform _) = 1
       | arity (Translate _) = 1
       | arity (LoadVoxels _) = 2
+      | arity (LoadVoxelsBase _) = 2
       | arity (LoadVoxelsWithCtl _) = 2
+      | arity (LoadVoxelsBaseWithCtl _) = 2
       | arity (Inside _) = 2
       | arity (IndexInside _) = 2
       | arity (ImageDim _) = 1
@@ -257,6 +269,9 @@ structure MidOps =
       | arity StabilizeAll = 0
       | arity (Print _) = ~1
       | arity (MathFn _) = ~1
+      | arity (Check _) = 1
+      | arity (Load _) = 0
+      | arity (Save _) = 2
 
     fun isPure (MkDynamic _) = false
       | isPure (Append _) = false
@@ -265,6 +280,7 @@ structure MidOps =
       | isPure KillAll = false
       | isPure StabilizeAll = false
       | isPure (Print _) = false
+      | isPure (Save _) = false
       | isPure _ = true
 
     fun same (IAdd, IAdd) = true
@@ -317,7 +333,9 @@ structure MidOps =
       | same (Transform(a0), Transform(b0)) = ImageInfo.same(a0, b0)
       | same (Translate(a0), Translate(b0)) = ImageInfo.same(a0, b0)
       | same (LoadVoxels(a0,a1), LoadVoxels(b0,b1)) = ImageInfo.same(a0, b0) andalso sameint(a1, b1)
+      | same (LoadVoxelsBase(a0,a1), LoadVoxelsBase(b0,b1)) = ImageInfo.same(a0, b0) andalso sameint(a1, b1)
       | same (LoadVoxelsWithCtl(a0,a1,a2), LoadVoxelsWithCtl(b0,b1,b2)) = ImageInfo.same(a0, b0) andalso sameint(a1, b1) andalso sameidxctl(a2, b2)
+      | same (LoadVoxelsBaseWithCtl(a0,a1,a2), LoadVoxelsBaseWithCtl(b0,b1,b2)) = ImageInfo.same(a0, b0) andalso sameint(a1, b1) andalso sameidxctl(a2, b2)
       | same (Inside(a0,a1), Inside(b0,b1)) = ImageInfo.same(a0, b0) andalso sameint(a1, b1)
       | same (IndexInside(a0,a1), IndexInside(b0,b1)) = ImageInfo.same(a0, b0) andalso sameint(a1, b1)
       | same (ImageDim(a0,a1), ImageDim(b0,b1)) = ImageInfo.same(a0, b0) andalso sameint(a1, b1)
@@ -336,6 +354,9 @@ structure MidOps =
       | same (StabilizeAll, StabilizeAll) = true
       | same (Print(a0), Print(b0)) = sametys(a0, b0)
       | same (MathFn(a0), MathFn(b0)) = MathFns.same(a0, b0)
+      | same (Check(a0), Check(b0)) = sameint(a0, b0)
+      | same (Load(a0,a1,a2,a3), Load(b0,b1,b2,b3)) = sameint(a0, b0) andalso sameint(a1, b1) andalso samety(a2, b2) andalso sameint(a3, b3)
+      | same (Save(a0,a1,a2,a3), Save(b0,b1,b2,b3)) = sameint(a0, b0) andalso sameint(a1, b1) andalso samety(a2, b2) andalso sameint(a3, b3)
       | same _ = false
 
     fun hash IAdd = 0w3
@@ -388,25 +409,30 @@ structure MidOps =
       | hash (Transform(a0)) = 0w227 + ImageInfo.hash a0
       | hash (Translate(a0)) = 0w229 + ImageInfo.hash a0
       | hash (LoadVoxels(a0,a1)) = 0w233 + ImageInfo.hash a0 + hashint a1
-      | hash (LoadVoxelsWithCtl(a0,a1,a2)) = 0w239 + ImageInfo.hash a0 + hashint a1 + hashidxctl a2
-      | hash (Inside(a0,a1)) = 0w241 + ImageInfo.hash a0 + hashint a1
-      | hash (IndexInside(a0,a1)) = 0w251 + ImageInfo.hash a0 + hashint a1
-      | hash (ImageDim(a0,a1)) = 0w257 + ImageInfo.hash a0 + hashint a1
-      | hash (BorderCtlDefault(a0)) = 0w263 + ImageInfo.hash a0
-      | hash (BorderCtlClamp(a0)) = 0w269 + ImageInfo.hash a0
-      | hash (BorderCtlMirror(a0)) = 0w271 + ImageInfo.hash a0
-      | hash (BorderCtlWrap(a0)) = 0w277 + ImageInfo.hash a0
-      | hash (LoadSeq(a0,a1)) = 0w281 + hashty a0 + hashstring a1
-      | hash (LoadImage(a0,a1)) = 0w283 + hashty a0 + hashstring a1
-      | hash (LoadFem(a0)) = 0w293 + hashty a0
-      | hash (ExtractFemItem(a0,a1)) = 0w307 + hashty a0 + FemOpt.hash a1
-      | hash (ExtractFemItem2(a0,a1,a2)) = 0w311 + hashty a0 + hashty a1 + FemOpt.hash a2
-      | hash (ExtractFem(a0,a1)) = 0w313 + hashty a0 + hashty a1
-      | hash (ExtractFemItemN(a0,a1,a2,a3,a4,a5,a6)) = 0w317 + hashtys a0 + hashty a1 + FemOpt.hash a2 + Stamp.hash a3 + hashstring a4 + hashtys a5 + hashty a6
-      | hash KillAll = 0w331
-      | hash StabilizeAll = 0w337
-      | hash (Print(a0)) = 0w347 + hashtys a0
-      | hash (MathFn(a0)) = 0w349 + MathFns.hash a0
+      | hash (LoadVoxelsBase(a0,a1)) = 0w239 + ImageInfo.hash a0 + hashint a1
+      | hash (LoadVoxelsWithCtl(a0,a1,a2)) = 0w241 + ImageInfo.hash a0 + hashint a1 + hashidxctl a2
+      | hash (LoadVoxelsBaseWithCtl(a0,a1,a2)) = 0w251 + ImageInfo.hash a0 + hashint a1 + hashidxctl a2
+      | hash (Inside(a0,a1)) = 0w257 + ImageInfo.hash a0 + hashint a1
+      | hash (IndexInside(a0,a1)) = 0w263 + ImageInfo.hash a0 + hashint a1
+      | hash (ImageDim(a0,a1)) = 0w269 + ImageInfo.hash a0 + hashint a1
+      | hash (BorderCtlDefault(a0)) = 0w271 + ImageInfo.hash a0
+      | hash (BorderCtlClamp(a0)) = 0w277 + ImageInfo.hash a0
+      | hash (BorderCtlMirror(a0)) = 0w281 + ImageInfo.hash a0
+      | hash (BorderCtlWrap(a0)) = 0w283 + ImageInfo.hash a0
+      | hash (LoadSeq(a0,a1)) = 0w293 + hashty a0 + hashstring a1
+      | hash (LoadImage(a0,a1)) = 0w307 + hashty a0 + hashstring a1
+      | hash (LoadFem(a0)) = 0w311 + hashty a0
+      | hash (ExtractFemItem(a0,a1)) = 0w313 + hashty a0 + FemOpt.hash a1
+      | hash (ExtractFemItem2(a0,a1,a2)) = 0w317 + hashty a0 + hashty a1 + FemOpt.hash a2
+      | hash (ExtractFem(a0,a1)) = 0w331 + hashty a0 + hashty a1
+      | hash (ExtractFemItemN(a0,a1,a2,a3,a4,a5,a6)) = 0w337 + hashtys a0 + hashty a1 + FemOpt.hash a2 + Stamp.hash a3 + hashstring a4 + hashtys a5 + hashty a6
+      | hash KillAll = 0w347
+      | hash StabilizeAll = 0w349
+      | hash (Print(a0)) = 0w353 + hashtys a0
+      | hash (MathFn(a0)) = 0w359 + MathFns.hash a0
+      | hash (Check(a0)) = 0w367 + hashint a0
+      | hash (Load(a0,a1,a2,a3)) = 0w373 + hashint a0 + hashint a1 + hashty a2 + hashint a3
+      | hash (Save(a0,a1,a2,a3)) = 0w379 + hashint a0 + hashint a1 + hashty a2 + hashint a3
 
     fun toString IAdd = "IAdd"
       | toString ISub = "ISub"
@@ -458,7 +484,9 @@ structure MidOps =
       | toString (Transform(a0)) = concat["Transform<", ImageInfo.toString a0, ">"]
       | toString (Translate(a0)) = concat["Translate<", ImageInfo.toString a0, ">"]
       | toString (LoadVoxels(a0,a1)) = concat["LoadVoxels<", ImageInfo.toString a0, ",", intToString a1, ">"]
+      | toString (LoadVoxelsBase(a0,a1)) = concat["LoadVoxelsBase<", ImageInfo.toString a0, ",", intToString a1, ">"]
       | toString (LoadVoxelsWithCtl(a0,a1,a2)) = concat["LoadVoxelsWithCtl<", ImageInfo.toString a0, ",", intToString a1, ",", idxctlToString a2, ">"]
+      | toString (LoadVoxelsBaseWithCtl(a0,a1,a2)) = concat["LoadVoxelsBaseWithCtl<", ImageInfo.toString a0, ",", intToString a1, ",", idxctlToString a2, ">"]
       | toString (Inside(a0,a1)) = concat["Inside<", ImageInfo.toString a0, ",", intToString a1, ">"]
       | toString (IndexInside(a0,a1)) = concat["IndexInside<", ImageInfo.toString a0, ",", intToString a1, ">"]
       | toString (ImageDim(a0,a1)) = concat["ImageDim<", ImageInfo.toString a0, ",", intToString a1, ">"]
@@ -477,6 +505,9 @@ structure MidOps =
       | toString StabilizeAll = "StabilizeAll"
       | toString (Print(a0)) = concat["Print<", tysToString a0, ">"]
       | toString (MathFn(a0)) = concat["MathFn<", MathFns.toString a0, ">"]
+      | toString (Check(a0)) = concat["Check<", intToString a0, ">"]
+      | toString (Load(a0,a1,a2,a3)) = concat["Load<", intToString a0, ",", intToString a1, ",", tyToString a2, ",", intToString a3, ">"]
+      | toString (Save(a0,a1,a2,a3)) = concat["Save<", intToString a0, ",", intToString a1, ",", tyToString a2, ",", intToString a3, ">"]
 
   end
 
