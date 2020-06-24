@@ -200,7 +200,8 @@ structure MidToLow : sig
 		in
 		 assign (DstOp.ExtractFemItemN(tys', outTy', opt', stamp', name', paramTys',  fTy'))
 		end
-
+	      | SrcOp.Check(j) => assign(DstOp.Check(j))
+	      | SrcOp.Load(i, j, t, k) => assign (DstOp.Load(i, j, cvtTy t, k))
               | rator => raise Fail("bogus operator " ^ SrcOp.toString rator)
             (* end case *)
           end
@@ -251,12 +252,13 @@ structure MidToLow : sig
               | SrcIR.OP(SrcOp.StabilizeAll, []) => mkOP (DstOp.StabilizeAll, [])
               | SrcIR.OP(SrcOp.Print tys, xs) => mkOP (DstOp.Print(List.map cvtTy tys), xs)
               | SrcIR.MAPREDUCE mrs => let
-                  val mrs = List.map
-                        (fn (r, f, xs) => (r, Env.renameFV(env, f), Env.renameList(env, xs)))
-                          mrs
-                  in
-                    massign (DstIR.MAPREDUCE mrs)
-                  end
+               val mrs = List.map
+                           (fn (r, f, xs) => (r, Env.renameFV(env, f), Env.renameList(env, xs)))
+                           mrs
+              in
+               massign (DstIR.MAPREDUCE mrs)
+              end
+	      | SrcIR.OP(SrcOp.Save(i, j, ty, k), xs) => mkOP(DstOp.Save(i, j, cvtTy ty, k), xs)
               | _ => raise Fail("bogus rhs for MASSIGN: " ^ SrcIR.RHS.toString rhs)
             (* end case *)
           end

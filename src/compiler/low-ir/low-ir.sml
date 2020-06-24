@@ -134,6 +134,9 @@ structure LowOps =
       | StabilizeAll
       | Print of tys
       | MathFn of MathFns.t
+      | Check of int
+      | Load of int * int * ty * int
+      | Save of int * int * ty * int
 
     fun resultArity IAdd = 1
       | resultArity ISub = 1
@@ -221,6 +224,9 @@ structure LowOps =
       | resultArity StabilizeAll = 0
       | resultArity (Print _) = 0
       | resultArity (MathFn _) = 1
+      | resultArity (Check _) = 1
+      | resultArity (Load _) = 1
+      | resultArity (Save _) = 0
 
     fun arity IAdd = 2
       | arity ISub = 2
@@ -308,6 +314,9 @@ structure LowOps =
       | arity StabilizeAll = 0
       | arity (Print _) = ~1
       | arity (MathFn _) = ~1
+      | arity (Check _) = 1
+      | arity (Load _) = 0
+      | arity (Save _) = 2
 
     fun isPure (MkDynamic _) = false
       | isPure (Append _) = false
@@ -316,6 +325,7 @@ structure LowOps =
       | isPure KillAll = false
       | isPure StabilizeAll = false
       | isPure (Print _) = false
+      | isPure (Save _) = false
       | isPure _ = true
 
     fun same (IAdd, IAdd) = true
@@ -404,6 +414,9 @@ structure LowOps =
       | same (StabilizeAll, StabilizeAll) = true
       | same (Print(a0), Print(b0)) = sametys(a0, b0)
       | same (MathFn(a0), MathFn(b0)) = MathFns.same(a0, b0)
+      | same (Check(a0), Check(b0)) = sameint(a0, b0)
+      | same (Load(a0,a1,a2,a3), Load(b0,b1,b2,b3)) = sameint(a0, b0) andalso sameint(a1, b1) andalso samety(a2, b2) andalso sameint(a3, b3)
+      | same (Save(a0,a1,a2,a3), Save(b0,b1,b2,b3)) = sameint(a0, b0) andalso sameint(a1, b1) andalso samety(a2, b2) andalso sameint(a3, b3)
       | same _ = false
 
     fun hash IAdd = 0w3
@@ -492,6 +505,9 @@ structure LowOps =
       | hash StabilizeAll = 0w439
       | hash (Print(a0)) = 0w443 + hashtys a0
       | hash (MathFn(a0)) = 0w449 + MathFns.hash a0
+      | hash (Check(a0)) = 0w457 + hashint a0
+      | hash (Load(a0,a1,a2,a3)) = 0w461 + hashint a0 + hashint a1 + hashty a2 + hashint a3
+      | hash (Save(a0,a1,a2,a3)) = 0w463 + hashint a0 + hashint a1 + hashty a2 + hashint a3
 
     fun toString IAdd = "IAdd"
       | toString ISub = "ISub"
@@ -579,6 +595,9 @@ structure LowOps =
       | toString StabilizeAll = "StabilizeAll"
       | toString (Print(a0)) = concat["Print<", tysToString a0, ">"]
       | toString (MathFn(a0)) = concat["MathFn<", MathFns.toString a0, ">"]
+      | toString (Check(a0)) = concat["Check<", intToString a0, ">"]
+      | toString (Load(a0,a1,a2,a3)) = concat["Load<", intToString a0, ",", intToString a1, ",", tyToString a2, ",", intToString a3, ">"]
+      | toString (Save(a0,a1,a2,a3)) = concat["Save<", intToString a0, ",", intToString a1, ",", tyToString a2, ",", intToString a3, ">"]
 
   end
 
