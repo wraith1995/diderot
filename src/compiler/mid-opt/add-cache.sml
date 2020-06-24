@@ -27,23 +27,7 @@ structure Env = TranslateEnvFn (
  structure DstIR = DstIR
  val cvtTy = cvtTy
  end)		    
-(* add cache opts: check(int)(v), load(size, ty), dofs = save(size, ty, dofs) *)
-(*expand and mexapnd and the ref (current entry, )*)
-(*build the vars and do a rewrite*)
-(*add the new statevar and the init - rewrite program*)
 
-(*check = check... (assign node)
-if check (cond node)
-then dofsTemp=load (true branch)
-else loadDofs = ...; dofsTemp = save(loadDofs) (false branch)
-
-
-dofsTemp = 
-
-function a(checkInt, dofLoad, dofSize, dofType, dstVar) = build the cfg
-function checkInt
-function buildDofLoad, etcc
- *)
 structure IR = MidIR
 structure Ty = MidTypes
 structure Op = MidOps
@@ -352,6 +336,12 @@ structure Trans = TranslateScopedFn(
 fun translate prog =
     let
      val prog = Trans.translate prog
+     val IR.Program{props, consts, inputs, constInit, globals, funcs, globInit, strand, create, start, update} = prog
+     val props = if (!currentSize) <> 0
+		 then Properties.UsesCache(!numberChecks, !currentSize)::props
+		 else props
+     val prog = IR.Program{props=props, consts=consts, inputs=inputs, constInit=constInit, globals=globals, funcs=funcs,
+			  globInit=globInit, strand=strand, create=create, start=start, update=update}
     in
      (MidCensus.init prog;
      prog)

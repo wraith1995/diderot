@@ -34,6 +34,7 @@ structure Properties =
                                  * that requires BSP execution.
                                  *)
       | NeedsExtraLibs of string list * string list * string list * string list
+      | UsesCache of int * int   (* present if there is a cache of n vars with m total bytes *)
 
     fun toString HasConsts = "HasConsts"
       | toString HasInputs = "HasInputs"
@@ -58,6 +59,7 @@ structure Properties =
 	^ (String.concatWith "," includeDirs) ^ "],-l["
 	^ (String.concatWith "," links) ^ "],-L["
 	^ (String.concatWith "," linkDirs) ^ "])"
+      | toString (UsesCache(a,b)) = "UsesCache("^(Int.toString a) ^", " ^(Int.toString b) ^")"
 
 
     fun propsToString [] = "none"
@@ -85,6 +87,10 @@ structure Properties =
 	in
 	 (nub r1, nub r2, nub r3, nub r4)
 	end
+    fun getCache(props : t list) = Option.map (fn UsesCache(a,b) => (a,b))
+					      (List.find (fn p => case p
+								   of UsesCache(a,b) => true
+								    | _ => false (* end case *)) props)
 
   (* NOTE: this function is less precise than the TargetSpec.dualState function *)
     val dualState = hasProp StrandCommunication
