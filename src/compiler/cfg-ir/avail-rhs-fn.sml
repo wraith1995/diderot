@@ -16,6 +16,8 @@ functor AvailRHSFn (
 
     structure IR : SSA
 
+
+
   ) : sig
 
     type rhs = IR.rhs
@@ -39,6 +41,9 @@ functor AvailRHSFn (
    * order from how they were added to the table.
    *)
     val getAssignments : t -> IR.assign list
+
+    val assignOp : t * string * IR.Ty.ty * IR.Op.rator * IR.var list -> IR.var
+
 
   end = struct
 
@@ -118,7 +123,17 @@ functor AvailRHSFn (
           (* end case *))
 
     fun addAssignToList (TBL{assigns, avail}, assgn) =
-          assigns := assgn :: !assigns
+        assigns := assgn :: !assigns
+
+
+    fun assignOp (avail, pre, ty, opss, args) =
+        addAssign(avail, pre, ty, IR.OP(opss, args))
+    fun assignCons (_, _, [], ty) = raise Fail "empty cons"
+      | assignCons (avail, pre, args as x::_, ty) = let
+      in
+       addAssign(avail, pre, ty, IR.CONS(args, ty))
+      end
+			      
 
     fun getAssignments (TBL{assigns, ...}) = !assigns
 
