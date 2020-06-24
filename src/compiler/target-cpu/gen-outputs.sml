@@ -598,7 +598,7 @@ structure GenOutputs : sig
 	       end
           fun getFn snapshot {name, ty, kind} = let
                 val funcName = if snapshot
-                      then GenAPI.snapshotGet(spec, name)
+			       then GenAPI.snapshotGet(spec, name)
 			       else GenAPI.outputGet(spec, name)
                 val (params, body) = genFnHelper(env, snapshot, nAxes, ty, name, kind)
                 in

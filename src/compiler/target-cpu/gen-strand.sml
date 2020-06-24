@@ -119,7 +119,6 @@ structure GenStrand : sig
                     protected = [],
                     private = []
                   }
-
                 in
                   [localStruct, sharedStruct, strandStruct]
                 end

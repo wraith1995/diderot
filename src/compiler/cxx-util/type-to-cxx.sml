@@ -4,7 +4,7 @@
  *
  * COPYRIGHT (c) 2016 The University of Chicago
  * All rights reserved.
- *)
+n *)
 
 structure TypeToCxx : sig
 
