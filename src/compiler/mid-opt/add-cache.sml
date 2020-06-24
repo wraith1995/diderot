@@ -16,14 +16,16 @@ structure SrcIR = MidIR
 structure SrcTy = MidTypes
 structure DstIR = MidIR
 structure DstTy = MidTypes
+structure SrcOp = MidOps
+structure DstOp = MidOps	    
 
 
-
+val cvtTy =  fn x => x
 structure Env = TranslateEnvFn (
  struct
  structure SrcIR = SrcIR
  structure DstIR = DstIR
- val cvtTy = fn x => x
+ val cvtTy = cvtTy
  end)		    
 (* add cache opts: check(int)(v), load(size, ty), dofs = save(size, ty, dofs) *)
 (*expand and mexapnd and the ref (current entry, )*)
@@ -229,12 +231,13 @@ fun buildCondition(calculateInt : IR.assignment list, intVar : IR.var,
 
      
      val cond = IR.Node.mkCOND checkBool
-     val _ = IR.Node.setPred(IR.CFG.exit loadCfg, cond)
+     val _ = IR.Node.addEdge(IR.CFG.exit loadCfg, cond)
 
      val cachedDofs = IR.Var.new("cachedDofs", dofType)
      val cachedDofsLoad = IR.ASSGN(cachedDofs, IR.OP(Op.Load(address, sizeAddress, dofType, dofSize), []))
      val cachedDofBranch = IR.CFG.mkBlock [cachedDofsLoad]
      val _ = IR.Node.setTrueBranch (cond, IR.CFG.entry cachedDofBranch)
+     val _ = IR.Node.setPred(IR.CFG.entry cachedDofBranch, cond)
 
      val intermediateDof = IR.Var.new ("loadedDofs", dofType)
      val savedDofs = IR.Var.new ("savedDofs", dofType)
@@ -242,14 +245,15 @@ fun buildCondition(calculateInt : IR.assignment list, intVar : IR.var,
      val saveDofs = IR.MASSGN(([], (IR.OP(Op.Save(address, sizeAddress, dofType, dofSize), [intVar, intermediateDof]))))
      val saveDofsBranch = IR.CFG.mkBlock [loadDofs, saveDofs]
      val _ = IR.Node.setFalseBranch (cond, IR.CFG.entry saveDofsBranch)
+     val _ = IR.Node.setPred(IR.CFG.entry saveDofsBranch, cond)
 
      (* val phiDofs = IR.Var.new("phiDofs", dofType) *)
-     val phi = [(dstVar, [SOME(cachedDofs), SOME(savedDofs)])]
+     val phi = [(dstVar, [SOME(cachedDofs), SOME(intermediateDof)])]
      val joinNd = IR.Node.mkJOIN phi
-     val _ = IR.Node.setPred(joinNd, IR.CFG.exit saveDofsBranch)
-     val _ = IR.Node.setPred(joinNd, IR.CFG.exit cachedDofBranch)
-
-     val cfg = IR.CFG{entry=IR.CFG.exit loadCfg, exit=joinNd}
+     val _ = IR.Node.addEdge(IR.CFG.exit cachedDofBranch, joinNd)
+     val _ = IR.Node.addEdge(IR.CFG.exit saveDofsBranch, joinNd)
+     val _ = IR.Node.setEdgeMask(joinNd, [false, false])
+     val cfg = IR.CFG{entry=IR.CFG.entry loadCfg, exit=joinNd}
     in
      cfg
     end
@@ -270,31 +274,64 @@ fun expandDofs(env, (y, IR.OP(rator, ys)) : IR.var * IR.rhs) =
 
 fun expand(env, (y, rhs) : (IR.var * IR.rhs), b) =
     let
-     fun assign rhs = [IR.ASSGN(Env.rename (env, y), rhs)]
+     fun expand' (env, (y, rhs)) = let
+      fun assign rhs = [DstIR.ASSGN(Env.rename (env, y), rhs)]
+     in
+      case rhs
+       of SrcIR.GLOBAL x => assign (DstIR.GLOBAL(Env.renameGV(env, x)))
+        | SrcIR.STATE(NONE, fld) => assign (DstIR.STATE(NONE, Env.renameSV(env, fld)))
+        | SrcIR.STATE(SOME x, fld) =>
+          assign (DstIR.STATE(SOME(Env.rename(env, x)), Env.renameSV(env, fld)))
+        | SrcIR.VAR x => assign (DstIR.VAR(Env.rename(env, x)))
+        | SrcIR.LIT lit => assign (DstIR.LIT lit)
+        | SrcIR.OP(rator, args) =>
+	  assign (DstIR.OP(rator, Env.renameList(env, args)))
+        | SrcIR.CONS(args, ty) => assign (DstIR.CONS(Env.renameList(env, args), cvtTy ty))
+        | SrcIR.SEQ(args, ty) => assign (DstIR.SEQ(Env.renameList(env, args), cvtTy ty))
+        | SrcIR.EINAPP(rator, args) => assign (DstIR.EINAPP(rator, Env.renameList(env, args)))
+        | SrcIR.APPLY(f, args) =>
+          assign (DstIR.APPLY(Env.renameFV(env, f), Env.renameList(env, args)))
+        | _ => raise Fail("bogus rhs for ASSIGN: " ^ SrcIR.RHS.toString rhs)
+		     (* end case *)
+     end
     in
      if b andalso loadsDofs(rhs)
      then expandDofs(env, (y, rhs))
-     else IR.CFG.mkBlock (assign rhs)
+     else IR.CFG.mkBlock (expand' (env, (y, rhs)))
     end
 
-fun mexpand(env, (ys, rhs), b) =
-    let
-     fun massign rhs = let
-      val nd = IR.Node.mkMASSIGN(Env.renameList(env, ys), rhs)
-     in
-      DstIR.CFG{entry=nd, exit=nd}
-     end
-    in
-     massign rhs
-    end
+fun mexpand (env, (ys, rhs), b) = let
+ fun massign rhs = let
+  val nd = DstIR.Node.mkMASSIGN(Env.renameList(env, ys), rhs)
+ in
+  DstIR.CFG{entry=nd, exit=nd}
+ end
+ fun mkOP (rator, xs) = massign(DstIR.OP(rator, Env.renameList(env, xs)))
+in
+ case rhs
+  of SrcIR.OP(SrcOp.EigenVecs2x2, xs) => mkOP (DstOp.EigenVecs2x2, xs)
+   | SrcIR.OP(SrcOp.EigenVecs3x3, xs) => mkOP (DstOp.EigenVecs3x3, xs)
+   | SrcIR.OP(SrcOp.KillAll, []) => mkOP (DstOp.KillAll, [])
+   | SrcIR.OP(SrcOp.StabilizeAll, []) => mkOP (DstOp.StabilizeAll, [])
+   | SrcIR.OP(SrcOp.Print tys, xs) => mkOP (DstOp.Print(List.map cvtTy tys), xs)
+   | SrcIR.MAPREDUCE mrs => let
+    val mrs = List.map
+                (fn (r, f, xs) => (r, Env.renameFV(env, f), Env.renameList(env, xs)))
+                mrs
+   in
+    massign (DstIR.MAPREDUCE mrs)
+   end
+   | _ => raise Fail("bogus rhs for MASSIGN: " ^ SrcIR.RHS.toString rhs)
+		(* end case *)
+end
 
 (*rewrite just touches the key ones*)
 structure Trans = TranslateScopedFn(
  struct
  open Env
  type scope = bool
- val expand = fn (x,y,z) => raise Fail "umm"
- val mexpand = fn (x,y,z) => raise Fail "umm"
+ val expand = expand
+ val mexpand = mexpand
 
  val constInitScope = false
  val funcScope = false

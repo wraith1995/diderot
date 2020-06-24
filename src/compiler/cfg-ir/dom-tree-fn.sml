@@ -68,7 +68,7 @@ functor DomTreeFn (IR : SSA) : DOMINANCE_TREE = struct
    *)
     fun computeTree cfg = let
           fun walk (joinStk : open_join list, nd) = (case Nd.kind nd
-                 of IR.NULL => raise Fail "unexpected NULL node"
+                 of IR.NULL => raise Fail ("unexpected NULL node: " ^(Nd.toString nd))
                   | IR.ENTRY{succ} => walk (joinStk, !succ)
                   | IR.JOIN{mask, succ, ...} => (
                       case joinStk
