@@ -31,6 +31,7 @@ structure TreeTypes =
       | ImageTy of ImageInfo.t
       | StrandIdTy of Atom.atom         (* index into strand-state array *)
       | FemData of FemData.femType
+      | Blob of t * int                (* a pointer to a giant blob of contig data*)
 
     fun containsFem (FemData(_)) = true
       | containsFem (SeqTy(ty, _)) = containsFem ty
@@ -50,28 +51,6 @@ structure TreeTypes =
 	in TensorTy([dim * 2 + 1]) end
       | replaceFem _ = raise Fail "impossible"
 
-    fun toSOA (SeqTy(s, NONE)) =
-	let
-	 fun toSOA' ty =
-	     (case ty
-	       of SeqTy(ty', NONE) => raise Fail "[] [] detected"
-		| SeqTy(ty', SOME(n)) => SeqTy(toSOA' ty', SOME(n))
-		| TupleTy(tys) => TupleTy(List.map toSOA' tys)
-		| _ => SeqTy(ty, NONE)
-	     (*End Case*))
-	in
-	 toSOA' s
-	end
-      | toSOA _ = raise Fail "invalid input to SOA"
-			
-    fun toAOS ty =
-	let
-	 fun cleanTy (TupleTy(tys)) = TupleTy(List.map cleanTy tys)
-	   | cleanTy (SeqTy(ty', NONE)) = ty'
-	   | cleanTy (SeqTy(ty', SOME(n))) = SeqTy(cleanTy ty', SOME(n)) 
-	in
-	 SeqTy(cleanTy ty, NONE)
-	end
 			     
     fun fromAPI (APITypes.IntTy) = IntTy
       | fromAPI (APITypes.BoolTy) = BoolTy
@@ -157,6 +136,7 @@ structure TreeTypes =
       | same (ImageTy info1, ImageTy info2) = ImageInfo.sameShape(info1, info2)
       | same (StrandIdTy n1, StrandIdTy n2) = Atom.same(n1, n2)
       | same (FemData(data1), FemData(data2)) = FemData.same(data1, data2)
+      | same (Blob(ty1, j1), Blob(ty2, j2)) = same(ty1, ty2) andalso j1=j2
       | same _ = false
 
   (* is a source type compatible with the destination type? *)
@@ -175,6 +155,7 @@ structure TreeTypes =
       | hash (ImageTy info) = 0w37 * ImageInfo.hash info + 0w6
       | hash (StrandIdTy n) = 0w41 + Atom.hash n
       | hash (FemData(data)) = 0w43 + 0w47 * (FemData.hash data)
+      | hash (Blob(ty, j)) = 0w53 + 0w59 * (hash ty) + (Word.fromInt j) * 0w61
 
     fun toString BoolTy = "bool"
       | toString StringTy = "string"
@@ -197,6 +178,7 @@ structure TreeTypes =
       | toString (ImageTy info) = concat["image(", ImageInfo.toString info, ")"]
       | toString (StrandIdTy n) = concat["id(", Atom.toString n, ")"]
       | toString (FemData(data)) = concat["femData(", FemData.toString(data), ")"]
+      | toString (Blob(ty, j)) = concat["Blob(", toString ty, ", ", Int.toString j, ")"]
 
     structure Tbl = HashTableFn (
       struct

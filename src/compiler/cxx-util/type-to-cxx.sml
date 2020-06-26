@@ -77,6 +77,11 @@ structure TypeToCxx : sig
                 | (Ty.ImageTy info) => trImageTy diderotTQ (env, info)
                 | (Ty.StrandIdTy _) => programQ "strand_array::sid_t"
 		| (Ty.FemData(data)) => programQ((Atom.toString (FemData.nameOf data)))
+		| Ty.Blob(ty, size) => (case ty
+					 of Ty.IntTy => diderotTQ("blob_int", [tr ty, CL.T_Named(Int.toString size)])
+					  | Ty.VecTy(1,1) => diderotTQ("blob_real", [tr ty, CL.T_Named(Int.toString size)])
+					  | _ => raise Fail "impossible")
+
               (* end case *))
           in
             tr ty
@@ -100,6 +105,10 @@ structure TypeToCxx : sig
             | (Ty.ImageTy info) => imageTy (env, info)
             | (Ty.StrandIdTy _) => CL.T_Named "strand_array::sid_t"
 	    | Ty.FemData(data) => CL.T_Named (Atom.toString (FemData.nameOf data))
+	    | Ty.Blob(ty, size) => (case ty
+				     of Ty.IntTy => CL.T_Template("diderot::blob_int", [trType(env, ty), CL.T_Named(Int.toString size)])
+				      | Ty.VecTy(1,1) => CL.T_Template("diderot::blob_real", [trType(env, ty), CL.T_Named(Int.toString size)])
+				      | _ => raise Fail "impossible")
           (* end case *))
 
   (* dynamic sequence of the specified element type *)

@@ -178,3 +178,4 @@ MathFn : MathFns.t : 1 : * : math function
 Check : int : 1 : 1 : check if cache int has the arg value
 Load : int * int * ty * int : 1 : 0 : load int number x at given sizes to value ty of size int
 !Save : int * int * ty * int : 0 : 2 : save int number x at given sizes to value ty of size int
+LoadScalar : int * int * int : 1 : 0 : load int number x at given size + offset

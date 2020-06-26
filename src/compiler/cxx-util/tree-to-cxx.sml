@@ -204,7 +204,7 @@ structure TreeToCxx : sig
                 val dd = (case ty
                        of Ty.TensorTy(_::dd) => dd
                         | Ty.TensorRefTy(_::dd) => dd
-                        | _ => raise Fail "bogus type for TensorIndex"
+                        | _ => raise Fail ("bogus type for TensorIndex: " ^ Ty.toString ty)
                       (* end case *))
               (* dimensions/indices are slowest to fastest *)
                 fun index ([], [i], acc) = acc + i
@@ -301,6 +301,25 @@ structure TreeToCxx : sig
             | (Op.ImageDim(info, i), [img]) => CL.mkDispatch(img, "size", [mkInt i])
             | (Op.MathFn f, args) => mkStdApply(MathFns.toString f, args)
             | (Op.IfWrap, [a, b, c])    => CL.mkApply("IfWrap", [a,b,c])
+	    | (Op.Check(j), [test]) =>
+	      let
+	       val selfLocal = Env.selfLocal env
+	       val addr = CL.mkInt(IntInf.fromInt j)
+	       val acc = CL.mkIndirect(CL.mkVar selfLocal, "sv__ct")
+	       val ret = CL.mkDispatch(acc, "check", [addr, test])
+	      in
+	       ret
+	      end
+	    | (Op.LoadScalar(_, addr, offset), []) =>
+	      let
+	       val selfLocal = Env.selfLocal env
+	       val addr' = CL.mkInt(IntInf.fromInt addr)
+	       val offset' = CL.mkInt(IntInf.fromInt offset)
+	       val acc = CL.mkIndirect(CL.mkVar selfLocal, "sv__c")
+	       val ret = CL.mkDispatch(acc, "getscalar", [addr', offset'])
+	      in
+	       ret
+	      end
 	    | (Op.LoadFem(Ty.FemData(data)), [a,b]) =>
 	      if FemData.baseFem(data)
 	      then CL.mkDispatch(a, "loadFem", [b]) 
@@ -475,7 +494,19 @@ structure TreeToCxx : sig
                   | IR.E_Op(Op.EigenVals2x2, [a]) =>
                       CL.mkCall("eigenvals", [trExp (env, a), lhs]) :: stms
                   | IR.E_Op(Op.EigenVals3x3, [a]) =>
-                      CL.mkCall("eigenvals", [trExp (env, a), lhs]) :: stms
+                    CL.mkCall("eigenvals", [trExp (env, a), lhs]) :: stms
+		  | IR.E_Op(Op.Load(addr, sizeAddr, dofRet, dofSize), []) =>
+		    let
+		     val selfLocal = Env.selfLocal env
+		     val ct = CL.mkIndirect(CL.mkVar selfLocal, "sv__c")
+		     val startExp = CL.mkInt(IntInf.fromInt sizeAddr)
+		     val size = CL.mkInt(IntInf.fromInt dofSize)
+		     val start =CL.mkInt(IntInf.fromInt sizeAddr)
+		     val dispatch = CL.S_Exp(CL.mkDispatch(ct, "copyout", [CL.mkSelect(lhs, "_data"), start, size]))
+		    in
+		     dispatch :: stms
+		    end
+
                   | IR.E_Pack({wid, ...}, args) =>
                       CL.mkCall (RN.vpack wid, lhs :: List.map (fn e => trExp(env, e)) args) :: stms
                   | IR.E_Cons(args, _) => let
@@ -508,6 +539,17 @@ structure TreeToCxx : sig
               | IR.E_Op(Op.EigenVals3x3, [a]) =>
                   CL.mkCall("eigenvals", [trExp (env, a), CL.mkVar lhs]) ::
                   CL.mkDecl(ty, lhs, NONE) :: stms
+	      | IR.E_Op(Op.Load(addr, sizeAddr, dofRet, dofSize), []) =>
+		let
+		 val selfLocal = Env.selfLocal env
+		 val ct = CL.mkIndirect(CL.mkVar selfLocal, "sv__c")
+		 val startExp = CL.mkInt(IntInf.fromInt sizeAddr)
+		 val size = CL.mkInt(IntInf.fromInt dofSize)
+		 val start =CL.mkInt(IntInf.fromInt sizeAddr)
+		 val dispatch = CL.S_Exp(CL.mkDispatch(ct, "copyout", [CL.mkSelect(CL.mkVar lhs, "_data"), start, size]))
+		in
+		 dispatch :: CL.mkDecl(trType (env, dofRet), lhs, NONE) :: stms
+		end
               | IR.E_Pack({wid, ...}, args) =>
                   CL.mkCall (RN.vpack wid, CL.mkVar lhs :: List.map (fn e => trExp(env, e)) args) ::
                   CL.mkDecl(ty, lhs, NONE) :: stms
@@ -534,7 +576,23 @@ structure TreeToCxx : sig
            of ([vals, vecs], Op.EigenVecs2x2, [exp]) =>
                 CL.mkCall("eigenvecs", [trExp (env, exp), vals, vecs])
             | ([vals, vecs], Op.EigenVecs3x3, [exp]) =>
-                CL.mkCall("eigenvecs", [trExp (env, exp), vals, vecs])
+              CL.mkCall("eigenvecs", [trExp (env, exp), vals, vecs])
+	    | ([], Op.Save(addr, sizeAddr, ty, size), [intVar, interDof]) =>
+	      let
+	       val intVar = trExp (env, intVar)
+	       val interDof = trExp (env, interDof)
+	       val selfLocal = Env.selfLocal env
+	       val ct = CL.mkIndirect(CL.mkVar selfLocal, "sv__ct")
+	       val addrInt = CL.mkInt (IntInf.fromInt addr)
+	       val assignCt = CL.mkDispatch(ct, "set", [addrInt, intVar])
+
+	       val ctd = CL.mkIndirect(CL.mkVar selfLocal, "sv__c")
+	       val sizeAdddrInt = CL.mkInt (IntInf.fromInt sizeAddr)
+	       val sizeInt = CL.mkInt (IntInf.fromInt size)
+	       val assignc = CL.mkDispatch(ctd, "copyin", [CL.mkSelect(interDof, "_data"), sizeAdddrInt, sizeInt])
+	      in
+	       CL.S_Block([CL.S_Exp(assignCt), CL.S_Exp(assignc)])
+	      end
             | _ => raise Fail "bogus multi-assignment"
           (* end case *))
       | trMultiAssign (env, lhs, rhs) = raise Fail "bogus multi-assignment"

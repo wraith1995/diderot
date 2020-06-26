@@ -227,7 +227,7 @@ structure LowToTree : sig
                   (e'::es, stms')
                 end
           in
-            List.foldr doArg ([], []) args
+            List.foldr doArg ([], []) args handle ex => raise ex
           end
 
     fun vectorArg (env, x) = let
@@ -532,6 +532,8 @@ structure LowToTree : sig
 		in
 		 bindTREE' ((TOp.ExtractFemItemN(tys', outTy', opt, name, qname, fTys', fTy')))
 		end
+	      | Op.Check(j) => bindTREE(TOp.Check(j))
+	      | Op.LoadScalar(a,b,c) => bindTREE(TOp.LoadScalar(a, b, c))
               | rator => raise Fail("bogus operator " ^ Op.toString srcRator)
             (* end case *)
           end
@@ -674,6 +676,7 @@ structure LowToTree : sig
                     | VAR x' => (case useVar env x
                          of Env.RHS(_, e) => mkAssign' (x', e) :: stms
                           | Env.TREE e => mkAssign' (x', e) :: stms
+			  | _ => raise Fail "in saving var: saving vec"
                         (* end case *))
                     | VEC xs => let
                         val (_, es, stms') = vectorArg (env, x)
@@ -687,6 +690,13 @@ structure LowToTree : sig
               | IR.LIT lit => bindSimple (T.E_Lit lit, stms)
               | IR.OP(Op.EigenVals2x2, [x]) => trEigenVals (env, lhs, TOp.EigenVals2x2, x, stms)
               | IR.OP(Op.EigenVals3x3, [x]) => trEigenVals (env, lhs, TOp.EigenVals3x3, x, stms)
+	      | IR.OP(Op.Save(a,b, ty, c), [i, dof]) =>
+		let
+		 val (i', stms) = singleArg env (i, stms)
+		 val (dof', stms) = singleArg env (dof, stms)
+		in
+		 T.S_MAssign([], T.E_Op(TOp.Save(a,b, U.trType ty, c), [i', dof']))::stms
+		end
               | IR.OP(Op.Zero(ty as Ty.TensorTy dd), []) => let
                   val z = T.E_Lit(Literal.Real(RealLit.zero false))
                   val sz = List.foldl Int.* 1 dd
@@ -710,7 +720,20 @@ structure LowToTree : sig
                   val lhs = newLocal (env, getLHS ())
                   in
                     T.S_LoadNrrd(lhs, U.toAPIType ty, file, SOME info) :: stms
-                  end
+              end
+	      | IR.OP(Op.Load(i, j, ty, k), []) =>
+		let
+		 val ty' = U.trType ty
+		 val (isDcl, lhs') =
+		     (case eqClassRepOf (env, lhs)
+		       of NOEQ => (true, newMemLocal(env, lhs))
+			| VAR y => (false, y)
+			| _ => raise Fail "unexpected vector variable"
+		     (* end case*))
+		 val stm = T.S_Assign(isDcl, lhs', T.E_Op(TOp.Load(i, j, ty', k), []))
+		in
+		 stm::stms
+		end
               | IR.OP(rator, args) => let
                   val (rhs, stms') = trOp (env, rator, args)
                   val stms = stms' @ stms
@@ -911,7 +934,15 @@ raise ex)
                         !succ, ifStk,
                         trEigenVecs (env, vals, vecs, TOp.EigenVecs3x3, x, stms))
                   | IR.MASSIGN{stm=(ys, IR.MAPREDUCE mrs), succ, ...} =>
-                      doNode (!succ, ifStk, trMapReduce (env, ys, mrs, stms))
+                    doNode (!succ, ifStk, trMapReduce (env, ys, mrs, stms))
+		  | IR.MASSIGN{stm=([], IR.OP(Op.Save(a,b, ty, c), [i, dof])), succ, ...} =>
+		    let
+		     val (i', stms) = singleArg env (i, stms)
+		     val (dof', stms) = singleArg env (dof, stms)
+		     val stms' = T.S_MAssign([], T.E_Op(TOp.Save(a,b, U.trType ty, c), [i', dof']))::stms
+		    in
+		     doNode(!succ, ifStk, stms')
+		    end
                   | IR.MASSIGN{stm=(ys, rhs), succ, ...} => raise Fail(concat[
                         "unexepected rhs ", IR.RHS.toString rhs, " for MASSIGN"
                       ])
@@ -1044,13 +1075,36 @@ raise ex)
             T.Method{needsW = needsWorld, hasG = usesGlobals, body = body}
           end
 
-    fun trStrand info strand = let
+    fun trStrand props info strand = let
           val IR.Strand{
                   name, params, spatialDim, state, stateInit, startM, updateM, stabilizeM
                 } = strand
           val trMethod = mkMethod o trCFG info
           val params' = List.map U.newParamVar params
+
           val state' = List.map getStateVar state
+	  val state' = (case Properties.getCache props
+			 of NONE => state'
+			  | SOME(a,b) =>
+			    let
+			     (*QUESTION: could these be used anywhere - non-output state shouldn't be used*)
+			     val intCacheTy = TTy.Blob(TTy.intTy, a)
+			     val intCacheTyAPI = APITypes.SeqTy(APITypes.IntTy, SOME(a))
+			     val dofCacheTy = TTy.Blob(TTy.realTy, b)
+			     val dofCacheTyAPI = APITypes.SeqTy(APITypes.realTy, SOME(b))
+
+			     val cacheTest = TreeStateVar.new {name="_ct", ty=intCacheTy,
+							       apiTy = intCacheTyAPI, output=false,
+							       varying=true, shared=false}
+			     val cache = TreeStateVar.new {name="_c", ty=dofCacheTy,
+							       apiTy = dofCacheTyAPI, output=false,
+							       varying=true, shared=false}							      
+
+			    in
+			     state'@[cacheTest, cache]
+			    end
+		       )
+
           val stateInit' = let
                 val env = Env.new info
                 in
@@ -1091,7 +1145,7 @@ raise ex)
                 globals = List.map mkGlobalVar globals,
                 funcs = List.map (trFunc info) funcs,
                 globInit = trCFG globInit,
-                strand = trStrand info strand,
+                strand = trStrand props info strand,
                 create = Create.map trCFG create,
                 start = Option.map trGlobalCFG start,
                 update = Option.map trGlobalCFG update

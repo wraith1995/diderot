@@ -20,6 +20,7 @@
 #include "util.hxx"
 #include "options.hxx"
 #include "tensor.hxx"
+#include "blob.hxx"
 #include "image.hxx"
 #include "dynseq.hxx"
 #ifdef DIDEROT_HAS_STRAND_COMMUNICATION

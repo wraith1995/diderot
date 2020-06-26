@@ -12,6 +12,8 @@
 
 structure FemToLow : sig
 	   val expandOp : LowIR.var * LowIR.var * LowIR.var * LowTypes.ty * LowTypes.ty * FemOpt.femOption -> LowIR.assign list
+
+	   val expandSave : LowIR.var * int * int * LowTypes.ty * int -> LowIR.assign list
 	  end = struct
 
 
@@ -70,7 +72,7 @@ structure FemToLow : sig
 	 val perDofShape = FO.findTargetShape loadOpt
 	 val dofSize = List.foldr (fn (x,y) => x*y) 1 perDofShape
 				  
-	 val _ = print ("[" ^ (String.concatWith ", " (List.map Int.toString perDofShape)) ^ "]\n")
+	 (* val _ = print ("[" ^ (String.concatWith ", " (List.map Int.toString perDofShape)) ^ "]\n") *)
 	 val perDofShapeRev = List.rev perDofShape
 	 val dim = List.length perDofShapeRev
 	 val _ = if dim >= loadDims
@@ -111,6 +113,19 @@ structure FemToLow : sig
 	 val result = assignCons(avail, "dofs", List.tabulate(numDofs, buildDof))
 	in
 	 AvailRHS.addAssignToList (avail, (lhs, IR.VAR result));
+	 List.rev (AvailRHS.getAssignments avail)
+	end
+
+    fun expandSave(lhs, num, sizeAddr, ty, loadSize) =
+	let
+	 val Ty.TensorTy(dofs::dofShape) = ty
+	 val realTy = Ty.realTy
+	 val avail = AvailRHS.new ()
+	 val doLoad = fn idx => assignOp(avail, "cacheLoad"^(Int.toString idx), realTy, Op.LoadScalar(num, sizeAddr, idx), [])
+	 val loads = List.tabulate(loadSize, doLoad)
+	 val cons = AvailRHS.addAssign(avail, "cacheLoadFull", ty, IR.CONS(loads, ty))
+	in
+	 AvailRHS.addAssignToList (avail, (lhs, IR.VAR cons));
 	 List.rev (AvailRHS.getAssignments avail)
 	end
 

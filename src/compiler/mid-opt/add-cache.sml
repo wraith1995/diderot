@@ -192,11 +192,11 @@ fun dofsInfo ((Op.LoadVoxels(info, n), [img, idx])) =
   | dofsInfo ((Op.ExtractFemItemN(tys, ty, opt as (FemOpt.ExtractDofs, data), _, _, _, _), [src1, src2, idx])) =
     let
      val shape = FemOpt.findTargetShape opt
-     val dofsCount = FemOpt.findIndexLength opt
-     val shape' = dofsCount::shape
-     val ten = Ty.TensorTy shape'
+     (* val dofsCount = FemOpt.findIndexLength opt *)
+     (* val shape' = dofsCount::shape *)
+     val ten = Ty.TensorTy shape
     in
-     (size shape', ten)
+     (size shape, ten)
     end
   | dofsInfo _ = raise Fail "impossible"		    
 		 
@@ -332,7 +332,7 @@ structure Trans = TranslateScopedFn(
  end
 )
 
-
+structure Promote = PromoteFn (DstIR)
 fun translate prog =
     let
      val prog = Trans.translate prog
@@ -344,6 +344,6 @@ fun translate prog =
 			  globInit=globInit, strand=strand, create=create, start=start, update=update}
     in
      (MidCensus.init prog;
-     prog)
+      Promote.transform prog)
     end
 end

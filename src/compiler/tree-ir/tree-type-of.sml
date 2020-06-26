@@ -121,6 +121,8 @@ structure TreeTypeOf : sig
 	    | Op.ExtractFem(ty,_) => ty
 	    | Op.ExtractFemItemN(_, ty, _, _, _, _, _) => ty
 	    | Op.Tuple(tys) => Ty.TupleTy(tys)
+	    | Op.Check _ => Ty.BoolTy
+	    | Op.Load(_,_,ty,_)  => ty
             | _ => raise Fail("invalid operator " ^ Op.toString rator)
           (* end case *))
 

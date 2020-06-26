@@ -137,6 +137,7 @@ structure LowOps =
       | Check of int
       | Load of int * int * ty * int
       | Save of int * int * ty * int
+      | LoadScalar of int * int * int
 
     fun resultArity IAdd = 1
       | resultArity ISub = 1
@@ -227,6 +228,7 @@ structure LowOps =
       | resultArity (Check _) = 1
       | resultArity (Load _) = 1
       | resultArity (Save _) = 0
+      | resultArity (LoadScalar _) = 1
 
     fun arity IAdd = 2
       | arity ISub = 2
@@ -317,6 +319,7 @@ structure LowOps =
       | arity (Check _) = 1
       | arity (Load _) = 0
       | arity (Save _) = 2
+      | arity (LoadScalar _) = 0
 
     fun isPure (MkDynamic _) = false
       | isPure (Append _) = false
@@ -417,6 +420,7 @@ structure LowOps =
       | same (Check(a0), Check(b0)) = sameint(a0, b0)
       | same (Load(a0,a1,a2,a3), Load(b0,b1,b2,b3)) = sameint(a0, b0) andalso sameint(a1, b1) andalso samety(a2, b2) andalso sameint(a3, b3)
       | same (Save(a0,a1,a2,a3), Save(b0,b1,b2,b3)) = sameint(a0, b0) andalso sameint(a1, b1) andalso samety(a2, b2) andalso sameint(a3, b3)
+      | same (LoadScalar(a0,a1,a2), LoadScalar(b0,b1,b2)) = sameint(a0, b0) andalso sameint(a1, b1) andalso sameint(a2, b2)
       | same _ = false
 
     fun hash IAdd = 0w3
@@ -508,6 +512,7 @@ structure LowOps =
       | hash (Check(a0)) = 0w457 + hashint a0
       | hash (Load(a0,a1,a2,a3)) = 0w461 + hashint a0 + hashint a1 + hashty a2 + hashint a3
       | hash (Save(a0,a1,a2,a3)) = 0w463 + hashint a0 + hashint a1 + hashty a2 + hashint a3
+      | hash (LoadScalar(a0,a1,a2)) = 0w467 + hashint a0 + hashint a1 + hashint a2
 
     fun toString IAdd = "IAdd"
       | toString ISub = "ISub"
@@ -598,6 +603,7 @@ structure LowOps =
       | toString (Check(a0)) = concat["Check<", intToString a0, ">"]
       | toString (Load(a0,a1,a2,a3)) = concat["Load<", intToString a0, ",", intToString a1, ",", tyToString a2, ",", intToString a3, ">"]
       | toString (Save(a0,a1,a2,a3)) = concat["Save<", intToString a0, ",", intToString a1, ",", tyToString a2, ",", intToString a3, ">"]
+      | toString (LoadScalar(a0,a1,a2)) = concat["LoadScalar<", intToString a0, ",", intToString a1, ",", intToString a2, ">"]
 
   end
 

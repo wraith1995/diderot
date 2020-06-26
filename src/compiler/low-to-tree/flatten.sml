@@ -181,16 +181,19 @@ raise ex)
         (* process a node; note that the node kinds here should match the filter above *)
           fun doNode nd = (case IR.Node.kind nd
                  of IR.ASSIGN{stm=(_, IR.CONS(_, Ty.TensorTy[_])), ...} => ()
-                  | IR.ASSIGN{stm=(y, IR.CONS(xs, ty as Ty.TensorTy(_::d::dd))), ...} =>
-                      if (V.useCount y = 0)
-                        then ST.tick cntSkipCons (* y will be removed *)
-                      else let
-                          val (xs', stms) = flatten (xs, d, dd)
-                          val cfg' = IR.CFG.mkBlock(List.rev(IR.ASSGN(y, IR.CONS(xs', ty))::stms))
-                          in
-                            ST.tick cntFlattenCons;
-                            IR.CFG.replaceNodeWithCFG (nd, cfg')
-                          end
+                  | IR.ASSIGN{stm=(y, IR.CONS(xs, ty as Ty.TensorTy(shape as _::d::dd))), ...} =>
+                    if (V.useCount y = 0)
+                    then ST.tick cntSkipCons (* y will be removed *)
+		    else
+		     if (List.length xs = List.foldr (op*) 1 shape)
+			 then ()
+			 else let
+                         val (xs', stms) = flatten (xs, d, dd)
+                         val cfg' = IR.CFG.mkBlock(List.rev(IR.ASSGN(y, IR.CONS(xs', ty))::stms))
+                        in
+                         ST.tick cntFlattenCons;
+                         IR.CFG.replaceNodeWithCFG (nd, cfg')
+                        end
                   | IR.MASSIGN{stm=(_, IR.MAPREDUCE mrs), ...} =>
                       List.app (fn (_, f, _) => markMapFunc(f, true)) mrs
                   | IR.FOREACH{pred=ref predNd, src as ref src', ...} =>
