@@ -473,7 +473,7 @@ structure ProbeEin : sig
 			 else ()
 
 	 val _ = printd("enterFemProbeInfo:\n")
-	 val _ = print("ein:" ^(EinPP.toString lam) ^ "\n")
+	 val _ = printd("ein:" ^(EinPP.toString lam) ^ "\n")
 	 val _ = printd("exitFemProbeInfo\n")
 	 val E.Probe(E.Fem(femEin, indexVarId, indexSrcId, dofSrcId, alpha, dx), E.Tensor(tid, _)) = probe
 	 val prePosVar = List.nth(args, tid)

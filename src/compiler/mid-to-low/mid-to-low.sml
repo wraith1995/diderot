@@ -201,7 +201,7 @@ structure MidToLow : sig
 		 assign (DstOp.ExtractFemItemN(tys', outTy', opt', stamp', name', paramTys',  fTy'))
 		end
 	      | SrcOp.Check(j) => assign(DstOp.Check(j))
-	      | SrcOp.Load(i, j, t, k) => assign (DstOp.Load(i, j, cvtTy t, k))
+	      | SrcOp.Load(i, j, t, k) => FemToLow.expandSave(y, i, j, cvtTy t, k)
               | rator => raise Fail("bogus operator " ^ SrcOp.toString rator)
             (* end case *)
           end
