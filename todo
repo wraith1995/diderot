@@ -1,155 +1,36 @@
-New:
-!!!!!!!!!!!!!!!!!!!!!!!
-Extra: vectorization in basis eval, basis field, Build a global basis registry to speed up compile time, fix damn fem names
-main:
-Target 1: Refine inline functions/dump and fix them all to help Hoare logic (mostly okay - replacements might be a bit annoying, but fine)
-Target 2: Hoare logic and translation
-Target 2.1: Downstream translation consquences:
-**Make Mid using Extractdofs until an optimization stage to replace
-!!CHECK DOWNSTREAM IF CHANGING IN SIMPLE!!**Use this to avoid some of the downstream consquences and to do caching (when we get space and so forth)
-**Make sure caching works with this too
+TODO:
+Minor misc:
+1. Vectorization in basis eval
+2. WorldPos in simple for both sides - why not disabled?
+3. Femname review
+4. Affine inverse find and affine optimizations.
+5. Pos cache update and other cache strats (per instruction x+h tracing, etc?)
+6. Equality for big fem
+7. Force inverse optimization or disable inverse optimization?
+8. Make border control error.
+9. Ref tuple?
+10. Basis field
 
-!CHECK!**Notice: T vs T^-1 should occur in high-opt though. Any other field replace menetn
-!???!! What does the T vs T^-1 coop with Chiw's stuff
-!!!!!!!!!!!!!!!!!!!!!!!!!
-Plan: do hoare and downstream (plan in morning, implement it later)
-Plan: build inverse optimization
-Plan: field language and extra high level
-Plan: Basis field and other fixes (basis registry): class, bounding boxes, enter global, enter global curved, intersection curved, on facet, facet access, edge, vertex, other geometry
---Week
-Plan: affine
---week
-
-Onwards: field language and clean up high level
-=======================
-Top level require smartter wrapping:
-**Alwalys have an inline able function unpack and unwrap for base functions
-**Is this still needed for Hoare logic phase?
-**Why though? Because ensures translation is easier
-**Maybe dump the basis...
-**CONCLUSION:Dump of basis INDICATES OKAy, but what if it needs to be translated
-==========================
-Hoare logic:
-**Translate all fem opts and fem data besides base to baser operations - make easier to do checks for the field
-** See other file
-**Should accomplish full fem scalariziation modulo big types
-**Needs to be aware that probe does this later down. You need extract fem maps.
-**Wnat to use this on POS too.
-**I think field optimization should occur in high-opt
-**Should this occur too?
-**Want to remove all non base acceses but we generate more in mid, etc - fix this.
-(BY TOMORROOW)
-
-===================
-Top level requires some new operators:
-**Check on face, edge, vertex detector
-**Swap
-**Robus intersection detector
-**Provide class methods for T, DT, DT^-1, etc with noinline propery
-**Provide bounding box for facet, global intersect spat, local global inersect spat -- defaults could be provided - see spattodo
-**Allow use of class methods in above
-**Document json/c copy -> if nrrd added could add more
-**Reorganization of common inserts (NearbyCell, InsideInsert)
-**Equality checkers for all items (do)
-**Tuple for exit pos (low)
-**Fix affine newton inverse (HIGh)
-**Make tuples here instead
-(SUNDAY JOB???)
-==========================
-Accomodate field language
---inverse optimizations
---force inverse optimization
---Allow position evaluation
---make inside use correct diagnostic (valid, meshpos, etc)
---Order inside with above
---border control (error)
---inside -- composition
-===========================
-Affine, interval, bspline (see below)
-========================
-Tuple:
-**invetigate ref tuple for input passing
-**simplifly interface
-!!!**Add general scalirzation optimizations
-**Check snapshots
-**Parsing
-========================
-Caches:
--Consider instruction level/thread level cache for:
---cells
---Dofs (defeat out of order stuff)
---certain situations to override the cache?
-===========================
-Basis function structure parsing and Basis SSA check.
---e.g. oplus, otimes, +.
-====================
-Sphere bug:
-curent _pos rewrite doesn't commute with sphere(a,b)
-(Or at least it doesn't if another sphere isn't there too)
-====================
-Merge in Chiw branch for field funcs 
-=====================
-BIG FEM IO FIX
-================
+Minor geom:
+-Bounding box for ray intersect
+-bounding box for facets
+-more geometry access: distance function,facets, edges,
+-FFI for this and maybe default - class metohds
+-access to simplexiation of the cell
 
 
-OLD
-====================
-Precdence fixing:
--select should be a deepest level
---Atomic Expr should feature .selec - remove from suffix
-====================
-Equality checking bug:
-Is the SSA thing really working? I have some doubts...
-=====================
-Delayed evaluation and composition with functions:
--We need a mechanism that compose swith FEM so that we can go between derivatives w.r.t to reference and w.r.t. to world
--Something like T^{*}F = F(T(x)), but we want T^{*}(DF) -> same as composition
----F = A \circ B^-1
----G = DF
----H = G \circ B //remove internal B^-1 !!!
----DH //future derivative doesn't add extra B^-1 term -- but does affect (DB)^-1 terms.
+Minor inside:
+Need to do comp, fem, might need reognize inserts
 
--Impl notes: Roughly like this....
---So we want T\circ T^-1 to happen -> idea is if you detect this in the inner thing - cancel and replace with one that only affects the deriative
---if you have |_ -> replace and then kill derivative after applying the ones around htis.
---so if I have P(D) (P(D)(F\ circ T^-1) |_{ T}) -> we stop replacing the derivative of P(D)
---General allow functions in the field language
-Better TT^-1 cancelling (relates highly to the above.)
---Capture TT^-1 and opposite - cancel them
---Done at simple-ir -> sometimes replace with no derivative version if there is a derivative being taken. (See above)
---Idea: cancel out these, but still allow world space and regular space derivatives.
---add potential cell/mesh checks (See other section)
-AD LIKE Related to above: Look at Chiw and think about functions in the field language vs. fields in the function language.
--Merge in Chiw's branch
--allow functions to have specified derivatives (field valued or maybe not)
--allows recovery
--Maybe look at exposing ImgToWorld/ImgCell/Positions on images.
-=========================
-==========================
-Tuple + FEM + Type one item
---When this should occur in relation to pos semantics
---When this should occur in relation to other optimizations
-e--scalarization relation
-=========================
-Pos lazyness/caching
---local rewrites to make CSE more likely/to continue to grab global results
---a sort of sub-typing maybe
-===========================
-Better Geometry and Bound box access:
--Would be useful to access bounding box at high level
--Would be useful to access simplexization of cell
--Would be useful to access distance functions/indicators
--Would be useful to access kernel fields
--Fix non-linear cell intersection - I don't think the C code intersections work
--Allow a default non-linear cell intersection algorithim - (would help if affine was around)
-=============================
-Allow a basis dump would be nice.
-=============================
-Affine SSA transformation
---affine keyword
---propogation until SSA level
---replace with new operators (vector min/max)
---Policy settomg
---function cooperation/insertion into field language
-=============================
+Irrelevant bug fix:
+1. Hoare logic multi
+2. Dof cache mult
+3. Does chained select still work?
+4. Do tuple snapshots work
+5. Sphere bug
+6. Does equal check really work?
+
+Major:
+Interval
+Affine
+bspline
