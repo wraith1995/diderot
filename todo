@@ -4,12 +4,13 @@ Minor misc:
 2. WorldPos in simple for both sides - why not disabled?
 3. Femname review
 4. Affine inverse find and affine optimizations.
-5. Pos cache update and other cache strats (per instruction x+h tracing, etc?)
+5. Pos cache update and other cache strats (per instruction x+h tracing, etc?, loads if already loadedxo)
 6. Equality for big fem
 7. Force inverse optimization or disable inverse optimization?
 8. Make border control error.
 9. Ref tuple?
 10. Basis field
+11. Scalarization
 
 Minor geom:
 -Bounding box for ray intersect
@@ -21,6 +22,20 @@ Minor geom:
 
 Minor inside:
 Need to do comp, fem, might need reognize inserts
+Plan:
+--AST: add inside and fix associated things (pp, etc)
+--Keep the inside basis vars to be 1
+--places where I make prim thing - I am going to check for inside--do the specifics and generate that
+---make a func for this
+--propogate this and replace in simple
+--make key replace in fields
+--run tests (okay...)
+--Do the damb thing:
+---rewrite image type
+---rewrite ops on it
+---do the analysis
+---write generator
+
 
 Irrelevant bug fix:
 1. Hoare logic multi
@@ -34,3 +49,4 @@ Major:
 Interval
 Affine
 bspline
+lifter for certain optimizations

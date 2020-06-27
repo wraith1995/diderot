@@ -34,46 +34,6 @@ structure Op = MidOps
 structure Var = IR.Var
 
 
-(*FIXME: allow more control of these so we can preserve caching for repeated evaluations downstream.
-
-Direction: F and x has a cache assocaited to it right now. We want to group F and several x.
-
-X
-x+h
-x+h'
-
-So the question is when should you do that:
-Use the position:
-
-When to use a previous check:
-When it is exactly the same.
-When there is a dependence that doesn't have anything to do
-When we can trace it back to a previous pos, we use the previous check.
-Get bindings: []... Deps
-
-Function:
-map from vars to check info.
-if none, we trace it back to potential check info (later...)
-
-Check: if there are dependencies on it. If no dependencies, natural thing. Otherwise, if there are, scann for previous ints involved (but no findPos). Then try.
-
-Strats:
--One cache per. 
--One per unique instruction
--determine locality
----Phi means check both if they are used.
----meshPos -- same
-
-
-Plan:
---make sure we don't create uneeded cache checks and saves and such
-
-if same as last one, just use previous load and save the load...
-
-
-
-
-*)
 val currentSize = ref 0
 val numberChecks = ref 0
 
