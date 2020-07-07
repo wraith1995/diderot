@@ -197,7 +197,8 @@ structure EinSums : sig
                   | E.Sum(sx1, E.Sum(sx2, e1)) => (changed := true; E.Sum (sx1@sx2, e1))
                   | E.Sum(sx, E.Op1(op1, e1)) => (changed := true; E.Op1(op1, E.Sum(sx, e1)))
                   | E.Sum(sx, E.Op2(E.Div, e1, e2)) => (
-                      changed := true;
+                   changed := true;
+		   (*FIXME: shouldn't this be: does e1 depend on sx?*)
                       case e1
                        of E.Const _ => mkDiv (e1, E.Sum(sx, e2))
                         | E.ConstR _ => mkDiv (e1, E.Sum(sx, e2))
@@ -213,7 +214,7 @@ structure EinSums : sig
                       in
                         if c then changed := true else (); e
                       end
-                  | E.Sum(sx, E.Opn(opn, es)) => (
+                  | E.Sum(sx, E.Opn(E.Add, es)) => (
                       changed := true; E.Opn(opn, List.map (fn e1 => E.Sum(sx, e1)) es))
 (* QUESTION: should we rewrite the body of the Sum here? *)
                   | E.Sum(sx, _) => b
