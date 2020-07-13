@@ -18,7 +18,7 @@ structure Types =
       | DIFF of 'diff           (* ranges of differentiation levels (0, 1, ...) *)
       | SHAPE of 'shape         (* ranges over tensor shapes *)
       | DIM of 'dim             (* ranges over dimensions (1, 2, ...) *)
-      | INTERVAL of 'interval
+      | INTERVAL of 'interval   (* ranges over intervals 0- for none, 1 for interval, 2 for affine and above*)
 
     datatype ty
       = T_Var of ty_var         (* meta variable of kind type *)

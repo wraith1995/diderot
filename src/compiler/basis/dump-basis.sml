@@ -128,14 +128,14 @@ structure DumpBasis : sig
                   | Ty.T_Sequence(ty, SOME dim) =>
                       String.concat[toTeX ty, "[", dim2s dim, "]"]
                   | Ty.T_Kernel diff => "kernel" ^ diff2s diff
-                  | Ty.T_Tensor(Ty.Shape[]) => "real"
-                  | Ty.T_Tensor(Ty.Shape[Ty.DimConst 2]) => "vec2"
-                  | Ty.T_Tensor(Ty.Shape[Ty.DimConst 3]) => "vec3"
-                  | Ty.T_Tensor(Ty.Shape[Ty.DimConst 4]) => "vec4"
-                  | Ty.T_Tensor(Ty.Shape[Ty.DimConst 2, Ty.DimConst 2]) => "mat2"
-                  | Ty.T_Tensor(Ty.Shape[Ty.DimConst 3, Ty.DimConst 3]) => "mat3"
-                  | Ty.T_Tensor(Ty.Shape[Ty.DimConst 4, Ty.DimConst 4]) => "mat4"
-                  | Ty.T_Tensor shp => String.concat["tensor[", shp2s shp, "]"]
+                  | Ty.T_Tensor(Ty.Shape[], ic) => "real"
+                  | Ty.T_Tensor(Ty.Shape[Ty.DimConst 2], ic) => "vec2"
+                  | Ty.T_Tensor(Ty.Shape[Ty.DimConst 3], ic) => "vec3"
+                  | Ty.T_Tensor(Ty.Shape[Ty.DimConst 4], ic) => "vec4"
+                  | Ty.T_Tensor(Ty.Shape[Ty.DimConst 2, Ty.DimConst 2], ic) => "mat2"
+                  | Ty.T_Tensor(Ty.Shape[Ty.DimConst 3, Ty.DimConst 3], ic) => "mat3"
+                  | Ty.T_Tensor(Ty.Shape[Ty.DimConst 4, Ty.DimConst 4], ic) => "mat4"
+                  | Ty.T_Tensor (shp, ic) => String.concat["tensor[", shp2s shp, "]"]
                   | Ty.T_Image{dim, shape} => String.concat[
                         "image(", dim2s dim, ")[", shp2s shape, "]"
                       ]
