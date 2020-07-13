@@ -195,7 +195,10 @@ structure EinSums : sig
                  of E.Probe (e1, e2) => E.Probe(rewrite e1, rewrite e2)
                   | E.Sum(sx, E.Lift e1) => (changed := true; E.Lift(E.Sum(sx, e1)))
                   | E.Sum(sx1, E.Sum(sx2, e1)) => (changed := true; E.Sum (sx1@sx2, e1))
-                  | E.Sum(sx, E.Op1(op1, e1)) => (changed := true; E.Op1(op1, E.Sum(sx, e1)))
+		  (*Note: I think this code is filled with flawed assumptions on the nature of op1,op2,op3,opn
+		   In particular, sum distribution can't happen for all of them yet it is not making this as clear
+		   as one would like.*)
+                  | E.Sum(sx, E.Op1(E.Neg, e1)) => (changed := true; E.Op1(E.Neg, E.Sum(sx, e1)))
                   | E.Sum(sx, E.Op2(E.Div, e1, e2)) => (
                    changed := true;
 		   (*FIXME: shouldn't this be: does e1 depend on sx?*)
@@ -215,9 +218,9 @@ structure EinSums : sig
                         if c then changed := true else (); e
                       end
                   | E.Sum(sx, E.Opn(E.Add, es)) => (
-                      changed := true; E.Opn(opn, List.map (fn e1 => E.Sum(sx, e1)) es))
+                   changed := true; E.Opn(E.Add, List.map (fn e1 => E.Sum(sx, e1)) es))
 (* QUESTION: should we rewrite the body of the Sum here? *)
-                  | E.Sum(sx, _) => b
+                  | E.Sum(sx, b') => E.Sum(sx, rewrite b')
                   | E.Op1(op1, e1) => E.Op1(op1, rewrite e1)
 (* QUESTION: doesn't this optimization get done elsewhere? *)
                   | E.Op2(E.Sub, e1, E.Const 0) => (changed := true; rewrite e1)

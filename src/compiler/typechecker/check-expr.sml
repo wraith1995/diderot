@@ -861,7 +861,6 @@ structure CheckExpr : sig
 	       val const = Option.mapPartial (fn x => TypeEnv.findConstant(x, field)) tyEnv
 	       val method =  Option.mapPartial (fn x => TypeEnv.findMethod(x, field)) tyEnv
 	       val func = Option.mapPartial (fn x => TypeEnv.findHiddenVar(x, field)) tyEnv
-	       (*Var.monoTypeOf f*)
 	       fun checkFunApp(f, Ty.T_Fun([dom], rng)) = (case Unify.matchArgs([dom], [e'], [namedTy])
 							    of SOME(args) => (AST.E_Apply(useVar(cxt, f), [e'], rng), rng)
 							     | NONE => raise Fail "IS THIS ACTUALlY POSSIBLE???"

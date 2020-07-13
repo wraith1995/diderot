@@ -26,6 +26,10 @@ structure BasisVars =
       fun DK () : Ty.meta_var = Ty.DIFF(MV.newDiffVar 0)
       val SK : unit -> Ty.meta_var = Ty.SHAPE o MV.newShapeVar
       val NK : unit -> Ty.meta_var = Ty.DIM o MV.newDimVar
+      val IV : unit -> Ty.meta_var = Ty.INTERVAL o MV.newIntervalVar
+
+      fun mergeIntervals(a,b) = Ty.MaxVar(a,b)
+      val noInterval = Ty.IC(0)
 
       fun ty t = ([], t)
       fun all (kinds, mkTy : Ty.meta_var list -> Ty.ty) = let
@@ -41,7 +45,7 @@ structure BasisVars =
 
       fun field (k, d, dd) = Ty.T_Field{diff=k, dim=d, shape=dd}
       fun field' (k, d, dd) = field(k, Ty.DimConst d, Ty.Shape(List.map Ty.DimConst dd))
-      fun tensor ds = Ty.T_Tensor(Ty.Shape ds)
+      fun tensor ds = Ty.T_Tensor(Ty.Shape ds, Ty.IC 0)
       fun matrix d = tensor[d,d]
       fun dynSeq ty = Ty.T_Sequence(ty, NONE)
 
@@ -80,14 +84,29 @@ structure BasisVars =
               val seqTyc = dynSeq(Ty.T_Var tv)
               in
                 [seqTyc, seqTyc] --> seqTyc
-              end))
+          end))
+
+    fun makeTTbinOp name =
+	polyVar(name, all([SK, IV, IV],
+			  fn [Ty.SHAPE dd, Ty.INTERVAL iv1, Ty.INTERVAL iv2] =>
+			     let
+			      val t1 = Ty.T_Tensor(Ty.ShapeVar dd, iv1)
+			      val t2 = Ty.T_Tensor(Ty.ShapeVar dd, iv2)
+			      val t3 = Ty.T_Tensor(Ty.ShapeVar dd, mergeIntervals(iv1, iv2))
+			     in
+			      [t1, t2] --> t3
+			     end))
 
     val add_ii = monoVar(N.op_add, [Ty.T_Int, Ty.T_Int] --> Ty.T_Int)
-    val add_tt = polyVar(N.op_add, all([SK], fn [Ty.SHAPE dd] => let
-            val t = Ty.T_Tensor(Ty.ShapeVar dd)
-            in
-              [t, t] --> t
-            end))
+    val add_tt = polyVar(N.op_add, all([SK, IV, IV],
+				       fn [Ty.SHAPE dd, Ty.INTERVAL iv1, TY.INTERVAL iv2] =>
+					  let
+					   val t1 = Ty.T_Tensor(Ty.ShapeVar dd, iv1)
+					   val t2 = Ty.T_Tensor(Ty.ShapeVar dd, iv2)
+					   val t3 = Ty.T_Tensor(Ty.ShapeVar dd, mergeIntervals(iv1, iv2))
+					  in
+					   [t1, t2] --> t3
+					  end))
     val add_ff = polyVar(N.op_add, all([DK,NK,SK],
           fn [Ty.DIFF k, Ty.DIM d, Ty.SHAPE dd] => let
             val f = Ty.T_Field{diff = Ty.DiffVar(k, 0), dim = Ty.DimVar d, shape = Ty.ShapeVar dd}
@@ -104,17 +123,14 @@ structure BasisVars =
     val add_tf = polyVar(N.op_add, all([DK,NK,SK], (* scalar + field *)
           fn [Ty.DIFF k, Ty.DIM d, Ty.SHAPE dd] => let
             val f = Ty.T_Field{diff = Ty.DiffVar(k, 0), dim = Ty.DimVar d, shape = Ty.ShapeVar dd}
-            val t = Ty.T_Tensor(Ty.ShapeVar dd)
+            val t = Ty.T_Tensor(Ty.ShapeVar dd, noInterval)
             in
               [t, f] --> f
             end))
 
     val sub_ii = monoVar(N.op_sub, [Ty.T_Int, Ty.T_Int] --> Ty.T_Int)
-    val sub_tt = polyVar(N.op_sub, all([SK], fn [Ty.SHAPE dd] => let
-            val t = Ty.T_Tensor(Ty.ShapeVar dd)
-            in
-              [t, t] --> t
-            end))
+    val sub_tt = makeTTbinOp(N.op_sub)
+			    
     val sub_ff = polyVar(N.op_sub, all([DK,NK,SK],
           fn [Ty.DIFF k, Ty.DIM d, Ty.SHAPE dd] => let
             val f = Ty.T_Field{diff = Ty.DiffVar(k, 0), dim = Ty.DimVar d, shape = Ty.ShapeVar dd}
@@ -124,14 +140,14 @@ structure BasisVars =
     val sub_ft = polyVar(N.op_sub, all([DK,NK,SK], (* field - scalar *)
           fn [Ty.DIFF k, Ty.DIM d,Ty.SHAPE dd] => let
             val f = Ty.T_Field{diff = Ty.DiffVar(k, 0), dim = Ty.DimVar d, shape = Ty.ShapeVar dd}
-            val t = Ty.T_Tensor(Ty.ShapeVar dd)
+            val t = Ty.T_Tensor(Ty.ShapeVar dd, noInterval)
             in
               [f, t] --> f
             end))
     val sub_tf = polyVar(N.op_sub, all([DK,NK,SK], (* scalar - field *)
           fn [Ty.DIFF k, Ty.DIM d,Ty.SHAPE dd] => let
             val f = Ty.T_Field{diff = Ty.DiffVar(k, 0), dim = Ty.DimVar d, shape = Ty.ShapeVar dd}
-            val t = Ty.T_Tensor(Ty.ShapeVar dd)
+            val t = Ty.T_Tensor(Ty.ShapeVar dd, noInterval)
             in
               [t, f] --> f
             end))
@@ -163,14 +179,14 @@ structure BasisVars =
             end))
     val mul_st = polyVar(N.op_mul, all([DK,NK,SK], fn [Ty.DIFF k, Ty.DIM d, Ty.SHAPE dd] => let
             val f = Ty.T_Field{diff = Ty.DiffVar(k, 0), dim = Ty.DimVar d, shape = Ty.Shape[]}
-            val t = Ty.T_Tensor(Ty.ShapeVar dd)
+            val t = Ty.T_Tensor(Ty.ShapeVar dd, noInterval)
             val g = Ty.T_Field{diff = Ty.DiffVar(k, 0), dim = Ty.DimVar d, shape = Ty.ShapeVar dd}
             in
               [f, t] --> g
             end))
     val mul_ts = polyVar(N.op_mul, all([DK,NK,SK], fn [Ty.DIFF k, Ty.DIM d, Ty.SHAPE dd] => let
             val f = Ty.T_Field{diff = Ty.DiffVar(k, 0), dim = Ty.DimVar d, shape = Ty.Shape[]}
-            val t = Ty.T_Tensor(Ty.ShapeVar dd)
+            val t = Ty.T_Tensor(Ty.ShapeVar dd, noInterval)
             val g = Ty.T_Field{diff = Ty.DiffVar(k, 0), dim = Ty.DimVar d, shape = Ty.ShapeVar dd}
             in
               [t, f] --> g
@@ -217,7 +233,7 @@ structure BasisVars =
               [f, s] --> f
             end))
     val div_ts = polyVar(N.op_div, all([DK,NK,SK], fn [Ty.DIFF k, Ty.DIM d, Ty.SHAPE dd] => let
-            val t = Ty.T_Tensor(Ty.ShapeVar dd)
+            val t = Ty.T_Tensor(Ty.ShapeVar dd, noInterval)
             val s = Ty.T_Field{diff = Ty.DiffVar(k, 0), dim = Ty.DimVar d, shape = Ty.Shape []}
             val f = Ty.T_Field{diff = Ty.DiffVar(k, 0), dim = Ty.DimVar d, shape = Ty.ShapeVar dd}
             in
@@ -230,7 +246,7 @@ structure BasisVars =
    *)
 (* FIXME: add pow_ii *)
     val pow_ri = monoVar(N.op_pow, [Ty.realTy, Ty.T_Int] --> Ty.realTy)
-    val pow_rr = monoVar(N.op_pow, [Ty.realTy, Ty.realTy] --> Ty.realTy)
+    val pow_rr = monoVar(N.op_pow, [Ty.realTy', Ty.realTy'] --> Ty.realTy')
     val pow_si = polyVar (N.op_pow, all([DK, NK], fn [Ty.DIFF k, Ty.DIM d] => let
           val k = Ty.DiffVar(k, 0)
           val d = Ty.DimVar d
@@ -271,26 +287,26 @@ structure BasisVars =
     end (* local *)
 
     val lt_ii = monoVar(N.op_lt, [Ty.T_Int, Ty.T_Int] --> Ty.T_Bool)
-    val lt_rr = monoVar(N.op_lt, [Ty.realTy, Ty.realTy] --> Ty.T_Bool)
+    val lt_rr = monoVar(N.op_lt, [Ty.realTy', Ty.realTy'] --> Ty.T_Bool)
     val lte_ii = monoVar(N.op_lte, [Ty.T_Int, Ty.T_Int] --> Ty.T_Bool)
-    val lte_rr = monoVar(N.op_lte, [Ty.realTy, Ty.realTy] --> Ty.T_Bool)
+    val lte_rr = monoVar(N.op_lte, [Ty.realTy', Ty.realTy'] --> Ty.T_Bool)
     val gte_ii = monoVar(N.op_gte, [Ty.T_Int, Ty.T_Int] --> Ty.T_Bool)
-    val gte_rr = monoVar(N.op_gte, [Ty.realTy, Ty.realTy] --> Ty.T_Bool)
+    val gte_rr = monoVar(N.op_gte, [Ty.realTy', Ty.realTy'] --> Ty.T_Bool)
     val gt_ii = monoVar(N.op_gt, [Ty.T_Int, Ty.T_Int] --> Ty.T_Bool)
-    val gt_rr = monoVar(N.op_gt, [Ty.realTy, Ty.realTy] --> Ty.T_Bool)
+    val gt_rr = monoVar(N.op_gt, [Ty.realTy', Ty.realTy'] --> Ty.T_Bool)
 
     val equ_bb = monoVar(N.op_equ, [Ty.T_Bool, Ty.T_Bool] --> Ty.T_Bool)
     val equ_ii = monoVar(N.op_equ, [Ty.T_Int, Ty.T_Int] --> Ty.T_Bool)
     val equ_ss = monoVar(N.op_equ, [Ty.T_String, Ty.T_String] --> Ty.T_Bool)
-    val equ_rr = monoVar(N.op_equ, [Ty.realTy, Ty.realTy] --> Ty.T_Bool)
+    val equ_rr = monoVar(N.op_equ, [Ty.realTy', Ty.realTy'] --> Ty.T_Bool)
     val neq_bb = monoVar(N.op_neq, [Ty.T_Bool, Ty.T_Bool] --> Ty.T_Bool)
     val neq_ii = monoVar(N.op_neq, [Ty.T_Int, Ty.T_Int] --> Ty.T_Bool)
     val neq_ss = monoVar(N.op_neq, [Ty.T_String, Ty.T_String] --> Ty.T_Bool)
-    val neq_rr = monoVar(N.op_neq, [Ty.realTy, Ty.realTy] --> Ty.T_Bool)
+    val neq_rr = monoVar(N.op_neq, [Ty.realTy', Ty.realTy'] --> Ty.T_Bool)
 
     val neg_i = monoVar(N.op_neg, [Ty.T_Int] --> Ty.T_Int)
-    val neg_t = polyVar(N.op_neg, all([SK], fn [Ty.SHAPE dd] => let
-          val t = Ty.T_Tensor(Ty.ShapeVar dd)
+    val neg_t = polyVar(N.op_neg, all([SK, IV], fn [Ty.SHAPE dd, Ty.INTERVAL iv] => let
+          val t = Ty.T_Tensor(Ty.ShapeVar dd, Ty.AddVar(iv, 0))
           in
             [t] --> t
           end))
@@ -308,10 +324,10 @@ structure BasisVars =
     val clamp_rrt = polyVar (N.fn_clamp, all([SK,NK], fn [Ty.SHAPE dd, Ty.DIM d] => let
           val t = Ty.T_Tensor(Ty.ShapeExt(Ty.ShapeVar dd, Ty.DimVar d))
           in
-            [Ty.realTy, Ty.realTy, t] --> t
+            [Ty.realTy', Ty.realTy', t] --> t
           end))
     val clamp_ttt = polyVar (N.fn_clamp, all([SK], fn [Ty.SHAPE dd] => let
-          val t = Ty.T_Tensor(Ty.ShapeVar dd)
+          val t = Ty.T_Tensor(Ty.ShapeVar dd, Ty.IC(0))
           in
             [t, t, t] --> t
           end))
@@ -342,7 +358,7 @@ structure BasisVars =
    * we overload the function.
    *)
     local
-      fun evals d = monoVar (N.fn_evals, [matrix d] --> Ty.T_Sequence(Ty.realTy, SOME d))
+      fun evals d = monoVar (N.fn_evals, [matrix d] --> Ty.T_Sequence(Ty.realTy', SOME d))
       fun evecs d = monoVar (N.fn_evecs, [matrix d] --> Ty.T_Sequence(tensor[d], SOME d))
     in
     val evals2x2 = evals(Ty.DimConst 2)
@@ -663,18 +679,12 @@ structure BasisVars =
             fn [Ty.TYPE tv] => [dynSeq(Ty.T_Var tv)] --> Ty.T_Int))
 
     val fn_max_i = monoVar (N.fn_max, [Ty.T_Int, Ty.T_Int] --> Ty.T_Int)
-    val fn_max_r = monoVar (N.fn_max, [Ty.realTy, Ty.realTy] --> Ty.realTy)
+    val fn_max_r = monoVar (N.fn_max, [Ty.realTy', Ty.realTy'] --> Ty.realTy')
 
     val fn_min_i = monoVar (N.fn_min, [Ty.T_Int, Ty.T_Int] --> Ty.T_Int)
-    val fn_min_r = monoVar (N.fn_min, [Ty.realTy, Ty.realTy] --> Ty.realTy)
+    val fn_min_r = monoVar (N.fn_min, [Ty.realTy', Ty.realTy'] --> Ty.realTy')
 
-    val fn_modulate_tt = polyVar (N.fn_modulate, all([NK],
-          fn [Ty.DIM dd] => let
-              (*val t = Ty.T_Tensor(Ty.ShapeVar dd)*)
-              val t = tensor [Ty.DimVar dd]
-              in
-                [t, t] --> t
-              end))
+    val fn_modulate_tt = makeTTbinOp (N.fn_modulate)
 
     val fn_modulate_tf = polyVar (N.fn_modulate, all([DK ,NK, NK],
           fn [Ty.DIFF k, Ty.DIM d, Ty.DIM dd] => let
@@ -705,9 +715,9 @@ structure BasisVars =
                 [f1,f1] --> f1
               end))
 
-    val fn_normalize_t = polyVar (N.fn_normalize, all([SK],
-          fn [Ty.SHAPE dd] => let
-            val t = Ty.T_Tensor(Ty.ShapeVar dd)
+    val fn_normalize_t = polyVar (N.fn_normalize, all([SK, IV],
+          fn [Ty.SHAPE dd, Ty.INTERVAL iv] => let
+            val t = Ty.T_Tensor(Ty.ShapeVar dd, iv)
             in
               [t] --> t
             end))

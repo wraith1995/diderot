@@ -12,6 +12,7 @@ structure TypeUtil : sig
    * dimensions.
    *)
     val mkTensorTy : int -> Types.ty
+    val mkTensorTy' : int * int -> Types.ty
 
   (* constructor for building a fixed-size sequence type of unknown size *)
     val mkSequenceTy : Types.ty -> Types.ty
@@ -56,6 +57,7 @@ structure TypeUtil : sig
     val prune : Types.ty -> Types.ty
     val pruneDiff : Types.diff -> Types.diff
     val pruneShape : Types.shape -> Types.shape
+    val pruneInterval : Types.interval -> Types.interval
     val pruneDim : Types.dim -> Types.dim
 
   (* prune the head of a type *)
@@ -66,7 +68,9 @@ structure TypeUtil : sig
     val resolveDiff : Types.diff_var -> Types.diff
     val resolveShape : Types.shape_var -> Types.shape
     val resolveDim : Types.dim_var -> Types.dim
+    val resolveInterval : Types.interval_var -> Types.interval
     val resolveVar : Types.meta_var -> Types.var_bind
+					 
 
   (* equality testing *)
     val sameDim : Types.dim * Types.dim -> bool
@@ -76,11 +80,13 @@ structure TypeUtil : sig
     val diffToString : Types.diff -> string
     val shapeToString : Types.shape -> string
     val dimToString : Types.dim -> string
+    val intervalToString : Types.interval -> string
 
   (* convert to fully resolved monomorphic forms *)
     val monoDim : Types.dim -> int
     val monoShape : Types.shape -> int list
     val monoDiff : Types.diff -> int option
+    val monoInterval : Types.interval -> int
 
   (* instantiate a type scheme, returning the argument meta variables and the resulting type.
    * Note that we assume that the scheme is closed.
@@ -97,7 +103,14 @@ structure TypeUtil : sig
    *)
     fun mkTensorTy order =
           Ty.T_Tensor(
-            Ty.Shape(List.tabulate(order, fn _ => Ty.DimVar(MetaVar.newDimVar()))))
+           Ty.Shape(List.tabulate(order, fn _ => Ty.DimVar(MetaVar.newDimVar()))),
+	   Ty.Interval(MetaVar.newIntervalVar ()))
+    fun mkTensorTy order interval = if interval < 0 then raise Fail "impossible"
+				    else
+          Ty.T_Tensor(
+           Ty.Shape(List.tabulate(order, fn _ => Ty.DimVar(MetaVar.newDimVar()))),
+	   Ty.Interval(MetaVar.newIntervalVar ()))
+
 
     fun mkSequenceTy ty = Ty.T_Sequence(ty, SOME(Ty.DimVar(MetaVar.newDimVar())))
 
@@ -109,12 +122,12 @@ structure TypeUtil : sig
                  of NONE => ty
                   | SOME ty => prune ty
 						    (* end case *))
-	    | Ty.T_Named(name, ty') =>  Ty.T_Named(name, prune ty') (*QUESTION: Is this even a concern?*)
+	    | Ty.T_Named(name, ty') =>  Ty.T_Named(name, prune ty')
             | Ty.T_Sequence(ty, NONE) => Ty.T_Sequence(prune ty, NONE)
             | Ty.T_Sequence(ty, SOME dim) => Ty.T_Sequence(prune ty, SOME(pruneDim dim))
 	    | Ty.T_Tuple(tys) => Ty.T_Tuple(List.map prune tys)
             | (Ty.T_Kernel diff) => Ty.T_Kernel(pruneDiff diff)
-            | (Ty.T_Tensor shape) => Ty.T_Tensor(pruneShape shape)
+            | (Ty.T_Tensor (shape, iv)) => Ty.T_Tensor(pruneShape shape, pruneInterval iv)
             | (Ty.T_Image{dim, shape}) => Ty.T_Image{
                   dim = pruneDim dim,
                   shape = pruneShape shape
@@ -154,7 +167,31 @@ structure TypeUtil : sig
                   | NONE => pruneShape shape
                 (* end case *))
             | _ => shape
-          (* end case *))
+            (* end case *))
+			     
+    and pruneInterval interval =
+	(case interval
+	  of Ty.IC j => Ty.IC j
+	   | Ty.MaxVar(a as Ty.IV{bind=ref(SOME iv1)}, b as Ty.IV{bind=ref(SOME iv2)}) =>
+	     (case (pruneInterval iv1, pruneInterval iv2)
+	       of (Ty.IC(iv1), TY.IC(iv2)) => 
+		  if iv1' = 0 andalso iv2' = 0
+		  then Ty.IC 0
+		  else if (iv1' = 0) andalso (iv2' > 0)
+		  then Ty.IC iv2'
+		  else if (iv2' = 0) andalso (iv1' > 0)
+		  then Ty.IC iv1'
+		  else if (iv1' > 0) andalso (iv1' = iv2')
+		  then Ty.IC iv1'
+		  else raise Fail "MaxVar incompatible or invalid"
+		| _ => Ty.Maxvar(a, b)
+	     (* end case *))
+	   | Ty.AddVar(iv, j) => (case pruneInterval iv
+				   of Ty.IC(iv') => Ty.IC(iv' + j)
+				    | _ => iv
+				 (* end case *))
+	   | _ => interval
+	(* end case *))
 
   (* resolve meta variables to their instantiations (or else variable) *)
     fun resolve (tv as Ty.TV{bind, ...}) = (case !bind
@@ -166,6 +203,12 @@ structure TypeUtil : sig
            of NONE => Ty.DiffVar(dv, 0)
             | SOME diff => pruneDiff diff
           (* end case *))
+
+    fun resolveInterval (iv as Ty.IV{bind, ...}) =
+	(case !bind
+	  of NONE => Ty.AddVar(iv, 0)
+	   | SOME iv => pruneInterval iv
+	(* end case*))
 
     fun resolveShape (sv as Ty.SV{bind, ...}) = (case !bind
            of NONE => Ty.ShapeVar sv
@@ -181,6 +224,7 @@ structure TypeUtil : sig
       | resolveVar (Ty.DIFF dv) = Ty.DIFF(resolveDiff dv)
       | resolveVar (Ty.SHAPE sv) = Ty.SHAPE(resolveShape sv)
       | resolveVar (Ty.DIM d) = Ty.DIM(resolveDim d)
+      | resolveVar (Ty.INTERVAL iv) = Ty.INTERVAL(resolveInterval iv)
 
   (* prune the head of a type *)
     fun pruneHead ty = let
@@ -192,7 +236,7 @@ structure TypeUtil : sig
             | prune' (Ty.T_Sequence(ty, SOME dim)) = Ty.T_Sequence(ty, SOME(pruneDim dim))
 	    | prune' (Ty.T_Tuple(tys)) = Ty.T_Tuple(List.map prune' tys)
             | prune' (Ty.T_Kernel diff) = Ty.T_Kernel(pruneDiff diff)
-            | prune' (Ty.T_Tensor shape) = Ty.T_Tensor(pruneShape shape)
+            | prune' (Ty.T_Tensor (shape, interval)) = Ty.T_Tensor(pruneShape shape, pruneInterval interval)
             | prune' (Ty.T_Image{dim, shape}) = Ty.T_Image{
                   dim = pruneDim dim,
                   shape = pruneShape shape
@@ -323,7 +367,7 @@ structure TypeUtil : sig
 	   | FemData.MeshCell _ => (Ty.T_Int, t)
 	   | FemData.FuncCell _ => (Ty.T_Int, t)
 	   | FemData.MeshPos m =>
-	     let val ten = Ty.T_Tensor(Ty.Shape([Ty.DimConst(FemData.underlyingDim data)]))
+	     let val ten = Ty.T_Tensor(Ty.Shape([Ty.DimConst(FemData.underlyingDim data)]), Ty.IC(0))
 	     in (Ty.T_Tuple([ten, Ty.T_Int, Ty.T_Int]), t)
 	     end (*TODO: Order correct with data.*)
 	(*end case*))
@@ -352,7 +396,8 @@ structure TypeUtil : sig
             | Ty.DiffVar(dv, i) => if i < 0
                 then String.concat["(", MV.diffVarToString dv, "-", Int.toString(~i), ")"]
                 else String.concat["(", MV.diffVarToString dv, "+", Int.toString i, ")"]
-          (* end case *))
+			    (* end case *))
+
 
     fun shapeToString shape = (case pruneShape shape
            of Ty.Shape shape => concat["[", listToString dimToString "," shape, "]"]
@@ -369,7 +414,19 @@ structure TypeUtil : sig
     and dimToString dim = (case pruneDim dim
            of Ty.DimConst n => Int.toString n
             | Ty.DimVar v => MV.dimVarToString v
-          (* end case *))
+			  (* end case *))
+    and intervalToString iv =
+	(case pruneInterval iv
+	  of Ty.IC j => if j=0
+			then ""
+			else if j = 1
+			then "interval "
+			else if j > 1
+			then "affine["^(Int.toString j)^"] " 
+			else "invalid["^(Int.toString j)^"] " 
+	   | Ty.MaxVar(a,b) => "affineMax(" ^ (MV.intervalVarToString a) ^ ", " ^ (MV.intervalVarToString b) ^") "
+	   | Ty.AddVar(iv, j) => "intervalAdd(" ^ (MV.intervalVarToString iv) ^ ", " ^ (Int.toString j) ^ ") "
+	(* end case *))
 
     fun toString ty = (case pruneHead ty
            of Ty.T_Var(Ty.TV{bind=ref(SOME ty), ...}) => toString ty
@@ -384,14 +441,14 @@ structure TypeUtil : sig
 	    | Ty.T_Named (id, ty') => (Atom.toString id ) ^"( using " ^ toString ty' ^ ")"
             | Ty.T_Kernel(Ty.DiffConst NONE) => raise Fail "unexpected infinite kernel"
             | Ty.T_Kernel diff => "kernel#" ^ diffToString diff
-            | Ty.T_Tensor(Ty.Shape[]) => "real"
-            | Ty.T_Tensor(Ty.Shape[Ty.DimConst 2]) => "vec2"
-            | Ty.T_Tensor(Ty.Shape[Ty.DimConst 3]) => "vec3"
-            | Ty.T_Tensor(Ty.Shape[Ty.DimConst 4]) => "vec4"
-            | Ty.T_Tensor(Ty.Shape[Ty.DimConst 2, Ty.DimConst 2]) => "mat2"
-            | Ty.T_Tensor(Ty.Shape[Ty.DimConst 3, Ty.DimConst 3]) => "mat3"
-            | Ty.T_Tensor(Ty.Shape[Ty.DimConst 4, Ty.DimConst 4]) => "mat4"
-            | Ty.T_Tensor shape => "tensor" ^ shapeToString shape
+            | Ty.T_Tensor(Ty.Shape[], iv) => intervalToString(iv) ^ "real"
+            | Ty.T_Tensor(Ty.Shape[Ty.DimConst 2], iv) => intervalToString(iv) ^ "vec2"
+            | Ty.T_Tensor(Ty.Shape[Ty.DimConst 3], iv) => intervalToString(iv) ^ "vec3"
+            | Ty.T_Tensor(Ty.Shape[Ty.DimConst 4], iv) => intervalToString(iv) ^ "vec4"
+            | Ty.T_Tensor(Ty.Shape[Ty.DimConst 2, Ty.DimConst 2], iv) => intervalToString(iv) ^ "mat2"
+            | Ty.T_Tensor(Ty.Shape[Ty.DimConst 3, Ty.DimConst 3], iv) => intervalToString(iv) ^ "mat3"
+            | Ty.T_Tensor(Ty.Shape[Ty.DimConst 4, Ty.DimConst 4], iv) => intervalToString(iv) ^ "mat4"
+            | Ty.T_Tensor (shape, iv) => intervalToString(iv) ^ "tensor" ^ shapeToString shape
             | Ty.T_Image{dim, shape} => concat[
                   "image(", dimToString dim, ")", shapeToString shape
                 ]
@@ -425,11 +482,11 @@ structure TypeUtil : sig
     fun rngOf (Ty.T_Fun(_, ty)) = ty
       | rngOf ty = raise Fail(concat["TypeUtil.rngOf(", toString ty, ")"])
 
-    fun slice (Ty.T_Tensor(Ty.Shape l), mask) = let
+    fun slice (Ty.T_Tensor(Ty.Shape l, iv), mask) = let
           fun f (d, true, dd) = dd
             | f (d, false, dd) = d::dd
           in
-            Ty.T_Tensor(Ty.Shape(ListPair.foldr f [] (l, mask)))
+            Ty.T_Tensor(Ty.Shape(ListPair.foldr f [] (l, mask)), iv)
           end
       | slice (Ty.T_Field{shape as Ty.Shape l,diff,dim}, mask) = let
           fun f (d, true, dd) = dd
@@ -453,7 +510,13 @@ structure TypeUtil : sig
     fun monoDiff diff = (case pruneDiff diff
            of Ty.DiffConst k => k
             | diff => raise Fail(concat["diff ", diffToString diff, " is not constant"])
-          (* end case *))
+			(* end case *))
+
+    fun monoInterval iv =
+	(case pruneInterval iv
+	  of Ty.IC j => j
+	   | _ => raise Fail(concat["interval ", intervalToString iv, " is not constant"])
+	(* end case*))
 
   (* instantiate a type scheme, returning the argument meta variables and the resulting type.
    * Note that we assume that the scheme is closed.
@@ -482,6 +545,18 @@ structure TypeUtil : sig
                 (* end case *))
             | iShape (Ty.ShapeExt(shape, dim)) = Ty.ShapeExt(iShape shape, iDim dim)
             | iShape (Ty.Shape dims) = Ty.Shape(List.map iDim dims)
+
+	  fun iInterval (Ty.AddVar(iv, j)) =
+	      (case MV.Map.find(env, Ty.INTERVAL iv)
+		of SOME(Ty.INTERAL iv') => Ty.Addvar(iv', j)
+		 | _ => raise Fail "impossible"
+	      (* end case *))
+	    | iInterval (Ty.IC(j)) = Ty.IC(j)
+	    | iInterval (Ty.MaxVar(iv1, iv2)) =
+	      (case (MV.Map.find(env, Ty.INTERVAL iv1), MV.Map.find(env, TY.INTERVAL iv2))
+		of (SOME(iv1', iv2')) => Ty.MaxVar(iv1', iv2')
+		 | _ => raise Fail "impossible"
+	      (* end case *))
           fun ity (Ty.T_Var tv) = (case MV.Map.find(env, Ty.TYPE tv)
                  of SOME(Ty.TYPE tv) => Ty.T_Var tv
                   | _ => raise Fail "impossible"
@@ -494,7 +569,7 @@ structure TypeUtil : sig
 	    | ity (Ty.T_Tuple(tys)) = Ty.T_Tuple(List.map ity tys)
             | ity (ty as Ty.T_Strand _) = ty
             | ity (Ty.T_Kernel k) = Ty.T_Kernel(iDiff k)
-            | ity (Ty.T_Tensor shape) = Ty.T_Tensor(iShape shape)
+            | ity (Ty.T_Tensor (shape, iv)) = Ty.T_Tensor(iShape shape, iInterval iv)
             | ity (Ty.T_Image{dim, shape}) = Ty.T_Image{dim=iDim dim, shape=iShape shape}
             | ity (Ty.T_Field{diff, dim, shape}) =
                 Ty.T_Field{diff=iDiff diff, dim=iDim dim, shape=iShape shape}

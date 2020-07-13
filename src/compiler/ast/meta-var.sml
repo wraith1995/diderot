@@ -11,6 +11,7 @@
  *      differentiation variables
  *      shape variables
  *      dimension variables
+ *      interval vars
  *
  * This module implements creation, equality testing, and printing for these.
  *)
@@ -22,6 +23,7 @@ structure MetaVar =
     datatype diff_var = datatype Types.diff_var
     datatype shape_var = datatype Types.shape_var
     datatype dim_var = datatype Types.dim_var
+    datatype interval_var = datatype Types.interval_var
     datatype kind = datatype Types.kind
 
 
@@ -79,6 +81,15 @@ structure MetaVar =
 
     fun sameDimVar (DV{id=a, ...}, DV{id=b, ...}) = Stamp.same(a, b)
 
+    (***** Interval variables ****)
+    fun newIntervalVar () = IV{
+	 id = Stamp.new(),
+	 bind = ref NONE
+	}
+			      
+    fun intervalVarToString(IV{id, ...}) = "'interval" ^ (Stamp.toString id)
+
+    fun sameIntervalVar (IV{id=a, ...}, IV{id=b, ...}) = Stamp.same(a,b)
 
   (***** Meta variables ****)
 
@@ -86,16 +97,19 @@ structure MetaVar =
       | metaToString (DIFF dv) = diffVarToString dv
       | metaToString (SHAPE sv) = shapeVarToString sv
       | metaToString (DIM dv) = dimVarToString dv
+      | metaToString (INTERVAL iv) = intervalVarToString iv
 
     fun stamp (TYPE(TV{id, ...})) = id
       | stamp (DIFF(DfV{id, ...})) = id
       | stamp (SHAPE(SV{id, ...})) = id
       | stamp (DIM(DV{id, ...})) = id
+      | stamp (INTERVAL(IV{id, ...})) = id
 
     fun copy (TYPE _) = TYPE(newTyVar())
       | copy (DIFF(k as DfV{bound, ...})) = DIFF(newDiffVar(!bound))
       | copy (SHAPE _) = SHAPE(newShapeVar())
       | copy (DIM _) = DIM(newDimVar())
+      | copy (INTERVAL _) = INTERVAL(newIntervalVar ())
 
     fun toType (TYPE(TV{bind, ...})) = (case !bind
            of SOME ty => ty
@@ -120,6 +134,12 @@ structure MetaVar =
             | NONE => raise Fail "unbound dimension meta variable"
           (* end case *))
       | toDim mv = raise Fail(concat["toDim(", metaToString mv, ")"])
+
+    fun toInterval (INTERVAL(IV{bind, ...})) = (case !bind
+						 of SOME ty => ty
+						  | NONE => raise Fail "unbound interval meta variable"
+					       (* end case *))
+      | toInterval mv = raise Fail(concat["toInterval(", metaToString mv, ")"])
 
 
     structure Map = RedBlackMapFn (

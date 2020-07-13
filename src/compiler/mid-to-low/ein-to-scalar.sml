@@ -75,7 +75,7 @@ structure EinToScalar : sig
               (*********sumexpression ********)
                 fun tb n =  List.tabulate (n, fn e => e)
                 fun sumCheck (mapp, (v, lb, ub) :: sumx, e) = let
-                      fun sumloop mapp = gen (mapp, e)
+
                       fun sumI1 (left, (v, [i], lb1), [], rest) = let
                             val mapp = IMap.insert (left, v, lb1+i)
                             val vD = gen (mapp, e)

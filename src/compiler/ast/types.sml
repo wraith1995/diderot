@@ -13,11 +13,12 @@ structure Types =
   struct
 
   (* union type for meta variables and meta-variable bindings *)
-    datatype ('ty, 'diff, 'shape, 'dim) kind
+    datatype ('ty, 'diff, 'shape, 'dim, 'interval) kind
       = TYPE of 'ty             (* ranges over types *)
       | DIFF of 'diff           (* ranges of differentiation levels (0, 1, ...) *)
       | SHAPE of 'shape         (* ranges over tensor shapes *)
       | DIM of 'dim             (* ranges over dimensions (1, 2, ...) *)
+      | INTERVAL of 'interval
 
     datatype ty
       = T_Var of ty_var         (* meta variable of kind type *)
@@ -33,7 +34,7 @@ structure Types =
     (* convolution kernel; argument is number of levels of differentiation *)
       | T_Kernel of diff
     (* scalars, vectors, matrices, etc.; argument is tensor shape *)
-      | T_Tensor of shape
+      | T_Tensor of shape * interval
     (* data sets from NRRD *)
       | T_Image of {
           dim : dim,            (* 2D or 3D data set *)
@@ -90,22 +91,33 @@ structure Types =
           id : Stamp.t,
           bind : dim option ref         (* unification binding *)
         }
-
-    type meta_var = (ty_var, diff_var, shape_var, dim_var) kind
-    type var_bind = (ty, diff, shape, dim) kind
+    and interval (* interval marker for a tensor: 0 for standard, 1 for interval, d = mid + d -2 errors + error*)
+	= IC of int
+        | MaxVar of interval_var * interval_var (* for bin ops where same types are added or one type + scalar *)
+        | AddVar of interval_var * int (* D+j for various operations *)
+    and interval_var = IV of {
+	 id: Stamp.t,
+	 bind : interval option ref
+	}
+    type meta_var = (ty_var, diff_var, shape_var, dim_var, interval_var) kind
+    type var_bind = (ty, diff, shape, dim, interval) kind
 
     type scheme = meta_var list * ty
 
   (* useful types *)
-    val realTy = T_Tensor(Shape[])
-    fun vecTy n = T_Tensor(Shape[DimConst n])
-    fun matTy n = T_Tensor(Shape[DimConst n, DimConst n])
-    val vec2Ty = vecTy 2
-    val vec3Ty = vecTy 3
-    val vec4Ty = vecTy 4
-    val mat2Ty = matTy 2
-    val mat3Ty = matTy 3
-    val mat4Ty = matTy 4
+    val realTy' = T_Tensor(Shape[], IC(0))
+    val realTy = fn x => T_Tensor(Shape[], x)
+    fun vecTy' n = T_Tensor(Shape[DimConst n], IC(0))
+    fun matTy' n = T_Tensor(Shape[DimConst n, DimConst n], IC(0))
+    fun vecTy n =  fn x => T_Tensor(Shape[DimConst n], x)
+    fun matTy n = fn x => T_Tensor(Shape[DimConst n, DimConst n], x)
+
+    val vec2Ty' = vecTy' 2
+    val vec3Ty' = vecTy' 3
+    val vec4Ty' = vecTy' 4
+    val mat2Ty' = matTy' 2
+    val mat3Ty' = matTy' 3
+    val mat4Ty' = matTy' 4
 
     fun vecField(diffInt, dimInt) = T_Field {diff=DiffConst(diffInt),
 					     dim=DimConst(dimInt),
