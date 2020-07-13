@@ -93,7 +93,7 @@ structure Types =
         }
     and interval (* interval marker for a tensor: 0 for standard, 1 for interval, d = mid + d -2 errors + error*)
 	= IC of int
-        | MaxVar of interval_var * interval_var (* for bin ops where same types are added or one type + scalar *)
+        | MaxVar of interval * interval (* for bin ops where same types are added or one type + scalar *)
         | AddVar of interval_var * int (* D+j for various operations *)
     and interval_var = IV of {
 	 id: Stamp.t,

@@ -66,7 +66,7 @@ structure ConstExpr : sig
     fun typeOfConst (String _) = Ty.T_String
       | typeOfConst (Bool _) = Ty.T_Bool
       | typeOfConst (Int _) = Ty.T_Int
-      | typeOfConst (Real _) = Ty.realTy
+      | typeOfConst (Real _) = Ty.realTy'
       | typeOfConst (Tensor(_, ty)) = ty
       | typeOfConst (Seq(_, ty)) = ty
       | typeOfConst (Tuple(_, ty)) = ty
@@ -139,7 +139,7 @@ structure ConstExpr : sig
                         | _ => NONE
 					      (* end case *))
 		  (*FIXME: Parse Tuples*)
-                  | Ty.T_Tensor(Ty.Shape[]) => let
+                  | Ty.T_Tensor(Ty.Shape[], Ty.IC(0)) => let
                       val (isNeg, rest) = (case SS.getc def
                              of SOME(#"-", rest) => (true, rest)
                               | SOME(#"+", rest) => (false, rest)
@@ -189,9 +189,9 @@ structure ConstExpr : sig
                       in
                         getFrac (rest, whole)
                       end
-                  | Ty.T_Tensor(Ty.Shape(Ty.DimConst d :: dd)) => ((* higher-order tensor *)
+                  | Ty.T_Tensor(Ty.Shape(Ty.DimConst d :: dd), j) => ((* higher-order tensor *)
                       case SS.getc def
-                       of SOME(#"[", rest) => (case parseVals (Ty.T_Tensor(Ty.Shape dd), rest)
+                       of SOME(#"[", rest) => (case parseVals (Ty.T_Tensor(Ty.Shape dd, j), rest)
                              of SOME(items, rest) => (case SS.getc (skipWS rest)
                                    of SOME(#"]", rest) => if (length items = d)
                                         then SOME(Tensor(items, ty), rest)

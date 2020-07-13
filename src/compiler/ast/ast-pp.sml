@@ -39,7 +39,7 @@ structure ASTPP : sig
                   | Types.DIFF dv => string("#"^TU.diffToString(TU.resolveDiff dv))
                   | Types.SHAPE sv => string("$"^TU.shapeToString(TU.resolveShape sv))
                   | Types.DIM dv => string("%"^TU.dimToString(TU.resolveDim dv))
-		  | Types.Interval iv => string("~"^(TU.intervalToString(TU.resolveInterval iv)))
+		  | Types.INTERVAL iv => string("~"^(TU.intervalToString(TU.resolveInterval iv)))
                 (* end case *))
           in
             ppList ppTyArg ("<", ";", ">") (ppStrm, mvs)

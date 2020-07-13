@@ -23,7 +23,7 @@ structure TypeOf : sig
 
     fun literal lit = (case lit
            of (Literal.Int _) => Ty.T_Int
-            | (Literal.Real _) => Ty.realTy
+            | (Literal.Real _) => Ty.realTy'
             | (Literal.String s) => Ty.T_String
             | (Literal.Bool _) => Ty.T_Bool
           (* end case *))

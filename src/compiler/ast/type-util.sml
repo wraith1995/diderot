@@ -104,12 +104,12 @@ structure TypeUtil : sig
     fun mkTensorTy order =
           Ty.T_Tensor(
            Ty.Shape(List.tabulate(order, fn _ => Ty.DimVar(MetaVar.newDimVar()))),
-	   Ty.Interval(MetaVar.newIntervalVar ()))
-    fun mkTensorTy order interval = if interval < 0 then raise Fail "impossible"
+	   Ty.AddVar(MetaVar.newIntervalVar (), 0))
+    fun mkTensorTy' (order, interval) = if interval < 0 then raise Fail "impossible"
 				    else
           Ty.T_Tensor(
            Ty.Shape(List.tabulate(order, fn _ => Ty.DimVar(MetaVar.newDimVar()))),
-	   Ty.Interval(MetaVar.newIntervalVar ()))
+	   Ty.AddVar(MetaVar.newIntervalVar (), 0))
 
 
     fun mkSequenceTy ty = Ty.T_Sequence(ty, SOME(Ty.DimVar(MetaVar.newDimVar())))
@@ -172,9 +172,9 @@ structure TypeUtil : sig
     and pruneInterval interval =
 	(case interval
 	  of Ty.IC j => Ty.IC j
-	   | Ty.MaxVar(a as Ty.IV{bind=ref(SOME iv1)}, b as Ty.IV{bind=ref(SOME iv2)}) =>
+	   | Ty.MaxVar(iv1, iv2) =>
 	     (case (pruneInterval iv1, pruneInterval iv2)
-	       of (Ty.IC(iv1), TY.IC(iv2)) => 
+	       of (Ty.IC(iv1'), Ty.IC(iv2')) => 
 		  if iv1' = 0 andalso iv2' = 0
 		  then Ty.IC 0
 		  else if (iv1' = 0) andalso (iv2' > 0)
@@ -184,12 +184,16 @@ structure TypeUtil : sig
 		  else if (iv1' > 0) andalso (iv1' = iv2')
 		  then Ty.IC iv1'
 		  else raise Fail "MaxVar incompatible or invalid"
-		| _ => Ty.Maxvar(a, b)
+		| (iv1', iv2') => Ty.MaxVar(iv1', iv2')
 	     (* end case *))
-	   | Ty.AddVar(iv, j) => (case pruneInterval iv
-				   of Ty.IC(iv') => Ty.IC(iv' + j)
-				    | _ => iv
-				 (* end case *))
+	   | Ty.AddVar(Ty.IV{id=id, bind=ref(SOME(iv))}, j) =>
+	     (case pruneInterval iv
+	       of Ty.IC(iv') => Ty.IC(iv' + j)
+		| Ty.AddVar(iv', k) => Ty.AddVar(iv', j+k)
+		| iv' => interval
+	     (* end case *))
+
+
 	   | _ => interval
 	(* end case *))
 
@@ -424,7 +428,7 @@ structure TypeUtil : sig
 			else if j > 1
 			then "affine["^(Int.toString j)^"] " 
 			else "invalid["^(Int.toString j)^"] " 
-	   | Ty.MaxVar(a,b) => "affineMax(" ^ (MV.intervalVarToString a) ^ ", " ^ (MV.intervalVarToString b) ^") "
+	   | Ty.MaxVar(a,b) => "affineMax(" ^ (intervalToString a) ^ ", " ^ (intervalToString b) ^") "
 	   | Ty.AddVar(iv, j) => "intervalAdd(" ^ (MV.intervalVarToString iv) ^ ", " ^ (Int.toString j) ^ ") "
 	(* end case *))
 
@@ -548,15 +552,12 @@ structure TypeUtil : sig
 
 	  fun iInterval (Ty.AddVar(iv, j)) =
 	      (case MV.Map.find(env, Ty.INTERVAL iv)
-		of SOME(Ty.INTERAL iv') => Ty.Addvar(iv', j)
+		of SOME(Ty.INTERVAL iv') => Ty.AddVar(iv', j)
 		 | _ => raise Fail "impossible"
 	      (* end case *))
 	    | iInterval (Ty.IC(j)) = Ty.IC(j)
-	    | iInterval (Ty.MaxVar(iv1, iv2)) =
-	      (case (MV.Map.find(env, Ty.INTERVAL iv1), MV.Map.find(env, TY.INTERVAL iv2))
-		of (SOME(iv1', iv2')) => Ty.MaxVar(iv1', iv2')
-		 | _ => raise Fail "impossible"
-	      (* end case *))
+	    | iInterval (Ty.MaxVar(iv1, iv2)) = Ty.MaxVar(iInterval iv1, iInterval iv2)
+							 
           fun ity (Ty.T_Var tv) = (case MV.Map.find(env, Ty.TYPE tv)
                  of SOME(Ty.TYPE tv) => Ty.T_Var tv
                   | _ => raise Fail "impossible"
