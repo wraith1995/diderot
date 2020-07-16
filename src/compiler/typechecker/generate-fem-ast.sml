@@ -137,20 +137,20 @@ fun makeAnds([v1,v2]) = makeAnd v1 v2
   | makeAnds (v::vs) = makeAnd v (makeAnds vs)
 fun makeRefCellInside(env, cxt, span, dim, refCellInfo, posVar, meshVar, insert, meshData, meshTy) =
     let
-     val insideVec = Ty.vecTy dim
+     val insideVec = Ty.vecTy' dim
      val FemData.RefCellData({ty=refCellClass, eps,...}) = refCellInfo
      val epsExpr = AST.E_Lit(Literal.Real(eps))
      val one = AST.E_Lit(Literal.Real(RealLit.one))
-     val onePlusEps = makePrim'(BV.add_tt, [one, epsExpr], [Ty.realTy, Ty.realTy], Ty.realTy)
+     val onePlusEps = makePrim'(BV.add_tt, [one, epsExpr], [Ty.realTy', Ty.realTy'], Ty.realTy')
      val posVar' = posVar
      val meshVar' = meshVar
      fun greaterThanTest top bot =
 	 let
 	  val (tyArgs, Ty.T_Fun(domTy, rngTy)) = TU.instantiate(Var.typeOf BV.gt_rr)
 	 in
-	  makePrim(AST.E_Prim(BV.gt_rr, tyArgs, [top, bot], Ty.T_Bool), [Ty.realTy, Ty.realTy])
+	  makePrim(AST.E_Prim(BV.gt_rr, tyArgs, [top, bot], Ty.T_Bool), [Ty.realTy', Ty.realTy'])
 	 end
-     fun subs vecExpr i = AST.E_Slice(vecExpr, [SOME(AST.E_Lit(Literal.intLit i))], Ty.realTy)
+     fun subs vecExpr i = AST.E_Slice(vecExpr, [SOME(AST.E_Lit(Literal.intLit i))], Ty.realTy')
 
 
 				     
@@ -168,7 +168,7 @@ fun makeRefCellInside(env, cxt, span, dim, refCellInfo, posVar, meshVar, insert,
 					      fn x => subs adjustedPos x)
 	   val posTests = List.map (fn x => greaterThanTest x (AST.E_Lit(Literal.Real(RealLit.zero true)))) adjustedPosAcc
 	   val (tyArgs', Ty.T_Fun(domTy', rngTy')) = TU.instantiate(Var.typeOf BV.op_inner_tt)
-	   val sumVar = makePrim(AST.E_Prim(BV.op_inner_tt, tyArgs', [oneVec, posVar'], Ty.realTy), [insideVec, insideVec])
+	   val sumVar = makePrim(AST.E_Prim(BV.op_inner_tt, tyArgs', [oneVec, posVar'], Ty.realTy'), [insideVec, insideVec])
 	   val sumTest = greaterThanTest onePlusEps sumVar
 	   val endResult = makeAnds (sumTest::posTests)
 				    
@@ -178,7 +178,7 @@ fun makeRefCellInside(env, cxt, span, dim, refCellInfo, posVar, meshVar, insert,
 	| FemData.KCube(_) =>
 	  let
 	   val (tyArgs, Ty.T_Fun(domTy, rngTy)) = TU.instantiate(Var.typeOf BV.op_norm_t)
-	   val norm = makePrim(AST.E_Prim(BV.op_norm_t, tyArgs, [posVar'], Ty.realTy), [insideVec])
+	   val norm = makePrim(AST.E_Prim(BV.op_norm_t, tyArgs, [posVar'], Ty.realTy'), [insideVec])
 	   val endTest = greaterThanTest onePlusEps norm
 	  in
 	   endTest
@@ -190,7 +190,7 @@ fun makeRefCellInside(env, cxt, span, dim, refCellInfo, posVar, meshVar, insert,
 		val _ = ()
 	       in
 		AST.E_ExtractFemItemN([meshVar, posVar, epsExpr],
-				      [meshTy, insideVec, Ty.realTy],
+				      [meshTy, insideVec, Ty.realTy'],
 				      Ty.T_Bool,
 				      (FemOpt.InsideInsert(Atom.atom file), meshData), NONE)
 	       end
@@ -212,7 +212,7 @@ fun itterStartPos(cxt, span, refCellClass, vecTy, dim, start) =
        | FemData.Other(dim, _) => (case start
 				       (*todo: check length*)
 				 of SOME(s) => AST.E_Tensor((List.map (fn x => AST.E_Lit(Literal.Real(x))) s),
-							    Ty.T_Tensor(Ty.Shape([Ty.DimConst dim])))
+							    Ty.T_Tensor(Ty.Shape([Ty.DimConst dim]), Ty.IC 0))
 				  | NONE => raise Fail "insert an error here")
     (* end case*))
 
@@ -226,7 +226,7 @@ fun dnT(env, cxt, span, mesh, m) =
      val dim = FT.meshDim meshData
      val range = dim::(List.tabulate(m, fn x => dim))
      val dimC = Ty.DimConst(dim)
-     val dimT = Ty.T_Tensor(Ty.Shape([dimC]))
+     val dimT = Ty.T_Tensor(Ty.Shape([dimC]), Ty.IC 0)
      val meshTy = Ty.T_Fem(mesh, NONE)
      val meshPosData = FT.MeshPos(meshData)
      val meshPosTy = Ty.T_Fem(meshPosData, SOME(FT.nameOf mesh))
@@ -234,7 +234,7 @@ fun dnT(env, cxt, span, mesh, m) =
      fun resultFieldTy n = Ty.T_Field{diff=Ty.DiffConst(NONE),
 				      dim = dimC,
 				      shape = rangeC n}
-     fun resultTensorTy n = Ty.T_Tensor(rangeC n)
+     fun resultTensorTy n = Ty.T_Tensor(rangeC n, Ty.IC 0)
      fun functionTy n = Ty.T_Fun([dimT,
 				  Ty.T_Int,
 				  meshTy
@@ -318,8 +318,8 @@ fun makeMeshPosSearch(env, cxt, span, refCellClass, meshData, newtonTol, newtonA
      val (FT.Mesh(mesh)) = meshData
      val meshTy = Ty.T_Fem(meshData, NONE)
      val dim = FemData.meshDim mesh
-     val insideVec = Ty.vecTy dim
-     val insideMat = Ty.matTy dim
+     val insideVec = Ty.vecTy' dim
+     val insideMat = Ty.matTy' dim
      val dimConst = Ty.DimConst(dim)
      val inf = Ty.DiffConst(NONE)
      val transformFieldTy = Ty.T_Field({diff=inf, dim = dimConst, shape=Ty.Shape([dimConst])})
@@ -374,9 +374,9 @@ fun makeMeshPosSearch(env, cxt, span, refCellClass, meshData, newtonTol, newtonA
      val dTransformField = makePrim'(BV.op_Dotimes,[transformField], [transformFieldTy], dTransformFieldTy)
      val invDTransformField = makePrim'(invVar, [dTransformField], [dTransformFieldTy], dTransformFieldTy)	    
      (*setup the key tests:*)
-     val tolExpr' = makePrim'(BV.mul_rr, [tolExpr, tolExpr], [Ty.realTy, Ty.realTy], Ty.realTy)
-     val deltaNorm = makePrim'(BV.op_inner_tt, [AST.E_Var((updateVar, span)), AST.E_Var((updateVar, span))], [insideVec, insideVec], Ty.realTy)
-     val deltaNormTest = makePrim'(BV.gte_rr, [tolExpr', deltaNorm], [Ty.realTy, Ty.realTy], Ty.T_Bool)
+     val tolExpr' = makePrim'(BV.mul_rr, [tolExpr, tolExpr], [Ty.realTy', Ty.realTy'], Ty.realTy')
+     val deltaNorm = makePrim'(BV.op_inner_tt, [AST.E_Var((updateVar, span)), AST.E_Var((updateVar, span))], [insideVec, insideVec], Ty.realTy')
+     val deltaNormTest = makePrim'(BV.gte_rr, [tolExpr', deltaNorm], [Ty.realTy', Ty.realTy'], Ty.T_Bool)
 				  
      val insideTest = insideFunction([meshExpr, newPosVarExpr])
      val makeMeshPos = AST.E_ExtractFemItemN([meshExpr, cellItterVarExp,newPosVarExpr, posExpr], [meshTy, Ty.T_Int, insideVec, insideVec], meshPosType, (FemOpt.AllBuild, meshPosData), NONE)
@@ -522,8 +522,8 @@ fun makeNewtonInversesBody(env, cxt, span, refCellClass, meshData, newtonTol, ne
     let
      (*Setup useful types*)
      val dim = FemData.meshDim meshData
-     val insideVec = Ty.vecTy dim
-     val insideMat = Ty.matTy dim
+     val insideVec = Ty.vecTy' dim
+     val insideMat = Ty.matTy' dim
      val dimConst = Ty.DimConst(dim)
      val inf = Ty.DiffConst(NONE)
      val transformFieldTy = Ty.T_Field({diff=inf, dim = dimConst, shape=Ty.Shape([dimConst])})
@@ -551,9 +551,9 @@ fun makeNewtonInversesBody(env, cxt, span, refCellClass, meshData, newtonTol, ne
      val dTransformField = makePrim'(BV.op_Dotimes,[transformField], [transformFieldTy], dTransformFieldTy)
      val invDTransformField = makePrim'(invVar, [dTransformField], [dTransformFieldTy], dTransformFieldTy)
 				       
-     val deltaNorm = makePrim'(BV.op_inner_tt, [AST.E_Var((updateVar, span)),AST.E_Var((updateVar, span))], [insideVec,insideVec], Ty.realTy)
-     val tolExpr' = makePrim'(BV.mul_rr, [tolExpr, tolExpr], [Ty.realTy, Ty.realTy], Ty.realTy)
-     val deltaNormTest = makePrim'(BV.gte_rr, [tolExpr', deltaNorm], [Ty.realTy, Ty.realTy], Ty.T_Bool)
+     val deltaNorm = makePrim'(BV.op_inner_tt, [AST.E_Var((updateVar, span)),AST.E_Var((updateVar, span))], [insideVec,insideVec], Ty.realTy')
+     val tolExpr' = makePrim'(BV.mul_rr, [tolExpr, tolExpr], [Ty.realTy', Ty.realTy'], Ty.realTy')
+     val deltaNormTest = makePrim'(BV.gte_rr, [tolExpr', deltaNorm], [Ty.realTy', Ty.realTy'], Ty.T_Bool)
      val insideTest = insideFunction([meshExpr, newPosVarExpr])
      (* val combinedTest = AST.Andalso(deltaNormTest, insideTest) (*note: we might want to combined them...... it might be better to do delta test then inside test????*) *)
      val meshPosData = FT.MeshPos(meshData)
@@ -823,7 +823,7 @@ fun makeFemMethods (cxt, env, tyName, span) femTyDef file cellAccData femInfo =
 	  val newtonAttempts = AST.E_Lit(Literal.intLit itters)
 
 	  val mapDim = FemData.meshDim m
-	  val vecTy = Ty.vecTy mapDim
+	  val vecTy = Ty.vecTy' mapDim
 
 	  val posParam = Var.new (Atom.atom "pos", span, AST.FunParam, vecTy)
 	  val meshParam = Var.new (Atom.atom "mesh", span, AST.FunParam, meshType)
@@ -948,7 +948,7 @@ fun makeMeshPos(env, cxt, span, meshData, transformVars, dumb, extraFuns, extraR
  val meshName = FT.nameOf meshData
  val FT.Mesh(mesh) = meshData
  val dim = FT.meshDim mesh
- val vecTy = Ty.vecTy dim
+ val vecTy = Ty.vecTy' dim
  val cellData = FT.cellOf meshData
  val cellName = FT.envNameOf cellData
  val cellTy = Ty.T_Fem(cellData, SOME(meshName))
@@ -1004,7 +1004,7 @@ fun makeDescendentFemTypes (cxt, tyName, span) geometry cellAccData (env, femTyp
 	   val meshName = FT.nameOf femType
 	   val meshTy = Ty.T_Fem(femType, NONE)
 	   val mapDim = FT.meshDim m
-	   val dimSizeVec = Ty.vecTy mapDim
+	   val dimSizeVec = Ty.vecTy' mapDim
 	   val meshMapDim = FT.meshMapDim m
 	   val shape = FT.dataShapeOf femType
 
@@ -1021,7 +1021,7 @@ fun makeDescendentFemTypes (cxt, tyName, span) geometry cellAccData (env, femTyp
 	   val posTy = Ty.T_Fem(posData, SOME(meshName))
 
 	   val transformDofs = Atom.atom "transformDofs"
-	   val transformDofsTy = Ty.T_Tensor(Ty.Shape((List.map Ty.DimConst shape))) (*careful*)
+	   val transformDofsTy = Ty.T_Tensor(Ty.Shape((List.map Ty.DimConst shape)), Ty.IC 0) (*careful*)
 	   val transformsDofsFunTy = Ty.T_Fun([cellTy], transformDofsTy)
 	   fun makeTransformDofs vars = (case vars
 					  of [v] =>
@@ -1074,7 +1074,7 @@ fun makeDescendentFemTypes (cxt, tyName, span) geometry cellAccData (env, femTyp
 	    val {contraction, itters, newtonTol, killAfterTol, start} = newtonControl
 
 	    val meshData = m
-	    val posTy = Ty.vecTy mapDim
+	    val posTy = Ty.vecTy' mapDim
 	    val newtonTol = AST.E_Lit(Literal.Real(newtonTol)) (*TODO fix me with ref cell info*)
 	    val newtonAttempts = AST.E_Lit(Literal.intLit itters) (*TODO fix me with ref cell info*)
 
@@ -1083,7 +1083,7 @@ fun makeDescendentFemTypes (cxt, tyName, span) geometry cellAccData (env, femTyp
 	    val cellIntParam = Var.new (Atom.atom "cellInt", span, AST.FunParam, Ty.T_Int)
 	    val meshParam = Var.new (Atom.atom "mesh", span, AST.FunParam, meshTy)
 	    val meshPosTy = Ty.T_Fem(FT.MeshPos(m), SOME(FT.nameOf (FT.Mesh(m))))
-	    val funTy = Ty.T_Fun([Ty.vecTy mapDim, Ty.T_Int, meshTy], meshPosTy)
+	    val funTy = Ty.T_Fun([Ty.vecTy' mapDim, Ty.T_Int, meshTy], meshPosTy)
 	    val hiddenFuncVar = Var.new (hiddenFuncAtom, span, AST.FunVar, funTy)
 					
 	    val posExpr = mkVar posParam
@@ -1242,7 +1242,7 @@ fun makeDescendentFemTypes (cxt, tyName, span) geometry cellAccData (env, femTyp
 	   val dofIndexSeq = Ty.T_Sequence(Ty.T_Int, SOME(Ty.DimConst(dofCount)))
 
 	   val functionDofs = Atom.atom FN.funcDofs
-	   val funcDofsTy = Ty.T_Tensor(Ty.Shape (List.map Ty.DimConst funcDataShape))
+	   val funcDofsTy = Ty.T_Tensor(Ty.Shape (List.map Ty.DimConst funcDataShape), Ty.IC 0)
 	   val functionDofsFunTy = Ty.T_Fun([cellTy], funcDofsTy)
 	   fun makeFunctionDofs vars = (case vars
 					 of [v] =>
@@ -1345,4 +1345,3 @@ fun makeDescendentFemTypes (cxt, tyName, span) geometry cellAccData (env, femTyp
       
 
 end
-  

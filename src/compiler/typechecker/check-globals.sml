@@ -450,8 +450,8 @@ structure CheckGlobals : sig
             | PT.GD_FieldFunc(ty, bindF, bindX, body) => (case CheckType.check(env, cxt, ty)
                  of ty' as Ty.T_Field{diff, dim, shape} => let
                       val f = Var.new(#tree bindF, #span bindF, Var.GlobalVar, ty')
-                      val xTy = Ty.T_Tensor(Ty.Shape[dim])
-                      val resTy = Ty.T_Tensor shape
+                      val xTy = Ty.T_Tensor(Ty.Shape[dim], raise Fail "oops") 
+                      val resTy = Ty.T_Tensor (shape, raise Fail "oops")
 		      (* QUESTION: should we check the arity of dim? *)
                       val x = Var.new(#tree bindX, #span bindX, Var.FunParam, xTy)
                       val env' = Env.insertLocal(

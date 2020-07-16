@@ -90,14 +90,14 @@ fun makeGeometryFuncs(env, cxt, span, meshData, geometry, inverse, forwardInfo, 
       dim = Ty.DimConst(dim),
       shape = Ty.Shape([Ty.DimConst(dim),Ty.DimConst(dim)])
      }						 
- val vecTy = Ty.vecTy dim
- val vec2Ty = Ty.vecTy 2
- val matTy = Ty.matTy dim
+ val vecTy = Ty.vecTy' dim
+ val vec2Ty = Ty.vecTy' 2
+ val matTy = Ty.matTy' dim
  (*for the case where we need to make 4d vecs and mats to do transforms*)
- val vecTyExtra = Ty.vecTy (dim + 1) 
- val matTyExtra = Ty.matTy (dim + 1);
+ val vecTyExtra = Ty.vecTy' (dim + 1) 
+ val matTyExtra = Ty.matTy' (dim + 1);
 
- val vec2SeqTy = Ty.T_Sequence(Ty.realTy, SOME(Ty.DimConst 2))
+ val vec2SeqTy = Ty.T_Sequence(Ty.realTy', SOME(Ty.DimConst 2))
 
  val invertBasisVar = if dim = 2
 		      then BV.fn_inv2_t
@@ -127,7 +127,7 @@ fun makeGeometryFuncs(env, cxt, span, meshData, geometry, inverse, forwardInfo, 
  (*if dim=2, line-line intersection; if dim=3 - line-plane intersection*)
  fun rayAtT(refPosExp, dPosExp, t) =
      let
-      val scale = makePrim'(BV.mul_tr, [dPosExp, t], [vecTy, Ty.realTy], vecTy)
+      val scale = makePrim'(BV.mul_tr, [dPosExp, t], [vecTy, Ty.realTy'], vecTy)
       val result = makePrim'(BV.add_tt, [refPosExp, scale], [vecTy, vecTy], vecTy)
      in
       result
@@ -137,7 +137,7 @@ fun makeGeometryFuncs(env, cxt, span, meshData, geometry, inverse, forwardInfo, 
       let
        (*comptue new pos *)
        val adjustedTest = test1
-       (* val scale = makePrim'(BV.mul_tr, [dPosExp, test1], [vecTy, Ty.realTy], vecTy) *)
+       (* val scale = makePrim'(BV.mul_tr, [dPosExp, test1], [vecTy, Ty.realTy'], vecTy) *)
        val newPos = rayAtT(refPosExp, dPosExp, adjustedTest)
        val insideTest = makeRefCellInsideFunc([newPos, newPos]);
        (*avoid the need to pass refPos because under our scheme we current forget it...*)
@@ -148,15 +148,15 @@ fun makeGeometryFuncs(env, cxt, span, meshData, geometry, inverse, forwardInfo, 
  fun kernAtT(normal, dScalar, refPosExp, dPosExp, t) =
      let
       val ray = rayAtT(refPosExp, dPosExp, t)
-      val norDot = makePrim'(BV.op_inner_tt, [normal, ray], [vecTy, vecTy], Ty.realTy)
-      val result = makePrim'(BV.sub_tt, [norDot, dScalar], [Ty.realTy, Ty.realTy], Ty.realTy)
+      val norDot = makePrim'(BV.op_inner_tt, [normal, ray], [vecTy, vecTy], Ty.realTy')
+      val result = makePrim'(BV.sub_tt, [norDot, dScalar], [Ty.realTy', Ty.realTy'], Ty.realTy')
      in
       result
      end
 
  fun gradKernAtT(normal, dScalar, refPosExp, dPosExp, t) =
      let
-      val data = makePrim'(BV.op_inner_tt, [normal, dPosExp], [vecTy, vecTy], Ty.realTy)
+      val data = makePrim'(BV.op_inner_tt, [normal, dPosExp], [vecTy, vecTy], Ty.realTy')
      in
       data
      end
@@ -165,8 +165,8 @@ fun makeGeometryFuncs(env, cxt, span, meshData, geometry, inverse, forwardInfo, 
      let
       val derv = gradKernAtT(normal, dScalar, refPosExp, dPosExp, t)
       val kern = kernAtT(normal, dScalar, refPosExp, dPosExp, t)
-      val update = makePrim'(BV.div_rr, [kern, derv], [Ty.realTy, Ty.realTy], Ty.realTy)
-      val updated = makePrim'(BV.sub_tt, [t, update], [Ty.realTy, Ty.realTy], Ty.realTy)
+      val update = makePrim'(BV.div_rr, [kern, derv], [Ty.realTy', Ty.realTy'], Ty.realTy')
+      val updated = makePrim'(BV.sub_tt, [t, update], [Ty.realTy', Ty.realTy'], Ty.realTy')
      in
       updated
      end
@@ -174,15 +174,15 @@ fun newtonUpdate'(normal, dScalar, refPosExp, dPosExp, t) =
      let
       val derv = gradKernAtT(normal, dScalar, refPosExp, dPosExp, t)
       val kern = kernAtT(normal, dScalar, refPosExp, dPosExp, t)
-      val update = makePrim'(BV.div_rr, [kern, derv], [Ty.realTy, Ty.realTy], Ty.realTy)
-      val updated = makePrim'(BV.sub_tt, [t, update], [Ty.realTy, Ty.realTy], Ty.realTy)
+      val update = makePrim'(BV.div_rr, [kern, derv], [Ty.realTy', Ty.realTy'], Ty.realTy')
+      val updated = makePrim'(BV.sub_tt, [t, update], [Ty.realTy', Ty.realTy'], Ty.realTy')
      in
       (updated, update)
      end
 
 fun newtonLoopBlock(normal, dScalar, refPosExp, dPosExp, maxN, eps, t) =
     let
-     val timeVar = Var.new(Atom.atom "t", span, Var.LocalVar, Ty.realTy)
+     val timeVar = Var.new(Atom.atom "t", span, Var.LocalVar, Ty.realTy')
      val timeExp = AST.E_Var(timeVar, span)
      val start = AST.S_Assign((timeVar, span), t)
 			     
@@ -191,8 +191,8 @@ fun newtonLoopBlock(normal, dScalar, refPosExp, dPosExp, maxN, eps, t) =
 			      Ty.T_Sequence(Ty.T_Int, NONE))
      val iter = (itterVar, itterExp)
      val (updated, update) = newtonUpdate'(normal, dScalar, refPosExp, dPosExp, timeExp)
-     val absUpdate = makePrim'(BV.op_norm_t, [update], [Ty.realTy], Ty.realTy)
-     val smallUpdate = makePrim'(BV.gte_rr, [eps, absUpdate], [Ty.realTy, Ty.realTy], Ty.T_Bool)
+     val absUpdate = makePrim'(BV.op_norm_t, [update], [Ty.realTy'], Ty.realTy')
+     val smallUpdate = makePrim'(BV.gte_rr, [eps, absUpdate], [Ty.realTy', Ty.realTy'], Ty.T_Bool)
 				
      val ifStatement = AST.S_IfThenElse(smallUpdate, AST.S_Return(timeExp), AST.S_Block([]))
      val forLoop = AST.S_Block([AST.S_Foreach(iter, AST.S_Block([
@@ -216,8 +216,8 @@ fun newtonLoopBlock(normal, dScalar, refPosExp, dPosExp, maxN, eps, t) =
 
  fun planePointDistSgn(normal, dScalar, refPosExp) =
      let
-      val norDot = makePrim'(BV.op_inner_tt, [normal, refPosExp], [vecTy, vecTy], Ty.realTy)
-      val result = makePrim'(BV.sub_tt, [dScalar, norDot], [Ty.realTy, Ty.realTy], Ty.realTy)
+      val norDot = makePrim'(BV.op_inner_tt, [normal, refPosExp], [vecTy, vecTy], Ty.realTy')
+      val result = makePrim'(BV.sub_tt, [dScalar, norDot], [Ty.realTy', Ty.realTy'], Ty.realTy')
 			    
      in
       result
@@ -225,16 +225,16 @@ fun newtonLoopBlock(normal, dScalar, refPosExp, dPosExp, maxN, eps, t) =
  fun planePointDist(normal, dScalar, refPosExp) =
      let
       val result = planePointDistSgn(normal, dScalar, refPosExp)
-      val abs = makePrim'(BV.op_norm_t, [result], [Ty.realTy], Ty.realTy)
+      val abs = makePrim'(BV.op_norm_t, [result], [Ty.realTy'], Ty.realTy')
      in
       (abs, result)
      end				      
  fun lineLineIntersect(targetBasis, targetD, refBasis, refD, normal, d) =
      let
       val sub1 = makePrim'(BV.sub_tt, [refBasis, targetBasis], [vecTy, vecTy], vecTy)
-      val cross1 = makePrim'(BV.op_cross2_tt, [targetD, refD], [vecTy, vecTy], Ty.realTy)
-      val div1 = makePrim'(BV.div_tr, [refD, cross1], [vecTy, Ty.realTy], vecTy)
-      val cross2 = makePrim'(BV.op_cross2_tt, [sub1, div1], [vecTy, vecTy], Ty.realTy)
+      val cross1 = makePrim'(BV.op_cross2_tt, [targetD, refD], [vecTy, vecTy], Ty.realTy')
+      val div1 = makePrim'(BV.div_tr, [refD, cross1], [vecTy, Ty.realTy'], vecTy)
+      val cross2 = makePrim'(BV.op_cross2_tt, [sub1, div1], [vecTy, vecTy], Ty.realTy')
       fun errorFunc t = planePointDistSgn(normal, d, rayAtT(refBasis, refD, t))
       fun refine(n,t) = newtonUpdates(normal, d, refBasis, refD, t, n)
 			    
@@ -244,10 +244,10 @@ fun newtonLoopBlock(normal, dScalar, refPosExp, dPosExp, maxN, eps, t) =
 
  fun linePlaneIntersect(refBasis, refD, normal, dScalar) =
      let
-      val dot1 = makePrim'(BV.op_inner_tt, [normal, refBasis], [vecTy, vecTy], Ty.realTy)
-      val num = makePrim'(BV.sub_tt, [dScalar, dot1], [Ty.realTy, Ty.realTy], Ty.realTy)
-      val dot2 = makePrim'(BV.op_inner_tt, [normal, refD], [vecTy, vecTy], Ty.realTy)
-      val result = makePrim'(BV.div_rr, [num, dot2], [Ty.realTy, Ty.realTy], Ty.realTy)
+      val dot1 = makePrim'(BV.op_inner_tt, [normal, refBasis], [vecTy, vecTy], Ty.realTy')
+      val num = makePrim'(BV.sub_tt, [dScalar, dot1], [Ty.realTy', Ty.realTy'], Ty.realTy')
+      val dot2 = makePrim'(BV.op_inner_tt, [normal, refD], [vecTy, vecTy], Ty.realTy')
+      val result = makePrim'(BV.div_rr, [num, dot2], [Ty.realTy', Ty.realTy'], Ty.realTy')
       fun errorFunc t = planePointDistSgn(normal, dScalar, rayAtT(refBasis, refD, t))
 			    
       fun refine(n, t) = newtonUpdates(normal, dScalar, refBasis, refD, t, n)
@@ -329,9 +329,9 @@ fun newtonLoopBlock(normal, dScalar, refPosExp, dPosExp, maxN, eps, t) =
  fun intersectionTesting(intersectionExprs, parallelTest, parallelTestNeps,
 			 insideTest, preRefine, postRefine, printFlag, facetIntTest, max, (r, d)) =
      let
-      fun coerce e = AST.E_Coerce({srcTy=Ty.T_Int, dstTy=Ty.realTy, e= e})
-      val tempVar = Var.new (Atom.atom "time", span, AST.LocalVar, Ty.realTy)
-      val faceReserveVar = Var.new (Atom.atom "faceTime", span, AST.LocalVar, Ty.realTy)
+      fun coerce e = AST.E_Coerce({srcTy=Ty.T_Int, dstTy=Ty.realTy', e= e})
+      val tempVar = Var.new (Atom.atom "time", span, AST.LocalVar, Ty.realTy')
+      val faceReserveVar = Var.new (Atom.atom "faceTime", span, AST.LocalVar, Ty.realTy')
       val tempVar' = Var.new (Atom.atom "face", span, AST.LocalVar, Ty.T_Int)
       val tempExp = AST.E_Var(tempVar, span)
       val tempExp' = AST.E_Var(tempVar', span)
@@ -352,8 +352,8 @@ fun newtonLoopBlock(normal, dScalar, refPosExp, dPosExp, maxN, eps, t) =
 
       fun build(isCloseToZero, eps) =
 	  let
-	   val absTest2 = makePrim'(BV.op_norm_t, [isCloseToZero], [Ty.realTy], Ty.realTy)
-	   val antiNanInfTest = makePrim'(BV.gte_rr, [absTest2, eps], [Ty.realTy, Ty.realTy], Ty.T_Bool)
+	   val absTest2 = makePrim'(BV.op_norm_t, [isCloseToZero], [Ty.realTy'], Ty.realTy')
+	   val antiNanInfTest = makePrim'(BV.gte_rr, [absTest2, eps], [Ty.realTy', Ty.realTy'], Ty.T_Bool)
 					 
 	  in
 	   antiNanInfTest
@@ -363,16 +363,16 @@ fun newtonLoopBlock(normal, dScalar, refPosExp, dPosExp, maxN, eps, t) =
 	  let
 	   (*compute special test, int*)
 	   val testError = errorAtT test1
-	   val absTestError = makePrim'(BV.op_norm_t, [testError], [Ty.realTy], Ty.realTy)
+	   val absTestError = makePrim'(BV.op_norm_t, [testError], [Ty.realTy'], Ty.realTy')
 				       
 	   val preRefinedTest1 = refine(preRefine, test1)
 
 	   val posRefineTest2 = preRefinedTest1 (*refine(postRefine, preRefinedTest1)*)
-	   val absTest2 = makePrim'(BV.op_norm_t, [test2], [Ty.realTy], Ty.realTy)
+	   val absTest2 = makePrim'(BV.op_norm_t, [test2], [Ty.realTy'], Ty.realTy')
 				   
-	   val positiveTest = makePrim'(BV.gte_rr, [preRefinedTest1, timeEps], [Ty.realTy, Ty.realTy], Ty.T_Bool)
-	   val newUpdateTest = makePrim'(BV.gt_rr, [tempExp, preRefinedTest1], [Ty.realTy, Ty.realTy], Ty.T_Bool)
-	   val antiNanInfTest = makePrim'(BV.gte_rr, [absTest2, normalEps], [Ty.realTy, Ty.realTy], Ty.T_Bool)
+	   val positiveTest = makePrim'(BV.gte_rr, [preRefinedTest1, timeEps], [Ty.realTy', Ty.realTy'], Ty.T_Bool)
+	   val newUpdateTest = makePrim'(BV.gt_rr, [tempExp, preRefinedTest1], [Ty.realTy', Ty.realTy'], Ty.T_Bool)
+	   val antiNanInfTest = makePrim'(BV.gte_rr, [absTest2, normalEps], [Ty.realTy', Ty.realTy'], Ty.T_Bool)
 	   val savePrint = if printFlag
 			   then [makePrinStatement("Saving at this face!", [preRefinedTest1, newUpdateTest], "\n")]
 			   else []
@@ -423,8 +423,8 @@ fun newtonLoopBlock(normal, dScalar, refPosExp, dPosExp, maxN, eps, t) =
       val nanTestsWithFace = ListPair.zip (List.tabulate(List.length nanTests, fn x => x), nanTests)
 
 
-      val timeReturn = makePrim'(BV.fn_max_r, [tempExp, zero], [Ty.realTy, Ty.realTy], Ty.realTy)
-      val backupTimeReturn = makePrim'(BV.fn_max_r, [faceExp, zero], [Ty.realTy, Ty.realTy], Ty.realTy)
+      val timeReturn = makePrim'(BV.fn_max_r, [tempExp, zero], [Ty.realTy', Ty.realTy'], Ty.realTy')
+      val backupTimeReturn = makePrim'(BV.fn_max_r, [faceExp, zero], [Ty.realTy', Ty.realTy'], Ty.realTy')
       (*build base + time*dpos       val end = rayAtT(r, d, timeReturn)
 *)
       val workedTestFacet = makePrim'(BV.neq_ii, [tempExp', neg1], [Ty.T_Int, Ty.T_Int], Ty.T_Bool)
@@ -461,7 +461,7 @@ fun newtonLoopBlock(normal, dScalar, refPosExp, dPosExp, maxN, eps, t) =
 			  | SOME(faceInt) =>
 			    let
 			     val antiNanFaceBackUp = makeOnPlaneBackup nanTestsWithFace
-			     val facetTest = makePrim'(BV.equ_rr, [AST.E_Lit(Literal.Real(RealLit.negInf)), faceExp], [Ty.realTy, Ty.realTy], Ty.T_Bool)
+			     val facetTest = makePrim'(BV.equ_rr, [AST.E_Lit(Literal.Real(RealLit.negInf)), faceExp], [Ty.realTy', Ty.realTy'], Ty.T_Bool)
 			     val otherReturn = AST.S_Return(AST.E_Tensor([backupTimeReturn, coerce faceInt], vec2Ty))
 			    in
 			     AST.S_IfThenElse(facetTest, wrapReturn(failRet, "fail"), wrapReturn(otherReturn, "backup"))
@@ -510,7 +510,7 @@ fun newtonLoopBlock(normal, dScalar, refPosExp, dPosExp, maxN, eps, t) =
   val result' = ((funAtom', funVar'), AST.D_Func(funVar', [refPosParam, dposParam], body'))
 
 
-  val exitFuncTy = Ty.T_Fun([refTy, posTy, vecTy], Ty.realTy)
+  val exitFuncTy = Ty.T_Fun([refTy, posTy, vecTy], Ty.realTy')
   val exitFuncName = Atom.atom (FemName.refExit)
   fun replaceExit ([re, pos, vec]) =
       let
@@ -518,7 +518,7 @@ fun newtonLoopBlock(normal, dScalar, refPosExp, dPosExp, maxN, eps, t) =
        val refPos = AST.E_ExtractFemItem(pos, vecTy, (FemOpt.RefPos, posData))
        val posEntryFacet = AST.E_ExtractFemItem(pos, Ty.T_Int, (FemOpt.PosEntryFacet, posData))
        val res = AST.E_Apply((funVar, span), [refPos, vec, posEntryFacet], vec2Ty)
-       val ret = AST.E_Slice(res, [SOME(AST.E_Lit(Literal.intLit 0))], Ty.realTy )
+       val ret = AST.E_Slice(res, [SOME(AST.E_Lit(Literal.intLit 0))], Ty.realTy' )
       in
        ret
 
@@ -526,11 +526,11 @@ fun newtonLoopBlock(normal, dScalar, refPosExp, dPosExp, maxN, eps, t) =
   val funcResult = (exitFuncName, replaceExit, exitFuncTy)
 
   val enterFuncName = Atom.atom (FemName.refEnter)
-  val enterFuncTy = Ty.T_Fun([refTy, vecTy, vecTy], Ty.realTy)
+  val enterFuncTy = Ty.T_Fun([refTy, vecTy, vecTy], Ty.realTy')
   fun replaceEnter ([re, vec1, vec2]) =
       let
        val res = AST.E_Apply((funVar', span), [vec1, vec2], vec2Ty)
-       val ret = AST.E_Slice(res, [SOME(AST.E_Lit(Literal.intLit 0))], Ty.realTy )
+       val ret = AST.E_Slice(res, [SOME(AST.E_Lit(Literal.intLit 0))], Ty.realTy' )
       in
        ret
       end
@@ -603,7 +603,7 @@ fun newtonLoopBlock(normal, dScalar, refPosExp, dPosExp, maxN, eps, t) =
   (*      (*extract meshPos*) *)
   (*      val meshExp = AST.E_ExtractFem(meshPosExp, meshData) *)
   (*      val cellExpr = AST.E_ExtractFemItem(meshPosExp,Ty.T_Int, (FemOpt.CellIndex, meshData)) *)
-  (*      val facetIdExpr = makePrim'(BV.floor, [AST.E_Slice(seqExp, [SOME(AST.E_Lit(Literal.intLit 1))], Ty.realTy)], [Ty.realTy], Ty.T_Int) *)
+  (*      val facetIdExpr = makePrim'(BV.floor, [AST.E_Slice(seqExp, [SOME(AST.E_Lit(Literal.intLit 1))], Ty.realTy')], [Ty.realTy'], Ty.T_Int) *)
   (*     in *)
   (*      AST.E_Apply((nextCellFuncVar, span), [facetIdExpr, cellExpr, meshExp], Ty.T_Sequence(Ty.T_Int, SOME(Ty.DimConst 2))) *)
   (*     end *)
@@ -654,7 +654,7 @@ fun newtonLoopBlock(normal, dScalar, refPosExp, dPosExp, maxN, eps, t) =
 							    else AST.E_Lit(Literal.intLit 1)) xs
 	   val count = List.length correctIndexes
 	   val selectTy = Ty.T_Sequence(Ty.T_Int, SOME(Ty.DimConst count))
-	   val seqVecTy = Ty.T_Sequence(Ty.realTy, SOME(Ty.DimConst(2)));
+	   val seqVecTy = Ty.T_Sequence(Ty.realTy', SOME(Ty.DimConst(2)));
 	   val selectTy' = Ty.T_Sequence(seqVecTy, SOME(Ty.DimConst count))
 	   val selectTy'' = Ty.T_Sequence(vecTy, SOME(Ty.DimConst count))
 
@@ -674,22 +674,22 @@ fun newtonLoopBlock(normal, dScalar, refPosExp, dPosExp, maxN, eps, t) =
 	       (
 		 makePrim'(BV.subscript, [alphas, srcFacetExp], [selectTy', Ty.T_Int], seqVecTy),
 		 makePrim'(BV.subscript, [betas, srcFacetExp], [selectTy', Ty.T_Int], seqVecTy),
-		 AST.E_Seq([AST.E_Slice(refPosExp, [SOME(AST.E_Lit(Literal.intLit 0))], Ty.realTy),
-			    AST.E_Slice(refPosExp, [SOME(AST.E_Lit(Literal.intLit 1))], Ty.realTy)], seqVecTy))
+		 AST.E_Seq([AST.E_Slice(refPosExp, [SOME(AST.E_Lit(Literal.intLit 0))], Ty.realTy'),
+			    AST.E_Slice(refPosExp, [SOME(AST.E_Lit(Literal.intLit 1))], Ty.realTy')], seqVecTy))
 		 
 	   val (alpha, beta, target) =
 	       (
-		 makePrim'(BV.subscript, [alphaSeq, solveIndex], [seqVecTy, Ty.T_Int], Ty.realTy),
-		 makePrim'(BV.subscript, [betaSeq, solveIndex], [seqVecTy, Ty.T_Int], Ty.realTy),
-		 makePrim'(BV.subscript, [targetSeq, solveIndex], [seqVecTy, Ty.T_Int], Ty.realTy)
+		 makePrim'(BV.subscript, [alphaSeq, solveIndex], [seqVecTy, Ty.T_Int], Ty.realTy'),
+		 makePrim'(BV.subscript, [betaSeq, solveIndex], [seqVecTy, Ty.T_Int], Ty.realTy'),
+		 makePrim'(BV.subscript, [targetSeq, solveIndex], [seqVecTy, Ty.T_Int], Ty.realTy')
 	       )
 
-	   val sub1 = makePrim'(BV.sub_tt, [target, alpha], [Ty.realTy, Ty.realTy], Ty.realTy)
-	   val timeAlongLine = makePrim'(BV.div_rr, [sub1, beta], [Ty.realTy, Ty.realTy], Ty.realTy)
+	   val sub1 = makePrim'(BV.sub_tt, [target, alpha], [Ty.realTy', Ty.realTy'], Ty.realTy')
+	   val timeAlongLine = makePrim'(BV.div_rr, [sub1, beta], [Ty.realTy', Ty.realTy'], Ty.realTy')
 
 	   val (newAlpha, newBeta) = (makePrim'(BV.subscript, [alphasTensor, dstFacetExpr], [selectTy'', Ty.T_Int], vecTy),
 				      makePrim'(BV.subscript, [betasTensors, dstFacetExpr], [selectTy'', Ty.T_Int], vecTy))
-	   val newRefPos = makePrim'(BV.add_tt, [newAlpha, makePrim'(BV.mul_tr, [newBeta, timeAlongLine], [vecTy, Ty.realTy], vecTy)],
+	   val newRefPos = makePrim'(BV.add_tt, [newAlpha, makePrim'(BV.mul_tr, [newBeta, timeAlongLine], [vecTy, Ty.realTy'], vecTy)],
 				     [vecTy, vecTy], vecTy)
 	  in
 	   (*meshExp,cellExpr, posExpr*)
@@ -697,8 +697,8 @@ fun newtonLoopBlock(normal, dScalar, refPosExp, dPosExp, maxN, eps, t) =
 	  end
 	| buildSolveOperation(CF.PlaneParam(_, xs)) =
 	  let
-	   val mat4 = Ty.matTy 4
-	   val vec4 = Ty.vecTy 4
+	   val mat4 = Ty.matTy' 4
+	   val vec4 = Ty.vecTy' 4
 
 	   fun buildTensor(a) = AST.E_Tensor(List.map (fn x => AST.E_Tensor(List.map makeRealExpr x , vec4)) a, mat4) handle exn => raise exn
 	   val count = List.length xs
@@ -712,11 +712,11 @@ fun newtonLoopBlock(normal, dScalar, refPosExp, dPosExp, maxN, eps, t) =
 
 	   val selectedTensor = makePrim'(BV.subscript, [selectedSeq, dstFacetExpr], [seqTy1, Ty.T_Int], mat4) handle exn => raise exn
 
-	   val vec4refPos = AST.E_Tensor(List.tabulate(3, fn x => AST.E_Slice(refPosExp, [SOME(AST.E_Lit(Literal.intLit x))], Ty.realTy))@[AST.E_Lit(Literal.Real(RealLit.one))],
+	   val vec4refPos = AST.E_Tensor(List.tabulate(3, fn x => AST.E_Slice(refPosExp, [SOME(AST.E_Lit(Literal.intLit x))], Ty.realTy'))@[AST.E_Lit(Literal.Real(RealLit.one))],
 					 vec4)
 					
 	   val resultVec4 = makePrim'(BV.op_inner_tt, [selectedTensor, vec4refPos], [mat4, vec4], vec4) handle exn => raise exn
-	   val newRefPos = AST.E_Tensor(List.tabulate(3, fn x => AST.E_Slice(resultVec4, [SOME(AST.E_Lit(Literal.intLit x))], Ty.realTy)), vecTy)
+	   val newRefPos = AST.E_Tensor(List.tabulate(3, fn x => AST.E_Slice(resultVec4, [SOME(AST.E_Lit(Literal.intLit x))], Ty.realTy')), vecTy)
 	   val result =  AST.E_ExtractFemItemN([meshExp, newCellExp, newRefPos, dstFacetExpr], [meshTy, Ty.T_Int, vecTy, Ty.T_Int], posTy, (FemOpt.RefBuild, FD.posOf meshData), NONE)
 	   val printStm = printSolveInfo(seqExp, srcFacetExp, dstFacetExpr, selectedTensor )
 
@@ -740,10 +740,10 @@ fun newtonLoopBlock(normal, dScalar, refPosExp, dPosExp, maxN, eps, t) =
  fun makeRefExitPosBody(meshExp, cellExp, refPosExp, dPosExp, timeAndFaceExp, dim, geometry, debug) =
      let
       (*first, build new expression*)
-      val time = AST.E_Slice(timeAndFaceExp, [SOME(AST.E_Lit(Literal.intLit 0))], Ty.realTy)
-      val srcFacet = makePrim'(BV.floor, [AST.E_Slice(timeAndFaceExp, [SOME(AST.E_Lit(Literal.intLit 1))], Ty.realTy)], [Ty.realTy], Ty.T_Int)
+      val time = AST.E_Slice(timeAndFaceExp, [SOME(AST.E_Lit(Literal.intLit 0))], Ty.realTy')
+      val srcFacet = makePrim'(BV.floor, [AST.E_Slice(timeAndFaceExp, [SOME(AST.E_Lit(Literal.intLit 1))], Ty.realTy')], [Ty.realTy'], Ty.T_Int)
       val srcFacetPrint = makePrinStatement("SrcFacet: ", [srcFacet], "\n");
-      val newVec = makePrim'(BV.add_tt, [makePrim'(BV.mul_rt, [time, dPosExp], [Ty.realTy, vecTy], vecTy), refPosExp], [vecTy, vecTy], vecTy)
+      val newVec = makePrim'(BV.add_tt, [makePrim'(BV.mul_rt, [time, dPosExp], [Ty.realTy', vecTy], vecTy), refPosExp], [vecTy, vecTy], vecTy)
       val ((_, nextCellFuncVar),_) = cellFunc4
       val nextCellAndFace = AST.E_Apply((nextCellFuncVar, span), [srcFacet, cellExp, meshExp], Ty.T_Sequence(Ty.T_Int, SOME(Ty.DimConst 2)))
       val newCell = makePrim'(BV.subscript, [nextCellAndFace, AST.E_Lit(Literal.intLit 0)], [Ty.T_Sequence(Ty.T_Int, SOME(Ty.DimConst 2)), Ty.T_Int], Ty.T_Int)
@@ -852,7 +852,7 @@ fun newtonLoopBlock(normal, dScalar, refPosExp, dPosExp, maxN, eps, t) =
 		 else [trans1, trans2, facetInt]
 			    
       val seqResult = AST.E_Apply((appFunc, span), args, vec2SeqTy)
-      val ret = AST.E_Slice(seqResult, [SOME(AST.E_Lit(Literal.intLit 0))], Ty.realTy)
+      val ret = AST.E_Slice(seqResult, [SOME(AST.E_Lit(Literal.intLit 0))], Ty.realTy')
 			   (*other exit call...*)
 			   
      in
@@ -874,7 +874,7 @@ fun newtonLoopBlock(normal, dScalar, refPosExp, dPosExp, maxN, eps, t) =
 									   
 
   val posExit = Atom.atom (FemName.posExit)
-  val posExitTy = Ty.T_Fun([posTy, vecTy], Ty.realTy)
+  val posExitTy = Ty.T_Fun([posTy, vecTy], Ty.realTy')
   fun posExitFun([v1, v2]) =
       let
        val mesh = AST.E_ExtractFem(v1, meshData)
@@ -892,7 +892,7 @@ fun newtonLoopBlock(normal, dScalar, refPosExp, dPosExp, maxN, eps, t) =
 
 
   val cellEnter = Atom.atom (FemName.cellEnter)
-  val cellEnterTy = Ty.T_Fun([cellTy, vecTy, vecTy], Ty.realTy)
+  val cellEnterTy = Ty.T_Fun([cellTy, vecTy, vecTy], Ty.realTy')
   fun cellEnterFun([v1, v2, v3]) =
       let
        val mesh = AST.E_ExtractFem(v1, meshData)
@@ -917,7 +917,7 @@ fun newtonLoopBlock(normal, dScalar, refPosExp, dPosExp, maxN, eps, t) =
        val (timeResult, (seq, refBPos, refDPos)) = cellHiddenExitFun(true, mesh, cellExp, cellInt, NONE, v2, v3, AST.E_Lit(Literal.intLit (~1)))
        val refPos = rayAtT(refBPos, refDPos, timeResult)
        val worldPos = rayAtT(v2, v3, timeResult)
-       val facetIdExpr = makePrim'(BV.floor, [AST.E_Slice(seq, [SOME(AST.E_Lit(Literal.intLit 1))], Ty.realTy)], [Ty.realTy], Ty.T_Int)
+       val facetIdExpr = makePrim'(BV.floor, [AST.E_Slice(seq, [SOME(AST.E_Lit(Literal.intLit 1))], Ty.realTy')], [Ty.realTy'], Ty.T_Int)
        val posResult = AST.E_ExtractFemItemN([mesh, cellInt, refPos, worldPos, facetIdExpr], [meshTy, Ty.T_Int, vecTy, vecTy, Ty.T_Int], posTy, (FemOpt.AllBuild, posData), NONE)
       in
        posResult

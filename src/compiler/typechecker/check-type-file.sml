@@ -144,9 +144,9 @@ fun matchType string =
 							   then Ty.T_String
 							   else if sub = "int"
 							   then Ty.T_Int
-							   else Ty.realTy, [])
+							   else Ty.realTy', [])
 
-			    | (NONE, SOME(ints, next)) => SOME(next, Ty.T_Tensor(Ty.Shape(List.map Ty.DimConst ints)), ints)
+			    | (NONE, SOME(ints, next)) => SOME(next, Ty.T_Tensor(Ty.Shape(List.map Ty.DimConst ints), Ty.IC 0), ints)
 			    | (NONE, NONE) => NONE
 			 (* end case*))
      fun mkSeq(ty, []) = ty
@@ -1155,8 +1155,8 @@ fun correctNormalOrientation center (d, normal) =
 				     fun astTyToDumb(Ty.T_Bool) = FT.Bool
 				       | astTyToDumb (Ty.T_String) = FT.String
 				       | astTyToDumb (Ty.T_Int) = FT.Int
-				       | astTyToDumb (Ty.T_Tensor(Ty.Shape([]))) = FT.Real
-				       | astTyToDumb (Ty.T_Tensor(Ty.Shape(dims))) = FT.Tensor(List.map (fn (Ty.DimConst(c)) => c) dims)
+				       | astTyToDumb (Ty.T_Tensor(Ty.Shape([]), _)) = FT.Real
+				       | astTyToDumb (Ty.T_Tensor(Ty.Shape(dims), _)) = FT.Tensor(List.map (fn (Ty.DimConst(c)) => c) dims)
 				       | astTyToDumb (Ty.T_Sequence(ty, SOME(Ty.DimConst(i)))) = FT.Array(astTyToDumb ty, i)
 				       | astTyToDumb _ = raise Fail "impossible"
 				     fun paresPair(j) =

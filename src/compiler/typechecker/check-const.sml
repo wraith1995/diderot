@@ -170,7 +170,7 @@ structure CheckConst : sig
 		      of C.Expr r1 => C.Expr (AST.E_ExtractFemItemN([r1], a, b, (FemOpt.InvalidBuild, c), NONE))
 		       | _ => raise Fail "impossible"
 		    (*end case*))
-                  | AST.E_Coerce{srcTy=Ty.T_Int, dstTy as Ty.T_Tensor(Ty.Shape[]), e} => (
+                  | AST.E_Coerce{srcTy=Ty.T_Int, dstTy as Ty.T_Tensor(Ty.Shape[], Ty.IC 0), e} => (
                       case eval' e
                        of C.Int i => C.Real(RealLit.fromInt i)
                         | C.Expr e' =>

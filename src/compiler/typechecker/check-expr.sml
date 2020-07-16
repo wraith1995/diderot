@@ -107,9 +107,9 @@ structure CheckExpr : sig
                               Env.recordProp (env, Properties.StrandCommunication);
                             (* check the type of the position; should be 1D, 2D, or 3D *)
                               case posType
-                               of Ty.T_Tensor(Ty.Shape[]) => result 1
-                                | Ty.T_Tensor(Ty.Shape[Ty.DimConst 2]) => result 2
-                                | Ty.T_Tensor(Ty.Shape[Ty.DimConst 3]) => result 3
+                               of Ty.T_Tensor(Ty.Shape[], Ty.IC 0) => result 1
+                                | Ty.T_Tensor(Ty.Shape[Ty.DimConst 2], Ty.IC 0) => result 2
+                                | Ty.T_Tensor(Ty.Shape[Ty.DimConst 3], Ty.IC 0) => result 3
 				| Ty.T_Fem(FT.MeshPos(meshData),_) => result (FemData.meshDim meshData)
                                 | ty => err(cxt, [
                                       S "'expected one of real, vec2, vec3, or a meshPosition on a mesh of dim 2 or 3 for type of 'pos',\n",
@@ -321,7 +321,7 @@ structure CheckExpr : sig
 						   val cellInt = AST.E_ExtractFemItem(e2', Ty.T_Int, (FemOpt.CellIndex, data))
 						   val dim = FemData.underlyingDim data
 						   val transformFieldTy = Ty.vecField(NONE, dim)
-						   val vecTy = Ty.vecTy dim
+						   val vecTy = Ty.vecTy' dim
 						   val femT = AST.E_FemField(meshData, meshData, SOME(cellInt), transformFieldTy,
 									     FemOpt.Transform, NONE)
 						   val (tyArgs', Ty.T_Fun([fldTy1, fldTy2], fldTy3)) =
@@ -530,7 +530,6 @@ structure CheckExpr : sig
 		     else
 		      (case indicies
 			of [SOME(AST.E_Lit(L.Int i))] => (let val idx = IntInf.toInt i
-							      val _ = print("poop:" ^ (Int.toString idx))
 							  in if 0 <= idx andalso idx < size
 							     then (AST.E_Slice(e', indicies, List.nth(tys, idx)), List.nth(tys, idx))
 							     else err (cxt, [S "Type error in slice operation\n",
@@ -552,7 +551,7 @@ structure CheckExpr : sig
                         val expectedTy = (case ty
                                of Ty.T_Field{diff, dim, shape=s as Ty.Shape(d2::dd2)} =>
                                     Ty.T_Field{diff=diff, dim=dim, shape=s}
-                                | Ty.T_Tensor shape => TU.mkTensorTy order
+                                | Ty.T_Tensor (shape, iv) => TU.mkTensorTy order 
                                 | Ty.T_Field _ => raise Fail "unknown field type"
                                 | ty => raise Fail("unexpected type for subscript: " ^ TU.toString ty)
                               (* end case *))
@@ -610,7 +609,7 @@ structure CheckExpr : sig
                 (* end case *))
             | PT.E_Real e => (case checkAndPrune (env, cxt, e)
                  of (e', Ty.T_Int) =>
-                      (AST.E_Prim(BV.i2r, [], [e'], Ty.realTy), Ty.realTy)
+                      (AST.E_Prim(BV.i2r, [], [e'], Ty.realTy'), Ty.realTy')
                   | (e', Ty.T_Error) => bogusExpTy
                   | (_, ty) => err(cxt, [
                         S "argument of 'real' must have type 'int', but found ",
@@ -673,7 +672,7 @@ structure CheckExpr : sig
                 val (tyArgs, Ty.T_Fun(_, rngTy)) =
                       TU.instantiate(Var.typeOf(BV.identity))
                 in
-                  if Unify.equalType(Ty.T_Tensor(checkShape(env, cxt, [d, d])), rngTy)
+                  if Unify.equalType(Ty.T_Tensor(checkShape(env, cxt, [d, d]), Ty.IC 0), rngTy)
                     then (AST.E_Prim(BV.identity, tyArgs, [], rngTy), rngTy)
                     else raise Fail "impossible"
             end
@@ -696,7 +695,7 @@ structure CheckExpr : sig
                 val (tyArgs, Ty.T_Fun(_, rngTy)) =
                       TU.instantiate(Var.typeOf(BV.zero))
                 in
-                  if Unify.equalType(Ty.T_Tensor(checkShape(env, cxt, dd)), rngTy)
+                  if Unify.equalType(Ty.T_Tensor(checkShape(env, cxt, dd), Ty.IC 0), rngTy)
                     then (AST.E_Prim(BV.zero, tyArgs, [], rngTy), rngTy)
                     else raise Fail "impossible"
                 end
@@ -704,7 +703,7 @@ structure CheckExpr : sig
                 val (tyArgs, Ty.T_Fun(_, rngTy)) =
                       TU.instantiate(Var.typeOf(BV.nan))
                 in
-                  if Unify.equalType(Ty.T_Tensor(checkShape(env, cxt, dd)), rngTy)
+                  if Unify.equalType(Ty.T_Tensor(checkShape(env, cxt, dd), Ty.IC 0), rngTy)
                     then (AST.E_Prim(BV.nan, tyArgs, [], rngTy), rngTy)
                     else raise Fail "impossible"
                 end
@@ -747,9 +746,9 @@ structure CheckExpr : sig
                         | SOME ty => ty
                       (* end case *))
               (* process the arguments checking that they all have the expected type *)
-                fun chkArgs (ty, shape) = let
+                fun chkArgs (ty, shape, ic) = let
                       val Ty.Shape dd = TU.pruneShape shape (* NOTE: this may fail if we allow user polymorphism *)
-                      val resTy = Ty.T_Tensor(Ty.Shape(Ty.DimConst(List.length args) :: dd))
+                      val resTy = Ty.T_Tensor(Ty.Shape(Ty.DimConst(List.length args) :: dd), ic)
                       fun chkArgs (arg::args, argTy::tys, args') = (
                             case Util.coerceType(ty, (arg, argTy))
                              of SOME arg' => chkArgs (args, tys, arg'::args')
@@ -782,8 +781,8 @@ structure CheckExpr : sig
                       end
                 in
                   case TU.pruneHead ty
-                   of Ty.T_Int => chkArgs(Ty.realTy, Ty.Shape[]) (* coerce integers to reals *)
-                    | ty as Ty.T_Tensor shape => chkArgs(ty, shape)
+                   of Ty.T_Int => chkArgs(Ty.realTy', Ty.Shape[], Ty.IC 0) (* coerce integers to reals *)
+                    | ty as Ty.T_Tensor (shape, ic) => chkArgs(ty, shape, ic)
                     | ty as Ty.T_Field{diff, dim, shape} => chkArgsF(ty, diff, dim, shape)
                     | _ => err(cxt, [S "Invalid argument type for tensor construction"])
                   (* end case *)
@@ -997,7 +996,7 @@ structure CheckExpr : sig
 
   (* check a tensor shape, where the dimensions are given by constant expressions *)
     and checkShape (env, cxt, shape) = let
-          fun checkDim' e = (case checkDim (env, cxt, e)
+          fun checkDim' (e) : Ty.dim = (case checkDim (env, cxt, e)
                  of SOME d => (
                       if (d <= 1)
                         then TypeError.error (cxt, [
@@ -1020,9 +1019,9 @@ structure CheckExpr : sig
 		 | _ => x::normalizeShape(xs)
 	      (* end case*))
 	    | normalizeShape [] = []
-
+	  val dims : Ty.dim list = List.map checkDim' (normalizeShape(shape))
           in
-            Ty.Shape(List.map checkDim' (normalizeShape(shape)))
+            Ty.Shape(dims) : Ty.shape
           end
 
   end

@@ -113,12 +113,12 @@ structure CheckOverload : sig
            tryCandidates candidates
       end
 
-							       
+    (**)
 
     fun mkChkProductParams params shapeChk =
 	if List.length params = 2
 	then (case (List.map TU.prune params)
-	       of [Ty.T_Tensor s1, Ty.T_Tensor s2] => shapeChk(s1, s2)
+	       of [Ty.T_Tensor (s1, _), Ty.T_Tensor (s2, _)] => shapeChk(s1, s2)
 		| _ => NONE)
 	else NONE							       
 
@@ -183,19 +183,20 @@ structure CheckOverload : sig
     in
      case (TU.prune ty1, TU.prune ty2)
             (* tensor * tensor inner product *)
-      of (Ty.T_Tensor s1, Ty.T_Tensor s2) => (case chkInnerProductShape(s1, s2)
-					       of SOME shp => let
-						val (tyArgs, Ty.T_Fun(domTy, rngTy)) = TU.instantiate(Var.typeOf BV.op_inner_tt)
-						val resTy = Ty.T_Tensor shp
-					       in
-						if Unify.equalTypes(domTy, [ty1, ty2]) andalso Unify.equalType(rngTy, resTy)
-						then overloadResult (AST.E_Prim(BV.op_inner_tt, tyArgs, [e1, e2], rngTy), rngTy)
-						else error()
-					       end
-						| NONE => NoOverload
-					     (* end case *))
+      of (Ty.T_Tensor (s1, i1), Ty.T_Tensor (s2, i2)) =>
+	 (case chkInnerProductShape(s1, s2)
+	   of SOME shp => let
+	    val (tyArgs, Ty.T_Fun(domTy, rngTy)) = TU.instantiate(Var.typeOf BV.op_inner_tt)
+	    val resTy = Ty.T_Tensor (shp, Ty.MaxVar(i1, i2))
+	   in
+	    if Unify.equalTypes(domTy, [ty1, ty2]) andalso Unify.equalType(rngTy, resTy)
+	    then overloadResult (AST.E_Prim(BV.op_inner_tt, tyArgs, [e1, e2], rngTy), rngTy)
+	    else error()
+	   end
+	    | NONE => NoOverload
+	 (* end case *))
        (* tensor * field inner product *)
-       | (Ty.T_Tensor s1, Ty.T_Field{diff, dim, shape=s2}) => (case chkInnerProductShape(s1, s2)
+       | (Ty.T_Tensor (s1, i1), Ty.T_Field{diff, dim, shape=s2}) => (case chkInnerProductShape(s1, s2)
 								of SOME shp => let
 								 val (tyArgs, Ty.T_Fun(domTy, rngTy)) = TU.instantiate(Var.typeOf BV.op_inner_tf)
 								 val resTy = Ty.T_Field{diff=diff, dim=dim, shape=shp}
@@ -208,7 +209,7 @@ structure CheckOverload : sig
 								 | NONE => error()
 							      (* end case *))
        (* field * tensor inner product *)
-       | (Ty.T_Field{diff, dim, shape=s1}, Ty.T_Tensor s2) => (case chkInnerProductShape(s1, s2)
+       | (Ty.T_Field{diff, dim, shape=s1}, Ty.T_Tensor (s2, i2)) => (case chkInnerProductShape(s1, s2)
 								of SOME shp => let
 								 val (tyArgs, Ty.T_Fun(domTy, rngTy)) = TU.instantiate(Var.typeOf BV.op_inner_ft)
 								 val resTy = Ty.T_Field{diff=diff, dim=dim, shape=shp}
@@ -257,10 +258,10 @@ structure CheckOverload : sig
     in
      case (TU.prune ty1, TU.prune ty2)
             (* tensor * tensor outer product *)
-      of (Ty.T_Tensor s1, Ty.T_Tensor s2) => (case chkOuterProductShape(s1, s2)
+      of (Ty.T_Tensor (s1, iv1), Ty.T_Tensor (s2, iv2)) => (case chkOuterProductShape(s1, s2)
 					       of SOME shp => let
 						val (tyArgs, Ty.T_Fun(domTy, rngTy)) = TU.instantiate(Var.typeOf BV.op_outer_tt)
-						val resTy = Ty.T_Tensor shp
+						val resTy = Ty.T_Tensor (shp, Ty.MaxVar(iv1, iv2))
 					       in
 						if Unify.equalTypes(domTy, [ty1, ty2])
 						   andalso Unify.equalType(rngTy, resTy)
@@ -270,7 +271,7 @@ structure CheckOverload : sig
 						| NONE => shapeError()
 					     (* end case *))
        (* field * tensor outer product *)
-       | (Ty.T_Field{diff, dim, shape=s1}, Ty.T_Tensor s2) => (case chkOuterProductShape(s1, s2)
+       | (Ty.T_Field{diff, dim, shape=s1}, Ty.T_Tensor (s2, _)) => (case chkOuterProductShape(s1, s2)
 								of SOME shp => let
 								 val (tyArgs, Ty.T_Fun(domTy, rngTy)) = TU.instantiate(Var.typeOf BV.op_outer_ft)
 								 val resTy = Ty.T_Field{diff=diff, dim=dim, shape=shp}
@@ -282,7 +283,7 @@ structure CheckOverload : sig
 								 | NONE => shapeError()
 							      (* end case *))
        (* tensor * field outer product *)
-       | (Ty.T_Tensor s1, Ty.T_Field{diff=diff, dim=dim, shape=s2}) => (case chkOuterProductShape(s1, s2)
+       | (Ty.T_Tensor (s1, _), Ty.T_Field{diff=diff, dim=dim, shape=s2}) => (case chkOuterProductShape(s1, s2)
 									 of SOME shp => let
 									  val (tyArgs, Ty.T_Fun(domTy, rngTy)) = TU.instantiate(Var.typeOf BV.op_outer_tf)
 									  val resTy = Ty.T_Field{diff=diff, dim=dim, shape=shp}
@@ -325,10 +326,10 @@ structure CheckOverload : sig
           in
             case (TU.prune ty1, TU.prune ty2)
             (* tensor * tensor colon product *)
-             of (Ty.T_Tensor s1, Ty.T_Tensor s2) => (case chkColonProductShape(s1, s2)
+             of (Ty.T_Tensor (s1, iv1), Ty.T_Tensor (s2, iv2)) => (case chkColonProductShape(s1, s2)
                    of SOME shp => let
                         val (tyArgs, Ty.T_Fun(domTy, rngTy)) = TU.instantiate(Var.typeOf BV.op_colon_tt)
-                        val resTy = Ty.T_Tensor shp
+                        val resTy = Ty.T_Tensor (shp, Ty.MaxVar(iv1, iv2))
                         in
                           if Unify.equalTypes(domTy, [ty1, ty2])
                           andalso Unify.equalType(rngTy, resTy)
@@ -338,7 +339,7 @@ structure CheckOverload : sig
                     | NONE => NoOverload
                   (* end case *))
             (* field * tensor colon product *)
-              | (Ty.T_Field{diff, dim, shape=s1}, Ty.T_Tensor s2) => (case chkColonProductShape(s1, s2)
+              | (Ty.T_Field{diff, dim, shape=s1}, Ty.T_Tensor (s2, _)) => (case chkColonProductShape(s1, s2)
                    of SOME shp => let
                         val (tyArgs, Ty.T_Fun(domTy, rngTy)) = TU.instantiate(Var.typeOf BV.op_colon_ft)
                         val resTy = Ty.T_Field{diff=diff, dim=dim, shape=shp}
@@ -350,7 +351,7 @@ structure CheckOverload : sig
                     | NONE => error()
                   (* end case *))
             (* tensor * field colon product *)
-              | (Ty.T_Tensor s1, Ty.T_Field{diff=diff, dim=dim, shape=s2}) => (case chkColonProductShape(s1, s2)
+              | (Ty.T_Tensor (s1, _), Ty.T_Field{diff=diff, dim=dim, shape=s2}) => (case chkColonProductShape(s1, s2)
                    of SOME shp => let
                         val (tyArgs, Ty.T_Fun(domTy, rngTy)) = TU.instantiate(Var.typeOf BV.op_colon_tf)
                         val resTy = Ty.T_Field{diff=diff, dim=dim, shape=shp}
