@@ -89,4 +89,19 @@ structure BasisNames =
     val kn_c2tent = Atom.atom "c2tent" (* for backwards compatibility to vis12 *)
     val kn_c2ctmr = Atom.atom "c2ctmr" (* for backwards compatibility to vis12 *)
 
+    (*basis and affine functions*)
+    (*Construction:*)
+    val interval = Atom.atom "interval"
+    val affine = Atom.atom "affine"
+    (*explosion:*)
+    val errors = Atom.atom "ε"
+    val errorn = Atom.atom "εn"
+    val center = Atom.atom "center"
+    val rad = Atom.atom "radius"
+
+    (*manipulation:*)
+    val intersection = Atom.atom "∩"
+    val hull = Atom.atom "∪"
+    val extend = Atom.atom "extend"
+			   (*extend, type util cover the above, also, what tests should we have - what comparisons?*)
   end

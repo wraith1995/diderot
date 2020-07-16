@@ -131,7 +131,9 @@ structure Basis : sig
                 BV.op_cross2_tt, BV.op_cross3_tt, BV.op_cross2_ff, BV.op_cross3_ff,
                 BV.op_cross2_tf, BV.op_cross3_tf, BV.op_cross2_ft, BV.op_cross3_ft
               ]),
-            (N.op_norm, [BV.op_norm_i, BV.op_norm_t, BV.op_norm_f])
+            (N.op_norm, [BV.op_norm_i, BV.op_norm_t, BV.op_norm_f]),
+	    (N.intersection, [BV.intersection]),
+	    (N.hull, [BV.hull])
           ]
 
     val overloadFunctions = [
@@ -147,8 +149,8 @@ structure Basis : sig
           (N.fn_inv, [BV.fn_inv1_t, BV.fn_inv2_t, BV.fn_inv3_t, BV.fn_inv1_f, BV.fn_inv2_f, BV.fn_inv3_f]),
           (N.fn_lerp, [BV.lerp5, BV.lerp3]),
           (N.fn_clerp, [BV.clerp5, BV.clerp3]),
-          (N.fn_max, [BV.fn_max_i, BV.fn_max_r, BV.red_max_i, BV.red_max_r]),
-          (N.fn_min, [BV.fn_min_i, BV.fn_min_r, BV.red_min_i, BV.red_min_r]),
+          (N.fn_max, [BV.fn_max_i, BV.fn_max_r, BV.red_max_i, BV.red_max_r, BV.max_interval]),
+          (N.fn_min, [BV.fn_min_i, BV.fn_min_r, BV.red_min_i, BV.red_min_r, BV.min_interval]),
           (N.fn_normalize, [BV.fn_normalize_t, BV.fn_normalize_f]),
           (N.fn_modulate, [BV.fn_modulate_tt, BV.fn_modulate_ff, BV.fn_modulate_tf, BV.fn_modulate_ft]),
           (N.fn_product, [BV.red_product_i, BV.red_product_r]),
@@ -159,7 +161,14 @@ structure Basis : sig
           (N.fn_tan, [BV.fn_tan_r, BV.fn_tan_s]),
           (N.fn_trace, [BV.fn_trace_t, BV.fn_trace_f]),
           (N.fn_transpose, [BV.fn_transpose_t, BV.fn_transpose_f]),
-          (N.op_compose, [BV.comp])
+          (N.op_compose, [BV.comp]),
+	  (N.interval, [BV.intervalSimple, BV.intervalMixed, BV.intervalAffine]),
+	  (N.affine, [BV.intervalToAffine, BV.tensorToAffine, BV.affineNaive]),
+	  (N.errors, [BV.errors]),
+	  (N.errorn, [BV.errorn]),
+	  (N.center, [BV.center]),
+	  (N.rad, [BV.radius]),
+	  (N.extend, [BV.extend])
           ]
 
   (* assignment operators are bound to the corresponding binary operator *)

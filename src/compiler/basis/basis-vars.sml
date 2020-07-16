@@ -784,7 +784,127 @@ structure BasisVars =
               val h = field(k0, d', Ty.Shape[b',a'])
               in
                 [f] --> h
-              end))
+          end))
+
+
+    (*Interval and affine basis functions*)
+    val intervalSimple  = polyVar(N.interval, all([SK],
+						  fn [Ty.SHAPE s] =>
+						     [Ty.T_Tensor(Ty.ShapeVar s, Ty.IC 0)] --> Ty.T_Tensor(Ty.ShapeVar s, Ty.IC 1)))
+    val intervalMixed = polyVar(N.interval, all([SK],
+						fn [Ty.SHAPE s] =>
+						   [Ty.T_Tensor(Ty.ShapeVar s, Ty.IC 0), Ty.T_Tensor(Ty.ShapeVar s, Ty.IC 0)] --> Ty.T_Tensor(Ty.ShapeVar s, Ty.IC 1)))
+    (*Question is j+2 right here?*)
+    val intervalAffine = polyVar(N.interval, all([SK, IV],
+						 fn [Ty.SHAPE s, Ty.INTERVAL j] =>
+						    [Ty.T_Tensor(Ty.ShapeVar s, Ty.AddVar(j,2))] --> Ty.T_Tensor(Ty.ShapeVar s, Ty.IC 1)))
+
+    val intervalToAffine = polyVar(N.affine, all([SK],
+						 fn [Ty.SHAPE s] =>
+						    let
+						     val sv = Ty.ShapeVar s
+						    in
+						     [Ty.T_Tensor(sv, Ty.IC 1)] --> Ty.T_Tensor(sv, Ty.ShapeSize sv)
+						    end))
+    val tensorToAffine = polyVar(N.affine, all([SK],
+					       fn [Ty.SHAPE s] =>
+						  let
+						   val sv = Ty.ShapeVar s
+						  in
+						   [Ty.T_Tensor(sv, Ty.IC 0)] --> Ty.T_Tensor(sv, Ty.ShapeSize sv)
+						  end))
+
+    val affineNaive = polyVar(N.affine, all([SK, NK],
+					       fn [Ty.SHAPE s, Ty.DIM d] =>
+						  let
+						   val dim = Ty.DimVar d
+						   val sv = Ty.ShapeVar s
+						   val ten = Ty.T_Tensor(sv, Ty.IC 0)
+						   val aff = Ty.ShapeSize (Ty.Shape([dim]))
+						   val seq = Ty.T_Sequence(ten, SOME(dim))
+						  in
+						   [ten, seq, ten] --> Ty.T_Tensor(sv, aff)
+						  end))
+				  
+
+    val errors = polyVar(N.errors, all([SK, IV],
+				       fn [Ty.SHAPE s, Ty.INTERVAL iv] =>
+					  let
+					   val sv = Ty.ShapeVar(s)
+					   val af2 = Ty.AddVar(iv, 2)
+					   val dim = Ty.IntervalDim(iv)
+					   val shapeExtend = Ty.ShapeExt'(dim, sv)
+					  in
+					   [Ty.T_Tensor(sv, af2)] -->Ty.T_Tensor(shapeExtend, Ty.IC 0)
+					  end))
+
+    val errorn = polyVar(N.errorn, all([SK, IV],
+				       fn [Ty.SHAPE s, Ty.INTERVAL iv]  =>
+					  let
+					   val sv = Ty.ShapeVar s
+					   val aff = Ty.AddVar(iv, 1)
+					  in
+					   [Ty.T_Tensor(sv, aff)] --> Ty.T_Tensor(sv, Ty.IC 0)
+					  end))
+    val center =  polyVar(N.center, all([SK, IV],
+					fn [Ty.SHAPE s, Ty.INTERVAL iv] =>
+					   let
+					    val sv = Ty.ShapeVar s
+					    val aff = Ty.AddVar(iv, 1)
+					   in
+					    [Ty.T_Tensor(sv, aff)] --> Ty.T_Tensor(sv, Ty.IC 0)
+					   end))
+    val radius =  polyVar(N.rad, all([SK, IV],
+					fn [Ty.SHAPE s, Ty.INTERVAL iv] =>
+					   let
+					    val sv = Ty.ShapeVar s
+					    val aff = Ty.AddVar(iv, 1)
+					   in
+					    [Ty.T_Tensor(sv, aff)] --> Ty.T_Tensor(sv, Ty.IC 0)
+					   end))
+			 
+
+    val min_interval = polyVar(N.fn_min, all([SK],
+					    fn [Ty.SHAPE s] =>
+					       let
+						val sv = Ty.ShapeVar s
+					       in
+						[Ty.T_Tensor(sv, Ty.IC 1)] --> Ty.T_Tensor(sv, Ty.IC 0)
+					       end))
+
+    val max_interval = polyVar(N.fn_min, all([SK],
+					    fn [Ty.SHAPE s] =>
+					       let
+						val sv = Ty.ShapeVar s
+					       in
+						[Ty.T_Tensor(sv, Ty.IC 1)] --> Ty.T_Tensor(sv, Ty.IC 0)
+					       end))
+
+    val intersection = polyVar(N.intersection, all([SK],
+						   fn [Ty.SHAPE s] =>
+						      let
+						       val sv = Ty.ShapeVar s
+						      in
+						       [Ty.T_Tensor(sv, Ty.IC 1), Ty.T_Tensor(sv, Ty.IC 1)] --> Ty.T_Tensor(sv, Ty.IC 1)
+						      end))
+    val hull = polyVar(N.hull, all([SK],
+				   fn [Ty.SHAPE s] =>
+				      let
+				       val sv = Ty.ShapeVar s
+				      in
+				       [Ty.T_Tensor(sv, Ty.IC 1), Ty.T_Tensor(sv, Ty.IC 1)] --> Ty.T_Tensor(sv, Ty.IC 1)
+				      end))
+
+    val extend = polyVar(N.extend, all([SK, IV],
+				       fn [Ty.SHAPE s, Ty.INTERVAL i] =>
+					  let
+					   val sv = Ty.ShapeVar s
+					   val aff = Ty.AddVar(i, 2)
+					   val aff' = Ty.AddVar(i, 3)
+					  in
+					   [Ty.T_Tensor(sv, aff)] --> Ty.T_Tensor(sv, aff')
+					  end))
+			     
 
     (* determinant: restrict to 2x2 and 3x3*)
     local
@@ -1044,5 +1164,7 @@ structure BasisVars =
     val and_b = monoVar (Atom.atom "$and", [Ty.T_Bool, Ty.T_Bool] --> Ty.T_Bool)
 
     end (* local *)
+
+
 
   end
