@@ -125,7 +125,7 @@ structure Simple =
     fun typeOf (E_Var x) = SimpleVar.typeOf x
       | typeOf (E_Lit lit) = (case lit
            of (Literal.Int _) => SimpleTypes.T_Int
-            | (Literal.Real _) => SimpleTypes.T_Tensor[]
+            | (Literal.Real _) => SimpleTypes.T_Tensor([], 0)
             | (Literal.String s) => SimpleTypes.T_String
             | (Literal.Bool _) => SimpleTypes.T_Bool
           (* end case *))
@@ -156,8 +156,8 @@ structure Simple =
       | typeOf (E_InsideImage _) = SimpleTypes.T_Bool
       | typeOf (E_FieldFn f) = let
           val (dim, shp) = (case SimpleFunc.typeOf f
-                 of (SimpleTypes.T_Tensor shp, [SimpleTypes.T_Tensor[]]) => (1, shp)
-                  | (SimpleTypes.T_Tensor shp, [SimpleTypes.T_Tensor[d]]) => (d, shp)
+                 of (SimpleTypes.T_Tensor (shp, _), [SimpleTypes.T_Tensor([], _)]) => (1, shp)
+                  | (SimpleTypes.T_Tensor (shp, _), [SimpleTypes.T_Tensor([d], _)]) => (d, shp)
                 (* end case *))
           in
             SimpleTypes.T_Field{diff = NONE, dim = dim, shape = shp}

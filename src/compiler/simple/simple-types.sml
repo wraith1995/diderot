@@ -17,7 +17,7 @@ structure SimpleTypes =
       | T_Int
       | T_String
     (* scalars, vectors, matrices, etc.; argument is tensor shape *)
-      | T_Tensor of shape
+      | T_Tensor of shape * interval
       | T_Sequence of ty * int option   (* sequence of values; second argument is length *)
       | T_Tuple of ty list              (* tuple of values *)
       | T_Strand of Atom.atom           (* strand type *)
@@ -38,6 +38,7 @@ structure SimpleTypes =
     withtype diff = int option
          and shape = int list
          and dim = int
+	 and interval = int
 
   (* instantiated meta variable values *)
     datatype meta_arg
@@ -45,20 +46,23 @@ structure SimpleTypes =
       | DIFF of diff
       | SHAPE of shape
       | DIM of dim
+      | INTERVAL of interval
 
-    val realTy = T_Tensor[]
+    val realTy' = T_Tensor([], 0)
+    fun realTy j = T_Tensor([], j)
 
     fun tupleTy [ty] = ty
       | tupleTy tys = T_Tuple tys
 
-    fun vecTy d = T_Tensor[d]
+    fun vecTy' d = T_Tensor([d], 0)
+    fun vecTy d j = T_Tensor([d], j)
 
   (* compare types for equality *)
     fun same (ty1, ty2) = (case (ty1, ty2)
            of (T_Bool, T_Bool) => true
             | (T_Int, T_Int) => true
             | (T_String, T_String) => true
-            | (T_Tensor shp1, T_Tensor shp2) => ListPair.allEq (op =) (shp1, shp2)
+            | (T_Tensor (shp1, i1), T_Tensor (shp2, i2)) => (i1 = i2) andalso ListPair.allEq (op =) (shp1, shp2)
             | (T_Sequence(ty1, NONE), T_Sequence(ty2, NONE)) => same (ty1, ty2)
             | (T_Sequence(ty1, SOME n1), T_Sequence(ty2, SOME n2)) =>
                 (n1 = n2) andalso same (ty1, ty2)
@@ -73,18 +77,25 @@ structure SimpleTypes =
           (* end case *))
 
     local
-      val shapeToString = String.concatWithMap "," Int.toString
+     val shapeToString = String.concatWithMap "," Int.toString
+     fun prefix s r = if s < 0
+		      then "errorInterval"
+		      else if s = 0
+		      then "" ^ r
+		      else if s = 1
+		      then "interval " ^ r
+		      else "aff[" ^ (Int.toString s) ^"] " ^ r
     in
 
     fun toString ty = (case ty
            of T_Bool => "bool"
             | T_Int => "int"
             | T_String => "string"
-            | T_Tensor[] => "real"
-            | T_Tensor[2] => "vec2"
-            | T_Tensor[3] => "vec3"
-            | T_Tensor[4] => "vec4"
-            | T_Tensor shape => concat["tensor[", shapeToString shape, "]"]
+            | T_Tensor([], i) => prefix i "real"
+            | T_Tensor([2], i) => prefix i "vec2"
+            | T_Tensor([3], i) => prefix i "vec3"
+            | T_Tensor([4], i) => prefix i "vec4"
+            | T_Tensor (shape, i) => prefix i (concat["tensor[", shapeToString shape, "]"])
             | T_Sequence(ty, NONE) => toString ty ^ "[]"
             | T_Sequence(ty, SOME dim) => concat[toString ty, "[", Int.toString dim, "]"]
             | T_Tuple tys => concat["(", String.concatWithMap "," toString tys, ")"]

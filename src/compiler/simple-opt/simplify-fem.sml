@@ -850,7 +850,7 @@ return to Strands until Fixed
 		 let
 		  val Ty.T_Fem(femData) = V.typeOf v1
 		  val dim  = FD.underlyingDim femData
-		  val fictionalEvalTy = Ty.vecTy dim
+		  val fictionalEvalTy = Ty.vecTy' dim
 		  val fictionalEvalVar = V.new("fiction", Var.LocalVar, fictionalEvalTy)
 		  val _ = defaultFemPres fictionalEvalVar
 
@@ -1288,8 +1288,8 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
       else (case d
 	     of FD.MeshPos(m) =>
 		if isBase
-		then Ty.T_Tuple([Ty.vecTy (FD.underlyingDim d), Ty.T_Int, Ty.T_Int])
-		else Ty.T_Tuple([Ty.vecTy (FD.underlyingDim d), Ty.T_Int, Ty.T_Int, Ty.T_Int])
+		then Ty.T_Tuple([Ty.vecTy' (FD.underlyingDim d), Ty.T_Int, Ty.T_Int])
+		else Ty.T_Tuple([Ty.vecTy' (FD.underlyingDim d), Ty.T_Int, Ty.T_Int, Ty.T_Int])
 	      | FD.FuncCell(_) => if isBase
 				  then Ty.T_Int
 				  else Ty.T_Tuple([Ty.T_Int, Ty.T_Int])
@@ -1429,7 +1429,7 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 		 val (newVar, newStm)  = globCvt(d', v1)
 		 val newTy = cvtTy(ty, ALL(d'))
 		 val newVar' = V.new(V.nameOf v, V.kindOf v, newTy)
-		 val posVecVar = V.new("refPos", Var.LocalVar, Ty.vecTy dim)
+		 val posVecVar = V.new("refPos", Var.LocalVar, Ty.vecTy' dim)
 		 val posCellVar = V.new("cell", Var.LocalVar, Ty.T_Int)
 		 val faceCellVar = V.new("cell", Var.LocalVar, Ty.T_Int)
 					(*get a few accs*)
@@ -1843,10 +1843,10 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 	     val femArg :: args = vs
 	     val femArg' = cvtVar femArg
 	     val args' = List.map cvtVar args
-	     val nanVar = V.new("nan", Var.LocalVar, Ty.realTy)
+	     val nanVar = V.new("nan", Var.LocalVar, Ty.realTy')
 	     val nanDec = S.S_Var(nanVar, SOME(S.E_Lit(Literal.Real(RealLit.nan))))
-	     val nanVecVar = V.new("nanVec", Var.LocalVar, Ty.T_Tensor[3])
-	     val nanVecDec = S.S_Var(nanVecVar, SOME(S.E_Tensor([nanVar, nanVar, nanVar], Ty.T_Tensor[3])))
+	     val nanVecVar = V.new("nanVec", Var.LocalVar, Ty.T_Tensor([3], 0))
+	     val nanVecDec = S.S_Var(nanVecVar, SOME(S.E_Tensor([nanVar, nanVar, nanVar], Ty.T_Tensor([3], 0))))
 	     val neg1 = V.new("neg1", Var.LocalVar, Ty.T_Int)
 	     val neg1Dec = S.S_Var(neg1, SOME(S.E_Lit(Literal.intLit (~1))))
 

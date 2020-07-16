@@ -63,7 +63,7 @@ structure II = ImageInfo
 		      | Types.T_Tuple(tys) => Ty.T_Tuple(List.map cvtTy tys)
 		      | Types.T_Strand id => Ty.T_Strand id
 		      | Types.T_Kernel _ => Ty.T_Kernel
-		      | Types.T_Tensor shape => Ty.T_Tensor(TU.monoShape shape)
+		      | Types.T_Tensor (shape, ic) => Ty.T_Tensor(TU.monoShape shape, TU.monoInterval ic)
 		      | Types.T_Image{dim, shape} =>
 			Ty.T_Image(II.mkInfo(TU.monoDim dim, TU.monoShape shape))
 		      | Types.T_Field{diff, dim, shape} => Ty.T_Field{

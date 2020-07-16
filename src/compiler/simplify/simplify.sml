@@ -95,7 +95,7 @@ structure Simplify : sig
 	    | Ty.T_Tuple(tys) => STy.T_Tuple(List.map cvtTy tys)
             | Ty.T_Strand id => STy.T_Strand id
             | Ty.T_Kernel _ => STy.T_Kernel
-            | Ty.T_Tensor shape => STy.T_Tensor(TU.monoShape shape)
+            | Ty.T_Tensor (shape, ic) => STy.T_Tensor(TU.monoShape shape, TU.monoInterval ic)
             | Ty.T_Image{dim, shape} =>
                 STy.T_Image(II.mkInfo(TU.monoDim dim, TU.monoShape shape))
             | Ty.T_Field{diff, dim, shape} => STy.T_Field{
@@ -116,7 +116,7 @@ structure Simplify : sig
             | cvtTy STy.T_String = APITypes.StringTy
             | cvtTy (STy.T_Sequence(ty, len)) = APITypes.SeqTy(cvtTy ty, len)
 	    | cvtTy (STy.T_Tuple(tys)) = APITypes.TupleTy(List.map cvtTy tys)
-            | cvtTy (STy.T_Tensor shape) = APITypes.TensorTy shape
+            | cvtTy (STy.T_Tensor (shape, i)) = APITypes.TensorTy (i::shape) 
             | cvtTy (STy.T_Image info) =
               APITypes.ImageTy(II.dim info, II.voxelShape info)
 	    | cvtTy (STy.T_Fem(data)) = APITypes.FemData(data)
@@ -152,7 +152,7 @@ structure Simplify : sig
               | ty as Ty.T_Field _ => let
                   val ty' as STy.T_Field{dim, shape, ...} = cvtTy ty
                   in
-                    SimpleFunc.newDiff (Var.nameOf f, STy.T_Tensor shape, [STy.T_Tensor[dim]])
+                    SimpleFunc.newDiff (Var.nameOf f, STy.T_Tensor (shape, 0), [STy.T_Tensor([dim], 0)]) (*QUESTION: is this correct? Answer: Probably not.*)
                   end
               | ty => raise Fail "expected function or field type"
             (* end case *))
@@ -202,9 +202,9 @@ structure Simplify : sig
   (* make a variable definition *)
     fun mkDef (x, e) = S.S_Var(x, SOME e)
 
-    fun mkRDiv (res, a, b) = mkDef (res, S.E_Prim(BV.div_rr, [], [a, b], STy.realTy))
+    fun mkRDiv (res, a, b) = mkDef (res, S.E_Prim(BV.div_rr, [], [a, b], STy.realTy')) (*Only used in reduction.*)
     fun mkToReal (res, a) =
-          mkDef (res, S.E_Coerce{srcTy = STy.T_Int, dstTy = STy.realTy, x = a})
+          mkDef (res, S.E_Coerce{srcTy = STy.T_Int, dstTy = STy.realTy', x = a})
     fun mkLength (res, elemTy, xs) =
           mkDef (res, S.E_Prim(BV.fn_length, [STy.TY elemTy], [xs], STy.T_Int))
 
@@ -464,8 +464,8 @@ structure Simplify : sig
                                   val (stms, S.E_Var resultV) = mkReductionLoop (
                                         Reductions.RSUM, bodyStms, bodyResult, stms)
                                   val num = SimpleVar.new ("num", Var.LocalVar, STy.T_Int)
-                                  val rNum = SimpleVar.new ("rNum", Var.LocalVar, STy.realTy)
-                                  val mean = SimpleVar.new ("mean", Var.LocalVar, STy.realTy)
+                                  val rNum = SimpleVar.new ("rNum", Var.LocalVar, STy.realTy')
+                                  val mean = SimpleVar.new ("mean", Var.LocalVar, STy.realTy')
                                   val stms =
                                         mkRDiv (mean, resultV, rNum) ::
                                         mkToReal (rNum, num) ::
@@ -656,7 +656,7 @@ structure Simplify : sig
 		   (stms', S.E_ExtractFemItemN(exprs', tys',outTy', femOpt', optVar'))
 		  end
               | AST.E_Coerce{dstTy, e=AST.E_Lit(Literal.Int n), ...} => (case cvtTy dstTy
-                   of SimpleTypes.T_Tensor[] => (stms, S.E_Lit(Literal.Real(RealLit.fromInt n)))
+                   of SimpleTypes.T_Tensor([], 0) => (stms, S.E_Lit(Literal.Real(RealLit.fromInt n)))
                     | _ => raise Fail "impossible: bad coercion"
                   (* end case *))
               | AST.E_Coerce{dstTy, srcTy, e as AST.E_Seq(es, ty)} => let
@@ -732,8 +732,8 @@ structure Simplify : sig
                                 args = args, source = x', domain = domain
                               }]
                     val num = SimpleVar.new ("num", Var.LocalVar, STy.T_Int)
-                    val rNum = SimpleVar.new ("rNum", Var.LocalVar, STy.realTy)
-                    val mean = SimpleVar.new ("mean", Var.LocalVar, STy.realTy)
+                    val rNum = SimpleVar.new ("rNum", Var.LocalVar, STy.realTy')
+                    val mean = SimpleVar.new ("mean", Var.LocalVar, STy.realTy')
                     val numStrandsOp = (case domain
                            of StrandSets.ACTIVE => BV.fn_numActive
                             | StrandSets.ALL => BV.fn_numStrands
@@ -989,6 +989,7 @@ structure Simplify : sig
 	     if List.length (TU.femDatas (TypeOf.expr e)) = 0
 	     then
 	      let
+	       (*clean up here... need intervals*)
 	       val x' = cvtVar x
 	       val (stms, e') = simplifyExp (cxt, e, [])
 	       val inp = S.INP{

@@ -321,9 +321,9 @@ structure Util : sig
 	   | doit (AST.E_ExtractFemItemN([mesh], _, _, (FemOpt.InvalidBuild, _), _), Ty.T_Fem(data', _), true) =
 
 	     let val dim = FemData.underlyingDim data'
-		 val nan = AST.E_Tensor(List.tabulate(dim, fn x => AST.E_Lit(Literal.Real(RealLit.nan))), Ty.vecTy dim)
+		 val nan = AST.E_Tensor(List.tabulate(dim, fn x => AST.E_Lit(Literal.Real(RealLit.nan))), Ty.vecTy' dim)
 		 val int = AST.E_Lit(Literal.intLit (~1))
-		 val ret = AST.E_Tuple([nan, int, int], [Ty.vecTy dim, Ty.T_Int, Ty.T_Int])
+		 val ret = AST.E_Tuple([nan, int, int], [Ty.vecTy' dim, Ty.T_Int, Ty.T_Int])
 	     in (datas := mesh :: !datas; ret)
 	     end
 	   | doit (AST.E_Coerce {srcTy, dstTy, e}, _, b) =
@@ -425,7 +425,7 @@ structure Util : sig
 	       val meshCellHolder = FemData.MeshCell(meshData)
 	       val meshTy = STy.T_Fem(meshHolder)
 	       val dim = FemData.meshDim (meshData)
-	       val newTensor = STy.T_Tensor([dim])
+	       val newTensor = STy.T_Tensor([dim], 0)
 					   
 	       val refPosTemp = newTemp newTensor;
 	       val meshTemp = newTemp meshTy;
@@ -460,7 +460,7 @@ structure Util : sig
 	  val name = Var.nameOf x
 	  val ty = Var.monoTypeOf x
 	  val dim = (case ty
-		      of Ty.T_Tensor(Ty.Shape([Ty.DimConst(d)])) => SOME(d)
+		      of Ty.T_Tensor(Ty.Shape([Ty.DimConst(d)]), Ty.IC 0) => SOME(d)
 		       | Ty.T_Fem(FemData.MeshPos(meshData), _) => SOME(FemData.meshDim meshData)
 		       | _ => NONE
 		    (*end case*))
@@ -468,7 +468,7 @@ structure Util : sig
 		orelse kind = Var.StrandOutputVar)
 	       andalso name = FemName.pos
 	       andalso Option.isSome dim
-	    then SOME(SimpleVar.new ("_pos", kind, STy.T_Tensor([Option.valOf dim])))
+	    then SOME(SimpleVar.new ("_pos", kind, STy.T_Tensor([Option.valOf dim], 0)))
 	    else NONE
 	 end
      val {getFn=getNewPosVar, ...} = Var.newProp cvt
@@ -477,7 +477,7 @@ structure Util : sig
 	 (case getNewPosVar x
 	   of NONE => NONE
 	    | SOME(x'') => (case SimpleVar.typeOf x'
-			     of STy.T_Tensor([d])
+			     of STy.T_Tensor([d], _)
 				=> (SOME([S.S_Assign(x'',S.E_Var(x'))]))
 			      | STy.T_Fem(ms as FemData.MeshPos(meshData)) =>
 				let
@@ -485,7 +485,7 @@ structure Util : sig
 				 val meshCellHolder = FemData.MeshCell(meshData)
 				 val meshTy = STy.T_Fem(meshHolder)
 				 val dim = FemData.meshDim (meshData)
-				 val newTensor = STy.T_Tensor([dim])
+				 val newTensor = STy.T_Tensor([dim], 0)
 							     
 				 val refPosTemp = newTemp newTensor;
 				 val meshTemp = newTemp meshTy;
@@ -509,7 +509,7 @@ structure Util : sig
 							  
 				 val inf = S.E_Lit(Literal.Real(RealLit.posInf))
 				 val infinityInits = List.tabulate(dim, fn x =>
-									   let val v = newTemp STy.realTy
+									   let val v = newTemp (STy.realTy 0)
 									   in (v, createV(v, inf)) end)
 				 val inits = List.map (fn (x,y) => y) infinityInits
 						      
