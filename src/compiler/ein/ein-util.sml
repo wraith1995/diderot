@@ -25,6 +25,9 @@ structure EinUtil : sig
     val cleanIds : Ein.ein_exp -> Ein.ein_exp
 
     val collectIndicies : Ein.ein_exp -> int list
+
+    (* val typeCheckTenShape : Ein.ein -> ((int list * int option) * bool)  (*shape, interval, matches internal shape*) *)
+    (* val typeCheckTenShapeExp : Ein.ein_exp * (int -> ((int list * int option)) option) -> (int list * int option) *)
   end = struct
 
     structure E = Ein
@@ -132,8 +135,10 @@ structure EinUtil : sig
         end
 
     fun same (E.EIN{params=p1, index=ix1, body=e1}, E.EIN{params=p2, index=ix2, body=e2}) = let
-          fun sameParam (E.TEN(i1, shp1), E.TEN(i2, shp2)) =
-                (i1 = i2) andalso ListPair.allEq (op =) (shp1, shp2)
+          fun sameParam (E.TEN(i1, shp1, NONE), E.TEN(i2, shp2, NONE)) =
+              (i1 = i2) andalso ListPair.allEq (op =) (shp1, shp2)
+	    | sameParam (E.TEN(i1, shp1, SOME k1), E.TEN(i2, shp2, SOME k2)) =
+	      (k1=k2) andalso i1=i2 andalso ListPair.allEq (op =) (shp1, shp2)
             | sameParam (E.FLD i1, E.FLD i2) = (i1 = i2)
             | sameParam (E.KRN, E.KRN) = true
             | sameParam (E.IMG(i1, shp1), E.IMG(i2, shp2)) =
@@ -469,4 +474,28 @@ structure EinUtil : sig
 	in
 	 ISet.listItems(mapper(e, start))
 	end
+
+    (* fun typeCheckTenShapeExp (exp, f) = *)
+    (* 	(case exp *)
+    (* 	  of *)
+    (* 	(* end case*)) *)
+    (* fun typeCheckTenShape (E.EIN{params, index, body}) = *)
+    (* 	let *)
+    (* 	 val p = List.length params *)
+    (* 	 fun f idx = if idx < p orelse p < 0 *)
+    (* 		     then NONE *)
+    (* 		     else (case List.nth(params, idx) *)
+    (* 			    of E.TEN(_, shape, iv) => SOME((shape, iv)) *)
+    (* 			     | E.FLD j => raise Fail "normalized ein has a FLD" *)
+    (* 			     | E.KRN => raise Fail "E.Krn checked" *)
+    (* 			     | E.IMG(j, shp) => raise Fail "E.IMG checked" *)
+    (* 			     | E.FEM(d) => raise Fail "E.FEM checked" *)
+    (* 			     | E.INT => raise Fail "Int checked" *)
+    (* 			  (* end case *)) *)
+
+    (* 	 val (shape, interval) = typeCheckTenShapeExp(body, f) *)
+    (* 	 val sameShape = ListPair.all (fn (x,y) => x=y) (shape, index) *)
+    (* 	in *)
+    (* 	 ((shape, interval), sameShape) *)
+    (* 	end *)
   end

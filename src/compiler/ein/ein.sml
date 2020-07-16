@@ -10,7 +10,7 @@ structure Ein =
   struct
 
     datatype param_kind
-      = TEN of bool * int list  (* the boolean specifies if the parameter is substitutable *)
+      = TEN of bool * int list * int option  (* the boolean specifies if the parameter is substitutable *)
       | FLD of int
       | KRN
       | IMG of int * int list

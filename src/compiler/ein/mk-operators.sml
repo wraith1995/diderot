@@ -11,45 +11,46 @@
 structure MkOperators : sig
 
     type dim = int
+    type interval = int option
     type shape = dim list
     type ids = Ein.index_id list
 
-    val addRR : Ein.ein
-    val addTT : shape -> Ein.ein
+    val addRR : interval * interval -> Ein.ein
+    val addTT : shape * interval * interval -> Ein.ein
     val addTF : dim * shape -> Ein.ein
     val addFF : dim * shape -> Ein.ein
 
-    val subRR : Ein.ein
-    val subTT : shape -> Ein.ein
+    val subRR : interval * interval -> Ein.ein
+    val subTT : shape * interval * interval -> Ein.ein
     val subTF : dim * shape -> Ein.ein
     val subFT : dim * shape -> Ein.ein
     val subFF : dim * shape -> Ein.ein
 
-    val mulRT : shape -> Ein.ein
-    val mulRR : Ein.ein
+    val mulRT : shape * interval * interval -> Ein.ein
+    val mulRR : interval * interval -> Ein.ein
     val mulRF : dim * shape -> Ein.ein
     val mulST : dim * shape -> Ein.ein
     val mulSS : dim -> Ein.ein
     val mulSF : dim * shape -> Ein.ein
 
-    val divTR : shape -> Ein.ein
-    val divRR : Ein.ein
+    val divTR : shape * interval * interval -> Ein.ein
+    val divRR : interval * interval -> Ein.ein
     val divFR : dim * shape -> Ein.ein
     val divSS : dim -> Ein.ein
     val divFS : dim * shape -> Ein.ein
     val divTS : dim * shape -> Ein.ein
 
-    val halfT : dim -> Ein.ein
+    val halfT : dim * interval -> Ein.ein
     val halfF : dim * dim -> Ein.ein
-    val scaleIdT : dim -> Ein.ein
+    val scaleIdT : dim * interval -> Ein.ein
     val scaleIdF : dim * dim -> Ein.ein
 
 
-    val negTT : shape -> Ein.ein
+    val negTT : shape * interval -> Ein.ein
     val negFF : dim * shape -> Ein.ein
 
-    val cross2TT : Ein.ein
-    val cross3TT : Ein.ein
+    val cross2TT : interval * interval -> Ein.ein
+    val cross3TT : interval * interval -> Ein.ein
     val cross2FF : Ein.ein
     val cross3FF : Ein.ein
     val cross2TF : Ein.ein
@@ -57,69 +58,69 @@ structure MkOperators : sig
     val cross2FT : Ein.ein
     val cross3FT : Ein.ein
 
-    val outerTT : shape * shape -> Ein.ein
+    val outerTT : shape * shape * interval * interval -> Ein.ein
     val outerFF : dim * shape * shape -> Ein.ein
     val outerTF : dim * shape * shape -> Ein.ein
     val outerFT : dim * shape * shape -> Ein.ein
 
-    val innerTT : shape * ids -> Ein.ein
+    val innerTT : shape * ids * interval * interval-> Ein.ein
     val innerFF : shape * dim * ids -> Ein.ein
     val innerFT : shape * dim * ids -> Ein.ein
     val innerTF : shape * dim * ids -> Ein.ein
 
-    val colonTT : shape * ids -> Ein.ein
+    val colonTT : shape * ids * interval * interval -> Ein.ein
     val colonFF : dim * shape * ids -> Ein.ein
     val colonFT : dim * shape * ids -> Ein.ein
     val colonTF : dim * shape * ids -> Ein.ein
 
-    val normT : shape -> Ein.ein
+    val normT : shape * interval -> Ein.ein
     val normF : dim * shape -> Ein.ein
 
-    val normalizeTT : shape -> Ein.ein
+    val normalizeTT : shape * interval * interval -> Ein.ein
     val normalizeFF : dim * shape -> Ein.ein
 
-    val traceT : dim -> Ein.ein
+    val traceT : dim * interval -> Ein.ein
     val traceF : dim * dim * shape -> Ein.ein
 
-    val transposeT : shape -> Ein.ein
+    val transposeT : shape * interval -> Ein.ein
 (* QUESTION: should these be index_kind? *)
     val transposeF : dim * Ein.index_id * Ein.index_id -> Ein.ein
 
-    val det2T : Ein.ein
-    val det3T : Ein.ein
+    val det2T : interval -> Ein.ein
+    val det3T : interval -> Ein.ein
     val det2F : dim -> Ein.ein
     val det3F : dim -> Ein.ein
 
-    val invR : Ein.ein
+    val invR : interval -> Ein.ein
     val invS : dim -> Ein.ein
-    val inv2T : Ein.ein
+    val inv2T : interval ->Ein.ein
     val inv2F : dim -> Ein.ein
-    val inv3T : Ein.ein
+    val inv3T : interval -> Ein.ein
     val inv3F : dim -> Ein.ein
 
     val expF : dim -> Ein.ein
-    val expT : Ein.ein
+    val expT : interval -> Ein.ein
 
     val powFI : dim * int -> Ein.ein
-    val powTI : int -> Ein.ein
-    val sqrtR : Ein.ein
+    val powTI : int * interval -> Ein.ein
+    val sqrtR : interval -> Ein.ein
     val sqrtF : dim -> Ein.ein
-    val cosR  : Ein.ein
+    val cosR  : interval -> Ein.ein
     val cosF  : dim -> Ein.ein
-    val acosR : Ein.ein
+    val acosR : interval -> Ein.ein
     val acosF : dim -> Ein.ein
-    val sinR  : Ein.ein
+    val sinR  : interval -> Ein.ein
     val sinF  : dim -> Ein.ein
-    val asinR : Ein.ein
+    val asinR : interval -> Ein.ein
     val asinF : dim -> Ein.ein
-    val tanR  : Ein.ein
+    val tanR  : interval -> Ein.ein
     val tanF  : dim -> Ein.ein
-    val atanR : Ein.ein
+    val atanR : interval -> Ein.ein
     val atanF : dim -> Ein.ein
     val maxF : dim -> Ein.ein
     val minF : dim -> Ein.ein
     
-    val modulateTT : shape -> Ein.ein
+    val modulateTT : shape * interval * interval -> Ein.ein
     val modulateTF : shape * dim -> Ein.ein
     val modulateFT : shape * dim -> Ein.ein
     val modulateFF : shape * dim -> Ein.ein
@@ -127,9 +128,9 @@ structure MkOperators : sig
     val identity : dim -> Ein.ein
     val identityFld : dim -> Ein.ein
     val zeros : shape -> Ein.ein
-    val sliceT : bool list * int list * Ein.index_bind list * int list -> Ein.ein
+    val sliceT : bool list * int list * Ein.index_bind list * int list * interval -> Ein.ein
     val sliceF : bool list * int list * Ein.index_bind list * int -> Ein.ein
-    val concatTensor : shape * int -> Ein.ein
+    val concatTensor : shape * int * interval -> Ein.ein
     val concatField : dim * shape * int -> Ein.ein
     val composition: int * shape * int * shape -> Ein.ein
     
@@ -141,7 +142,7 @@ structure MkOperators : sig
     val clerp5 : shape -> Ein.ein
 
     val conv : dim * shape -> Ein.ein
-    val probe : shape * dim -> Ein.ein
+    val probe : shape * dim * interval -> Ein.ein
     val condField : dim * shape -> Ein.ein
     val condField_GT : dim * shape -> Ein.ein
     val condField_LT : dim * shape -> Ein.ein
@@ -160,6 +161,7 @@ structure MkOperators : sig
     structure E = Ein
 
     type dim = int
+    type interval = int option
     type shape = dim list
     type ids = int list
 
@@ -169,10 +171,12 @@ structure MkOperators : sig
   (* A constructor function for tensor variables that (by default) can be substituted for;
    * this behavior is controlled by the canSubst flag.
    *)
-    fun mkTEN alpha = E.TEN(canSubst, alpha)
+    fun mkTEN alpha interval = E.TEN(canSubst, alpha, interval)
+    fun mkTEN' alpha = E.TEN(canSubst, alpha, NONE)
 
   (* a constructor function for tensor parameters that should never be substituted for.  *)
-    fun mkNoSubstTEN alpha = E.TEN(false, alpha)
+    fun mkNoSubstTEN alpha interval = E.TEN(false, alpha, interval)
+    fun mkNoSubstTEN' alpha = E.TEN(false, alpha, NONE)
 
     fun specialize (alpha, inc) = List.mapi (fn (i, _) => E.V(i + inc)) alpha
 
@@ -187,24 +191,24 @@ structure MkOperators : sig
   (******************************* Addition *****************************************)
 
   (* Adding tensors : < X{\alpha} + Y_{\alpha}>_{\alpha} *)
-    fun addTT alpha = let
+    fun addTT(alpha, interval1, interval2) = let
           val expindex = specialize(alpha, 0)
           in
             E.EIN{
-                params = [mkTEN alpha, mkTEN alpha],
+                params = [mkTEN alpha interval1, mkTEN alpha interval2],
                 index = alpha,
                 body = E.Opn(E.Add, [E.Tensor(0, expindex), E.Tensor(1, expindex)])
               }
           end
 
-    val addRR = addTT []
+    val addRR = fn (x,y) => addTT([], x, y)
 
   (* Tensor and Fields *)
     fun addTF (dim, shape) =let
           val expindex = specialize(shape, 0)
           in
             E.EIN{
-                params = [mkTEN shape, E.FLD dim],
+                params = [mkTEN' shape, E.FLD dim],
                 index = shape,
                 body = E.Opn(E.Add, [E.Lift(E.Tensor(0, expindex)), E.Field(1, expindex)])
               }
@@ -223,23 +227,23 @@ structure MkOperators : sig
 
   (********************************* Subtraction **************************************)
 
-    fun subTT alpha = let
+    fun subTT(alpha, iv1, iv2) = let
           val expindex = specialize(alpha, 0)
           in
             E.EIN{
-                params = [mkTEN alpha, mkTEN alpha],
+                params = [mkTEN alpha iv1, mkTEN alpha iv2],
                 index = alpha,
                 body = E.Op2(E.Sub, E.Tensor(0, expindex), E.Tensor(1, expindex))
               }
           end
 
-    val subRR = subTT []
+    val subRR = fn (x,y) => subTT([], x, y)
 
     fun subTF (dim, shape) = let
           val expindex = specialize(shape, 0)
           in
             E.EIN{
-                params = [mkTEN shape, E.FLD dim],
+                params = [mkTEN' shape, E.FLD dim],
                 index = shape,
                 body = E.Opn(E.Add,
                   [E.Lift(E.Tensor(0, expindex)), E.Op1(E.Neg, E.Field(1, expindex))])
@@ -250,7 +254,7 @@ structure MkOperators : sig
           val expindex = specialize(shape, 0)
           in
             E.EIN{
-                params = [mkTEN shape, E.FLD dim],
+                params = [mkTEN' shape, E.FLD dim],
                 index = shape,
                 body = E.Op2(E.Sub, E.Field(1, expindex), E.Lift(E.Tensor(0, expindex)))
               }
@@ -269,23 +273,23 @@ structure MkOperators : sig
   (********************************** Multiplication *************************************)
 
   (* scalar times tensor product: <s * T_{\alpha}>_{\alpha} *)
-    fun mulRT alpha = let
+    fun mulRT (alpha, iv1, iv2) = let
           val expindex = specialize(alpha, 0)
           in
             E.EIN{
-                params = [mkTEN [], mkTEN alpha],
+                params = [mkTEN [] iv1, mkTEN alpha iv2],
                 index = alpha,
                 body = E.Opn(E.Prod, [E.Tensor(0, []),  E.Tensor(1, expindex)])
               }
           end
 
-    val mulRR = mulRT []
+    val mulRR = fn (x,y) => mulRT ([], x, y)
 
     fun mulRF (dim, shape) =let
           val expindex = specialize(shape, 0)
           in
             E.EIN{
-                 params = [mkTEN [], E.FLD dim],
+                 params = [mkTEN' [], E.FLD dim],
                  index = shape,
                  body = E.Opn(E.Prod, [E.Lift(E.Tensor(0, [])), E.Field(1, expindex)])
                }
@@ -295,7 +299,7 @@ structure MkOperators : sig
           val expindex = specialize(shape, 0)
           in
             E.EIN{
-                params = [mkTEN shape, E.FLD dim],
+                params = [mkTEN' shape, E.FLD dim],
                 index = shape,
                 body = E.Opn(E.Prod, [E.Lift(E.Tensor(0, expindex)), E.Field(1, [])])
               }
@@ -319,23 +323,23 @@ structure MkOperators : sig
 
   (************************************ Division ************************************)
 
-    fun divTR alpha = let
+    fun divTR (alpha, iv1, iv2) = let
           val expindex = specialize(alpha, 0)
           in
             E.EIN{
-                params = [mkTEN alpha, mkTEN []],
+                params = [mkTEN alpha iv1, mkTEN [] iv2],
                 index = alpha,
                 body = E.Op2(E.Div, E.Tensor(0, expindex), E.Tensor(1, []))
               }
           end
 
-    val divRR = divTR []
+    val divRR = fn (x,y) => divTR ([], x, y)
 
     fun divFR (dim, shape) = let
           val expindex = specialize(shape, 0)
           in
             E.EIN{
-                params = [E.FLD dim, mkTEN []],
+                params = [E.FLD dim, mkTEN' []],
                 index = shape,
                 body = E.Op2(E.Div, E.Field(0, expindex), E.Lift(E.Tensor(1, [])))
               }
@@ -361,15 +365,15 @@ structure MkOperators : sig
           val expindex = specialize(shape,0)
           in
             E.EIN{
-                params = [mkTEN  shape, E.FLD dim],
+                params = [mkTEN' shape, E.FLD dim],
                 index = shape,
                 body = E.Op2(E.Div, E.Lift(E.Tensor(0, expindex)), E.Field(1, []))
               }
           end
 
     (* Divide Scalars*)
-    fun halfT(n) = E.EIN{
-            params = [mkTEN [n, n]],
+    fun halfT(n, iv1) = E.EIN{
+            params = [mkTEN [n, n] iv1],
             index = [n,n],
             body = E.Op2(E.Div, E.Tensor(0, [E.V 0 , E.V 1]), E.Const 2)
         }
@@ -381,8 +385,8 @@ structure MkOperators : sig
         }
 
     (*scale by delta*)
-    fun scaleIdT(n) = E.EIN{
-            params = [mkTEN []],
+    fun scaleIdT(n, iv1) = E.EIN{
+            params = [mkTEN [] iv1],
             index = [n,n],
             body = E.Opn(E.Prod, [E.Tensor(0, []), E.Delta(E.V 0, E.V 1)])
         }
@@ -397,11 +401,11 @@ structure MkOperators : sig
 
   (************************************* Negation **********************************)
 
-    fun negTT alpha = let
+    fun negTT (alpha, iv1) = let
           val expindex = specialize(alpha, 0)
           in
             E.EIN {
-                params = [mkTEN alpha], index = alpha,
+                params = [mkTEN alpha iv1], index = alpha,
                 body = E.Op1(E.Neg, E.Tensor(0, expindex))
               }
           end
@@ -418,16 +422,16 @@ structure MkOperators : sig
   (****************************** cross product ***********************************)
 
   (* 2-d cross product Eps_{ij}U_i V_j *)
-    val cross2TT = E.EIN{
-             params = [mkTEN [2], mkTEN [2]],
+    fun cross2TT (iv1, iv2) = E.EIN{
+             params = [mkTEN [2] iv1, mkTEN [2] iv2],
              index = [],
              body = E.Sum([(0, 0, 1), (1, 0, 1)],
              E.Opn(E.Prod, [E.Eps2(E.V 0, E.V 1), E.Tensor(0, [E.V 0]), E.Tensor(1, [E.V 1])]))
           }
 
   (* crossProduct is on 3D vectors ..vec3 t8=t0 × t1; *)
-    val cross3TT = E.EIN{
-             params = [mkTEN [3], mkTEN [3]],
+    fun cross3TT (iv1, iv2) = E.EIN{
+             params = [mkTEN [3] iv1, mkTEN [3] iv2],
              index = [3],
              body = E.Sum([(1, 0, 2), (2, 0, 2)],
                 E.Opn(E.Prod, [
@@ -457,7 +461,7 @@ structure MkOperators : sig
 
     (*Field and Tensor Cross product *)
     val cross2FT = E.EIN{
-            params = [E.FLD(2), mkTEN [2]], index= [],
+            params = [E.FLD(2), mkTEN' [2]], index= [],
             body = E.Sum([(0, 0, 1), (1, 0, 1)],
                 E.Opn(E.Prod, [
                     E.Eps2(E.V 0, E.V 1),
@@ -467,7 +471,7 @@ structure MkOperators : sig
           }
 
     val cross3FT = E.EIN{
-            params = [E.FLD(3), mkTEN[3]], index= [3],
+            params = [E.FLD(3), mkTEN'[3]], index= [3],
             body = E.Sum([(1, 0, 2), (2, 0, 2)],
                 E.Opn(E.Prod, [
                     E.Epsilon(E.V 0, E.V 1, E.V 2),
@@ -477,7 +481,7 @@ structure MkOperators : sig
           }
 
     val cross2TF = E.EIN{
-            params = [mkTEN[2], E.FLD(2)], index = [],
+            params = [mkTEN'[2], E.FLD(2)], index = [],
             body = E.Sum([(0, 0, 1), (1, 0, 1)],
                 E.Opn(E.Prod, [
                     E.Eps2(E.V 0, E.V 1),
@@ -487,7 +491,7 @@ structure MkOperators : sig
           }
 
     val cross3TF = E.EIN{
-            params = [mkTEN[3], E.FLD(3)], index= [3],
+            params = [mkTEN'[3], E.FLD(3)], index= [3],
             body = E.Sum([(1, 0, 2),(2,0,2)],
                 E.Opn(E.Prod, [
                     E.Epsilon(E.V 0, E.V 1, E.V 2),
@@ -498,12 +502,12 @@ structure MkOperators : sig
 
   (******************** outer product ********************************)
 
-    fun outerTT (alpha, beta) = let
+    fun outerTT (alpha, beta, iv1, iv2) = let
           val expIdxA = specialize (alpha, 0)
           val expIdxB = specialize (beta, length alpha)
           in
             E.EIN{
-                params = [mkTEN alpha, mkTEN beta],
+                params = [mkTEN alpha iv1, mkTEN beta iv2],
                 index = alpha@beta,
                 body = E.Opn(E.Prod, [E.Tensor(0, expIdxA), E.Tensor(1, expIdxB)])
               }
@@ -526,7 +530,7 @@ structure MkOperators : sig
           val expIdxB = specialize (beta, length alpha)
           in
             E.EIN{
-                params = [mkTEN alpha, E.FLD dim],
+                params = [mkTEN' alpha, E.FLD dim],
                 index = alpha@beta,
                 body = E.Opn(E.Prod, [E.Lift(E.Tensor(0, expIdxA)), E.Field(1, expIdxB)])
               }
@@ -537,7 +541,7 @@ structure MkOperators : sig
           val expIdxB = specialize(beta, length alpha)
           in
             E.EIN{
-                params = [E.FLD dim, mkTEN alpha],
+                params = [E.FLD dim, mkTEN' alpha],
                 index = alpha@beta,
                 body = E.Opn(E.Prod, [E.Field(0, expIdxA), E.Lift(E.Tensor(1, expIdxB))])
               }
@@ -545,7 +549,7 @@ structure MkOperators : sig
 
   (*************************** inner product **********************************)
     (* generic inner product: <T_{\alpha i} * T_{i \beta}>_{\alpha \beta} *)
-    fun innerTT (shape1, i::beta) = let
+    fun innerTT (shape1, i::beta, iv1, iv2) = let
           val alpha = List.take(shape1, length shape1 - 1)
           val expindexA = specialize(alpha, 0)
           val expindexB = specialize(beta, length alpha)
@@ -554,7 +558,7 @@ structure MkOperators : sig
           val s'' = [(sid, 0, i-1)]
           in
             E.EIN{
-                params = [mkTEN shape1, mkTEN(i :: beta)],
+                params = [mkTEN shape1 iv1, mkTEN (i :: beta) iv2],
                 index = alpha@beta,
                 body = E.Sum(s'', E.Opn(E.Prod, [
                     E.Tensor(0, expindexA@[sx]),   (* T_{\alpha i} *)
@@ -592,7 +596,7 @@ structure MkOperators : sig
           val sx = E.V sid
           in
             E.EIN{
-                params = [E.FLD dim, mkTEN(i::beta)],
+                params = [E.FLD dim, mkTEN' (i::beta)],
                 index = alpha @ beta,
                 body = E.Sum([(sid, 0, i-1)],
                   E.Opn(E.Prod, [
@@ -611,7 +615,7 @@ structure MkOperators : sig
           val sx = E.V sid
           in
             E.EIN{
-                params = [mkTEN shape1, E.FLD dim],
+                params = [mkTEN' shape1, E.FLD dim],
                 index = alpha @ beta,
                 body = E.Sum([(sid, 0, i-1)],
                   E.Opn(E.Prod, [
@@ -625,7 +629,7 @@ structure MkOperators : sig
   (*************************** colon product **********************************)
 
   (* <T_{\alpha i j} * B{i j \beta }>_\alpha \beta *)
-    fun colonTT (shape1, i::j::beta) = let
+    fun colonTT (shape1, i::j::beta, iv1, iv2) = let
           val lenAlpha = length shape1 - 2
           val alpha = List.take(shape1, lenAlpha)
           val expindexA = specialize(alpha, 0)
@@ -635,7 +639,7 @@ structure MkOperators : sig
           val sx = [(sumi, 0, i-1), ((sumi+1), 0, j-1)]
           in
             E.EIN{
-                params = [mkTEN shape1, mkTEN(i::j::beta)],
+                params = [mkTEN shape1 iv1, mkTEN(i::j::beta) iv2],
                 index = alpha@beta,
                 body = E.Sum(sx,
                   E.Opn(E.Prod, [E.Tensor(0, expindexA@s'), E.Tensor(1, s'@expindexB)]))
@@ -672,7 +676,7 @@ structure MkOperators : sig
           val sx = [(sid, 0, i-1), ((sid+1), 0, j-1)]
           in
             E.EIN{
-                params = [E.FLD dim, mkTEN shape1],
+                params = [E.FLD dim, mkTEN' shape1],
                 index = alpha@beta,
                 body = E.Sum(sx,
                   E.Opn(E.Prod, [E.Field(0, expindexA@s'), E.Lift(E.Tensor(1, s'@expindexB))]))
@@ -690,7 +694,7 @@ structure MkOperators : sig
           val sx = [(sid, 0, i-1), ((sid+1), 0, j-1)]
           in
             E.EIN{
-                params = [mkTEN(i::j::beta), E.FLD dim],
+                params = [mkTEN' (i::j::beta), E.FLD dim],
                 index = alpha@beta,
                 body = E.Sum(sx,
                   E.Opn(E.Prod, [E.Lift(E.Tensor(0, expindexA@s')), E.Field(1, s'@expindexB)]))
@@ -699,15 +703,15 @@ structure MkOperators : sig
 
   (******************** Norm  ********************************)
 
-        fun normT [] = E.EIN{
-                params = [mkTEN []], index = [], body = E.Op1(E.Abs, E.Tensor(0, []))
+        fun normT( [], iv1) = E.EIN{
+                params = [mkTEN [] iv1], index = [], body = E.Op1(E.Abs, E.Tensor(0, []))
               }
-          | normT alpha = let
+          | normT (alpha, iv1) = let
               val expIdx = specialize(alpha, 0)
               val sx = sumIds(length alpha, 0, alpha)
               in
                 E.EIN{
-                    params = [mkTEN alpha],
+                    params = [mkTEN alpha iv1],
                     index = [],
                     body = E.Op1(E.Sqrt,
                       E.Sum(sx, E.Opn(E.Prod, [E.Tensor(0, expIdx), E.Tensor(0, expIdx)])))
@@ -728,7 +732,7 @@ structure MkOperators : sig
               }
           end
 
-    fun normalizeTT alpha = let
+    fun normalizeTT (alpha, iv1, iv2) = let
           val expindex = specialize(alpha, 0)
           val len = length alpha
           val expindexDot = specialize(alpha, len)
@@ -737,7 +741,7 @@ structure MkOperators : sig
           val g = E.Tensor(1, expindexDot)
           in
             E.EIN{
-                params = [mkTEN alpha, mkTEN alpha],
+                params = [mkTEN alpha iv1, mkTEN alpha iv2],
                 index = alpha,
                 body = E.Opn(E.Prod, [
                     f, E.Op2(E.Div, E.Const 1, E.Op1(E.Sqrt, E.Sum(sx, E.Opn(E.Prod, [g, g]))))
@@ -765,8 +769,8 @@ structure MkOperators : sig
   (************************* trace *************************)
 
   (* Trace: <M_{i, i}>  This one Sx represents both i's*)
-    fun traceT dim = E.EIN{
-            params = [mkTEN [dim, dim]], index = [],
+    fun traceT (dim, iv1) = E.EIN{
+            params = [mkTEN [dim, dim] iv1], index = [],
             body = E.Sum([(0, 0, dim-1)], E.Tensor(0, [E.V 0, E.V 0]))
           }
 
@@ -785,8 +789,8 @@ structure MkOperators : sig
 
   (************************* tranpose *************************)
 
-    fun transposeT alpha = E.EIN{
-            params = [mkTEN alpha],
+    fun transposeT (alpha, iv1) = E.EIN{
+            params = [mkTEN alpha iv1],
             index = List.rev alpha,
             body = E.Tensor(0, [E.V 1, E.V 0])
           }
@@ -800,15 +804,15 @@ structure MkOperators : sig
 
   (************************* determinant *************************)
 
-    val det2T = E.EIN{
-            params = [mkNoSubstTEN [2, 2]],
+    fun det2T iv = E.EIN{
+            params = [mkNoSubstTEN ([2, 2]) iv],
             index = [],
             body = E.Op2(E.Sub,
               E.Opn(E.Prod, [E.Tensor(0, [E.C 0, E.C 0]), E.Tensor(0, [E.C 1, E.C 1])]),
               E.Opn(E.Prod, [E.Tensor(0, [E.C 0, E.C 1]), E.Tensor(0, [E.C 1, E.C 0])]))
           }
 
-    val det3T = let
+    fun det3T iv = let
           val a = E.Tensor(0, [E.C 0, E.C 0])
           val b = E.Tensor(0, [E.C 0, E.C 1])
           val c = E.Tensor(0, [E.C 0, E.C 2])
@@ -820,7 +824,7 @@ structure MkOperators : sig
           val i = E.Tensor(0, [E.C 2, E.C 2])
           in
             E.EIN{
-                params = [mkNoSubstTEN [3, 3]],
+                params = [mkNoSubstTEN [3, 3] iv],
                 index = [],
                 body = E.Op2(E.Sub,
                   E.Opn(E.Add, [
@@ -859,7 +863,7 @@ structure MkOperators : sig
 
     fun mkInvS e = E.Op2(E.Div, E.Const 1, e(0, []))
     fun invS dim = E.EIN{params = [E.FLD dim], index= [], body =  mkInvS E.Field}
-    val invR = E.EIN{params = [mkTEN([])], index= [], body =  mkInvS E.Tensor}
+    fun invR iv = E.EIN{params = [mkTEN ([]) iv], index= [], body =  mkInvS E.Tensor}
 
 
 
@@ -932,27 +936,27 @@ structure MkOperators : sig
 
     fun inv2F dim = E.EIN{params = [E.FLD dim], index= [2, 2], body = mkInv2x2 E.Field}
 
-    val inv2T = let
+    fun inv2T iv = let
           val shape = [2, 2]
           in
-            E.EIN{params = [mkTEN shape], index = shape, body = mkInv2x2 E.Tensor}
+            E.EIN{params = [mkTEN shape iv], index = shape, body = mkInv2x2 E.Tensor}
     end
 
     fun inv3F dim = E.EIN{params = [E.FLD dim], index= [3, 3], body = mkInv3x3 E.Field}
-    val inv3T = let
+    fun inv3T iv = let
      val shape = [3, 3]
     in
-     E.EIN{params = [mkTEN shape], index = shape, body = mkInv3x3 E.Tensor}
+     E.EIN{params = [mkTEN shape iv], index = shape, body = mkInv3x3 E.Tensor}
     end		  
 		  
   (************************* Exponential **************************)
     fun expF dim = E.EIN{params = [E.FLD dim], index = [], body = E.Op1(E.Exp, E.Field(0, []))}
-    val expT = E.EIN{params = [mkNoSubstTEN []], index = [], body = E.Op1(E.Exp, E.Tensor(0, []))}
+    fun expT iv = E.EIN{params = [mkNoSubstTEN [] iv], index = [], body = E.Op1(E.Exp, E.Tensor(0, []))}
 
   (************************* Lifted single-argument math functions *************************)
     local
-      fun tensorFn rator = E.EIN{
-              params = [mkTEN []],
+      fun tensorFn rator iv = E.EIN{
+              params = [mkTEN [] iv],
               index = [],
               body = E.Op1(rator, E.Tensor(0, []))
             }
@@ -966,8 +970,8 @@ structure MkOperators : sig
             params = [E.FLD dim],
             index = [], body = E.Op1(E.PowInt n, E.Field(0, []))
           }
-    fun powTI n = E.EIN{
-            params = [mkTEN []],
+    fun powTI (n, iv)= E.EIN{
+            params = [mkTEN [] iv],
             index = [], body = E.Op1(E.PowInt n, E.Tensor(0, []))
           }
     val sqrtR = tensorFn E.Sqrt
@@ -996,11 +1000,11 @@ structure MkOperators : sig
         
   (************************* other tensor ops *************************)
 
-    fun modulateTT shape = let
+    fun modulateTT(shape, iv1, iv2) = let
           val expindex = specialize(shape, 0)
           in
             E.EIN{
-                params = [mkTEN shape, mkTEN shape],
+                params = [mkTEN shape iv1, mkTEN shape iv2],
                 index = shape,
                 body = E.Opn(E.Prod, [E.Tensor(0, expindex), E.Tensor(1, expindex)])
               }
@@ -1020,7 +1024,7 @@ structure MkOperators : sig
           val expindex = specialize(shape, 0)
           in
             E.EIN{
-                params = [mkTEN shape, E.FLD dim],
+                params = [mkTEN' shape, E.FLD dim],
                 index = shape,
                 body = E.Opn(E.Prod,[E.Lift(E.Tensor(0, expindex)), E.Field(1, expindex)])
               }
@@ -1030,7 +1034,7 @@ structure MkOperators : sig
           val expindex = specialize(shape, 0)
           in
             E.EIN{
-                params = [E.FLD dim, mkTEN shape],
+                params = [E.FLD dim, mkTEN' shape],
                 index = shape,
                 body = E.Opn(E.Prod, [E.Field(0, expindex), E.Lift(E.Tensor(1, expindex))])
               }
@@ -1049,13 +1053,13 @@ structure MkOperators : sig
  * of the mask element!  Likewise, the result type can be determined from the argTy and
  * mask.
  *)
-    fun sliceT (mask, const, rstTy, argTy) = let
+    fun sliceT (mask, const, rstTy, argTy, iv) = let
           fun iter ([], _, cnt) = []
             | iter (true::es, c::cs, cnt) = (E.C c)::iter(es, cs, cnt)
             | iter (false::es, cs, cnt) = (E.V cnt)::iter(es, cs, cnt+1)
           val ix = iter(mask, const, 0)
           in
-            E.EIN{params = [E.TEN(true, argTy)], index = rstTy, body = E.Tensor(0, ix)}
+            E.EIN{params = [E.TEN(true, argTy, iv)], index = rstTy, body = E.Tensor(0, ix)}
           end
 
     fun sliceF (mask, const, rstTy, dim) = let
@@ -1074,9 +1078,9 @@ structure MkOperators : sig
             E.Opn(E.Add, exps)
           end
 
-    fun concatTensor (shape, nflds) =
+    fun concatTensor (shape, nflds, iv) =
           E.EIN{
-              params = List.tabulate (nflds, fn _=> mkTEN shape),
+              params = List.tabulate (nflds, fn _=> mkTEN shape iv),
               index = nflds::shape,
               body = concatBody (E.Tensor, shape, nflds, 0)
             }
@@ -1117,7 +1121,7 @@ structure MkOperators : sig
           val e5 = E.Opn(E.Prod, [c, e3])
           in
             E.EIN{
-                params = [mkTEN alpha, mkTEN alpha, mkTEN []],
+             params = [mkTEN' alpha, mkTEN' alpha, mkTEN' []],
                 index = alpha,
                 body = E.Opn(E.Add, [a, e5])
               }
@@ -1137,7 +1141,7 @@ structure MkOperators : sig
           val e5 = E.Opn(E.Prod, [e4, e3])
           in
             E.EIN{
-                params = [mkTEN alpha, mkTEN alpha, mkTEN [], mkTEN [], mkTEN []],
+                params = [mkTEN' alpha, mkTEN' alpha, mkTEN' [], mkTEN' [], mkTEN' []],
                 index = alpha,
                 body = E.Opn(E.Add, [a, e5])
               }
@@ -1151,7 +1155,7 @@ structure MkOperators : sig
           val c = E.Tensor(2, expindex)
           in
             E.EIN{
-                params = [mkTEN [], mkTEN [], mkTEN alpha],
+                params = [mkTEN' [], mkTEN' [], mkTEN' alpha],
                 index = alpha,
                 body = E.Op3(E.Clamp, a, b, c)
               }
@@ -1165,7 +1169,7 @@ structure MkOperators : sig
           val c = E.Tensor(2, expindex)
           in
             E.EIN{
-                params = [mkTEN alpha, mkTEN alpha, mkTEN alpha],
+                params = [mkTEN' alpha, mkTEN' alpha, mkTEN' alpha],
                 index = alpha,
                 body = E.Op3(E.Clamp, a, b, c)
              }
@@ -1181,7 +1185,7 @@ structure MkOperators : sig
           val elerp = E.Opn(E.Add, [a, e5])
           in
             E.EIN{
-                params = [mkTEN alpha, mkTEN alpha, mkTEN []],
+                params = [mkTEN' alpha, mkTEN' alpha, mkTEN' []],
                 index = alpha,
                 body = E.Op3(E.Clamp, a, b, elerp)
               }
@@ -1202,7 +1206,7 @@ structure MkOperators : sig
           val elerp = E.Opn(E.Add, [a, e5])
           in
             E.EIN{
-                params = [mkTEN alpha, mkTEN alpha, mkTEN [], mkTEN [], mkTEN []],
+                params = [mkTEN' alpha, mkTEN' alpha, mkTEN' [], mkTEN' [], mkTEN' []],
                 index = alpha,
                 body =  E.Op3(E.Clamp, a, b, elerp)
               }
@@ -1222,11 +1226,11 @@ structure MkOperators : sig
           end
 
   (* Probe: <F(x)>_{\alpha}   *)
-    fun probe (alpha, dim) = let
+    fun probe (alpha, dim, iv) = let
           val expindex = specialize(alpha, 0)
           in
             E.EIN{
-                params = [E.FLD dim, mkNoSubstTEN [dim]], index = alpha,
+                params = [E.FLD dim, mkNoSubstTEN [dim] iv], index = alpha,
                 body = E.Probe(E.Field(0, expindex), E.Tensor(1, []))
               }
           end
@@ -1235,7 +1239,7 @@ structure MkOperators : sig
           val expindex = specialize(alpha, 0)
           in  
             E.EIN{
-                params = [mkNoSubstTEN[], E.FLD dim, E.FLD dim], 
+                params = [mkNoSubstTEN'[], E.FLD dim, E.FLD dim], 
                 index = alpha, 
                 body = E.If(E.Var 0, E.Field(1, expindex) , E.Field(2, expindex))
               }
@@ -1245,7 +1249,7 @@ structure MkOperators : sig
           val expindex = specialize(alpha, 0)
           in 
             E.EIN{
-                params = [mkTEN[], mkTEN[], E.FLD dim, E.FLD dim], 
+                params = [mkTEN'[], mkTEN'[], E.FLD dim, E.FLD dim], 
                 index = alpha, 
                 body = E.If(E.Compare(condition, E.Tensor(0,[]),E.Tensor(1,[])), E.Field(2, expindex) , E.Field(3, expindex))
               }   
@@ -1268,7 +1272,7 @@ structure MkOperators : sig
           }
 
     val curl3d = E.EIN{
-            params = [mkTEN [3]],
+            params = [E.FLD 3],
             index = [3],
             body = E.Sum([(1, 0, 2), (2, 0, 2)],
               E.Opn(E.Prod, [
@@ -1328,9 +1332,9 @@ structure MkOperators : sig
           val tterm_tt = List.tabulate(n_tt, fn id => (id+shift_tf,E.T))
           val fldtem = E.Tensor(0, specialize(alpha_f, 0))
           val bodyterm  = E.OField(E.CFExp (tterm_tf@tterm_tt), fldtem ,  E.Partial [])
-          val param_f = [mkTEN alpha_f]
-          val param_tt = List.map (fn talpha => mkNoSubstTEN  talpha)  alphas_tt
-          val param_tf = List.map (fn talpha => mkNoSubstTEN  talpha)  alphas_tf
+          val param_f = [mkTEN' alpha_f]
+          val param_tt = List.map (fn talpha => mkNoSubstTEN' talpha)  alphas_tt
+          val param_tf = List.map (fn talpha => mkNoSubstTEN' talpha)  alphas_tf
           in
             E.EIN {
                 params = param_f@param_tf@param_tt,

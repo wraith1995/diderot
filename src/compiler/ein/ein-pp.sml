@@ -173,7 +173,9 @@ structure EinPP : sig
           (* end case *))
 
     fun toString (Ein.EIN{params, index, body}) = let
-          fun paramToString (i, E.TEN(t, shp)) = concat["T", i2s i, "[", shp2s shp, "]"]
+     fun paramToString (i, E.TEN(t, shp, NONE)) = concat["T", i2s i, "[", shp2s shp, "]"]
+       | paramToString (i, E.TEN(t, shp, SOME 1)) = concat["interval T", i2s i, "[", shp2s shp, "]"]
+       | paramToString (i, E.TEN(t, shp, SOME k)) = concat["affine ", i2s k, " T", i2s i, "[", shp2s shp, "]"]
             | paramToString (i, E.FLD d) = concat["F", i2s i, "[", i2s d, "]"]
             | paramToString (i, E.KRN) = "H" ^ i2s i
             | paramToString (i, E.IMG(d, shp)) = concat["V", i2s i, "(", i2s d, ")[", shp2s shp, "]"]
