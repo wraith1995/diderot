@@ -74,6 +74,7 @@ structure Types =
 	= Shape of dim list
       | ShapeVar of shape_var
       | ShapeExt of shape * dim         (* extension of shape (i.e., for D operator) *)
+      | ShapeExt' of dim * shape         (* extension of shape for interval and affine operators*)
 
   (* shape meta variable *)
     and shape_var = SV of {
@@ -85,6 +86,7 @@ structure Types =
     and dim
       = DimConst of int                 (* i *)
       | DimVar of dim_var
+      | IntervalDim of interval_var
 
   (* dimension meta variable *)
     and dim_var = DV of {
@@ -95,6 +97,7 @@ structure Types =
 	= IC of int
         | MaxVar of interval * interval (* for bin ops where same types are added or one type + scalar *)
         | AddVar of interval_var * int (* D+j for various operations *)
+	| ShapeSize of shape
     and interval_var = IV of {
 	 id: Stamp.t,
 	 bind : interval option ref

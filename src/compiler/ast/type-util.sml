@@ -58,6 +58,7 @@ structure TypeUtil : sig
     val pruneDiff : Types.diff -> Types.diff
     val pruneShape : Types.shape -> Types.shape
     val pruneInterval : Types.interval -> Types.interval
+    val pruneInterval' : (Types.shape * Types.shape -> bool) -> Types.interval -> Types.interval
     val pruneDim : Types.dim -> Types.dim
 
   (* prune the head of a type *)
@@ -73,7 +74,7 @@ structure TypeUtil : sig
 					 
 
   (* equality testing *)
-    val sameDim : Types.dim * Types.dim -> bool
+    (* val sameDim : Types.dim * Types.dim -> bool *)
 
   (* string representations of types, etc *)
     val toString : Types.ty -> string
@@ -149,10 +150,22 @@ structure TypeUtil : sig
           (* end case *))
       | pruneDiff diff = diff
 
-    and pruneDim dim = (case dim
-           of Ty.DimVar(Ty.DV{bind=ref(SOME dim), ...}) => pruneDim dim
-            | dim => dim
-          (* end case *))
+    and pruneDim dim =
+	(case dim
+	  of Ty.DimVar(Ty.DV{bind=ref(SOME dim), ...}) => pruneDim dim
+	   | Ty.IntervalDim(iv) =>
+	     let
+	      val Ty.IV{bind, id} = iv
+	     in
+	      (case !bind
+		of NONE => dim
+		 | SOME(iv') =>
+		   (case pruneInterval iv'
+		     of Ty.IC j => Ty.DimConst j
+		      | iv'' => (bind := SOME(iv''); dim)))
+	     end
+           | dim => dim
+        (* end case *))
 
     and filterDim dim = (case pruneDim dim
            of Ty.DimConst 1 => NONE
@@ -162,19 +175,25 @@ structure TypeUtil : sig
     and pruneShape shape = (case shape
            of Ty.Shape dd => Ty.Shape(List.mapPartial filterDim dd)
             | Ty.ShapeVar(Ty.SV{bind=ref(SOME shape), ...}) => pruneShape shape
-            | Ty.ShapeExt(shape, dim) => (case filterDim dim
-                 of SOME dim => Ty.shapeExt(pruneShape shape, dim)
-                  | NONE => pruneShape shape
-                (* end case *))
+            | Ty.ShapeExt(shape, dim) =>
+	      (case filterDim dim
+                of SOME dim => Ty.shapeExt(pruneShape shape, dim)
+                 | NONE => pruneShape shape
+	      (* end case *))
+            | Ty.ShapeExt'(dim, shape) =>
+	      (case filterDim dim
+                of SOME dim => Ty.ShapeExt'(dim, pruneShape shape)
+                 | NONE => pruneShape shape
+              (* end case *))
             | _ => shape
-            (* end case *))
+			   (* end case *))
 			     
     and pruneInterval interval =
 	(case interval
 	  of Ty.IC j => Ty.IC j
 	   | Ty.MaxVar(iv1, iv2) =>
 	     (case (pruneInterval iv1, pruneInterval iv2)
-	       of (Ty.IC(iv1'), Ty.IC(iv2')) => 
+	       of (a as Ty.IC(iv1'), b as Ty.IC(iv2')) => 
 		  if iv1' = 0 andalso iv2' = 0
 		  then Ty.IC 0
 		  else if (iv1' = 0) andalso (iv2' > 0)
@@ -183,7 +202,13 @@ structure TypeUtil : sig
 		  then Ty.IC iv1'
 		  else if (iv1' > 0) andalso (iv1' = iv2')
 		  then Ty.IC iv1'
-		  else raise Fail "MaxVar incompatible or invalid"
+		  else Ty.MaxVar(a, b)
+		| (Ty.IC 0, b) => b
+		| (a, Ty.IC 0) => a
+		| (a as Ty.AddVar(iv1,r), b as Ty.AddVar(iv2, r')) =>
+		  if MV.sameIntervalVar(iv1, iv2) andalso r=r'
+		  then Ty.AddVar(iv1,r)
+		  else Ty.MaxVar (a,b)
 		| (iv1', iv2') => Ty.MaxVar(iv1', iv2')
 	     (* end case *))
 	   | Ty.AddVar(Ty.IV{id=id, bind=ref(SOME(iv))}, j) =>
@@ -192,8 +217,26 @@ structure TypeUtil : sig
 		| Ty.AddVar(iv', k) => Ty.AddVar(iv', j+k)
 		| iv' => interval
 	     (* end case *))
-
-
+	   | Ty.ShapeSize(shape) =>
+	     (case pruneShape shape
+	       of Ty.Shape ds =>
+		  let
+		   val size = List.foldr (fn (Ty.DimConst j, k) => j *k | _ => 0) 1 ds
+					 
+		  in
+		   if size = 0
+		   then Ty.ShapeSize (Ty.Shape ds)
+		   else Ty.IC (size + 2)
+		  end
+		| shape' => Ty.ShapeSize(shape'))
+	   | _ => interval
+	(* end case *))
+    and pruneInterval' equalShape interval  =
+	(case pruneInterval interval
+	  of Ty.MaxVar(Ty.ShapeSize(shape1), Ty.ShapeSize(shape2)) =>
+	     if equalShape(shape1, shape2)
+	     then Ty.ShapeSize(shape1)
+	     else interval
 	   | _ => interval
 	(* end case *))
 
@@ -252,7 +295,6 @@ structure TypeUtil : sig
               }
 	    | prune' (Ty.T_Named(name, def)) = Ty.T_Named(name,  prune' def)
             | prune' ty = ty
-
           in
             prune' ty
           end
@@ -385,11 +427,12 @@ structure TypeUtil : sig
 	   | Ty.T_Named(_, ty') => isInputFemType ty'
 	   | _ => false
 	(*end case*))
-
+    (*Question: Do we need this function?*)
   (* equality testing *)
-    fun sameDim (Ty.DimConst d1, Ty.DimConst d2) = (d1 = d2)
-      | sameDim (Ty.DimVar v1, Ty.DimVar v2) = MetaVar.sameDimVar(v1, v2)
-      | sameDim _ = false
+    (* fun sameDim (Ty.DimConst d1, Ty.DimConst d2) = (d1 = d2) *)
+    (*   | sameDim (Ty.DimVar v1, Ty.DimVar v2) = MetaVar.sameDimVar(v1, v2) *)
+    (*   | sameDim (Ty.IntervalDim iv1, Ty.IntervalDim iv2) = MetaVar.sameIntervalVar(iv1, iv2) *)
+    (*   | sameDim _ = false *)
 
     fun listToString fmt sep items = String.concatWith sep (List.map fmt items)
 
@@ -410,14 +453,24 @@ structure TypeUtil : sig
                 fun toS (Ty.Shape shape) = (listToString dimToString "," shape) ^ ","
                   | toS (Ty.ShapeVar sv) = MV.shapeVarToString sv ^ ";"
                   | toS (Ty.ShapeExt(shape, d)) = concat[toS shape, dimToString d, ","]
+		  | toS (Ty.ShapeExt'(d,shape)) = concat[dimToString d, toS shape, ","]
                 in
                   concat["[", toS shape, dimToString d, "]"]
-                end
+            end
+	    | Ty.ShapeExt'(d, shape) => let
+             fun toS (Ty.Shape shape) = (listToString dimToString "," shape) ^ ","
+               | toS (Ty.ShapeVar sv) = MV.shapeVarToString sv ^ ";"
+               | toS (Ty.ShapeExt(shape, d)) = concat[toS shape, dimToString d, ","]
+	       | toS (Ty.ShapeExt'(d,shape)) = concat[dimToString d, toS shape, ","]
+            in
+             concat["[", dimToString d, ",", toS shape, "]"]
+            end
           (* end case *))
 
     and dimToString dim = (case pruneDim dim
            of Ty.DimConst n => Int.toString n
             | Ty.DimVar v => MV.dimVarToString v
+	    | Ty.IntervalDim iv => MV.intervalVarToString iv
 			  (* end case *))
     and intervalToString iv =
 	(case pruneInterval iv
@@ -430,6 +483,7 @@ structure TypeUtil : sig
 			else "invalid["^(Int.toString j)^"] " 
 	   | Ty.MaxVar(a,b) => "affineMax(" ^ (intervalToString a) ^ ", " ^ (intervalToString b) ^") "
 	   | Ty.AddVar(iv, j) => "intervalAdd(" ^ (MV.intervalVarToString iv) ^ ", " ^ (Int.toString j) ^ ") "
+	   | Ty.ShapeSize(shape) => "affine[|" ^ (shapeToString shape) ^"| + 1]"
 	(* end case *))
 
     fun toString ty = (case pruneHead ty
@@ -539,15 +593,20 @@ structure TypeUtil : sig
                 (* end case *))
             | iDiff diff = diff
           fun iDim (Ty.DimVar dv) = (case MV.Map.find(env, Ty.DIM dv)
-                 of SOME(Ty.DIM dv) => Ty.DimVar dv
-                  | _ => raise Fail "impossible"
-                (* end case *))
+				      of SOME(Ty.DIM dv) => Ty.DimVar dv
+				       | _ => raise Fail "impossible"
+				    (* end case *))
+	    | iDim (Ty.IntervalDim iv) = (case MV.Map.find(env, Ty.INTERVAL iv)
+					   of SOME(Ty.INTERVAL iv') => Ty.IntervalDim iv'
+					    | _ => raise Fail "impossible"
+					 (* end case *))
             | iDim dim = dim
           fun iShape (Ty.ShapeVar sv) = (case MV.Map.find(env, Ty.SHAPE sv)
                  of SOME(Ty.SHAPE sv) => Ty.ShapeVar sv
                   | _ => raise Fail "impossible"
                 (* end case *))
             | iShape (Ty.ShapeExt(shape, dim)) = Ty.ShapeExt(iShape shape, iDim dim)
+	    | iShape (Ty.ShapeExt'(dim, shape)) = Ty.ShapeExt'(iDim dim, iShape shape)
             | iShape (Ty.Shape dims) = Ty.Shape(List.map iDim dims)
 
 	  fun iInterval (Ty.AddVar(iv, j)) =
@@ -557,6 +616,7 @@ structure TypeUtil : sig
 	      (* end case *))
 	    | iInterval (Ty.IC(j)) = Ty.IC(j)
 	    | iInterval (Ty.MaxVar(iv1, iv2)) = Ty.MaxVar(iInterval iv1, iInterval iv2)
+	    | iInterval (Ty.ShapeSize(shape)) = Ty.ShapeSize(iShape shape)
 							 
           fun ity (Ty.T_Var tv) = (case MV.Map.find(env, Ty.TYPE tv)
                  of SOME(Ty.TYPE tv) => Ty.T_Var tv
