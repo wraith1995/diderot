@@ -32,6 +32,7 @@ structure Unify : sig
     val tryEqualTypes : Types.ty list * Types.ty list -> bool
 
     val equalDim : Types.dim * Types.dim -> bool
+    val equalInterval : Types.interval * Types.interval -> bool
 
   end = struct
 
@@ -65,11 +66,20 @@ structure Unify : sig
           pl := Ty.DIM dv :: !pl)
       | bindDimVar _ = raise Fail "rebinding dimension variable"
 
+
+    fun bindIntervalVar (pl, iv as Ty.IV{bind as ref NONE, ...}, interval) =
+	(
+	  bind := SOME interval;
+	  pl := Ty.INTERVAL iv :: !pl
+	)
+      | bindIntervalVar _ = raise Fail "rebinding interval variable"
+				  
     fun undo pl = let
           fun undo1 (Ty.TYPE(Ty.TV{bind, ...})) = bind := NONE
             | undo1 (Ty.DIFF(Ty.DfV{bind, ...})) = bind := NONE
             | undo1 (Ty.SHAPE(Ty.SV{bind, ...})) = bind := NONE
             | undo1 (Ty.DIM(Ty.DV{bind, ...})) = bind := NONE
+	    | undo1 (Ty.INTERVAL(Ty.IV{bind, ...})) = bind := NONE
           in
             List.map undo1 (!pl)
           end
@@ -83,7 +93,7 @@ structure Unify : sig
             | (Ty.DiffVar(dv, 0), Ty.DiffConst NONE) => (
                 bindDiffVar(pl, dv, Ty.DiffConst NONE); true)
             | (Ty.DiffConst(SOME k1), Ty.DiffConst(SOME k2)) => (k1 = k2)
-            | (Ty.DiffConst(SOME k), Ty.DiffVar(dv, i)) => let
+            | (Ty.DiffConst(SOME k), Ty.DiffVar(dv, i)) => let (*QUESTION: shouldn't k = dv+i so dv = k - i*)
                 val k' = k+i
                 in
                   if k' < 0 then false
@@ -115,15 +125,92 @@ structure Unify : sig
             | (Ty.DiffVar(dv1, k1), Ty.DiffVar(dv2, k2)) =>
                 MV.sameDiffVar(dv1, dv2) andalso (k1 <= k2)
             | _ => equalDiff (pl, diff1, diff2)  (* force equality *)
-          (* end case *))
+				       (* end case *))
 
-    fun equalDim (pl, dim1, dim2) = (case (TU.pruneDim dim1, TU.pruneDim dim2)
-           of (Ty.DimConst d1, Ty.DimConst d2) => (d1 = d2)
-            | (Ty.DimVar dv, dim2) => (bindDimVar(pl, dv, dim2); true)
-            | (dim1, Ty.DimVar dv) => (bindDimVar(pl, dv, dim1); true)
-          (* end case *))
+    fun equalInterval (pl, iv1, iv2) =
+	let
+	 val eqs = fn (x,y) => equalShape(pl, x, y)
+	 (*tries to patch two intervals at the sametime and undoes bindings if it fails to do so.*)
+	 fun tryMatchIvPair(pl, (iv1, iv2), (iv1', iv2')) =
+	     let
+	      val pl' = ref []
+	      val eq1 = equalInterval(pl', iv1, iv1') handle ex => false
+	      val eq2 = equalInterval(pl', iv2, iv2') handle ex => false
+	      val ret = eq1 andalso eq2
+	     in
+	      ((if not(ret)
+	       then (undo pl'; pl' := [])
+	       else ());
+	       (pl := !pl' @ !pl);
+	       ret
+	      )
+	     end
 
-    fun equalShape (pl, shape1, shape2) = (case (TU.pruneShape shape1, TU.pruneShape shape2)
+	 fun swap (a,b) = (b,a)
+	 (*a Max(a,b) can match some c when Max is equal to either a or b if the non-matched one is a scalar or if c equals both a and b.*)
+	 fun constantOrSame(pl, maxivs, other) =
+	     let
+	      val case1 = (other, other)
+	      val case2 = (Ty.IC 0, other)
+	      val case3 = swap case2
+	     in
+	      tryMatchIvPair(pl, maxivs, case1)
+	      orelse tryMatchIvPair(pl, maxivs, case2)
+	      orelse tryMatchIvPair(pl, maxivs, case3)
+	     end
+	in
+	(case (TU.pruneInterval' eqs iv1, TU.pruneInterval' eqs iv2)
+	  of (Ty.IC j, Ty.IC k) => j=k
+	   | (Ty.IC j, Ty.AddVar(iv1, k)) =>
+	     (*j = iv1 + k so iv1 = j-k*)
+	     let
+	      val k' = j - k
+	     in
+	      if k' < 0 then false
+	      else (bindIntervalVar(pl, iv1, Ty.IC k'); true)
+	     end
+	       
+	   | (Ty.AddVar(iv1, k), Ty.IC j) =>
+	     let
+	      val k' = j-k
+	     in
+	      if k' < 0 then false
+	      else (bindIntervalVar(pl, iv1, Ty.IC k'); true)
+	     end
+	   (*there must be an unbound addVar in both or a maxvar*)	       
+	   | (av1 as Ty.AddVar(iv1, k), av2 as Ty.AddVar(iv2, j)) =>
+	     if k = 0
+	     then (bindIntervalVar(pl, iv1, av2); true)
+	     else if j = 0
+	     then (bindIntervalVar(pl, iv2, av1); true)
+		    (*iv1 +k = iv2 + j*)
+	     else if MV.sameIntervalVar(iv1, iv2)
+	     then false
+	     else (bindIntervalVar(pl, iv1, Ty.AddVar(iv2, j-k)); true)
+	   | (Ty.ShapeSize(shape), Ty.ShapeSize(shape')) => eqs(shape, shape')
+	   | (Ty.AddVar(iv, 0), alt) => (bindIntervalVar(pl, iv, alt); true)
+	   | (alt, Ty.AddVar(iv, 0)) => (bindIntervalVar(pl, iv, alt); true)
+	   | (Ty.MaxVar ivs1, Ty.MaxVar ivs2) => tryMatchIvPair(pl, ivs1, ivs2) orelse tryMatchIvPair(pl, swap ivs1, ivs2)
+	   | (Ty.MaxVar ivs, alt) => constantOrSame(pl, ivs, alt)
+	   | (alt, Ty.MaxVar ivs) => constantOrSame(pl, ivs, alt)
+	   | _ => false
+	(*merge, merge - merge/ic, merge/addVar*)
+	(* end case *))
+	  end
+
+    and equalDim (pl, dim1, dim2) =
+	(case (TU.pruneDim dim1, TU.pruneDim dim2)
+	  of (Ty.DimConst d1, Ty.DimConst d2) => (d1 = d2)
+	   | (Ty.IntervalDim(iv1), Ty.DimConst d) => (bindIntervalVar(pl, iv1, Ty.IC d); true)
+	   | (Ty.DimConst d, Ty.IntervalDim iv2) => (bindIntervalVar(pl, iv2, Ty.IC d); true)
+	   | (Ty.IntervalDim(iv1), Ty.IntervalDim(iv2)) => (bindIntervalVar(pl, iv1, Ty.AddVar(iv2, 0)); true)
+	   | (Ty.IntervalDim(iv1), Ty.DimVar(dv1)) => false
+	   | (Ty.DimVar(dv1), Ty.IntervalDim(iv2)) => false
+           | (Ty.DimVar dv, dim2) => (bindDimVar(pl, dv, dim2); true) (*dim2 is a var or const*)
+           | (dim1, Ty.DimVar dv) => (bindDimVar(pl, dv, dim1); true) (*dim1 is a var or const*)
+        (* end case *))
+
+    and equalShape (pl, shape1, shape2) = (case (TU.pruneShape shape1, TU.pruneShape shape2)
            of (Ty.Shape[], Ty.Shape[Ty.DimVar dv]) => ( (* tensor[] == tensor[1] *)
                 bindDimVar(pl, dv, Ty.DimConst 1); true)
 (*
@@ -150,10 +237,18 @@ structure Unify : sig
                   | chk (d::dd, revDD) = chk(dd, d::revDD)
                 in
                   chk (dd, [])
-                end
+            end
+            | (Ty.Shape (d::dd), Ty.ShapeExt'(d', shape)) => let
+            in
+	     equalDim(pl, d : Ty.dim, d' : Ty.dim) andalso equalShape(pl, Ty.Shape dd, shape)
+            end
+	    | (Ty.Shape [], Ty.ShapeExt' _) => false
             | (Ty.ShapeVar sv, shape) => (bindShapeVar (pl, sv, shape); true)
             | (Ty.ShapeExt(shape1, d1), Ty.ShapeExt(shape2, d2)) =>
-                equalDim(pl, d1, d2) andalso equalShape(pl, shape1, shape2)
+              equalDim(pl, d1, d2) andalso equalShape(pl, shape1, shape2)
+            | (Ty.ShapeExt'(d1, shape1), Ty.ShapeExt'(d2, shape2)) =>
+              equalDim(pl, d1, d2) andalso equalShape(pl, shape1, shape2)
+	    | (Ty.ShapeExt'(d1, shape1), Ty.ShapeExt(shape2, d2)) => raise Fail "impossible: both shapeExt' and ShapeExt are return type restricted; therefore they should be pruned to Ty.Shape (Ty.Dimconst ...) before use. This assumption will have died if the typesystem is more polymorphic."
             | (shape1, shape2) => equalShape(pl, shape2, shape1)
         (* end case *))
 
@@ -185,7 +280,7 @@ structure Unify : sig
             | match (Ty.T_Strand s1, Ty.T_Strand s2) = Atom.same(s1, s2)
 	    | match (Ty.T_Named(s1,_), Ty.T_Named (s2,_)) = Atom.same(s1, s2)
             | match (Ty.T_Kernel k1, Ty.T_Kernel k2) = equalDiff (pl, k1, k2)
-            | match (Ty.T_Tensor s1, Ty.T_Tensor s2) = equalShape (pl, s1, s2)
+            | match (Ty.T_Tensor (s1, i1), Ty.T_Tensor (s2, i2)) = equalShape (pl, s1, s2) andalso equalInterval(pl, i1, i2)
             | match (Ty.T_Image{dim=d1, shape=s1}, Ty.T_Image{dim=d2, shape=s2}) =
                 equalDim (pl, d1, d2) andalso equalShape(pl, s1, s2)
             | match (Ty.T_Field{diff=k1, dim=d1, shape=s1}, Ty.T_Field{diff=k2, dim=d2, shape=s2}) =
@@ -214,8 +309,8 @@ structure Unify : sig
 
   (* try to unify ty1 and ty2, where we allow ty2 to be coerced to ty1 *)
     fun unifyTypeWithCoercion (pl, ty1, ty2) = (case (TU.pruneHead ty1, TU.pruneHead ty2)
-           of (Ty.T_Tensor shp, Ty.T_Int) =>
-                if equalShape (pl, Ty.Shape[], shp) then COERCE else FAIL
+           of (Ty.T_Tensor (shp, iv), Ty.T_Int) =>
+                if equalShape (pl, Ty.Shape[], shp) andalso equalInterval(pl, Ty.IC 0, iv) then COERCE else FAIL
             | (Ty.T_Sequence(ty1, SOME d1), Ty.T_Sequence(ty2, SOME d2)) =>
                 if equalDim(pl, d1, d2)
                   then unifyTypeWithCoercion(pl, ty1, ty2)
@@ -238,7 +333,6 @@ structure Unify : sig
 	      then COERCE
 	      else EQ
 	     end
-
 	     else FAIL
 	    )
             | (Ty.T_Field{diff=k1, dim=d1, shape=s1}, Ty.T_Field{diff=k2, dim=d2, shape=s2}) =>
@@ -327,5 +421,6 @@ val unifyTypeWithCoercion = fn (pl, ty1, ty2) => let
 
   (* rebind equalDim without patch-list argument *)
     val equalDim = fn (d1, d2) => equalDim(ref [], d1, d2)
+    val equalInterval = fn (iv1, iv2) => equalInterval(ref [], iv1, iv2)
 
   end

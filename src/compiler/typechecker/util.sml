@@ -32,7 +32,7 @@ structure Ty = Types
 structure Lit = Literal
 
   (* build a coercion expression; for literal values, we can coerce directly *)
-    fun coerceExp (Ty.T_Tensor(Ty.Shape[]), Ty.T_Int, AST.E_Lit(Literal.Int n)) =
+    fun coerceExp (Ty.T_Tensor(Ty.Shape[], Ty.IC 0), Ty.T_Int, AST.E_Lit(Literal.Int n)) =
         AST.E_Lit(Literal.Real(RealLit.fromInt n))
       | coerceExp (Ty.T_Tuple(tys1), Ty.T_Tuple(tys2), e) =
 	let (*build access up and distribute here.*)
