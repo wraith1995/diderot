@@ -27,7 +27,7 @@ structure MidToLow : sig
            of SrcTy.BoolTy => DstTy.BoolTy
             | SrcTy.StringTy => DstTy.StringTy
             | SrcTy.IntTy => DstTy.IntTy
-            | SrcTy.TensorTy sh => DstTy.TensorTy sh
+            | SrcTy.TensorTy(sh, NONE) => DstTy.TensorTy sh
             | SrcTy.TupleTy tys => DstTy.TupleTy(List.map cvtTy tys)
             | SrcTy.SeqTy(ty, d) => DstTy.SeqTy(cvtTy ty, d)
             | SrcTy.ImageTy info => DstTy.ImageTy info
@@ -101,7 +101,7 @@ structure MidToLow : sig
               | SrcOp.EigenVals2x2 => assign (DstOp.EigenVals2x2)
               | SrcOp.EigenVals3x3 => assign (DstOp.EigenVals3x3)
               | SrcOp.Zero ty => assign (DstOp.Zero(cvtTy ty))
-              | SrcOp.TensorIndex(SrcTy.TensorTy[d], [i]) => assign (DstOp.VIndex(d,i))
+              | SrcOp.TensorIndex(SrcTy.TensorTy([d], NONE), [i]) => assign (DstOp.VIndex(d,i))
               | SrcOp.TensorIndex(ty, shp) => assign (DstOp.TensorIndex(cvtTy ty, shp))
               | SrcOp.Select(ty, i) => assign (DstOp.Select(cvtTy ty, i))
 	      | SrcOp.Tuple(tys) => assign (DstOp.Tuple(List.map cvtTy tys))

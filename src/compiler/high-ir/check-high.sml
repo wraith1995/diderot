@@ -38,9 +38,9 @@ structure CheckOps : OPERATOR_TY = struct
             | Op.Max ty => (ty, [ty, ty])
             | Op.Min ty => (ty, [ty, ty])
             | Op.Zero ty => (ty, [])
-            | Op.TensorIndex(ty as Ty.TensorTy shp, idxs) =>
+            | Op.TensorIndex(ty as Ty.TensorTy (shp,a), idxs) =>
                 if ListPair.allEq chkIndex (idxs, shp)
-                  then (Ty.realTy, [ty])
+                  then (Ty.TensorTy([],a), [ty])
                   else raise Fail("sigOf: invalid index in operator " ^ Op.toString rator)
             | Op.Select(ty as Ty.TupleTy tys, i) =>
                 if (1 <= i) andalso (i <= length tys)
@@ -56,7 +56,7 @@ structure CheckOps : OPERATOR_TY = struct
             | Op.SphereQuery(1, strandTy) =>
                 (Ty.SeqTy(strandTy, NONE), [Ty.realTy, Ty.realTy])
             | Op.SphereQuery(dim, strandTy) =>
-                (Ty.SeqTy(strandTy, NONE), [Ty.TensorTy[dim], Ty.realTy])
+                (Ty.SeqTy(strandTy, NONE), [Ty.vecTy' dim, Ty.realTy])
             | Op.IntToReal => (Ty.realTy, [Ty.IntTy])
             | Op.TruncToInt => (Ty.IntTy, [Ty.realTy])
             | Op.RoundToInt => (Ty.IntTy, [Ty.realTy])
@@ -65,10 +65,10 @@ structure CheckOps : OPERATOR_TY = struct
             | Op.NumStrands _ => (Ty.IntTy, [])
             | Op.Strands(strandTy, _) => (Ty.SeqTy(strandTy, NONE), [])
             | Op.Kernel _ => (Ty.KernelTy, [])
-            | Op.Inside(info, _) => (Ty.BoolTy, [Ty.vecTy(ImageInfo.dim info), Ty.ImageTy info])
+            | Op.Inside(info, _) => (Ty.BoolTy, [Ty.vecTy'(ImageInfo.dim info), Ty.ImageTy info])
             | Op.ImageDim(info, _) => (Ty.IntTy, [Ty.ImageTy info])
             | Op.BorderCtlDefault info =>
-                (Ty.ImageTy info, [Ty.ImageTy info, Ty.TensorTy(ImageInfo.voxelShape info)])
+                (Ty.ImageTy info, [Ty.ImageTy info, Ty.TensorTy(ImageInfo.voxelShape info, NONE)])
             | Op.BorderCtlClamp info => (Ty.ImageTy info, [Ty.ImageTy info])
             | Op.BorderCtlMirror info => (Ty.ImageTy info, [Ty.ImageTy info])
             | Op.BorderCtlWrap info => (Ty.ImageTy info, [Ty.ImageTy info])
@@ -82,10 +82,10 @@ structure CheckOps : OPERATOR_TY = struct
     fun eigenSig dim = let
           val resTy = [
                   Ty.SeqTy(Ty.realTy, SOME dim),
-                  Ty.SeqTy(Ty.vecTy dim, SOME dim)
+                  Ty.SeqTy(Ty.vecTy' dim, SOME dim)
                 ]
           in
-            (resTy, [Ty.TensorTy[dim, dim]])
+            (resTy, [Ty.TensorTy([dim, dim], NONE)])
           end
 
     fun msigOf rator = (case rator
@@ -97,9 +97,9 @@ structure CheckOps : OPERATOR_TY = struct
             | _ => raise Fail("msigOf: invalid operator " ^ Op.toString rator)
           (* end case *))
 
-    fun typeOfCons (Ty.TensorTy dd', (ty1 as Ty.TensorTy dd)::r) =
+    fun typeOfCons (Ty.TensorTy (dd',a), (ty1 as Ty.TensorTy (dd,a'))::r) =
           if List.all (fn ty => Ty.same(ty1, ty)) r
-            then (dd' = (List.length r + 1)::dd)
+            then (dd' = (List.length r + 1)::dd) andalso a=a'
             else false
       | typeOfCons _ = false
 

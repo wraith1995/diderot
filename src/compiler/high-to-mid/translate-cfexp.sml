@@ -29,7 +29,7 @@ structure TranslateCFExp : sig
     val i2s = Int.toString
     val shp2s = String.concatWithMap " " i2s
     fun rhsToString (x, rhs) = concat [IR.Var.toString x , "=", IR.RHS.toString rhs]
-    fun paramToString (i, E.TEN (t, shp)) = concat["T", i2s i, "[", shp2s shp, "]"]
+    fun paramToString (i, E.TEN (t, shp, _)) = concat["T", i2s i, "[", shp2s shp, "]"]
       | paramToString (i, E.FLD d) = concat["F", i2s i, " (", i2s d, ")"]
       | paramToString (i, E.KRN) = "H" ^ i2s i
       | paramToString (i, E.IMG (d, shp)) = concat["V", i2s i, " (", i2s d, ")[", shp2s shp, "]"]
@@ -108,8 +108,8 @@ structure TranslateCFExp : sig
                   (* check if the current parameter is a sequence and get dimension *)
                   (* Note Dev branch supports sequence parameter *)
                     val dim = (case List.nth (params, idx)
-                            of E.TEN (_, []) => 1
-                            | E.TEN (_, [i]) => i
+                            of E.TEN (_, [], _) => 1
+                            | E.TEN (_, [i], _) => i
                             | p => raise Fail ("unsupported argument type:"^paramToString (idx, p))
                         (* end case *))
                   (* variable arg, and param *)

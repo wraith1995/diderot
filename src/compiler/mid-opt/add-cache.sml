@@ -87,7 +87,7 @@ fun dofsInfo ((Op.LoadVoxels(info, n), [img, idx])) =
      val dim = ImageInfo.dim info
      val lastSize = power(n, dim)
      val shape' = shape@[lastSize]
-     val ten = Ty.TensorTy shape'
+     val ten = Ty.TensorTy (shape', NONE)
     in
      (size shape', ten)
     end
@@ -97,14 +97,14 @@ fun dofsInfo ((Op.LoadVoxels(info, n), [img, idx])) =
      val dim = ImageInfo.dim info
      val lastSize = power(n, dim)
      val shape' = shape@[lastSize]
-     val ten = Ty.TensorTy shape'
+     val ten = Ty.TensorTy (shape', NONE)
     in
      (size shape', ten)
     end    
   | dofsInfo ((Op.ExtractFemItemN(tys, ty, opt as (FemOpt.ExtractDofs, data), _, _, _, _), [src1, src2, idx])) =
     let
      val shape = FemOpt.findTargetShape opt
-     val ten = Ty.TensorTy shape
+     val ten = Ty.TensorTy (shape, NONE)
     in
      (size shape, ten)
     end

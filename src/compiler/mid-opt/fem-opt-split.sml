@@ -48,7 +48,7 @@ structure FemOptSplit : sig
 
     fun dofLoad (avail, shape, opt, dofSource, seqVar, seqTy) =
 	let
-	 val targetType = Ty.TensorTy(shape)
+	 val targetType = Ty.TensorTy(shape, NONE)
 	 val newOpt = Op.ExtractFemItem2(seqTy, targetType, opt)
 	 val result = assignOp(avail, "femDofs", targetType, newOpt, [dofSource, seqVar])
 	in

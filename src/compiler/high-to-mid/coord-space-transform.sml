@@ -61,12 +61,12 @@ structure CoordSpaceTransform : sig
     fun worldToImage {avail, info, img, pos} = let
           val dim = ImageInfo.dim info
           val (_, fty, pty) = getTys dim
-          val mty = Ty.TensorTy pty
-          val rty = Ty.TensorTy fty
+          val mty = Ty.TensorTy (pty, NONE)
+          val rty = Ty.TensorTy (fty, NONE)
           val M = AvailRHS.addAssign (avail, "Mtransform", mty, IR.OP(Op.Transform info, [img]))
           val (mulOp, addOp) = if (dim = 1)
-                then (Mk.mulRR, Mk.addRR)
-                else (Mk.innerTT([dim, dim], [dim]), Mk.addTT[dim])
+                then (Mk.mulRR(NONE, NONE), Mk.addRR(NONE, NONE))
+                else (Mk.innerTT([dim, dim], [dim], NONE, NONE), Mk.addTT([dim], NONE, NONE))
           val x0 = AvailRHS.addAssign (avail, "MxPos", rty, IR.EINAPP(mulOp, [M, pos])) (*Image-Space position*)
           val T = AvailRHS.addAssign (avail, "Ttranslate", rty, IR.OP(Op.Translate info, [img]))
           val x = AvailRHS.addAssign (avail, "imgPos", rty, IR.EINAPP(addOp, [x0, T]))
@@ -79,15 +79,15 @@ structure CoordSpaceTransform : sig
     fun worldToIndex (arg as {avail, info, img, pos}) = let
           val dim = ImageInfo.dim info
           val (ity, fty, pty) = getTys dim
-          val mty = Ty.TensorTy  pty
-          val rty = Ty.TensorTy fty
+          val mty = Ty.TensorTy  (pty, NONE)
+          val rty = Ty.TensorTy (fty, NONE)
           val (M, x) = worldToImage arg
           val nd = AvailRHS.addAssign (avail, "nd", rty, IR.OP(Op.Floor dim, [x]))      (* real position *)
-          val f = AvailRHS.addAssign (avail, "f", rty, IR.EINAPP(Mk.subTT fty, [x, nd])) (* fractional *)
+          val f = AvailRHS.addAssign (avail, "f", rty, IR.EINAPP(Mk.subTT (fty, NONE, NONE), [x, nd])) (* fractional *)
           val n = AvailRHS.addAssign (avail, "n", ity, IR.OP(Op.RealToInt dim, [nd]))   (* integer position *)
           val P = if (dim = 1)
                 then M
-                else AvailRHS.addAssign (avail, "P", mty, IR.EINAPP(Mk.transposeT pty, [M]))
+                else AvailRHS.addAssign (avail, "P", mty, IR.EINAPP(Mk.transposeT (pty, NONE), [M]))
           in
             (n, f, P)
           end

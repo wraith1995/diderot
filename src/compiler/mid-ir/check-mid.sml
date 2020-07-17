@@ -14,7 +14,7 @@ structure CheckOps : OPERATOR_TY = struct
     type rator = Op.rator
     type ty = Ty.ty
 
-    val vec3Ty = Ty.vecTy 3
+    val vec3Ty = Ty.vecTy' 3
 
   (* the type of the indices for an image; note that 1D images are indexed by 1-element
    * sequences.
@@ -28,7 +28,7 @@ structure CheckOps : OPERATOR_TY = struct
     fun loadVoxelsSig (info, support) = let
           val shp = ImageInfo.voxelShape info
           val dim = ImageInfo.dim info
-          val resTy = Ty.TensorTy(shp @ List.tabulate(dim, fn _ => support))
+          val resTy = Ty.TensorTy(shp @ List.tabulate(dim, fn _ => support), NONE)
           in
             (resTy, [Ty.ImageTy info, indexType info])
           end
@@ -55,12 +55,12 @@ structure CheckOps : OPERATOR_TY = struct
             | Op.BNot => (Ty.BoolTy, [Ty.BoolTy])
             | Op.Max ty => (ty, [ty, ty])
             | Op.Min ty => (ty, [ty, ty])
-            | Op.EigenVals2x2 => (Ty.SeqTy(Ty.realTy, SOME 2), [Ty.TensorTy[2,2]])
-            | Op.EigenVals3x3 => (Ty.SeqTy(Ty.realTy, SOME 3), [Ty.TensorTy[3,3]])
+            | Op.EigenVals2x2 => (Ty.SeqTy(Ty.realTy, SOME 2), [Ty.TensorTy([2,2], NONE)])
+            | Op.EigenVals3x3 => (Ty.SeqTy(Ty.realTy, SOME 3), [Ty.TensorTy([3,3], NONE)])
             | Op.Zero ty => (ty, [])
-            | Op.TensorIndex(ty as Ty.TensorTy shp, idxs) =>
+            | Op.TensorIndex(ty as Ty.TensorTy (shp, a), idxs) =>
                 if ListPair.allEq chkIndex (idxs, shp)
-                  then (Ty.realTy, [ty])
+                  then (Ty.TensorTy([],a), [ty])
                   else raise Fail("sigOf: invalid index in operator " ^ Op.toString rator)
             | Op.Select(ty as Ty.TupleTy tys, i) => (List.nth(tys, i-1), [ty])
             | Op.Subscript(ty as Ty.SeqTy(elemTy, _)) => (elemTy, [ty, Ty.intTy])
@@ -73,40 +73,40 @@ structure CheckOps : OPERATOR_TY = struct
             | Op.SphereQuery(1, strandTy) =>
                 (Ty.SeqTy(strandTy, NONE), [Ty.realTy, Ty.realTy])
             | Op.SphereQuery(dim, strandTy) =>
-                (Ty.SeqTy(strandTy, NONE), [Ty.TensorTy[dim], Ty.realTy])
-            | Op.Ceiling d => (Ty.vecTy d, [Ty.vecTy d])
-            | Op.Floor d => (Ty.vecTy d, [Ty.vecTy d])
-            | Op.Round d => (Ty.vecTy d, [Ty.vecTy d])
-            | Op.Trunc d => (Ty.vecTy d, [Ty.vecTy d])
+                (Ty.SeqTy(strandTy, NONE), [Ty.vecTy' dim, Ty.realTy])
+            | Op.Ceiling d => (Ty.vecTy' d, [Ty.vecTy' d])
+            | Op.Floor d => (Ty.vecTy' d, [Ty.vecTy' d])
+            | Op.Round d => (Ty.vecTy' d, [Ty.vecTy' d])
+            | Op.Trunc d => (Ty.vecTy' d, [Ty.vecTy' d])
             | Op.IntToReal => (Ty.realTy, [Ty.intTy])
             | Op.RealToInt 1 => (Ty.IntTy, [Ty.realTy])
-            | Op.RealToInt d => (Ty.SeqTy(Ty.IntTy, SOME d), [Ty.TensorTy[d]])
+            | Op.RealToInt d => (Ty.SeqTy(Ty.IntTy, SOME d), [Ty.TensorTy([d], NONE)])
             | Op.NumStrands _ => (Ty.IntTy, [])
             | Op.Strands(strandTy, _) => (Ty.SeqTy(strandTy, NONE), [])
-            | Op.BuildPos s => (Ty.TensorTy[2*s], [Ty.realTy])
-            | Op.EvalKernel(d, _, _) => (Ty.TensorTy[d], [Ty.TensorTy[d]])
+            | Op.BuildPos s => (Ty.TensorTy([2*s], NONE), [Ty.realTy])
+            | Op.EvalKernel(d, _, _) => (Ty.vecTy' d, [Ty.vecTy' d])
             | Op.Kernel _ => (Ty.KernelTy, [])
             | Op.Transform info => let
                 val dim = ImageInfo.dim info
                 in
                   if (dim = 1)
-                    then (Ty.TensorTy[], [Ty.ImageTy info])
-                    else (Ty.TensorTy[dim, dim], [Ty.ImageTy info])
+                    then (Ty.TensorTy([], NONE), [Ty.ImageTy info])
+                    else (Ty.TensorTy([dim, dim], NONE), [Ty.ImageTy info])
                 end
             | Op.Translate info => let
                 val dim = ImageInfo.dim info
                 in
                   if (dim = 1)
-                    then (Ty.TensorTy[], [Ty.ImageTy info])
-                    else (Ty.TensorTy[dim], [Ty.ImageTy info])
+                    then (Ty.realTy, [Ty.ImageTy info])
+                    else (Ty.vecTy' dim, [Ty.ImageTy info])
                 end
             | Op.LoadVoxels(info, s) => loadVoxelsSig (info, s)
             | Op.LoadVoxelsWithCtl(info, s, _) => loadVoxelsSig (info, s)
-            | Op.Inside(info, _) => (Ty.BoolTy, [Ty.vecTy(ImageInfo.dim info), Ty.ImageTy info])
+            | Op.Inside(info, _) => (Ty.BoolTy, [Ty.vecTy'(ImageInfo.dim info), Ty.ImageTy info])
             | Op.IndexInside(info, _) => (Ty.BoolTy, [indexType info, Ty.ImageTy info])
             | Op.ImageDim(info, _) => (Ty.IntTy, [Ty.ImageTy info])
             | Op.BorderCtlDefault info =>
-                (Ty.ImageTy info, [Ty.ImageTy info, Ty.TensorTy(ImageInfo.voxelShape info)])
+                (Ty.ImageTy info, [Ty.ImageTy info, Ty.TensorTy(ImageInfo.voxelShape info, NONE)])
             | Op.BorderCtlClamp info => (Ty.ImageTy info, [Ty.ImageTy info])
             | Op.BorderCtlMirror info => (Ty.ImageTy info, [Ty.ImageTy info])
             | Op.BorderCtlWrap info => (Ty.ImageTy info, [Ty.ImageTy info])
@@ -120,10 +120,10 @@ structure CheckOps : OPERATOR_TY = struct
     fun eigenSig dim = let
           val resTy = [
                   Ty.SeqTy(Ty.realTy, SOME dim),
-                  Ty.SeqTy(Ty.vecTy dim, SOME dim)
+                  Ty.SeqTy(Ty.vecTy' dim, SOME dim)
                 ]
           in
-            (resTy, [Ty.TensorTy[dim, dim]])
+            (resTy, [Ty.TensorTy([dim, dim], NONE)])
           end
 
     fun msigOf rator = (case rator
@@ -135,9 +135,9 @@ structure CheckOps : OPERATOR_TY = struct
             | _ => raise Fail("msigOf: invalid operator " ^ Op.toString rator)
           (* end case *))
 
-    fun typeOfCons (Ty.TensorTy dd', (ty1 as Ty.TensorTy dd)::r) =
+    fun typeOfCons (Ty.TensorTy (dd', a), (ty1 as Ty.TensorTy (dd, a'))::r) =
           if List.all (fn ty => Ty.same(ty1, ty)) r
-            then (dd' = (List.length r + 1)::dd)
+            then (dd' = (List.length r + 1)::dd) andalso a=a'
             else false
       | typeOfCons _ = false
 

@@ -13,7 +13,7 @@ structure HighTypes =
 
     datatype ty
       = BoolTy | StringTy | IntTy
-      | TensorTy of int list            (* tensor types, which include reals, vectors, etc. *)
+      | TensorTy of int list * int option            (* tensor types, which include reals, vectors, etc. *)
       | TupleTy of ty list              (* tuples; used for multiple return values *)
       | SeqTy of ty * int option
       | ImageTy of ImageInfo.t
@@ -23,20 +23,23 @@ structure HighTypes =
       | FieldTy
 
     val intTy = IntTy
-    val realTy = TensorTy[]
-    fun vecTy 1 = realTy
-      | vecTy n = TensorTy[n]
-    val vec2Ty = TensorTy[2]
-    val vec3Ty = TensorTy[3]
-    val vec4Ty = TensorTy[4]
+    val realTy' = TensorTy([], NONE)
+    val realTy = TensorTy([], NONE)
+    fun vecTy' 1 = realTy'
+      | vecTy' n = TensorTy([n],NONE)
+    val vec2Ty' = vecTy' 2
+    val vec3Ty' = vecTy' 3
+    val vec4Ty' = vecTy' 4
 
   (* smart constructor for tensor type that prunes out dimensions with size 1 *)
-    fun tensorTy dd = TensorTy(List.mapPartial (fn 1 => NONE | d => SOME d) dd)
+    fun tensorTy' dd = TensorTy(List.mapPartial (fn 1 => NONE | d => SOME d) dd, NONE)
+    fun tensorTy dd k = TensorTy(List.mapPartial (fn 1 => NONE | d => SOME d) dd, k)
 
     fun same (BoolTy, BoolTy) = true
       | same (StringTy, StringTy) = true
       | same (IntTy, IntTy) = true
-      | same (TensorTy dd1, TensorTy dd2) = (dd1 = dd2)
+      | same (TensorTy (dd1, NONE), TensorTy (dd2, NONE)) = (dd1 = dd2)
+      | same (TensorTy (dd1, SOME k1), TensorTy (dd2, SOME k2)) = (dd1 = dd2) andalso k1 = k2
       | same (TupleTy tys1, TupleTy tys2) = ListPair.allEq same (tys1, tys2)
       | same (SeqTy(ty1, NONE), SeqTy(ty2, NONE)) = same(ty1, ty2)
       | same (SeqTy(ty1, SOME n1), SeqTy(ty2, SOME n2)) = (n1 = n2) andalso same(ty1, ty2)
@@ -50,7 +53,7 @@ structure HighTypes =
     fun hash BoolTy = 0w1
       | hash StringTy = 0w2
       | hash IntTy = 0w3
-      | hash (TensorTy dd) = List.foldl (fn (d, s) => 0w11 * Word.fromInt d + s) 0w5 dd
+      | hash (TensorTy (dd, NONE)) = List.foldl (fn (d, s) => 0w11 * Word.fromInt d + s) 0w5 dd
       | hash (TupleTy tys) = List.foldl (fn (ty, s) => hash ty + s) 0w7 tys
       | hash (SeqTy(ty, NONE)) = hash ty + 0w11
       | hash (SeqTy(ty, SOME n)) = Word.fromInt n * hash ty + 0w13
@@ -59,12 +62,16 @@ structure HighTypes =
       | hash FieldTy = 0w23
       | hash (StrandTy n) = Atom.hash n
       | hash (FemData(data)) = 0w29 + 0w31 * (FemData.hash data)
+      | hash (TensorTy (dd, SOME j)) = 0w37 * (Word.fromInt j) + List.foldl (fn (d, s) => 0w11 * Word.fromInt d + s) 0w5 dd
 
+    fun pre(NONE) =""
+      | pre (SOME 1) = "interval "
+      | pre (SOME k) = "aff[" ^ (Int.toString k) ^ "] "
     fun toString BoolTy = "bool"
       | toString StringTy = "string"
       | toString IntTy = "int"
-      | toString (TensorTy[]) = "real"
-      | toString (TensorTy dd) = String.concat[
+      | toString (TensorTy([], a)) = (pre a) ^ "real"
+      | toString (TensorTy (dd, a)) = String.concat[ (pre a),
             "tensor[", String.concatWithMap "," Int.toString dd, "]"
           ]
       | toString (TupleTy tys) = String.concat[
