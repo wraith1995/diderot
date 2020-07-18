@@ -993,13 +993,14 @@ structure BasisVars =
     
   (* lifted unary math functions; these have both real and scalar-field forms *)
     local
-     fun fn_r name = polyVar (name, all([SK], fn [Ty.INTERVAL iv] =>
+     fun fn_r name = polyVar (name, all([IV], fn [Ty.INTERVAL iv] =>
 						 let
 						  val r = Ty.realTy (intervalVar iv)
 						 in
 						  [r] --> r
 						 end))
-      fun fn_s name = polyVar (N.fn_sqrt, all([DK,NK], fn [Ty.DIFF k, Ty.DIM d] => let
+			     
+      fun fn_s name = polyVar (name, all([DK,NK], fn [Ty.DIFF k, Ty.DIM d] => let
             val k' = Ty.DiffVar(k, 0)
             val d' = Ty.DimVar d
             val f = field(k', d', Ty.Shape[])
