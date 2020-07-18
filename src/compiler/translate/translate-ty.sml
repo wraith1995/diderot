@@ -19,11 +19,16 @@ structure TranslateTy : sig
            of Ty.T_Bool => DstTy.BoolTy
             | Ty.T_Int => DstTy.IntTy
             | Ty.T_String => DstTy.StringTy
-            | Ty.T_Tensor dd => let
+            | Ty.T_Tensor (dd, j) => let
                 fun cvtDim 1 = NONE
                   | cvtDim d = SOME d
+		val j' = if j < 0
+			 then raise Fail "bad interval"
+			 else if j = 0
+			 then NONE
+			 else SOME(j)
                 in
-                  DstTy.TensorTy(List.mapPartial cvtDim dd)
+                  DstTy.TensorTy(List.mapPartial cvtDim dd, j')
                 end
             | Ty.T_Sequence(ty, optDim) => DstTy.SeqTy(tr ty, optDim)
             | Ty.T_Tuple tys => DstTy.TupleTy(List.map tr tys)

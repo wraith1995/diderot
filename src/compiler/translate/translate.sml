@@ -323,7 +323,7 @@ print(concat["doVar (", SV.uniqueNameOf srcVar, ", ", IR.phiToString phi, ", _) 
           (* end case *))
 
     fun tensorSize v = (case IR.Var.ty v
-           of DstTy.TensorTy alpha => alpha
+           of DstTy.TensorTy (alpha, _) => alpha
             | _ => raise Fail "Type is a not a tensor"
           (* end case *))
 
@@ -382,8 +382,8 @@ print(concat["doVar (", SV.uniqueNameOf srcVar, ", ", IR.phiToString phi, ", _) 
                       val args' = List.mapPartial Fn.id indices
                       val mask' = List.map Option.isSome indices
                       val rator = (case (IR.Var.ty lhs, IR.Var.ty x, ty)
-                             of (DstTy.TensorTy rstTy, DstTy.TensorTy argTy, _) =>
-                                  MkOperators.sliceT (mask', args', rstTy, argTy)
+                             of (DstTy.TensorTy (rstTy, restIv), DstTy.TensorTy (argTy, argIv), _) =>
+                                MkOperators.sliceT (mask', args', rstTy, argTy, argIv)
                               | (_, _, Ty.T_Field{diff, dim, shape}) =>
                                   MkOperators.sliceF(mask', args', shape, dim)
                               | (_, _, _ ) => raise Fail "unsupported type"
@@ -615,8 +615,9 @@ print(concat["doVar (", SV.uniqueNameOf srcVar, ", ", IR.phiToString phi, ", _) 
                 val alphas_PT = List.map tensorSize lhs_PT
                 val alphas_allP = alphas_PF@alphas_PT
                 val alpha_comp = tensorSize lhs_comp
+
               (* create ein operator*)
-                val rator = MkOperators.cfexpMix (alpha_comp, alphas_PF, alphas_PT)
+                val rator = MkOperators.cfexpMix ( alpha_comp,  alphas_PF,  alphas_PT)
                 val args =  lhs_comp::lhs_allP
                 val ein = IR.EINAPP(rator, args)
                 in
