@@ -52,7 +52,9 @@ Output:
 
 structure CleanIndex : sig
 
-    val clean : Ein.ein_exp * int list * Ein.sumrange list -> Ein.mu list * int list * Ein.ein_exp
+	   val clean : Ein.ein_exp * int list * Ein.sumrange list -> Ein.mu list * int list * Ein.ein_exp
+
+	   val rankOfExp : Ein.ein_exp * Ein.param_kind list -> int
 
 	  end = struct
 
@@ -299,7 +301,64 @@ fun intlist sx = "[" ^(String.concatWith "," (List.map Int.toString sx)) ^ "]"
               (* end case *))
           in
             rewrite e
-          end
+    end
+
+    fun rankOfExp(e, params) =
+	let
+	 fun maxi s = List.foldr (Int.max) 0 s
+	 fun minAboveZero s = List.foldr (Int.min) 0 (List.filter (fn x => x > 0) s)
+	 fun failOrMax(es, rs) =
+	     if List.length es <> List.length rs
+	     then raise Fail "internal failure in rank of exp"
+	     else if (maxi rs) <> (minAboveZero rs)
+	     then raise Fail ("internal rank error: typechecker or later created expressions of incompatible interval rank:\n "
+			      ^ (String.concat(ListPair.map (fn (x,y) => "rank(" ^ (EinPP.expToString x) ^ ") = " ^ (Int.toString y) ^ "\n") (es, rs))))
+	     else maxi rs
+
+	 fun recur e' = rankOfExp(e', params)
+	 fun failOrMax'(es) = failOrMax(es, List.map recur es)
+
+	 fun doTensor(idx) = if 0 > idx orelse idx >= List.length params
+			     then raise Fail "bad tensor param"
+			     else (case List.nth(params, idx)
+				    of E.TEN(_, _, SOME j) => j
+				     | E.TEN(_, _, NONE) => 0
+				     | _ => raise Fail "bad Tensor arg"
+				  (* end case *))
+
+
+				  
+	in
+	 (case e
+	   of E.Const _ => 0
+	    | E.ConstR _ => 0
+	    | E.Tensor(pid, _) => doTensor pid
+	    | E.Zero _ => 0
+	    | E.Delta _ => 0
+	    | E.Epsilon _ => 0
+	    | E.Eps2 _ => 0
+	    | E.Field _ => raise Fail "Field in normalized ein"
+	    | E.Lift e => recur e
+	    | E.Identity _ => raise Fail "id-field in normalized ein"
+	    | E.Conv _ => 0 (*WARNING: convo outsie of probe assumed scalar*)
+	    | E.Fem _ => 0 (*WARNING: FEM outsie of probe assumed scalar*)
+	    | E.Partial _ => raise Fail "Partial in normalized ein"
+	    | E.Apply _ => raise Fail "Apply in normalized ein"
+	    | E.Comp _ => raise Fail "comp outside probe"
+	    | E.Probe(e, at) => recur at
+	    | E.OField _ => raise Fail "ignore ofield"
+	    | E.Value _ => raise Fail "Value before mid"
+	    | E.Img _ => raise Fail "Img before mid"
+	    | E.Krn _ => raise Fail "Krn outside of mid"
+	    | E.Poly _ => raise Fail "Poly outside of mid"
+	    | E.If(_, a, b) => failOrMax'([a,b])
+	    | E.Sum(sx, e') => recur e'
+	    | E.Op1(u, e') => recur e'
+	    | E.Op2(b, e1, e2) => failOrMax'([e1, e2])
+	    | E.Op3(t, e1, e2, e3) => failOrMax'([e1, e2, e3])
+	    | E.Opn(opn, es) => failOrMax' es
+	 (*end case*))
+	end
 
     fun shapeToString (pre, es) = String.concat[
             pre, "-", String.concatWithMap "," (fn E.V(e) => "E.V:"^Int.toString e) es

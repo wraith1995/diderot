@@ -124,20 +124,20 @@ structure ProbeEin : sig
                 then vF   (* position is a real type*)
                 else AvailRHS.addAssign (
                   avail, concat["v", axis, "_"],
-                  Ty.realTy, IR.OP(Op.TensorIndex(Ty.TensorTy[dim], [dir]), [vF]))
+                  Ty.realTy, IR.OP(Op.TensorIndex(Ty.TensorTy([dim], NONE), [dir]), [vF]))
           val vPos =  AvailRHS.addAssign (
                 avail, concat["kern", axis, "_"],
-                Ty.TensorTy[range], IR.OP(Op.BuildPos s, [vX]))
+                Ty.vecTy' range, IR.OP(Op.BuildPos s, [vX]))
           val nKernEvals = List.length dx + 1
           fun mkEval k = AvailRHS.addAssign (
                 avail, concat["keval", axis, "_d", Int.toString k, "_"],
-                Ty.TensorTy[range], IR.OP(Op.EvalKernel(range, h, k), [vPos]))
+                Ty.vecTy' range, IR.OP(Op.EvalKernel(range, h, k), [vPos]))
           val vKs = List.tabulate(nKernEvals, fn k => mkEval k)
           in
             case vKs
              of [v] => v (* scalar result *)
               | _ => let
-                  val consTy = Ty.TensorTy[nKernEvals, range]
+                  val consTy = Ty.TensorTy([nKernEvals, range], NONE)
                   in
                     AvailRHS.addAssign (
                       avail, concat["kcons", axis, "_"],
@@ -189,7 +189,7 @@ structure ProbeEin : sig
                 (fn (E.V e) => "v"^Int.toString e | E.C(c) => "c"^Int.toString c) es
 *)
           val supportshape = List.tabulate (dim, fn _ => s')
-          val ldty = Ty.TensorTy(shape @ supportshape)
+          val ldty = Ty.TensorTy(shape @ supportshape, NONE)
           val op1 = (case border
                  of NONE => Op.LoadVoxels (info, s')
                   | SOME b => Op.LoadVoxelsWithCtl (info, s', b)
@@ -262,9 +262,9 @@ structure ProbeEin : sig
 			      
 	 val intOpt = (FemOpt.ExtractDofs, dofData)
 	 val dofShape = FemOpt.findTargetShape(intOpt)
-	 val dofTensorTy = Ty.TensorTy(dofShape)
+	 val dofTensorTy = Ty.TensorTy(dofShape, NONE)
 	 val dofVar = IR.Var.new("dofs", dofTensorTy)
-	 val dofParam = E.TEN(true, dofShape)
+	 val dofParam = E.TEN(true, dofShape, NONE)
 	 val dofAlpha = sumIndexVar :: alpha
 	 val dofExpression = E.Tensor(dofParamId, dofAlpha)
 	 val extractOp = Op.ExtractFemItemN([IR.Var.ty dofSrcVar, IR.Var.ty indexSrcVar, IR.Var.ty indexVar],
@@ -274,14 +274,18 @@ structure ProbeEin : sig
 	 (* val _ = FemOptSplit.indexedDataLoweringAvail(avail, dofVar, intOpt, dofSrcVar, indexSrcVar, indexVar) *)
 						     
 	 val basisShape = BasisDataArray.shape basisArray
+	 val basisInterval = (case IR.Var.ty posVar
+			       of Ty.TensorTy(_, d) => d
+				| _ => raise Fail "impossible: bad evaluate of basis"
+			     (*end case*))
 	 val basisOpt = IR.OP(Op.EvaluateBasis(basisArray), [posVar])
-	 val basisTensorTy = Ty.TensorTy(basisShape)
+	 val basisTensorTy = Ty.TensorTy(basisShape, basisInterval)
 	 val basisVar = IR.Var.new("basisResult", basisTensorTy)
 	 val _ =  AvailRHS.addAssignToList (avail, (basisVar, basisOpt))
 	 (* val printBasisOpt = Op.Print(basisTensorTy) *)
 	 (* val *)
 	 (* val _ = AvailRHS.addAssignToList (avail, (basisVar, basisOpt)) *)
-	 val basisParam = E.TEN(true, basisShape)
+	 val basisParam = E.TEN(true, basisShape, basisInterval)
 	 val basisAlpha = List.@(dx, [sumIndexVar])
 	 (* List.@(dx, [sumIndexVar]) if we went the other way *)
 	 val basisExpression = E.Tensor(basisParamId, basisAlpha)
@@ -372,7 +376,7 @@ structure ProbeEin : sig
           val (args', vP, probe') = fieldReconstruction (
                 avail, sxn, alpha, shape, dx', Vid, Vidnew, kid, hid, tid, args)
         (* add new params transformation matrix (Pid), image param, and kernel ids *)
-          val pP = E.TEN(true, [dim, dim])
+          val pP = E.TEN(true, [dim, dim], NONE)
           val pV = List.nth(params, Vid)
           val pK = List.tabulate(dim,fn _=> E.KRN)
           val params' = params @ (pP::pV::pK)
@@ -395,29 +399,17 @@ structure ProbeEin : sig
 	 val IR.FV{paramTys, ty,...} = dstFunc
 
 	 val params = (case paramTys
-			of [Ty.TensorTy([n]), Ty.IntTy, Ty.IntTy] => (case IR.Var.getDef meshVar
+			of [Ty.TensorTy([n], NONE), Ty.IntTy, Ty.IntTy] => (case IR.Var.getDef meshVar
 								       of IR.OP(Op.Subscript _, [v, idx]) => [posVar, cellIntVar, idx]
 									| _ => raise Fail "impossible"
 									(* end case*))
-			 | [Ty.TensorTy([n]), Ty.IntTy] => [posVar, cellIntVar]
+			 | [Ty.TensorTy([n], NONE), Ty.IntTy] => [posVar, cellIntVar]
 		      (*end case*))
 
-			
 
-	 (* val tempName = Atom.toString (FemData.functionNameMake' data (FemName.hiddenNewtonInverse) func) *)
-	 (* val paramTys = [HTy.TensorTy([n]), HTy.IntTy, HTy.FemData data] *)
-			  
-	 (* val newFuncFV = HIR.FV{id=func, name = tempName, ty = HTy.FemData(meshPosData), *)
-	 (* 			useCnt = ref 1, *)
-	 (* 			paramTys = paramTys, *)
-	 (* 			props = PropList.newHolder ()} *)
-	 (* val targetFV = Env.renameFV(env, newFuncFV) 
-	    [posVar, cellIntVar, meshVar]		     
-	    meshPosTy
-	  *)
 	 val meshPosResult = AvailRHS.addAssign(avail, "callNewtonPos", ty, IR.APPLY(dstFunc, params))
 	 val newPosVar = AvailRHS.addAssign(avail, "refPos",
-					    Ty.TensorTy([dim]),
+					    Ty.TensorTy([dim], NONE),
 					    IR.OP(Op.Select(ty, 0),
 					    [meshPosResult]))
 	in
@@ -429,22 +421,15 @@ structure ProbeEin : sig
 	 val Ty.FemData(data) = IR.Var.ty meshVar (*check meshData*)
 	 val FemData.Mesh(meshData) = data
 	 val n = FemData.underlyingDim data
-	 (* val tempName = Atom.toString (FemData.functionNameMake' data (FemName.meshPos) func) *)
-	 (* val paramTys = [HTy.FemData data, HTy.TensorTy([n])] *)
-	 (* val newFuncFV = HIR.FV({id=func, name = tempName, ty = HTy.FemData (FemData.MeshPos(meshData)), *)
-	 (* 			 useCnt = ref (1) : int ref, *)
-	 (* 			 paramTys = paramTys, *)
-	 (* 			 props = PropList.newHolder ()}) *)
-	 (* val targetFV = Env.renameFV(env, newFuncFV) *)
 	 val (srcFunc, dstFunc) = Env.findSrcFV (env, func)
 	 val IR.FV{paramTys, ty,...} = dstFunc
 
 	 val params = (case paramTys
-			of [Ty.IntTy, Ty.TensorTy([n])] => (case IR.Var.getDef meshVar
+			of [Ty.IntTy, Ty.TensorTy([n], NONE)] => (case IR.Var.getDef meshVar
 								       of IR.OP(Op.Subscript _, [v, idx]) => [idx, posVar]
 									| _ => raise Fail "impossible"
 								     (* end case*))
-			 | [Ty.TensorTy([n])] => [posVar]
+			 | [Ty.TensorTy([n], NONE)] => [posVar]
 		      (*end case*))
 
 	 val meshPosResult = AvailRHS.addAssign(avail, "callFindPos",
@@ -456,7 +441,7 @@ structure ProbeEin : sig
 					  Op.Select(ty, 1),
 					  [meshPosResult]))
 	 val newPosVar = AvailRHS.addAssign(avail, "refPos",
-					    Ty.TensorTy([n]),
+					    Ty.TensorTy([n], NONE),
 					    IR.OP(
 					     Op.Select(ty, 0),
 					     [meshPosResult]))
@@ -465,7 +450,7 @@ structure ProbeEin : sig
 	end
 
     (* fun resolveFunctionCallFromStamp() *)
-    fun replaceFemProbe ( avail, env, (y, IR.EINAPP(lam as Ein.EIN{params, index, body}, args)), probe, sx) =
+    fun replaceFemProbe ( avail, env, (y, IR.EINAPP(lam as Ein.EIN{params, index, body}, args)), probe, sx) = (*FIXME*)
 	let
 	 val debug = false
 	 fun printd(x) = if debug
@@ -517,7 +502,7 @@ structure ProbeEin : sig
 	       (*substitute the result of the function call into the ein expression:*)
 	       val newParamLen = List.length params
 	       val newParamId = newParamLen
-	       val newParamKinds = [E.TEN(true, [dim]), E.INT]
+	       val newParamKinds = [E.TEN(true, [dim], NONE), E.INT] (*FIXMEIV*)
 	       val params'' = params @ newParamKinds
 	       val args'' = args @ [posVar, indexVar]
 	       val newProbe = E.Tensor(newParamId, alpha)
@@ -543,7 +528,8 @@ structure ProbeEin : sig
 		    dx, indexVar, indexSrcVar, dofSrcVar, basisArray, dofCount, dofData)
 
 	       val args'' = args @ args'
-	       val params'' = params @ params' @[E.TEN(true, [dim])] (*because a new pos is being attached to the end.*)
+	       (*because a new pos is being attached to the end.*)
+	       val params'' = params @ params' @[E.TEN(true, [dim], NONE)]  (*FIXMEIV*)
 	       val (_, body') = substituteProbe(body, probe')
 					       
 	       val einapp = (y, IR.EINAPP(mkEin(params'', index, body'), args''))
@@ -556,11 +542,17 @@ structure ProbeEin : sig
 	  
     fun replaceProbe (arg as (avail, env, (y, IR.EINAPP(Ein.EIN{params, index, body}, args)), probe, sx)) =
 	let
-	 val E.Probe(f, _) = probe
+	 val E.Probe(f, probeat) = probe
+	 val E.Tensor(tid, _) = probeat
+	 val interval = (case List.nth(params, tid)
+			  of E.TEN(_, _, iv) => iv
+			   | _ => raise Fail "impossible: invalid probe"
+			(*end case*))
 	in
-	 (case f
-	   of E.Conv(_,_,_,_) => replaceImgProbe arg
-	    | E.Fem _ => replaceFemProbe arg
+	 (case (f,interval)
+	   of (E.Conv(_,_,_,_), NONE) => replaceImgProbe arg
+	    | (E.Conv _, SOME k) => raise Fail "FIXME: usenans"
+	    | (E.Fem _, _) => replaceFemProbe arg
 	 (* end case*))
 	end
     (* multiply probe by transformation matrix and split product operation
@@ -594,7 +586,7 @@ structure ProbeEin : sig
                 of [] => ([], index, E.Conv(0, alpha, 1, dx'))
                 | _ => CleanIndex.clean(E.Conv(0, alpha, 1, dx'), index, sxx)
                 (* end case *))
-          val params = [E.TEN(true, [dim,dim]), E.TEN(true, sizes)]
+          val params = [E.TEN(true, [dim,dim], NONE), E.TEN(true, sizes, NONE)]
           val ein0 = mkEin(params, index, eout)
           (* clean index *)
           val E.Conv(_, alpha', _, dx) = ec
@@ -613,7 +605,7 @@ structure ProbeEin : sig
         (* transform T*P*P..Ps *)
           val (splitvar, ein0, sizes, dx, alpha') =
                 createEinApp (body, alpha, index, freshIndex, dim, dx, sx)
-          val vT = V.new ("TPP", Ty.tensorTy sizes)
+          val vT = V.new ("TPP", Ty.tensorTy sizes NONE)
         (* reconstruct the lifted probe *)
         (* making params args: image, position, and kernel ids *)
           val kid = 0 (* params used *)
@@ -630,7 +622,20 @@ structure ProbeEin : sig
                 else [(y, IR.EINAPP(ein0, [vP, vT]))]
           in
             List.app (fn e => AvailRHS.addAssignToList(avail, e)) (((vT, einApp1)::(rtn0)))
-          end
+    end
+
+    fun liftProbeWrap (argss as (avail, (y, IR.EINAPP(Ein.EIN{params, index, body}, args)), probe, sx)) = let
+     val E.Probe(E.Conv(Vid, alpha, hid, dx), E.Tensor(tid, _)) = probe
+     val arg = List.nth(params, tid)
+     val interval = (case arg
+		      of E.TEN(_, _, s) => s
+		       | _ => raise Fail "invalid probe in liftProbe")
+    in
+     (case interval
+       of NONE => liftProbe argss
+	| SOME k => raise Fail "FIXME: handle probe of images."
+     (* end case *)) (*replace with nans for now*)
+    end
 
   (* expandEinOp: code->  code list
    * A this point we only have simple ein ops

@@ -22,14 +22,21 @@ structure FloatEin : sig
 		    then print(x)
 		    else ()
 
+    fun makeInterval x = if x < 0
+			 then raise Fail "bad interval"
+			 else if x = 0
+			 then NONE
+			 else SOME x
+
     fun cut (name, origProbe, params, index, sx, argsOrig, avail, newvx) = let
-     val _ = print("CUT CALLED" ^ (Int.toString newvx))
+     val _ = printd("CUT CALLED" ^ (Int.toString newvx))
         (* clean and rewrite current body *)
 (* DEBUG val _ = print(String.concat["\n\n impact cut"]) *)
-          val (tshape1, sizes1, body1) = CleanIndex.clean (origProbe, index, sx)
+     val (tshape1, sizes1, body1) = CleanIndex.clean (origProbe, index, sx)
+     val interval1 = makeInterval(CleanIndex.rankOfExp(body1, params))
           val id = length params
-          val Rparams = params@[E.TEN(true, sizes1)] (*adding another tensor paramter corresponding to the shape of the application *)
-          val y = V.new (concat[name, "_l_", Int.toString id], Ty.tensorTy sizes1)
+          val Rparams = params@[E.TEN(true, sizes1, interval1)] (*adding another tensor paramter corresponding to the shape of the application *)
+          val y = V.new (concat[name, "_l_", Int.toString id], Ty.tensorTy sizes1 interval1)
           val IR.EINAPP(ein, args) = CleanParams.clean (body1, Rparams, sizes1, argsOrig@[y]) (* add the new paramter and a vew variable to the ein app and getting the applicatin out*)
         (* shift indices in probe body from constant to variable *)
           val Ein.EIN{
@@ -43,24 +50,26 @@ structure FloatEin : sig
           val unshiftedBody = E.Probe(E.Conv(V, [E.V newvx], h, dx), pos)
         (* clean to get body indices in order *)
           val (_ , sizes2, body2) = CleanIndex.clean (unshiftedBody, index1, [])
+	  val interval2 = makeInterval(CleanIndex.rankOfExp(body2, params0))
           val ein2 = E.EIN{params = params0, index =  sizes2, body = body2}
 (* DEBUG val _ = print(String.concat["\n\n  ein2:",EinPP.toString(ein2)]) *)
-          val lhs = AvailRHS.addAssign (avail, "L", Ty.tensorTy sizes2, IR.EINAPP(ein2, args))
+          val lhs = AvailRHS.addAssign (avail, "L", Ty.tensorTy sizes2 interval2, IR.EINAPP(ein2, args))
           val Rargs = argsOrig @ [lhs]
         (*Probe that tensor at a constant position  c1*)
           val nx = List.mapi (fn (i, _) => E.V i) dx (*QUESTION: is this line supposed to do anything?*)
           val Re = E.Tensor(id, c1 :: tshape1)
-          val Rparams = params @ [E.TEN(true, sizes2)]
+          val Rparams = params @ [E.TEN(true, sizes2, interval2)]
           in
             (Re, Rparams, Rargs)
     end
     (*We are not sure this is even needed or why, but we can replicate the above.*)
     fun cutFem(name, origProbe, params, index, sx, argsOrig, avail, newvx) =
 	let
-          val (tshape1, sizes1, body1) = CleanIndex.clean (origProbe, index, sx)
+         val (tshape1, sizes1, body1) = CleanIndex.clean (origProbe, index, sx)
+	 val interval1 = makeInterval(CleanIndex.rankOfExp(body1, params))
           val id = length params
-          val Rparams = params@[E.TEN(true, sizes1)] (*adding another tensor paramter corresponding to the shape of the application *)
-          val y = V.new (concat[name, "_l_", Int.toString id], Ty.tensorTy sizes1)
+          val Rparams = params@[E.TEN(true, sizes1, interval1)] (*adding another tensor paramter corresponding to the shape of the application *)
+          val y = V.new (concat[name, "_l_", Int.toString id], Ty.tensorTy sizes1 interval1)
           val IR.EINAPP(ein, args) = CleanParams.clean (body1, Rparams, sizes1, argsOrig@[y])
 
 	  val Ein.EIN{
@@ -73,14 +82,15 @@ structure FloatEin : sig
 	  val index1 = index0@[i]
           val unshiftedBody = E.Probe(E.Fem(femEin,v1,v2,v3, [E.V newvx], dx), pos)
 	  val (_ , sizes2, body2) = CleanIndex.clean (unshiftedBody, index1, [])
+	  val interval2 = makeInterval(CleanIndex.rankOfExp(body2, params0))
           val ein2 = E.EIN{params = params0, index =  sizes2, body = body2}
 	  (* DEBUG val _ = print(String.concat["\n\n  ein2:",EinPP.toString(ein2)]) *)
-          val lhs = AvailRHS.addAssign (avail, "L", Ty.tensorTy sizes2, IR.EINAPP(ein2, args))
+          val lhs = AvailRHS.addAssign (avail, "L", Ty.tensorTy sizes2 interval2, IR.EINAPP(ein2, args))
           val Rargs = argsOrig @ [lhs]
           (*Probe that tensor at a constant position  c1*)
           val nx = List.mapi (fn (i, _) => E.V i) dx (*QUESTION: is this line supposed to do anything?*)
           val Re = E.Tensor(id, c1 :: tshape1)
-          val Rparams = params @ [E.TEN(true, sizes2)]
+          val Rparams = params @ [E.TEN(true, sizes2, interval2)]
 	in
 	 (Re, Rparams, Rargs)
 	end
@@ -128,8 +138,8 @@ structure FloatEin : sig
           (* outer term in composition: newP, innerVar*)
           val id2 = length params
           val args2 = args@[innerVar]
-          val newP2 = params@[E.TEN(true, index2)]
-          val exp_pos = E.Tensor(id2, [])
+	  val exp_pos = E.Tensor(id2, [])
+
           val exp_fld = (case fld
                 of E.OField(E.CFExp tterm, _, dx) => E.OField(E.CFExp tterm, A, dx)
                 | _ => A (*uses correct sub exp*)
@@ -138,16 +148,19 @@ structure FloatEin : sig
           val outerExp2 = (case sx2
                 of [] => exp_probe
                 | _ => E.Sum(sx2, exp_probe)
-            (* end case*))
-          val (tshape2, sizes2, body2) = CleanIndex.clean(outerExp2, index, sx) (*just rewrites indecies for the shape - body of comp ignored*)
+			  (* end case*))
+	  (*just rewrites indecies for the shape - body of comp ignored*)
+          val (tshape2, sizes2, body2) = CleanIndex.clean(outerExp2, index, sx) 
+	  val interval1 = makeInterval(CleanIndex.rankOfExp(body2, params))
+          val newP2 = params@[E.TEN(true, index2, interval1)]
           val einapp2 = CleanParams.clean (body2, newP2, sizes2, args2) (*simplifies the params*)
 	  val MidIR.EINAPP(einapp2', _) = einapp2
 	  val _ = printd(String.concat ["\ncomp-makes-app:", EinPP.toString einapp2', "\n"])
-          val lhs = AvailRHS.addAssign (avail, concat[name, "l"], Ty.tensorTy sizes2, einapp2) (*does the probe*)
+          val lhs = AvailRHS.addAssign (avail, concat[name, "l"], Ty.tensorTy sizes2 interval1, einapp2) (*does the probe*)
           (*replacement*)
           val Re = E.Tensor(id2, tshape2)
           in
-            (Re, sizes2, lhs)
+            (Re, sizes2, interval1, lhs)
           end
     (* handle multiple compositions*)
     fun compn (name, exp, params, indexD, sx, sx2, args, avail) = 
@@ -160,7 +173,7 @@ structure FloatEin : sig
 
           fun iter(sizes, lhs, [], avail) = compSingle(name, params, sx, sx2, args, avail, lhs, D, indexD, sizes, fld)
             | iter(sizes, lhs, (B, indexB)::ns, avail) = let
-                val (_, sizes2, lhs2) = compSingle(name, params, [], [], args, avail, lhs, B, indexB, sizes, fld)
+                val (_, sizes2, _, lhs2) = compSingle(name, params, [], [], args, avail, lhs, B, indexB, sizes, fld)
                 in
                   iter(sizes2, lhs2, ns, avail)
                 end
@@ -175,18 +188,19 @@ structure FloatEin : sig
                     params = params,
                     index =  indexA, 
                     body = E.Probe(wrapA, pos)
-                    }
+               }
+	   val intervalA = makeInterval(CleanIndex.rankOfExp(E.Probe(wrapA, pos), params))
            val innerVar = AvailRHS.addAssign (
                 avail, 
                 "Inner", 
-                Ty.tensorTy indexA, 
+                Ty.tensorTy indexA intervalA, 
                 IR.EINAPP(innerExp, args))
 
 	   val _ = printd(String.concat ["\ncomp-makes-app:", EinPP.toString innerExp, "\n"])
             (*other  composition *)
-           val (Re, sizes, lhs) = iter(indexA, innerVar, List.tl(es'), avail)
+           val (Re, sizes, interval1, lhs) = iter(indexA, innerVar, List.tl(es'), avail)
            in
-             (Re, params @ [E.TEN(true, sizes)], args @ [lhs])
+             (Re, params @ [E.TEN(true, sizes, interval1)], args @ [lhs])
            end
             
    (* lift:ein_app*params*index*sum_id*args-> (ein_exp* params*args*code)
@@ -201,6 +215,7 @@ structure FloatEin : sig
      val _ = printd("finding body:"^(EinPP.expToString(e))^"\n")
      val _ = printd("finding index:"^(EinPP.indexToString(index))^"\n")
      val (tshape, sizes, body) = CleanIndex.clean(e, index, sx)
+     val interval = makeInterval(CleanIndex.rankOfExp(body, params))
      val _ = printd("resulting sizes:"^(EinPP.indexToString(sizes))^"\n")
           val id = length params
           val Re = E.Tensor(id, tshape)
@@ -209,12 +224,12 @@ structure FloatEin : sig
 	  val _ = printd("einapp ret:"^(EinPP.toString einapp')^"\n")
           val lhs = AvailRHS.addAssign (
                 avail,
-                concat[name, "_l_", Int.toString id], Ty.tensorTy sizes,
+                concat[name, "_l_", Int.toString id], Ty.tensorTy sizes interval,
                 einapp)
 	  val _ = printd("einapp var:"^(V.name lhs)^"\n")
 	  val _ = printd("exiting lift\n")
           in
-            (Re, params @ [E.TEN(true, sizes)], args @ [lhs])
+            (Re, params @ [E.TEN(true, sizes, interval)], args @ [lhs])
           end
 
     fun isOp e = (case e

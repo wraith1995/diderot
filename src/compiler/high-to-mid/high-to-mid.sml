@@ -49,6 +49,7 @@ structure HighToMid : sig
   (* expand raising a real to an integer power.  When we know the exponent, we can inline
    * multiplications.
    *)
+    (*FIXME: intervals*)
     fun expandPower (env, y, [x, n]) = let
           fun getConst x = (case SrcIR.Var.getDef x
                  of SrcIR.LIT(Literal.Int n) => SOME n
@@ -69,9 +70,9 @@ structure HighToMid : sig
                   val t = DstIR.Var.new("one", DstTy.realTy)
                   in [
                     (t, DstIR.LIT(Literal.Real(RealLit.one))),
-                    (y, DstIR.EINAPP(MkOperators.divRR, [t, x]))
+                    (y, DstIR.EINAPP(MkOperators.divRR(NONE, NONE), [t, x]))
                   ] end
-              | SOME 2 => [(y, DstIR.EINAPP(MkOperators.mulRR, [x, x]))]
+              | SOME 2 => [(y, DstIR.EINAPP(MkOperators.mulRR(NONE, NONE), [x, x]))]
 (* FIXME: expand into multiplications
               | SOME n =>
 *) | SOME _ => pow()
@@ -97,8 +98,8 @@ structure HighToMid : sig
             List.rev code
           end
 
-    fun arity (SrcTy.TensorTy[]) = 1
-      | arity (SrcTy.TensorTy[d]) = d
+    fun arity (SrcTy.TensorTy([], _)) = 1
+      | arity (SrcTy.TensorTy([d], _)) = d
       | arity _ = raise Fail "arity"
 
     fun expandOp (env, y, rator, args) = let
