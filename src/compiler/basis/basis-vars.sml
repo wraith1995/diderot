@@ -825,6 +825,19 @@ structure BasisVars =
 						  in
 						   [ten, seq, ten] --> Ty.T_Tensor(sv, aff)
 						  end))
+
+    val affineNaiveTen = polyVar(N.affine, all([SK, NK],
+					    fn [Ty.SHAPE s, Ty.DIM d] =>
+					       let
+						val dim = Ty.DimVar d
+						val sv = Ty.ShapeVar s
+						val ten = Ty.T_Tensor(sv, Ty.IC 0)
+						val aff = Ty.ShapeSize (Ty.Shape([dim]))
+						val sv' = Ty.ShapeExt'(dim, sv)
+						val seqTen = Ty.T_Tensor(sv', Ty.IC 0)
+					       in
+						[ten, seqTen, ten] --> Ty.T_Tensor(sv, aff)
+					       end))			     
 				  
 
     val errors = polyVar(N.errors, all([SK, IV],
@@ -904,6 +917,16 @@ structure BasisVars =
 					  in
 					   [Ty.T_Tensor(sv, aff)] --> Ty.T_Tensor(sv, aff')
 					  end))
+
+    val insideInterval = polyVar(N.insideInterval, all([SK, IV],
+					       fn [Ty.SHAPE s, Ty.INTERVAL i] =>
+						  let
+						   val sv = Ty.ShapeVar s
+						   val aff = Ty.IC 1
+						  in
+						   [Ty.T_Tensor(sv, aff)] --> Ty.T_Bool
+						  end
+			))
 			     
 
     (* determinant: restrict to 2x2 and 3x3*)

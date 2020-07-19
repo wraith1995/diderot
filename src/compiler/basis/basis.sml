@@ -133,7 +133,8 @@ structure Basis : sig
               ]),
             (N.op_norm, [BV.op_norm_i, BV.op_norm_t, BV.op_norm_f]),
 	    (N.intersection, [BV.intersection]),
-	    (N.hull, [BV.hull])
+	    (N.hull, [BV.hull]),
+	    (N.insideInterval, [BV.insideInterval])
           ]
 
     val overloadFunctions = [
@@ -163,7 +164,7 @@ structure Basis : sig
           (N.fn_transpose, [BV.fn_transpose_t, BV.fn_transpose_f]),
           (N.op_compose, [BV.comp]),
 	  (N.interval, [BV.intervalSimple, BV.intervalMixed, BV.intervalAffine]),
-	  (N.affine, [BV.intervalToAffine, BV.tensorToAffine, BV.affineNaive]),
+	  (N.affine, [BV.intervalToAffine, BV.tensorToAffine, BV.affineNaive, BV.affineNaiveTen]),
 	  (N.errors, [BV.errors]),
 	  (N.errorn, [BV.errorn]),
 	  (N.center, [BV.center]),

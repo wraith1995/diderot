@@ -103,5 +103,6 @@ structure BasisNames =
     val intersection = Atom.atom "∩"
     val hull = Atom.atom "∪"
     val extend = Atom.atom "extend"
+    val insideInterval = Atom.atom "∈"
 			   (*extend, type util cover the above, also, what tests should we have - what comparisons?*)
   end
