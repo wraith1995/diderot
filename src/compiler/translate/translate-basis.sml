@@ -509,7 +509,30 @@ structure TranslateBasis : sig
                 (BV.fn_round_r,         fn (y, _, args) =>
                                           assign(y, Op.MathFn MathFns.ROUND, args)),
                 (BV.fn_trunc_r,         fn (y, _, args) =>
-                                          assign(y, Op.MathFn MathFns.TRUNC, args))
+                                           assign(y, Op.MathFn MathFns.TRUNC, args)),
+		(BV.intervalSimple,     fn (y, [shape], args) => simpleOp Op.intervalSimple (y, [], args)),
+		(BV.intervalMixed,      fn (y, mvs, args) => simpleOp Op.intervalMixed (y, [], args)),
+		(BV.intervalAffine,      fn (y, mvs, args) => simpleOp Op.intervalAffine (y, [], args)),
+		(BV.intervalToAffine,      fn (y, mvs, args) => simpleOp Op.intervalToAffine (y, [], args)),
+		(BV.tensorToAffine,      fn (y, mvs, args) => simpleOp Op.tensorToAffine (y, [], args)),
+		(BV.affineNaive,      fn (y, [Ty.SHAPE s, Ty.DIM d], args) =>
+					 let val ten = DstTy.TensorTy(s, NONE)
+					     val seq = DstTy.SeqTy(ten, SOME d)
+					 in simpleOp (Op.affineNative(ten, seq, ten)) (y, [], args) end),
+		(BV.affineNaiveTen,      fn (y, [Ty.SHAPE s, Ty.DIM d], args) =>
+					    let val ten = DstTy.TensorTy(s, NONE)
+						val ten' = DstTy.TensorTy(d::s, NONE)
+					    in simpleOp (Op.affineNative(ten, ten', ten)) (y, [], args) end) ,
+		(BV.errors,      fn (y, mvs, args) => simpleOp Op.errors (y, [], args)),
+		(BV.errorn,      fn (y, mvs, args) => simpleOp Op.lasterr (y, [], args)),
+		(BV.center,      fn (y, mvs, args) => simpleOp Op.center (y, [], args)),
+		(BV.radius,      fn (y, mvs, args) => simpleOp Op.radius (y, [], args)),
+		(BV.min_interval,      fn (y, mvs, args) => simpleOp Op.minInterval (y, [], args)),
+		(BV.max_interval,      fn (y, mvs, args) => simpleOp Op.maxInterval (y, [], args)),
+		(BV.intersection,      fn (y, mvs, args) => simpleOp Op.intersection (y, [], args)),
+		(BV.hull,      fn (y, mvs, args) => simpleOp Op.hull (y, [], args)),
+		(BV.extend,      fn (y, mvs, args) => simpleOp Op.extend (y, [], args)),
+		(BV.insideInterval,      fn (y, mvs, args) => simpleOp Op.insideInterval (y, [], args))
               ];
             tbl
           end
