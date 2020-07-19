@@ -100,6 +100,22 @@ structure HighOps =
       | StabilizeAll
       | Print of tys
       | MathFn of MathFns.t
+      | intervalSimple
+      | intervalMixed
+      | intervalAffine
+      | intervalToAffine
+      | tensorToAffine
+      | affineNative of ty * ty * ty
+      | errors
+      | lasterr
+      | center
+      | radius
+      | minInterval
+      | maxInterval
+      | intersection
+      | hull
+      | extend
+      | insideInterval
 
     fun resultArity IAdd = 1
       | resultArity ISub = 1
@@ -159,6 +175,22 @@ structure HighOps =
       | resultArity StabilizeAll = 0
       | resultArity (Print _) = 0
       | resultArity (MathFn _) = 1
+      | resultArity intervalSimple = 1
+      | resultArity intervalMixed = 1
+      | resultArity intervalAffine = 1
+      | resultArity intervalToAffine = 1
+      | resultArity tensorToAffine = 1
+      | resultArity (affineNative _) = 1
+      | resultArity errors = 1
+      | resultArity lasterr = 1
+      | resultArity center = 1
+      | resultArity radius = 1
+      | resultArity minInterval = 1
+      | resultArity maxInterval = 1
+      | resultArity intersection = 1
+      | resultArity hull = 1
+      | resultArity extend = 1
+      | resultArity insideInterval = 1
 
     fun arity IAdd = 2
       | arity ISub = 2
@@ -218,6 +250,22 @@ structure HighOps =
       | arity StabilizeAll = 0
       | arity (Print _) = ~1
       | arity (MathFn _) = ~1
+      | arity intervalSimple = 1
+      | arity intervalMixed = 2
+      | arity intervalAffine = 1
+      | arity intervalToAffine = 1
+      | arity tensorToAffine = 1
+      | arity (affineNative _) = 3
+      | arity errors = 1
+      | arity lasterr = 1
+      | arity center = 1
+      | arity radius = 1
+      | arity minInterval = 1
+      | arity maxInterval = 1
+      | arity intersection = 2
+      | arity hull = 2
+      | arity extend = 1
+      | arity insideInterval = 1
 
     fun isPure (MkDynamic _) = false
       | isPure (Append _) = false
@@ -286,6 +334,22 @@ structure HighOps =
       | same (StabilizeAll, StabilizeAll) = true
       | same (Print(a0), Print(b0)) = sametys(a0, b0)
       | same (MathFn(a0), MathFn(b0)) = MathFns.same(a0, b0)
+      | same (intervalSimple, intervalSimple) = true
+      | same (intervalMixed, intervalMixed) = true
+      | same (intervalAffine, intervalAffine) = true
+      | same (intervalToAffine, intervalToAffine) = true
+      | same (tensorToAffine, tensorToAffine) = true
+      | same (affineNative(a0,a1,a2), affineNative(b0,b1,b2)) = samety(a0, b0) andalso samety(a1, b1) andalso samety(a2, b2)
+      | same (errors, errors) = true
+      | same (lasterr, lasterr) = true
+      | same (center, center) = true
+      | same (radius, radius) = true
+      | same (minInterval, minInterval) = true
+      | same (maxInterval, maxInterval) = true
+      | same (intersection, intersection) = true
+      | same (hull, hull) = true
+      | same (extend, extend) = true
+      | same (insideInterval, insideInterval) = true
       | same _ = false
 
     fun hash IAdd = 0w3
@@ -346,6 +410,22 @@ structure HighOps =
       | hash StabilizeAll = 0w269
       | hash (Print(a0)) = 0w271 + hashtys a0
       | hash (MathFn(a0)) = 0w277 + MathFns.hash a0
+      | hash intervalSimple = 0w281
+      | hash intervalMixed = 0w283
+      | hash intervalAffine = 0w293
+      | hash intervalToAffine = 0w307
+      | hash tensorToAffine = 0w311
+      | hash (affineNative(a0,a1,a2)) = 0w313 + hashty a0 + hashty a1 + hashty a2
+      | hash errors = 0w317
+      | hash lasterr = 0w331
+      | hash center = 0w337
+      | hash radius = 0w347
+      | hash minInterval = 0w349
+      | hash maxInterval = 0w353
+      | hash intersection = 0w359
+      | hash hull = 0w367
+      | hash extend = 0w373
+      | hash insideInterval = 0w379
 
     fun toString IAdd = "IAdd"
       | toString ISub = "ISub"
@@ -405,6 +485,22 @@ structure HighOps =
       | toString StabilizeAll = "StabilizeAll"
       | toString (Print(a0)) = concat["Print<", tysToString a0, ">"]
       | toString (MathFn(a0)) = concat["MathFn<", MathFns.toString a0, ">"]
+      | toString intervalSimple = "intervalSimple"
+      | toString intervalMixed = "intervalMixed"
+      | toString intervalAffine = "intervalAffine"
+      | toString intervalToAffine = "intervalToAffine"
+      | toString tensorToAffine = "tensorToAffine"
+      | toString (affineNative(a0,a1,a2)) = concat["affineNative<", tyToString a0, ",", tyToString a1, ",", tyToString a2, ">"]
+      | toString errors = "errors"
+      | toString lasterr = "lasterr"
+      | toString center = "center"
+      | toString radius = "radius"
+      | toString minInterval = "minInterval"
+      | toString maxInterval = "maxInterval"
+      | toString intersection = "intersection"
+      | toString hull = "hull"
+      | toString extend = "extend"
+      | toString insideInterval = "insideInterval"
 
   end
 

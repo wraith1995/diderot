@@ -114,3 +114,22 @@ ExtractFemItemN : tys * ty * FemOpt.femOption * Stamp.t * string * tys * ty: 1 :
 #
 # unlifted math functions
 MathFn : MathFns.t : 1 : * : math function
+#Interval constructors, destructors, and utils
+intervalSimple : : 1 : 1 : scalars -> intervals
+intervalMixed : : 1 : 2 : (mins, maxes) -> intervals
+intervalAffine : : 1 : 1 : affine -> intervals
+intervalToAffine : : 1 : 1 : interval -> affine
+tensorToAffine : : 1 : 1 : tensor -> affine
+affineNative : ty * ty * ty : 1 : 3 : ten, seq, tne -> affine
+#destructors
+errors : : 1 : 1 : aff -> tensor
+lasterr : : 1 : 1 : interval or aff -> tensor
+center : : 1 : 1 : interval or affine -> tensor
+radius : : 1 : 1 : interval or affine -> tensor
+minInterval : : 1 : 1 : interval -> tensor
+maxInterval : : 1 : 1 : interval -> tensor
+#special ops
+intersection : : 1 : 2 : interval * interval -> interval
+hull : : 1 : 2 : interval * interval -> interval
+extend : : 1 : 1 : affine -> affine (check notes)
+insideInterval : : 1 : 1 : interval -> bool

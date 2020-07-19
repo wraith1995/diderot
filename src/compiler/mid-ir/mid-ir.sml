@@ -122,6 +122,22 @@ structure MidOps =
       | Check of int
       | Load of int * int * ty * int
       | Save of int * int * ty * int
+      | intervalSimple
+      | intervalMixed
+      | intervalAffine
+      | intervalToAffine
+      | tensorToAffine
+      | affineNative of ty * ty * ty
+      | errors
+      | lasterr
+      | center
+      | radius
+      | minInterval
+      | maxInterval
+      | intersection
+      | hull
+      | extend
+      | insideInterval
 
     fun resultArity IAdd = 1
       | resultArity ISub = 1
@@ -197,6 +213,22 @@ structure MidOps =
       | resultArity (Check _) = 1
       | resultArity (Load _) = 1
       | resultArity (Save _) = 0
+      | resultArity intervalSimple = 1
+      | resultArity intervalMixed = 1
+      | resultArity intervalAffine = 1
+      | resultArity intervalToAffine = 1
+      | resultArity tensorToAffine = 1
+      | resultArity (affineNative _) = 1
+      | resultArity errors = 1
+      | resultArity lasterr = 1
+      | resultArity center = 1
+      | resultArity radius = 1
+      | resultArity minInterval = 1
+      | resultArity maxInterval = 1
+      | resultArity intersection = 1
+      | resultArity hull = 1
+      | resultArity extend = 1
+      | resultArity insideInterval = 1
 
     fun arity IAdd = 2
       | arity ISub = 2
@@ -272,6 +304,22 @@ structure MidOps =
       | arity (Check _) = 1
       | arity (Load _) = 0
       | arity (Save _) = 2
+      | arity intervalSimple = 1
+      | arity intervalMixed = 2
+      | arity intervalAffine = 1
+      | arity intervalToAffine = 1
+      | arity tensorToAffine = 1
+      | arity (affineNative _) = 3
+      | arity errors = 1
+      | arity lasterr = 1
+      | arity center = 1
+      | arity radius = 1
+      | arity minInterval = 1
+      | arity maxInterval = 1
+      | arity intersection = 2
+      | arity hull = 2
+      | arity extend = 1
+      | arity insideInterval = 1
 
     fun isPure (MkDynamic _) = false
       | isPure (Append _) = false
@@ -357,6 +405,22 @@ structure MidOps =
       | same (Check(a0), Check(b0)) = sameint(a0, b0)
       | same (Load(a0,a1,a2,a3), Load(b0,b1,b2,b3)) = sameint(a0, b0) andalso sameint(a1, b1) andalso samety(a2, b2) andalso sameint(a3, b3)
       | same (Save(a0,a1,a2,a3), Save(b0,b1,b2,b3)) = sameint(a0, b0) andalso sameint(a1, b1) andalso samety(a2, b2) andalso sameint(a3, b3)
+      | same (intervalSimple, intervalSimple) = true
+      | same (intervalMixed, intervalMixed) = true
+      | same (intervalAffine, intervalAffine) = true
+      | same (intervalToAffine, intervalToAffine) = true
+      | same (tensorToAffine, tensorToAffine) = true
+      | same (affineNative(a0,a1,a2), affineNative(b0,b1,b2)) = samety(a0, b0) andalso samety(a1, b1) andalso samety(a2, b2)
+      | same (errors, errors) = true
+      | same (lasterr, lasterr) = true
+      | same (center, center) = true
+      | same (radius, radius) = true
+      | same (minInterval, minInterval) = true
+      | same (maxInterval, maxInterval) = true
+      | same (intersection, intersection) = true
+      | same (hull, hull) = true
+      | same (extend, extend) = true
+      | same (insideInterval, insideInterval) = true
       | same _ = false
 
     fun hash IAdd = 0w3
@@ -433,6 +497,22 @@ structure MidOps =
       | hash (Check(a0)) = 0w367 + hashint a0
       | hash (Load(a0,a1,a2,a3)) = 0w373 + hashint a0 + hashint a1 + hashty a2 + hashint a3
       | hash (Save(a0,a1,a2,a3)) = 0w379 + hashint a0 + hashint a1 + hashty a2 + hashint a3
+      | hash intervalSimple = 0w383
+      | hash intervalMixed = 0w389
+      | hash intervalAffine = 0w397
+      | hash intervalToAffine = 0w401
+      | hash tensorToAffine = 0w409
+      | hash (affineNative(a0,a1,a2)) = 0w419 + hashty a0 + hashty a1 + hashty a2
+      | hash errors = 0w421
+      | hash lasterr = 0w431
+      | hash center = 0w433
+      | hash radius = 0w439
+      | hash minInterval = 0w443
+      | hash maxInterval = 0w449
+      | hash intersection = 0w457
+      | hash hull = 0w461
+      | hash extend = 0w463
+      | hash insideInterval = 0w467
 
     fun toString IAdd = "IAdd"
       | toString ISub = "ISub"
@@ -508,6 +588,22 @@ structure MidOps =
       | toString (Check(a0)) = concat["Check<", intToString a0, ">"]
       | toString (Load(a0,a1,a2,a3)) = concat["Load<", intToString a0, ",", intToString a1, ",", tyToString a2, ",", intToString a3, ">"]
       | toString (Save(a0,a1,a2,a3)) = concat["Save<", intToString a0, ",", intToString a1, ",", tyToString a2, ",", intToString a3, ">"]
+      | toString intervalSimple = "intervalSimple"
+      | toString intervalMixed = "intervalMixed"
+      | toString intervalAffine = "intervalAffine"
+      | toString intervalToAffine = "intervalToAffine"
+      | toString tensorToAffine = "tensorToAffine"
+      | toString (affineNative(a0,a1,a2)) = concat["affineNative<", tyToString a0, ",", tyToString a1, ",", tyToString a2, ">"]
+      | toString errors = "errors"
+      | toString lasterr = "lasterr"
+      | toString center = "center"
+      | toString radius = "radius"
+      | toString minInterval = "minInterval"
+      | toString maxInterval = "maxInterval"
+      | toString intersection = "intersection"
+      | toString hull = "hull"
+      | toString extend = "extend"
+      | toString insideInterval = "insideInterval"
 
   end
 
