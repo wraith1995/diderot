@@ -200,8 +200,22 @@ structure HighToMid : sig
 		in
 		assign (DstOp.ExtractFemItemN(tys', outTy', opt', stamp', name', paramTys',  fTy'))
 		end
-
-
+	      | SrcOp.intervalSimple => assign (DstOp.intervalSimple)
+	      | SrcOp.intervalMixed => assign (DstOp.intervalMixed)
+	      | SrcOp.intervalAffine => assign (DstOp.intervalAffine)
+	      | SrcOp.intervalToAffine => assign (DstOp.intervalToAffine)
+	      | SrcOp.tensorToAffine => assign (DstOp.tensorToAffine)
+	      | SrcOp.affineNative(t,s,t') => assign (DstOp.affineNative(cvtTy t, cvtTy s, cvtTy t'))
+	      | SrcOp.errors => assign (DstOp.errors)
+	      | SrcOp.lasterr => assign (DstOp.lasterr)
+	      | SrcOp.center => assign (DstOp.center)
+	      | SrcOp.radius => assign (DstOp.radius)
+	      | SrcOp.minInterval => assign (DstOp.minInterval)
+	      | SrcOp.maxInterval => assign (DstOp.maxInterval)
+	      | SrcOp.intersection => assign (DstOp.intersection)
+	      | SrcOp.hull => assign (DstOp.hull)
+	      | SrcOp.extend => assign (DstOp.extend)
+	      | SrcOp.insideInterval => assign (DstOp.insideInterval)
               | rator => raise Fail("bogus operator " ^ SrcOp.toString rator)
             (* end case *)
           end
