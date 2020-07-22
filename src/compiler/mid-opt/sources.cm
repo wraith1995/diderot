@@ -26,6 +26,7 @@ is
   avail-rhs.sml
   fem-opt-split.sml
   fem-opt-split-rewrite.sml
+  mid-interval-expand.sml
   border-ctl.sml
   dom-tree.sml
   mid-contract.sml

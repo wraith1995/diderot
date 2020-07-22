@@ -21,6 +21,7 @@ local
   
   avail-rhs.sml
   fem-opt-split.sml
+  mid-interval-expand.sml
   fem-opt-split-rewrite.sml
   dom-tree.sml
   border-ctl.sml
