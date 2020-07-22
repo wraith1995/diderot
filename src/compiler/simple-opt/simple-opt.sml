@@ -35,7 +35,7 @@ structure SimpleOpt : sig
           val prog = checkAfter ("contraction (1)", SimpleContract.transform prog)
           val prog = checkAfter ("map-reduce-fusion", MapReduceOpt.transform prog)
           val prog = if Controls.get Ctl.inline
-                then checkAfter ("inlining", Inliner.transform prog)
+                     then checkAfter ("inlining", Inliner.transform prog)
                      else prog
         (* second round of contraction after inlining *)
           val prog = if Controls.get Ctl.inline

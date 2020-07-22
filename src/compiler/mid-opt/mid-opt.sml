@@ -43,8 +43,8 @@ structure MidOptimizer : sig
 		     else prog
 	  val prog = transform' (Timers.timeMidDofExpand, "timeMidDofExpand", FemOptSplitRewrite.transform, prog)
           val prog = transform' (Timers.timeMidBorderCtl, "border control", BorderCtl.transform, prog)
-	  (* val prog = transform (Ctl.midVN, Timers.timeMidVN, "value numbering (2)", VN.transform, prog) *)
-          (* val prog = transform (Ctl.midContract, Timers.timeMidContract, "contraction (2)", MidContract.transform, prog) *)
+	  val prog = transform (Ctl.midVN, Timers.timeMidVN, "value numbering (2)", VN.transform, prog)
+          val prog = transform (Ctl.midContract, Timers.timeMidContract, "contraction (2)", MidContract.transform, prog)
 
           in
             prog
