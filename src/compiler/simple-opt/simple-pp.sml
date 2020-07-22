@@ -46,6 +46,9 @@ structure SimplePP : sig
                         "$[", String.concatWith "," (List.map Int.toString shp), "]"
                       ])
                   | Ty.DIM d => string("%"^Int.toString d)
+		  | Ty.INTERVAL iv => (case iv
+					of 0 => string("~scalar")
+					 |  j => string("~Aff["^(Int.toString j)^"]"))
                 (* end case *))
           in
             ppList ppTyArg ("<", ";", ">") (ppStrm, mvs)

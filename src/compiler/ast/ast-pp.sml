@@ -58,7 +58,7 @@ structure ASTPP : sig
                   | AST.E_Select(e, (field, _)) => (pp e; string "."; var field)
                   | AST.E_Prim(f, [], args, ty) => (var f; sp(); ppArgs (ppStrm, args); string " => "; string (TypeUtil.toString ty))
                   | AST.E_Prim(f, mvs, args, ty) => (
-                      var f; ppTyArgs (ppStrm, mvs); sp(); ppArgs (ppStrm, args); string " => "; string (TypeUtil.toString ty))
+                   (string "("); var f; ppTyArgs (ppStrm, mvs); sp(); ppArgs (ppStrm, args); string " => "; string (TypeUtil.toString ty); (string ")"))
                   | AST.E_Apply((f, _), args, _) => (var f; sp(); ppArgs (ppStrm, args))
                   | AST.E_Comprehension(e, iter, _) => (
                       string "{";

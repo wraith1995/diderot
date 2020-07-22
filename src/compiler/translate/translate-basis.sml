@@ -236,8 +236,15 @@ structure TranslateBasis : sig
                                           end),
                 (BV.neg_f,              fn (y, [_, Ty.DIM d, Ty.SHAPE dd], xs) =>
                                           [assignEin(y, Mk.negFF(d, dd), xs)]),
-                (BV.op_probe,           fn (y, [_, Ty.DIM d, Ty.SHAPE dd, Ty.INTERVAL iv], xs) =>
-                                          [assignEin(y, (Mk.probe(dd, d, intervalToInt iv)), xs)]),
+                (BV.op_probe,           fn (y, mvs, xs) =>
+					   let
+					    val _ = print("ugg:"^((Int.toString o List.length)(mvs)))
+					    val [_, Ty.DIM d, Ty.SHAPE dd, Ty.INTERVAL iv] = mvs
+					   in
+                                            [assignEin(y, (Mk.probe(dd, d, intervalToInt iv)), xs)]
+					   end
+		),
+		
                 (BV.op_D,               fn (y, [_, Ty.DIM d], xs) =>
                                             if (d = 2) orelse (d = 3)
                                             then [assignEin(y, Mk.grad [d], xs)]
@@ -538,7 +545,7 @@ structure TranslateBasis : sig
           end
 
     fun translate (y, f, mvs, xs) = (case VTbl.find tbl f
-           of SOME transFn => transFn(y, mvs, xs)
+				      of SOME transFn => (transFn(y, mvs, xs) handle ex => raise ex)
             | NONE => raise Fail("TranslateBasis.translate: unknown basis function " ^ Var.uniqueNameOf f)
           (* end case *))
 handle ex => (print(concat["exeption in translate (", IR.Var.toString y, ", ",

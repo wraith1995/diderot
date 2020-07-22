@@ -202,7 +202,7 @@ structure Simplify : sig
   (* make a variable definition *)
     fun mkDef (x, e) = S.S_Var(x, SOME e)
 
-    fun mkRDiv (res, a, b) = mkDef (res, S.E_Prim(BV.div_rr, [], [a, b], STy.realTy')) (*Only used in reduction.*)
+    fun mkRDiv (res, a, b) = mkDef (res, S.E_Prim(BV.div_rr, [STy.INTERVAL 0, STy.INTERVAL 0], [a, b], STy.realTy')) (*Only used in reduction.*)
     fun mkToReal (res, a) =
           mkDef (res, S.E_Coerce{srcTy = STy.T_Int, dstTy = STy.realTy', x = a})
     fun mkLength (res, elemTy, xs) =
@@ -320,6 +320,7 @@ structure Simplify : sig
                   | cvtTyArg (Types.DIFF dv) = S.DIFF(TU.monoDiff(TU.resolveDiff dv))
                   | cvtTyArg (Types.SHAPE sv) = S.SHAPE(TU.monoShape(TU.resolveShape sv))
                   | cvtTyArg (Types.DIM dv) = S.DIM(TU.monoDim(TU.resolveDim dv))
+		  | cvtTyArg (Types.INTERVAL iv) = S.INTERVAL(TU.monoInterval(TU.resolveInterval iv)) handle ex => raise ex
                 in
                   if Basis.isBorderCtl f
                     then (stms, doBorderCtl (f, xs))

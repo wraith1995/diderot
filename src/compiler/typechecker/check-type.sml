@@ -55,7 +55,7 @@ structure CheckType : sig
            of PT.T_Mark m => check (Env.withEnvAndContext(env, cxt, m))
             | PT.T_Bool => Ty.T_Bool
             | PT.T_Int => Ty.T_Int
-            | PT.T_Real => Ty.realTy (raise Fail "fixme")
+            | PT.T_Real => Ty.realTy (Ty.IC 0) (* FIX ME*)
             | PT.T_Id strand => (case Env.findStrand(env, strand)
                  of SOME _ => Ty.T_Strand strand
                   | NONE => (
@@ -73,7 +73,7 @@ structure CheckType : sig
                   dim = checkDim (env, cxt, dim),
                   shape = CheckExpr.checkShape (env, cxt, shape)
                 }
-            | PT.T_Tensor shape => Ty.T_Tensor(CheckExpr.checkShape(env, cxt, shape), raise Fail "fix me")
+            | PT.T_Tensor shape => Ty.T_Tensor(CheckExpr.checkShape(env, cxt, shape), Ty.IC 0) (* fix me*)
             | PT.T_Image{dim, shape} => Ty.T_Image{
                   dim = checkDim (env, cxt, dim),
                   shape = CheckExpr.checkShape (env, cxt, shape)

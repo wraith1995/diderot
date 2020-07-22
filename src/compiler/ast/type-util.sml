@@ -475,7 +475,7 @@ structure TypeUtil : sig
     and intervalToString iv =
 	(case pruneInterval iv
 	  of Ty.IC j => if j=0
-			then ""
+			then "scalar "
 			else if j = 1
 			then "interval "
 			else if j > 1

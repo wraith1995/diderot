@@ -105,7 +105,7 @@ structure BasisVars =
 				   fn [Ty.INTERVAL iv1, Ty.INTERVAL iv2] =>
 				      let
 				       val t1 = Ty.realTy (intervalVar iv1)
-				       val t2 = Ty.realTy (intervalVar iv1)
+				       val t2 = Ty.realTy (intervalVar iv2)
 				       val t3 = Ty.realTy (mergeIntervals(iv1,iv2))
 				      in
 				       [t1, t2] --> t3
@@ -118,7 +118,7 @@ structure BasisVars =
 				       val t3 = Ty.T_Tensor (Ty.ShapeVar dd, mergeIntervals(iv1,iv2))
 				      in
 				       [t1, t2] --> t3
-							    end))
+				      end))
     fun makeTRbinOp name = polyVar(name, all([SK, IV, IV],
 				   fn [Ty.SHAPE dd, Ty.INTERVAL iv1, Ty.INTERVAL iv2] =>
 				      let
@@ -229,7 +229,7 @@ structure BasisVars =
 
     val div_ii = monoVar(N.op_div, [Ty.T_Int, Ty.T_Int] --> Ty.T_Int)
     val div_rr = makeRRbinOp(N.op_div)
-    val div_tr = makeRTbinOp(N.op_div)
+    val div_tr = makeTRbinOp(N.op_div)
 			    
     val div_fr = polyVar(N.op_div, all([DK,NK,SK], fn [Ty.DIFF k, Ty.DIM d, Ty.SHAPE dd] => let
             val t = Ty.T_Field{diff = Ty.DiffVar(k, 0), dim = Ty.DimVar d, shape = Ty.ShapeVar dd}

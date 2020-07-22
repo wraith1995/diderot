@@ -80,7 +80,7 @@ structure Util : sig
 *)
             else raise Fail(Var.uniqueNameOf rator ^ " is not a reduction operator")
 
-    val mvsReal = [SimpleTypes.SHAPE[]]
+    val mvsReal = [SimpleTypes.SHAPE[], SimpleTypes.INTERVAL 0, SimpleTypes.INTERVAL 0]
 
     fun reductionInfo redOp = let
           val id = Reductions.identity redOp
@@ -441,7 +441,7 @@ structure Util : sig
 	       val getMesh = createV(meshTemp, S.E_ExtractFem(x', meshHolder))
 	       val fieldAssign = createV(fieldTemp, S.E_FemField(meshTemp, meshTemp, SOME(cellTemp), fieldTy, FemOpt.Transform, NONE))
 	       val getRefCell = createV(refPosTemp, S.E_ExtractFemItem(x', newTensor, (FemOpt.RefPos, ms)))
-	       val metaArgs = [STy.DIFF(NONE), STy.DIM(dim), STy.SHAPE([dim])]
+	       val metaArgs = [STy.DIFF(NONE), STy.DIM(dim), STy.SHAPE([dim]), STy.INTERVAL(0)]
 	       val worldPos = createV(assignTemp, S.E_Prim(BasisVars.op_probe, metaArgs, [fieldTemp, refPosTemp], newTensor))
 	       val worldPosReplace = if assign
 				     then S.S_Assign(worldPosAssign, S.E_Var(assignTemp))
@@ -515,7 +515,7 @@ structure Util : sig
 						      
 				 val infity = S.E_Tensor(List.map (fn (x, y) => x) infinityInits, newTensor)
 				 val badAssign = S.S_Assign(assignTemp, infity)
-				 val metaArgs = [STy.DIFF(NONE), STy.DIM(dim), STy.SHAPE([dim])]
+				 val metaArgs = [STy.DIFF(NONE), STy.DIM(dim), STy.SHAPE([dim]), STy.INTERVAL 0]
 				 val worldPos = S.S_Assign(assignTemp, S.E_Prim(BasisVars.op_probe, metaArgs, [fieldTemp, refPosTemp], newTensor))
 
 

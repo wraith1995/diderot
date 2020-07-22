@@ -67,8 +67,9 @@ structure Unify : sig
       | bindDimVar _ = raise Fail "rebinding dimension variable"
 
 
-    fun bindIntervalVar (pl, iv as Ty.IV{bind as ref NONE, ...}, interval) =
+    fun bindIntervalVar (pl, iv as Ty.IV{bind as ref NONE, id}, interval) =
 	(
+	  (* print("Binding " ^ (Stamp.toString id) ^ " to " ^ (TU.intervalToString interval) ^ "\n"); *)
 	  bind := SOME interval;
 	  pl := Ty.INTERVAL iv :: !pl
 	)
@@ -179,14 +180,17 @@ structure Unify : sig
 	     end
 	   (*there must be an unbound addVar in both or a maxvar*)	       
 	   | (av1 as Ty.AddVar(iv1, k), av2 as Ty.AddVar(iv2, j)) =>
-	     if k = 0
+	     if MV.sameIntervalVar(iv1, iv2)
+	     then j=k
+	     else 
+	     (
+	     if k = 0 
 	     then (bindIntervalVar(pl, iv1, av2); true)
-	     else if j = 0
+	     else if j = 0 
 	     then (bindIntervalVar(pl, iv2, av1); true)
 		    (*iv1 +k = iv2 + j*)
-	     else if MV.sameIntervalVar(iv1, iv2)
-	     then false
 	     else (bindIntervalVar(pl, iv1, Ty.AddVar(iv2, j-k)); true)
+	     )
 	   | (Ty.ShapeSize(shape), Ty.ShapeSize(shape')) => eqs(shape, shape')
 	   | (Ty.AddVar(iv, 0), alt) => (bindIntervalVar(pl, iv, alt); true)
 	   | (alt, Ty.AddVar(iv, 0)) => (bindIntervalVar(pl, iv, alt); true)
