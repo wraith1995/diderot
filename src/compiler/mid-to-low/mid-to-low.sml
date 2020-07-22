@@ -28,6 +28,7 @@ structure MidToLow : sig
             | SrcTy.StringTy => DstTy.StringTy
             | SrcTy.IntTy => DstTy.IntTy
             | SrcTy.TensorTy(sh, NONE) => DstTy.TensorTy sh
+	    | SrcTy.TensorTy(sh, SOME _) => raise Fail "non-eliminated interval tensor"
             | SrcTy.TupleTy tys => DstTy.TupleTy(List.map cvtTy tys)
             | SrcTy.SeqTy(ty, d) => DstTy.SeqTy(cvtTy ty, d)
             | SrcTy.ImageTy info => DstTy.ImageTy info

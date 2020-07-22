@@ -26,7 +26,13 @@ fun doRewrite(lhs, IR.OP(Op.ExtractFemItemN(tys, outTy, opt as (FemOpt.ExtractDo
      SOME(stmts)
     end
   | doRewrite _ = NONE
+structure ST = Stats
+val cntUnused               = ST.newCounter "mid-opt:unused'"
+structure UnusedElim = UnusedElimFn (
+ structure IR = IR
+ val cntUnused = cntUnused)
 
+		    
 structure Rewrite = RewriteFn (
  struct
  structure IR = IR
