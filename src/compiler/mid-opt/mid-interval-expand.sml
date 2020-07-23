@@ -58,6 +58,7 @@ Plan: make util functions we will need and framework (we can use mk ops though)
 Plan: Do interval, push the new functions down to low and vectorize and cxx
 Plan: affine later.
 Plan: Push and test
+Plan:vectorization
 PLan:fast-math
 Plan:parser
 .
@@ -74,42 +75,108 @@ structure MidIntervalExpand : sig
     structure Ty = MidTypes
     structure V = IR.Var
     structure ST = Stats
+    structure E = Ein
+    structure EU = EinUtil
+    structure EP = EinPP
+
+    fun cvtTy (Ty.TensorTy(ts, SOME j)) = if j = 1
+					  then Ty.TensorTy(2 :: ts, NONE)
+					  else if j > 1
+					  then Ty.TensorTy(j :: ts, NONE)
+					  else raise Fail "impossible Tensor Ty"
+      | cvtTy (Ty.TensorTy(ts, NONE)) = Ty.TensorTy(ts, NONE)
+      | cvtTy (Ty.TupleTy(ts)) = Ty.TupleTy(List.map cvtTy ts)
+      | cvtTy (Ty.SeqTy(t, opt)) = Ty.SeqTy(cvtTy t, opt)
+      | cvtTy (t) = t (*bool, string, int, img, strand, fem, kern*)
+
+    structure Env = TranslateEnvFn (
+     struct
+     structure SrcIR = IR
+     structure DstIR = IR
+     val cvtTy = cvtTy
+     end)		    
+		     
 
   (********** Counters for statistics **********)
-    val cntUnused               = ST.newCounter "mid-opt:unused"
+    val cntUnused               = ST.newCounter "mid-opt:unusedp"
     val firstCounter            = cntUnused
     val lastCounter             = cntUnused
 
-    structure UnusedElim = UnusedElimFn (
-        structure IR = IR
-        val cntUnused = cntUnused)
-
-    fun useCount (IR.V{useCnt, ...}) = !useCnt
-
-  (* adjust a variable's use count *)
-    fun incUse (IR.V{useCnt, ...}) = (useCnt := !useCnt + 1)
-    fun decUse (IR.V{useCnt, ...}) = (useCnt := !useCnt - 1)
-    fun use x = (incUse x; x)
-
-    fun getRHSOpt x = (case V.getDef x
-           of IR.OP arg => SOME arg
-            | _ => NONE
-          (* end case *))
-
+    (*Plan: opts here, expands here, deal with new mid in mid to low, vectorization, c++, lifting, parsing, affine fix
+    State vars? Globals? Might need a new rewrite - rewrite and change. Translate is a good idea.
+     *)
+			
     fun doAssign (lhs, IR.OP rhs) = raise Fail "umm"
       | doAssign _ = raise Fail "umm"
 
 
 
 
-    structure Rewrite = RewriteFn (
+    fun expand (env, (y, rhs)) = let
+          fun assign rhs = [IR.ASSGN(Env.rename (env, y), rhs)]
+          in
+            case rhs
+             of IR.GLOBAL x => assign (IR.GLOBAL(Env.renameGV(env, x)))
+              | IR.STATE(NONE, fld) => assign (IR.STATE(NONE, Env.renameSV(env, fld)))
+              | IR.STATE(SOME x, fld) =>
+                  assign (IR.STATE(SOME(Env.rename(env, x)), Env.renameSV(env, fld)))
+              | IR.VAR x => assign (IR.VAR(Env.rename(env, x)))
+              | IR.LIT lit => assign (IR.LIT lit)
+              | IR.OP(rator, args) => raise Fail "oops"
+                  (* List.map IR.ASSGN (expandOp (env, Env.rename (env, y), rator, args)) *)
+              | IR.CONS(args, ty) => assign (IR.CONS(Env.renameList(env, args), cvtTy ty))
+              | IR.SEQ(args, ty) => assign (IR.SEQ(Env.renameList(env, args), cvtTy ty))
+              | IR.EINAPP(rator, args) => raise Fail "oops"
+              | IR.APPLY(f, args) =>
+                  assign (IR.APPLY(Env.renameFV(env, f), Env.renameList(env, args)))
+              | _ => raise Fail("bogus rhs for ASSIGN: " ^ IR.RHS.toString rhs)
+            (* end case *)
+    end
+
+
+
+  (* expand a IR multi-assignment to a IR CFG *)
+    fun mexpand (env, (ys, rhs)) = let
+          fun massign rhs = let
+                val nd = IR.Node.mkMASSIGN(Env.renameList(env, ys), rhs)
+                in
+                  IR.CFG{entry=nd, exit=nd}
+                end
+          fun mkOP (rator, xs) = massign(IR.OP(rator, Env.renameList(env, xs)))
+          in
+            case rhs
+             of IR.OP(Op.EigenVecs2x2, xs) => mkOP (Op.EigenVecs2x2, xs)
+              | IR.OP(Op.EigenVecs3x3, xs) => mkOP (Op.EigenVecs3x3, xs)
+              | IR.OP(Op.KillAll, []) => mkOP (Op.KillAll, [])
+              | IR.OP(Op.StabilizeAll, []) => mkOP (Op.StabilizeAll, [])
+              | IR.OP(Op.Print tys, xs) => mkOP (Op.Print(List.map cvtTy tys), xs)
+	      | IR.OP(Op.Save args, xs) => mkOP(Op.Save args, xs)
+              | IR.MAPREDUCE mrs => let
+                  val mrs = List.map
+                        (fn (r, f, xs) => (r, Env.renameFV(env, f), Env.renameList(env, xs)))
+                          mrs
+                  in
+                    massign (IR.MAPREDUCE mrs)
+                  end
+              | _ => raise Fail("bogus rhs for MASSIGN: " ^ IR.RHS.toString rhs)
+            (* end case *)
+          end
+
+    structure Trans =  TranslateFn (
       struct
-        structure IR = IR
-        val doAssign = doAssign
-        fun doMAssign _ = NONE
-        val elimUnusedVars = UnusedElim.reduce
+        open Env
+        val expand = IR.CFG.mkBlock o expand
+        val mexpand = mexpand
       end)
 
-    val transform = Rewrite.transform
+structure Promote = PromoteFn (IR)
+
+    fun transform prog =
+	let
+	 val prog = Trans.translate prog
+	in
+	 MidCensus.init prog;
+	 Promote.transform prog
+	end
 
   end
