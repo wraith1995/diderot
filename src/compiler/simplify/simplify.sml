@@ -116,8 +116,10 @@ structure Simplify : sig
             | cvtTy STy.T_String = APITypes.StringTy
             | cvtTy (STy.T_Sequence(ty, len)) = APITypes.SeqTy(cvtTy ty, len)
 	    | cvtTy (STy.T_Tuple(tys)) = APITypes.TupleTy(List.map cvtTy tys)
-            | cvtTy (STy.T_Tensor (shape, i)) = if i > 0
+            | cvtTy (STy.T_Tensor (shape, i)) = if i > 1
 						then APITypes.TensorTy (i::shape)
+						else if i = 1
+						then APITypes.TensorTy (2::shape)
 						else if i = 0
 						then APITypes.TensorTy (shape)
 						else raise Fail "bad interval"

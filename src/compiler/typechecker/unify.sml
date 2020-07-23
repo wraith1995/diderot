@@ -198,7 +198,6 @@ structure Unify : sig
 	   | (Ty.MaxVar ivs, alt) => constantOrSame(pl, ivs, alt)
 	   | (alt, Ty.MaxVar ivs) => constantOrSame(pl, ivs, alt)
 	   | _ => false
-	(*merge, merge - merge/ic, merge/addVar*)
 	(* end case *))
 	  end
 
