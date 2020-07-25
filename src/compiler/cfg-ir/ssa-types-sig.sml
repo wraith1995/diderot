@@ -21,5 +21,7 @@ signature SSA_TYPES =
     val intTy : ty
     val realTy : ty
 
+    val tensorTy' : int list -> ty
+
   end
 
