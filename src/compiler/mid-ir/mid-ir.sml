@@ -128,6 +128,7 @@ structure MidOps =
       | intervalToAffine
       | tensorToAffine
       | affineNative of ty * ty * ty
+      | affineNative2 of ty
       | errors
       | lasterr
       | center
@@ -219,6 +220,7 @@ structure MidOps =
       | resultArity intervalToAffine = 1
       | resultArity tensorToAffine = 1
       | resultArity (affineNative _) = 1
+      | resultArity (affineNative2 _) = 1
       | resultArity errors = 1
       | resultArity lasterr = 1
       | resultArity center = 1
@@ -310,6 +312,7 @@ structure MidOps =
       | arity intervalToAffine = 1
       | arity tensorToAffine = 1
       | arity (affineNative _) = 3
+      | arity (affineNative2 _) = 2
       | arity errors = 1
       | arity lasterr = 1
       | arity center = 1
@@ -411,6 +414,7 @@ structure MidOps =
       | same (intervalToAffine, intervalToAffine) = true
       | same (tensorToAffine, tensorToAffine) = true
       | same (affineNative(a0,a1,a2), affineNative(b0,b1,b2)) = samety(a0, b0) andalso samety(a1, b1) andalso samety(a2, b2)
+      | same (affineNative2(a0), affineNative2(b0)) = samety(a0, b0)
       | same (errors, errors) = true
       | same (lasterr, lasterr) = true
       | same (center, center) = true
@@ -503,16 +507,17 @@ structure MidOps =
       | hash intervalToAffine = 0w401
       | hash tensorToAffine = 0w409
       | hash (affineNative(a0,a1,a2)) = 0w419 + hashty a0 + hashty a1 + hashty a2
-      | hash errors = 0w421
-      | hash lasterr = 0w431
-      | hash center = 0w433
-      | hash radius = 0w439
-      | hash minInterval = 0w443
-      | hash maxInterval = 0w449
-      | hash intersection = 0w457
-      | hash hull = 0w461
-      | hash extend = 0w463
-      | hash insideInterval = 0w467
+      | hash (affineNative2(a0)) = 0w421 + hashty a0
+      | hash errors = 0w431
+      | hash lasterr = 0w433
+      | hash center = 0w439
+      | hash radius = 0w443
+      | hash minInterval = 0w449
+      | hash maxInterval = 0w457
+      | hash intersection = 0w461
+      | hash hull = 0w463
+      | hash extend = 0w467
+      | hash insideInterval = 0w479
 
     fun toString IAdd = "IAdd"
       | toString ISub = "ISub"
@@ -594,6 +599,7 @@ structure MidOps =
       | toString intervalToAffine = "intervalToAffine"
       | toString tensorToAffine = "tensorToAffine"
       | toString (affineNative(a0,a1,a2)) = concat["affineNative<", tyToString a0, ",", tyToString a1, ",", tyToString a2, ">"]
+      | toString (affineNative2(a0)) = concat["affineNative2<", tyToString a0, ">"]
       | toString errors = "errors"
       | toString lasterr = "lasterr"
       | toString center = "center"

@@ -530,6 +530,10 @@ structure TranslateBasis : sig
 					    let val ten = DstTy.TensorTy(s, NONE)
 						val ten' = DstTy.TensorTy(d::s, NONE)
 					    in simpleOp (Op.affineNative(ten, ten', ten)) (y, [], args) end) ,
+		(BV.affineNaiveTen',      fn (y, [Ty.SHAPE s], args) =>
+					    let val ten = DstTy.TensorTy(s, NONE)
+					    in simpleOp (Op.affineNative2(ten)) (y, [], args) end),
+
 		(BV.errors,      fn (y, mvs, args) => simpleOp Op.errors (y, [], args)),
 		(BV.errorn,      fn (y, mvs, args) => simpleOp Op.lasterr (y, [], args)),
 		(BV.center,      fn (y, mvs, args) => simpleOp Op.center (y, [], args)),

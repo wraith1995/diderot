@@ -30,6 +30,7 @@ structure MidTypes =
 
   (* smart constructor for tensor type that prunes out dimensions with size 1 *)
     fun tensorTy dd a = TensorTy(List.mapPartial (fn 1 => NONE | d => SOME d) dd, a)
+    fun tensorTy' dd = TensorTy(List.mapPartial (fn 1 => NONE | d => SOME d) dd, NONE)
 
     fun same (BoolTy, BoolTy) = true
       | same (StringTy, StringTy) = true

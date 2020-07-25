@@ -164,7 +164,7 @@ structure Basis : sig
           (N.fn_transpose, [BV.fn_transpose_t, BV.fn_transpose_f]),
           (N.op_compose, [BV.comp]),
 	  (N.interval, [BV.intervalSimple, BV.intervalMixed, BV.intervalAffine]),
-	  (N.affine, [BV.intervalToAffine, BV.tensorToAffine, BV.affineNaive, BV.affineNaiveTen]),
+	  (N.affine, [BV.intervalToAffine, BV.tensorToAffine, BV.affineNaive, BV.affineNaiveTen, BV.affineNaiveTen']),
 	  (N.errors, [BV.errors]),
 	  (N.errorn, [BV.errorn]),
 	  (N.center, [BV.center]),

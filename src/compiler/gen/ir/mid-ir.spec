@@ -170,6 +170,7 @@ intervalAffine : : 1 : 1 : affine -> intervals
 intervalToAffine : : 1 : 1 : interval -> affine
 tensorToAffine : : 1 : 1 : tensor -> affine
 affineNative : ty * ty * ty : 1 : 3 : ten, seq, tne -> affine
+affineNative2 : ty : 1 : 2 : ten, tne -> affine
 #destructors
 errors : : 1 : 1 : aff -> tensor
 lasterr : : 1 : 1 : interval or aff -> tensor

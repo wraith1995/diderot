@@ -837,8 +837,16 @@ structure BasisVars =
 						val seqTen = Ty.T_Tensor(sv', Ty.IC 0)
 					       in
 						[ten, seqTen, ten] --> Ty.T_Tensor(sv, aff)
-					       end))			     
-				  
+					       end))
+				
+    val affineNaiveTen' = polyVar(N.affine, all([SK],
+						fn [Ty.SHAPE s] =>
+						   let
+						    val sv = Ty.ShapeVar s
+						    val ten = Ty.T_Tensor(sv, Ty.IC 0)
+						   in
+						    [ten, ten] --> Ty.T_Tensor(sv, Ty.IC 2)
+						   end))
 
     val errors = polyVar(N.errors, all([SK, IV],
 				       fn [Ty.SHAPE s, Ty.INTERVAL iv] =>

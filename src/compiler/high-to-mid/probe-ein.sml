@@ -57,7 +57,28 @@ structure ProbeEin : sig
                   "expected rhs operator for ", IR.Var.toString x,
                   " but found ", IR.RHS.toString rhs
                 ])
-          (* end case *))
+		      (* end case *))
+
+    fun buildInvalidInterval(avail, shape, iv) =
+	let
+	 val argTy = Ty.tensorTy' shape
+	 val midTy = Ty.tensorTy' ((iv - 2) :: shape)
+	 val retTy = Ty.tensorTy shape (SOME(iv))
+				 
+	 val nan = AvailRHS.makeNan(avail, shape)
+	 val nanArgs = if iv = 1 orelse iv = 2
+		       then [nan, nan]
+		       else if iv > 2
+		       then List.tabulate(iv, fn x => nan)
+		       else raise Fail "impossible"
+	 val myop = if iv = 1
+		  then Op.intervalMixed
+		  else if iv = 2
+		  then Op.affineNative2(argTy)
+		  else Op.affineNative(argTy, midTy, argTy)
+	in
+	 AvailRHS.assignOp(avail, "badinterval", retTy, myop, nanArgs)
+	end
 
     fun axis dir = (case dir of 0 => "X" | 1 => "Y" | 2 => "Z" | _ => "dir" ^ Int.toString dir)
 
@@ -398,23 +419,35 @@ structure ProbeEin : sig
 	 val (srcFunc, dstFunc) = Env.findSrcFV (env, func)
 	 val IR.FV{paramTys, ty,...} = dstFunc
 
-	 val params = (case paramTys
+	 val (params, nanflag) = (case paramTys
 			of [Ty.TensorTy([n], NONE), Ty.IntTy, Ty.IntTy] => (case IR.Var.getDef meshVar
-								       of IR.OP(Op.Subscript _, [v, idx]) => [posVar, cellIntVar, idx]
+								       of IR.OP(Op.Subscript _, [v, idx]) => ([posVar, cellIntVar, idx], false)
 									| _ => raise Fail "impossible"
 									(* end case*))
-			 | [Ty.TensorTy([n], NONE), Ty.IntTy] => [posVar, cellIntVar]
+			 | [Ty.TensorTy([n], NONE), Ty.IntTy] => ([posVar, cellIntVar], false)
+			 | Ty.TensorTy([n], SOME k) :: _ => ([buildInvalidInterval(avail, [n], k), cellIntVar], true)
 		      (*end case*))
 
 
-	 val meshPosResult = AvailRHS.addAssign(avail, "callNewtonPos", ty, IR.APPLY(dstFunc, params))
-	 val newPosVar = AvailRHS.addAssign(avail, "refPos",
-					    Ty.TensorTy([dim], NONE),
-					    IR.OP(Op.Select(ty, 0),
-					    [meshPosResult]))
+				   
+	 val newPosVar = if nanflag
+			     then List.nth(params, 0)
+			     else
+			      let
+			       val meshPosResult = AvailRHS.addAssign(avail, "callNewtonPos", ty, IR.APPLY(dstFunc, params))
+			      in
+			       AvailRHS.addAssign(avail, "refPos",
+						  Ty.TensorTy([dim], NONE),
+						  IR.OP(Op.Select(ty, 0),
+							[meshPosResult]))
+			      end
+
 	in
 	 newPosVar
 	end
+
+
+
 
     fun callMeshPosFunc(avail, env, n, func, posVar, meshVar, meshData) =
 	let
@@ -424,27 +457,37 @@ structure ProbeEin : sig
 	 val (srcFunc, dstFunc) = Env.findSrcFV (env, func)
 	 val IR.FV{paramTys, ty,...} = dstFunc
 
-	 val params = (case paramTys
+	 val (params, nanflag) = (case paramTys
 			of [Ty.IntTy, Ty.TensorTy([n], NONE)] => (case IR.Var.getDef meshVar
-								       of IR.OP(Op.Subscript _, [v, idx]) => [idx, posVar]
+								       of IR.OP(Op.Subscript _, [v, idx]) => ([idx, posVar], false)
 									| _ => raise Fail "impossible"
 								     (* end case*))
-			 | [Ty.TensorTy([n], NONE)] => [posVar]
-		      (*end case*))
+			 | [Ty.TensorTy([n], NONE)] => ([posVar], false)
+			 | Ty.TensorTy([n], SOME k) :: _ => ([buildInvalidInterval(avail, [n], k)], true)
+				 (*end case*))
 
-	 val meshPosResult = AvailRHS.addAssign(avail, "callFindPos",
-						ty,
-						IR.APPLY(dstFunc, params))
-	 val intVar = AvailRHS.addAssign(avail, "intPos",
-					 Ty.IntTy,
-					 IR.OP(
-					  Op.Select(ty, 1),
-					  [meshPosResult]))
-	 val newPosVar = AvailRHS.addAssign(avail, "refPos",
-					    Ty.TensorTy([n], NONE),
-					    IR.OP(
-					     Op.Select(ty, 0),
-					     [meshPosResult]))
+	 val (intVar, newPosVar) = if Bool.not nanflag
+				   then
+				    let
+				     val meshPosResult = AvailRHS.addAssign(avail, "callFindPos",
+									    ty,
+									    IR.APPLY(dstFunc, params))
+				     val intVar = AvailRHS.addAssign(avail, "intPos",
+								     Ty.IntTy,
+								     IR.OP(
+								      Op.Select(ty, 1),
+								      [meshPosResult]))
+				     val newPosVar = AvailRHS.addAssign(avail, "refPos",
+									Ty.TensorTy([n], NONE),
+									IR.OP(
+									 Op.Select(ty, 0),
+									 [meshPosResult]))
+
+				    in
+				     (intVar, newPosVar)
+				    end
+				   else (AvailRHS.addAssign(avail, "neg1", Ty.intTy, IR.LIT(Literal.intLit (~1))), List.nth(params, 0))
+
 	in
 	 (intVar, newPosVar)
 	end
@@ -551,7 +594,7 @@ structure ProbeEin : sig
 	in
 	 (case (f,interval)
 	   of (E.Conv(_,_,_,_), NONE) => replaceImgProbe arg
-	    | (E.Conv _, SOME k) => raise Fail "FIXME: usenans"
+	    | (E.Conv _, SOME k) => AvailRHS.addAssignToList(avail, (y, IR.VAR(buildInvalidInterval(avail, index, k))))
 	    | (E.Fem _, _) => replaceFemProbe arg
 	 (* end case*))
 	end
@@ -633,7 +676,7 @@ structure ProbeEin : sig
     in
      (case interval
        of NONE => liftProbe argss
-	| SOME k => raise Fail "FIXME: handle probe of images."
+	| SOME k => AvailRHS.addAssignToList(avail, (y, IR.VAR(buildInvalidInterval(avail, index, k))))
      (* end case *)) (*replace with nans for now*)
     end
 
@@ -645,13 +688,13 @@ structure ProbeEin : sig
            of (E.Probe(E.Conv(_, _, _, []) ,_)) =>
               replaceProbe (avail, env, e, body, [])
             | (E.Probe(E.Conv(_, alpha, _, dx) ,_)) =>
-              liftProbe (avail, e, body, []) (*scans dx for contant*)
+              liftProbeWrap (avail, e, body, []) (*scans dx for contant*)
 	    | (p as E.Probe(E.Fem _, _)) =>
 	      replaceProbe (avail, env, e, p, [])
             | (E.Sum(sx, p as E.Probe(E.Conv(_, _, _, []), _))) =>
                 replaceProbe (avail, env, e, p, sx)   (*no dx*)
             | (E.Sum(sx, p as E.Probe(E.Conv(_, [], _, dx), _))) =>
-                liftProbe (avail, e, p, sx) (*scalar field*)
+                liftProbeWrap (avail, e, p, sx) (*scalar field*)
             | (E.Sum(sx, E.Probe p)) =>
                 replaceProbe (avail, env, e, E.Probe p, sx)
             | (E.Sum(sx, E.Opn(E.Prod, [eps, E.Probe p]))) =>

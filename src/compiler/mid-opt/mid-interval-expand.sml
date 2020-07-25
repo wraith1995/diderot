@@ -103,8 +103,10 @@ structure MidIntervalExpand : sig
     val lastCounter             = cntUnused
 
     (*Plan: opts here, expands here, deal with new mid in mid to low, vectorization, c++, lifting, parsing, affine fix
-    State vars? Globals? Might need a new rewrite - rewrite and change. Translate is a good idea.
      *)
+    (*plan: probe and such - ops expand here -  further expansion (TOM)
+Do assign, dops
+     ops first because easy - tensor[j::sigma] -- low opt tensor index*)
 			
     fun doAssign (lhs, IR.OP rhs) = raise Fail "umm"
       | doAssign _ = raise Fail "umm"
@@ -123,6 +125,7 @@ structure MidIntervalExpand : sig
               | IR.VAR x => assign (IR.VAR(Env.rename(env, x)))
               | IR.LIT lit => assign (IR.LIT lit)
               | IR.OP(rator, args) => raise Fail "oops"
+	      (*Affine ops used -- all else pass on (BASIS or pass into low?)*)
                   (* List.map IR.ASSGN (expandOp (env, Env.rename (env, y), rator, args)) *)
               | IR.CONS(args, ty) => assign (IR.CONS(Env.renameList(env, args), cvtTy ty))
               | IR.SEQ(args, ty) => assign (IR.SEQ(Env.renameList(env, args), cvtTy ty))
@@ -169,7 +172,7 @@ structure MidIntervalExpand : sig
         val mexpand = mexpand
       end)
 
-structure Promote = PromoteFn (IR)
+    structure Promote = PromoteFn (IR)
 
     fun transform prog =
 	let

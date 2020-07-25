@@ -206,6 +206,7 @@ structure HighToMid : sig
 	      | SrcOp.intervalToAffine => assign (DstOp.intervalToAffine)
 	      | SrcOp.tensorToAffine => assign (DstOp.tensorToAffine)
 	      | SrcOp.affineNative(t,s,t') => assign (DstOp.affineNative(cvtTy t, cvtTy s, cvtTy t'))
+	      | SrcOp.affineNative2(t) => assign (DstOp.affineNative2(cvtTy t))
 	      | SrcOp.errors => assign (DstOp.errors)
 	      | SrcOp.lasterr => assign (DstOp.lasterr)
 	      | SrcOp.center => assign (DstOp.center)
