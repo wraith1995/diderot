@@ -43,10 +43,12 @@ functor AvailRHSFn (
     val getAssignments : t -> IR.assign list
 
     val assignOp : t * string * IR.Ty.ty * IR.Op.rator * IR.var list -> IR.var
+    val assignEin : t * string * IR.Ty.ty * Ein.ein * IR.var list -> IR.var
+    val assignCons : t * string   * IR.var list * IR.Ty.ty-> IR.var
 
     val makeRealLit : t * int list * RealLit.t -> IR.var
     val makeNan : t * int list -> IR.var
-
+    val makeIntLit : t * int -> IR.var
 
   end = struct
 
@@ -134,6 +136,8 @@ functor AvailRHSFn (
 
     fun assignOp (avail, pre, ty, opss, args) =
         addAssign(avail, pre, ty, IR.OP(opss, args))
+    fun assignEin (avail, pre, ty, ein, args) =
+        addAssign(avail, pre, ty, IR.EINAPP(ein, args))
     fun assignCons (_, _, [], ty) = raise Fail "empty cons"
       | assignCons (avail, pre, args as x::_, ty) = let
       in
@@ -142,10 +146,10 @@ functor AvailRHSFn (
 
     fun makeRealLit(t, intlist, rlit) =
 	let
-	 val nanVar = addAssign(t, "nan", IR.Ty.realTy, IR.LIT(Literal.Real (rlit)))
+	 val nanVar = addAssign(t, "lit", IR.Ty.realTy, IR.LIT(Literal.Real (rlit)))
 	 val reved = (List.rev intlist)
 	 fun conses([], s, x) = x
-	   | conses ((d)::ds, s, x) = conses(ds, d::s, assignCons(t, "nans", List.tabulate(d, fn y => x ), IR.Ty.tensorTy' (d::s)))
+	   | conses ((d)::ds, s, x) = conses(ds, d::s, assignCons(t, "lit", List.tabulate(d, fn y => x ), IR.Ty.tensorTy' (d::s)))
 	in
 	 conses(reved, [], nanVar)
 	end						      
@@ -158,7 +162,14 @@ functor AvailRHSFn (
 	   | conses ((d)::ds, s, x) = conses(ds, d::s, assignCons(t, "nans", List.tabulate(d, fn y => x ), IR.Ty.tensorTy' (d::s)))
 	in
 	 conses(reved, [], nanVar)
-	end						      
+	end
+
+    fun makeIntLit(t, int) =
+	let
+	 val intLit = Literal.intLit int
+	in
+	 addAssign(t, "intlit", IR.Ty.intTy, IR.LIT(intLit))
+	end
 			      
 
     fun getAssignments (TBL{assigns, ...}) = !assigns
