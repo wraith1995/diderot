@@ -139,6 +139,8 @@ structure MidOps =
       | hull
       | extend
       | insideInterval
+      | EvaluateBasisAff of BasisDataArray.t * int
+      | twocomp
 
     fun resultArity IAdd = 1
       | resultArity ISub = 1
@@ -231,6 +233,8 @@ structure MidOps =
       | resultArity hull = 1
       | resultArity extend = 1
       | resultArity insideInterval = 1
+      | resultArity (EvaluateBasisAff _) = 1
+      | resultArity twocomp = 3
 
     fun arity IAdd = 2
       | arity ISub = 2
@@ -321,8 +325,10 @@ structure MidOps =
       | arity maxInterval = 1
       | arity intersection = 2
       | arity hull = 2
-      | arity extend = 1
-      | arity insideInterval = 1
+      | arity extend = 2
+      | arity insideInterval = 2
+      | arity (EvaluateBasisAff _) = 1
+      | arity twocomp = 1
 
     fun isPure (MkDynamic _) = false
       | isPure (Append _) = false
@@ -425,6 +431,8 @@ structure MidOps =
       | same (hull, hull) = true
       | same (extend, extend) = true
       | same (insideInterval, insideInterval) = true
+      | same (EvaluateBasisAff(a0,a1), EvaluateBasisAff(b0,b1)) = BasisDataArray.same(a0, b0) andalso sameint(a1, b1)
+      | same (twocomp, twocomp) = true
       | same _ = false
 
     fun hash IAdd = 0w3
@@ -518,6 +526,8 @@ structure MidOps =
       | hash hull = 0w463
       | hash extend = 0w467
       | hash insideInterval = 0w479
+      | hash (EvaluateBasisAff(a0,a1)) = 0w487 + BasisDataArray.hash a0 + hashint a1
+      | hash twocomp = 0w491
 
     fun toString IAdd = "IAdd"
       | toString ISub = "ISub"
@@ -610,6 +620,8 @@ structure MidOps =
       | toString hull = "hull"
       | toString extend = "extend"
       | toString insideInterval = "insideInterval"
+      | toString (EvaluateBasisAff(a0,a1)) = concat["EvaluateBasisAff<", BasisDataArray.toString a0, ",", intToString a1, ">"]
+      | toString twocomp = "twocomp"
 
   end
 

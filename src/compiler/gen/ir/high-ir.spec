@@ -132,5 +132,6 @@ maxInterval : : 1 : 1 : interval -> tensor
 #special ops
 intersection : : 1 : 2 : interval * interval -> interval
 hull : : 1 : 2 : interval * interval -> interval
-extend : : 1 : 1 : affine -> affine (check notes)
-insideInterval : : 1 : 1 : interval -> bool
+extend : : 1 : 2 : affine -> affine (check notes)
+insideInterval : : 1 : 2 : ten * interval -> bool
+

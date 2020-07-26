@@ -181,5 +181,8 @@ maxInterval : : 1 : 1 : interval -> tensor
 #special ops
 intersection : : 1 : 2 : interval * interval -> interval
 hull : : 1 : 2 : interval * interval -> interval
-extend : : 1 : 1 : affine -> affine (check notes)
-insideInterval : : 1 : 1 : interval -> bool
+extend : : 1 : 2 : affine -> affine (check notes)
+insideInterval : : 1 : 2 : ten * interval -> bool
+#translated interval/affine op
+EvaluateBasisAff : BasisDataArray.t * int : 1 : 1 : compute array of basis values.
+twocomp :: 3 : 1 : ten * ten * ten -> bool

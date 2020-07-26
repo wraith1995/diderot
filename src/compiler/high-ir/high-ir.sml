@@ -267,8 +267,8 @@ structure HighOps =
       | arity maxInterval = 1
       | arity intersection = 2
       | arity hull = 2
-      | arity extend = 1
-      | arity insideInterval = 1
+      | arity extend = 2
+      | arity insideInterval = 2
 
     fun isPure (MkDynamic _) = false
       | isPure (Append _) = false

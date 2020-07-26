@@ -923,7 +923,7 @@ structure BasisVars =
 					   val aff = Ty.AddVar(i, 2)
 					   val aff' = Ty.AddVar(i, 3)
 					  in
-					   [Ty.T_Tensor(sv, aff)] --> Ty.T_Tensor(sv, aff')
+					   [Ty.T_Tensor(sv, aff), Ty.T_Tensor(sv, Ty.IC 0)] --> Ty.T_Tensor(sv, aff')
 					  end))
 
     val insideInterval = polyVar(N.insideInterval, all([SK, IV],
@@ -932,7 +932,7 @@ structure BasisVars =
 						   val sv = Ty.ShapeVar s
 						   val aff = Ty.IC 1
 						  in
-						   [Ty.T_Tensor(sv, aff)] --> Ty.T_Bool
+						   [Ty.T_Tensor(sv, Ty.IC 0), Ty.T_Tensor(sv, aff)] --> Ty.T_Bool
 						  end
 			))
 			     
