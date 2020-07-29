@@ -186,3 +186,4 @@ insideInterval : : 1 : 2 : ten * interval -> bool
 #translated interval/affine op
 EvaluateBasisAff : BasisDataArray.t * int : 1 : 1 : compute array of basis values.
 twocomp :: 3 : 1 : ten * ten * ten -> bool
+scalarIntervalFun : string : 1 : 1 : scalar sine, arcsine, etc... string is a hack for now out of lazyness -- takes 2 vector and dumps two vector....

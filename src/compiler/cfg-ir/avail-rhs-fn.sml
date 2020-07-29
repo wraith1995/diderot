@@ -41,6 +41,7 @@ functor AvailRHSFn (
    * order from how they were added to the table.
    *)
     val getAssignments : t -> IR.assign list
+    val getAssignments' : t -> IR.assignment list
 
     val assignOp : t * string * IR.Ty.ty * IR.Op.rator * IR.var list -> IR.var
     val assignEin : t * string * IR.Ty.ty * Ein.ein * IR.var list -> IR.var
@@ -173,6 +174,7 @@ functor AvailRHSFn (
 			      
 
     fun getAssignments (TBL{assigns, ...}) = !assigns
+    fun getAssignments' (TBL{assigns, ...}) = (List.map (fn x => IR.ASSGN x)) (List.rev (!assigns))
 
   end
 

@@ -25,6 +25,7 @@ structure EinUtil : sig
     val cleanIds : Ein.ein_exp -> Ein.ein_exp
 
     val collectIndicies : Ein.ein_exp -> int list
+    val mapIndex : Ein.ein_exp * (int -> int) -> Ein.ein_exp
 
     (* val typeCheckTenShape : Ein.ein -> ((int list * int option) * bool)  (*shape, interval, matches internal shape*) *)
     (* val typeCheckTenShapeExp : Ein.ein_exp * (int -> ((int list * int option)) option) -> (int list * int option) *)
@@ -473,6 +474,44 @@ structure EinUtil : sig
 					  
 	in
 	 ISet.listItems(mapper(e, start))
+	end
+
+    fun mapIndex(einExp, indexf) =
+	let
+	 fun fixIndex (E.V j) = E.V (indexf j)
+	   | fixIndex (E.C r) = E.C r
+
+	 fun fixIndexes ms = List.map fixIndex ms
+
+	 fun mapper (e as E.Const _) = e
+	   | mapper (e as E.ConstR _) = e
+	   | mapper (E.Tensor(pid, alpha)) = E.Tensor(pid, fixIndexes alpha)
+	   | mapper (E.Zero alpha) = E.Zero (fixIndexes alpha)
+	   | mapper (E.Delta(a,b)) = E.Delta(fixIndex a, fixIndex b)
+	   | mapper (E.Epsilon(a,b,c)) = E.Epsilon(fixIndex a, fixIndex b, fixIndex c)
+	   | mapper (E.Eps2(a, b)) = E.Eps2(a, b)
+	   | mapper (E.Field(pid, alpha)) = E.Field(pid, fixIndexes alpha)
+	   | mapper (E.Lift e) = E.Lift (mapper e)
+	   | mapper (E.Identity(r, m, other)) = E.Identity(r, fixIndex m, other)
+	   | mapper (E.Conv(pid1, alpha1, pid2, alpha2)) = E.Conv(pid1, fixIndexes alpha1, pid2, fixIndexes alpha2)
+	   | mapper (E.Fem(fem, pid1, pid2, pid3, alpha1, alpha2)) = E.Fem(fem, pid1, pid2, pid3, fixIndexes alpha1, fixIndexes alpha2)
+	   | mapper (E.Partial alpha) = E.Partial (fixIndexes alpha)
+	   | mapper (E.Apply(e1, e2)) = E.Apply(mapper e1, mapper e2)
+	   | mapper (E.Comp(e, es)) = E.Comp(e, List.map (fn (x,y) => (mapper x, y)) es)
+	   | mapper (E.Probe(e1, e2)) = E.Probe(mapper e1, mapper e2)
+	   | mapper (E.OField _) = raise Fail "OField ignored"
+	   | mapper (E.Value j) =  E.Value (indexf j)
+	   | mapper (E.Img(pid1, alpha1, poses, j)) = E.Img(pid1, fixIndexes alpha1, List.map mapper poses, j)
+	   | mapper (E.Krn(pid1, mus, j)) = E.Krn(pid1, List.map (fn (x,y) => (fixIndex x, fixIndex y)) mus, j)
+	   | mapper (E.Poly _) = raise Fail "poly ignored"
+	   | mapper (E.If _) = raise Fail "If ignored"
+	   | mapper (E.Sum(sx, e)) = E.Sum(List.map (fn (x, y, z) => (indexf x, y, z)) sx, mapper e)
+	   | mapper (E.Op1(u, e)) = E.Op1(u, mapper e)
+	   | mapper (E.Op2(b, e1, e2)) = E.Op2(b, mapper e1, mapper e2)
+	   | mapper (E.Op3(t, e1, e2, e3)) = E.Op3(t, mapper e1, mapper e2, mapper e3)
+	   | mapper (E.Opn(opn, es)) = E.Opn(opn, List.map mapper es)
+	in
+	 mapper einExp
 	end
 
     (* fun typeCheckTenShapeExp (exp, f) = *)

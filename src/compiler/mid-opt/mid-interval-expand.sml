@@ -15,7 +15,8 @@ ret = ops | E.Sum ops
 ONE ISSUE: Make sure sizing and special ops
 (case op1
       increasing, decreasing (neg, expr, sqrt, pow) -> obvious
-      abs -> min(max(min, 0), max), max(abs(max), abs(min)) -- vectorized
+      abs -> min(max(min, 0), max), max(abs(max), abs(min)) -- vectorized abs via or max(-xmin, max(xmax, -xmax)) 3 -- 4
+      
       rest - two 2 vec rep, unwrap into interval functions, rewrap
       ignore: sgn
 
@@ -78,7 +79,30 @@ structure MidIntervalExpand : sig
     structure E = Ein
     structure EU = EinUtil
     structure EP = EinPP
+    (*given a tensor shape and an alpha, compute a new shape and alpha to represent the result after alpha is used in another op*)
+    (*
+\sum ijk...
 
+*)
+    fun alphaIndex(argshape, alpha) =
+	let
+	 val rank = List.length argshape
+	 val newShape = List.mapPartial (fn E.V x => SOME(List.nth(argshape, x)) | E.C _ => NONE ) alpha
+	 val newAlpha = List.filter (fn E.V _ => true | E.C _ => false) alpha
+				     
+	in
+	 (newShape, newAlpha)
+	end
+
+    fun groupConversionS name avail (lst, s) = let
+     val v::vst = lst
+     val ty = IR.Var.ty v
+     val Ty.TensorTy(shape', _) = ty
+    in
+     AvailRHS.assignCons(avail, name, lst, Ty.TensorTy(s::shape', NONE))
+    end
+
+		     
     fun cvtTy (Ty.TensorTy(ts, SOME j)) = if j = 1
 					  then Ty.TensorTy(2 :: ts, NONE)
 					  else if j > 1
@@ -203,6 +227,7 @@ Do assign, dops
 	in
 	 AvailRHS.assignEin(avail, "absTensor", tenTy, ein, [src])
 	end
+	  
 
     fun makeAbsTenAtIdx(avail, outerIdx, src) =
 	let
@@ -324,6 +349,28 @@ Do assign, dops
 	in
 	 AvailRHS.assignEin(avail, "maxTensor", Ty.TensorTy(ts, NONE), ein, srcs)
 	end
+    fun vmax2alpha(b, avail, src1, src2, index, alpha1, alpha2) =
+	let
+	 val srcs = [src1, src2]
+	 val Ty.TensorTy(ts, NONE) = IR.Var.ty src1
+	 val Ty.TensorTy(ts', NONE) = IR.Var.ty src2
+	 val params = [E.TEN(true, ts, NONE), E.TEN(true, ts', NONE)]
+	 val body = E.Op2(if b then E.Max else E.Min, E.Tensor(0, alpha1), E.Tensor(1, alpha2))
+	 val ein = E.EIN{params=params, index=index, body=body}
+	in
+	 AvailRHS.assignEin(avail, "maxTensor", Ty.TensorTy(ts, NONE), ein, srcs)
+	end
+    fun makeAbsTenAlpha(avail, src, alpha, index) =
+	let
+	 val tenTy = IR.Var.ty src
+	 val Ty.TensorTy(ts, NONE) = tenTy
+	 val params = [E.TEN(true, ts, NONE)]
+	 val body = E.Op1(E.Abs, E.Tensor(0, alpha))
+	 val ein = E.EIN{params=params, index=index, body=body}
+	in
+	 AvailRHS.assignEin(avail, "absTensor", tenTy, ein, [src])
+	end
+	  
 
     fun vmax(b, avail, srcs) =
 	let
@@ -580,6 +627,401 @@ Do assign, dops
 	end
 
 
+    fun verifyEinForm(body) =
+	let
+	 val (sx, body') = (case body
+			     of E.Sum(sx, e) => (sx, e)
+			      | _ => ([], body)
+			   (* end case *))
+	 fun highIr () = raise Fail "high ir term in mid ir"
+	 fun verifyLeaf (E.Const _) = true
+	   | verifyLeaf (E.ConstR _) = true
+	   | verifyLeaf (E.Tensor _) = true
+	   | verifyLeaf (E.Zero _) = true
+	   | verifyLeaf (E.Delta _) = true
+	   | verifyLeaf (E.Epsilon _) = true
+	   | verifyLeaf (E.Eps2 _) = true
+	   | verifyLeaf (E.Field _) = highIr ()
+	   | verifyLeaf (E.Lift _) = highIr ()
+	   | verifyLeaf (E.Identity _) = highIr ()
+	   | verifyLeaf (E.Fem _) = highIr ()
+	   | verifyLeaf (E.Conv _) = highIr ()
+	   | verifyLeaf (E.Partial _) = highIr ()
+	   | verifyLeaf (E.Apply _) = highIr ()
+	   | verifyLeaf (E.Comp _) = highIr ()
+	   | verifyLeaf (E.Probe _) = highIr ()
+	   | verifyLeaf (E.OField _) = raise Fail "disallowed term"
+	   | verifyLeaf (E.Value _) = true
+	   | verifyLeaf (E.Img _) = true
+	   | verifyLeaf (E.Krn _) = true
+	   | verifyLeaf (E.Poly _) = raise Fail "disallowed term"
+	   | verifyLeaf (E.If _) = raise Fail "disallowed term"
+	   | verifyLeaf (E.Op1 _) = false
+	   | verifyLeaf (E.Op2 _) = false
+	   | verifyLeaf (E.Op3 _) = false
+	   | verifyLeaf (E.Opn _) = false
+
+	 fun leafs (E.Op1(_, b)) = [b]
+	   | leafs (E.Op2(_, b1, b2)) = [b1, b2]
+	   | leafs (E.Op3(_, b1, b2, b3)) = [b1, b2, b3]
+	   | leafs (E.Opn(_, bs)) = bs
+	   | leafs _ = raise Fail "impossible"
+	in
+	 if verifyLeaf body'
+	 then (sx, true, body')
+	 else if List.all verifyLeaf (leafs body')
+	 then (sx, false, body')
+	 else raise Fail "badly formed mid ein"
+	end
+
+    fun rankOfExp'(e, params) =
+	let
+	 fun maxi s = List.foldr (Int.max) 0 s
+	 fun minAboveZero s = List.foldr (Int.min) 0 (List.filter (fn x => x > 0) s)
+	 fun failOrMax(es, rs) =
+	     if List.length es <> List.length rs
+	     then raise Fail "internal failure in rank of exp"
+	     else if (maxi rs) <> (minAboveZero rs)
+	     then raise Fail ("internal rank error: typechecker or later created expressions of incompatible interval rank:\n "
+			      ^ (String.concat(ListPair.map (fn (x,y) => "rank(" ^ (EinPP.expToString x) ^ ") = " ^ (Int.toString y) ^ "\n") (es, rs))))
+	     else maxi rs
+
+	 fun recur e' = rankOfExp'(e', params)
+	 fun failOrMax'(es) = failOrMax(es, List.map recur es)
+
+	 fun doTensor(idx) = if 0 > idx orelse idx >= List.length params
+			     then raise Fail "bad tensor param"
+			     else (case List.nth(params, idx)
+				    of E.TEN(_, _, SOME j) => j
+				     | E.TEN(_, _, NONE) => 0
+				     | _ => raise Fail ("bad Tensor arg: " ^ (Int.toString idx))
+				  (* end case *))
+
+
+				    
+	in
+	 (case e
+	   of E.Const _ => 0
+	    | E.ConstR _ => 0
+	    | E.Tensor(pid, _) => doTensor pid
+	    | E.Zero _ => 0
+	    | E.Delta _ => 0
+	    | E.Epsilon _ => 0
+	    | E.Eps2 _ => 0
+	    | E.Field _ => raise Fail "Field in mid"
+	    | E.Lift e => recur e
+	    | E.Identity _ => raise Fail "id-field in mid"
+	    | E.Conv _ => raise Fail "Convo in mid"
+	    | E.Fem _ => raise Fail "Fem in mid"
+	    | E.Partial _ => raise Fail "Partial in mid"
+	    | E.Apply _ => raise Fail "Apply in mid"
+	    | E.Comp _ => raise Fail "comp in mid"
+	    | E.Probe(e, at) => recur at
+	    | E.OField _ => raise Fail "ignore ofield"
+	    | E.Value _ => 0
+	    | E.Img _ => 0
+	    | E.Krn _ => 0
+	    | E.Poly _ => raise Fail "ignore Poly"
+	    | E.If(_, a, b) => failOrMax'([a,b])
+	    | E.Sum(sx, e') => recur e'
+	    | E.Op1(u, e') => recur e'
+	    | E.Op2(b, e1, e2) => failOrMax'([e1, e2])
+	    | E.Op3(t, e1, e2, e3) => failOrMax'([e1, e2, e3])
+	    | E.Opn(opn, es) => failOrMax' es
+	 (*end case*))
+	end
+
+    fun leafPid (E.Tensor(pid, _)) = SOME(pid)
+      | leafPid (E.Lift(e)) = leafPid e
+      | leafPid (E.Const _) = NONE
+      | leafPid (E.ConstR _) = NONE
+      | leafPid (E.Zero _) = NONE
+      | leafPid (E.Delta _) = NONE
+      | leafPid (E.Epsilon _) = NONE
+      | leafPid (E.Eps2 _) = NONE
+      | leafPid _ = raise Fail "bad leaf"
+
+
+    fun cvtParams (E.TEN(b, shp, NONE)) = E.TEN(b, shp, NONE)
+      | cvtParams (E.TEN(b, shp, SOME k)) = if k = 1
+					    then E.TEN(b, 2::shp, NONE)
+					    else if k > 1
+					    then E.TEN(b, k::shp, NONE)
+					    else raise Fail "bad TEN"
+      | cvtParams (E.FLD _) = raise Fail "high-ir param"
+      | cvtParams (other) = other
+
+    fun detectBadTen r (E.TEN(b, shp, SOME k)) = r = k
+      | detectBadTen r _ = true
+
+
+    fun toTwoVec(avail, arg) =
+	let
+	 val ty = IR.Var.ty arg
+	 val Ty.TensorTy(s::innerShape, NONE) = ty
+	 val _ = if s <> 2
+		 then raise Fail "bad interval tensor"
+		 else ()
+	 val temp = ArrayNd.array'(0, innerShape)
+	 val inverse = (ArrayNd.getInverseIndex o ArrayNd.computeInverseIndex)(temp)
+	 val make2Var = List.map (fn x => let
+				   val x' = x
+				   val a = AvailRHS.assignOp(avail, "acc02", Ty.realTy, Op.TensorIndex(ty, 0::x'), [arg])
+				   val b = AvailRHS.assignOp(avail, "acc12", Ty.realTy, Op.TensorIndex(ty, 1::x'), [arg])
+				  in
+				   AvailRHS.assignCons(avail, "acc2", [a,b], Ty.TensorTy([2],NONE))
+				  end) (Array.toList(inverse))
+									      
+	in
+	 make2Var
+	end
+
+    fun buildIntervalFromTwoVec(avail, innerShape, twoVecs) =
+	let
+	 val temp = ArrayNd.array'(0, innerShape)
+	 val inverse = (ArrayNd.getInverseIndex o ArrayNd.computeInverseIndex)(temp)
+
+	 fun build i = List.map (fn x => AvailRHS.assignOp(avail, "unacc0"^(Int.toString i), Ty.realTy, Op.TensorIndex(Ty.TensorTy([2], NONE), [i]), [x])) twoVecs
+	 val twovec1 = build 0
+	 val twovec2 = build 1
+	 val indexInfo = ArrayNd.fromList'(List.@(twovec1, twovec2), 2::innerShape)
+	 val ret = ArrayNd.convertToTree(indexInfo, (fn x => x), groupConversionS "unaccgroup" avail)
+	in
+	 ret
+	end
+
+
+    fun swapIntervalMinMax(avail, interval) =
+	let
+	 val ty as Ty.TensorTy(s::shp, NONE) = IR.Var.ty interval
+	 val _ = if s <> 2
+		 then raise Fail "bad interval to swapIntervalMinMax"
+		 else ()
+	 val temp = ArrayNd.array'(0, s::shp)
+	 val inverse = (ArrayNd.getInverseIndex o ArrayNd.computeInverseIndex)(temp)
+	 val inverseArray = ArrayNd.fromArray'(inverse, s::shp)
+	 fun swapFn(i::idx) =
+	     let
+	      val i' = if i = 0
+		       then 1
+		       else if i = 1
+		       then 0
+		       else raise Fail "impossible"
+				  
+	     in
+	      AvailRHS.assignOp(avail, "intervalSawpAcc", Ty.realTy, Op.TensorIndex(ty, i'::idx), [interval])
+	     end
+	in
+	 ArrayNd.convertToTree(inverseArray, swapFn , groupConversionS "swapInterval" avail)
+	end
+
+    fun inc(E.V x) = E.V (x + 1)
+      | inc (E.C j) = E.C j
+    fun modAlpha alpha = E.V 0 :: (List.map inc alpha)
+    fun modTensor(E.Tensor(pid, alpha)) = E.Tensor(0, E.V 0 :: (List.map inc alpha))
+    fun modSumrange(xs) = List.map (fn (x,y,z) => (x + 1, y, z)) xs
+
+    fun mkSum([], b) = b
+      | mkSum (sx, b) = E.Sum(sx, b)
+	  
+
+
+    fun handleIntervalEin(y, oldY, params, index, sx, body, body', leafForm, args, oldArgs) =
+	let
+	 val avail = AvailRHS.new ()
+	 fun rankOfExp(e) = let val i = rankOfExp'(e, params) in if i = 0
+								 then NONE
+								 else if i > 0
+								 then SOME(i)
+								 else raise Fail "bad interval rank" end
+
+	 fun mkEin (index, param, b) = E.EIN{index=index, params=params, body=b}
+	 val tests = List.all (detectBadTen 2) params
+	 val _ = if tests
+		 then ()
+		 else raise Fail "bad params to interval ein"
+	 val params' = List.map cvtParams params
+	 val noInterval = List.all (detectBadTen (~1)) params
+	 val overallRank = rankOfExp(body')
+
+
+	 fun handleOp1 (E.PowInt(j), t as E.Tensor(pid, alpha)) =
+	     if Int.mod(j, 2) = 1
+	     then
+	      AvailRHS.assignEin(avail, "tempIntervalPowOdd", IR.Var.ty y, mkEin(2::index, params',
+									      mkSum(modSumrange(sx),
+										    E.Op1(E.PowInt(j),
+											  modTensor(t)))),
+				 [List.nth(args, pid)])
+	     else 
+	     let
+	      (*min(xmax, max(0, xmin))*)
+	      (*max(abs(xmin), xmax)*)
+	      val arg = List.nth(args, pid)
+	      val E.TEN(_, argShape, _) = List.nth(params, pid)
+	      val (argShape', alpha') = alphaIndex(argShape, alpha)
+
+	      val xmin = minInterval(avail, arg)
+	      val xmax = minInterval(avail, arg)
+	      val minabs = makeAbsTenAlpha(avail, xmin, alpha, argShape')
+	      val xmax' =  vmax2alpha(true, avail, minabs, xmax, argShape', alpha', alpha)
+
+	      val zeros = AvailRHS.makeRealLit(avail, argShape', RealLit.zero true)
+	      val maxzeromin = vmax2alpha(true, avail, zeros, xmin, argShape', alpha', alpha)
+	      val xmin' = vmax2alpha(false, avail, xmax, maxzeromin, argShape', alpha', alpha')
+
+	      val result = intervalCons(avail, xmin', xmax')				    
+				       
+	     in
+	      AvailRHS.assignEin(avail, "tempIntervalPowEven", IR.Var.ty y, mkEin(2::index,
+										  params',
+										  mkSum(modSumrange(sx),
+											(E.Tensor(0, modAlpha alpha')))), [result])
+				
+	     end
+	   | handleOp1 (E.Abs, t as E.Tensor(pid, alpha)) =
+	     let
+	      
+	     (*
+max(abs(xmin), xmax)
+abs(min(xmax, max(0, xmin))) 
+	      *)
+
+	      val arg = List.nth(args, pid)
+	      val E.TEN(_, argShape, _) = List.nth(params, pid)
+	      val (argShape', alpha') = alphaIndex(argShape, alpha)
+	      val xmin = minInterval(avail, arg)
+	      val xmax = minInterval(avail, arg)
+	      val minabs = makeAbsTenAlpha(avail, xmin, alpha, argShape') 
+	      val xmax' = vmax2alpha(true, avail, minabs, xmax, argShape', alpha', alpha) (*alpha' doesn't have any more constants*)
+
+	      val zeros = AvailRHS.makeRealLit(avail, argShape', RealLit.zero true)
+	      val zeromax= vmax2alpha(true, avail, zeros, xmin, argShape, alpha', alpha)
+	      val minzeromax= vmax2alpha(false, avail, xmax, zeromax, argShape', alpha', alpha')
+	      val xmin' = makeAbsTen(avail, minzeromax)
+	      val result = intervalCons(avail, xmin', xmax')
+	     in
+	      AvailRHS.assignEin(avail, "tempIntervalAbs", IR.Var.ty y, mkEin(2::index,
+									      params',
+									      mkSum(modSumrange(sx),
+										    (E.Tensor(0, modAlpha alpha')))), [result])
+	     end
+	   | handleOp1 (operator : E.unary, t as E.Tensor(pid, alpha)) =
+	     let
+	      val dec = (false, true)
+	      val inc = (true, false)
+	      val nei = (false, false)
+	      val (increasing, decreasing) = (case operator
+					       of E.Neg => dec
+						| E.Exp => inc
+						| E.Sqrt => inc
+						| E.Cosine => nei
+						| E.ArcCosine => nei
+						| E.Sine => nei
+						| E.ArcSine => nei
+						| E.Tangent => nei
+						| E.ArcTangent => nei
+						| E.PowInt(j) => raise Fail "handle otherway"
+						| E.Abs => raise Fail "handle otherway"
+						| E.Sgn => raise Fail "no sgn of interval"
+					     (* end case *))
+	     in
+	      if increasing
+	      then AvailRHS.assignEin(avail, "tempIntervalInc", IR.Var.ty y, mkEin(2::index, params',
+										   mkSum(modSumrange(sx),
+											 E.Op1(operator, modTensor(t)))), [List.nth(args, pid)])
+	      else if decreasing
+	      then let
+	       val arg = List.nth(args, pid)
+	       val swaped = swapIntervalMinMax(avail, arg)
+	      in
+	       AvailRHS.assignEin(avail, "tempIntervalDec", IR.Var.ty y, mkEin(2::index,
+									       params',
+									       mkSum(modSumrange(sx),
+										     E.Op1(operator, modTensor(t)))),
+				  [swaped])
+	      end
+	      else
+	       let
+		val arg = List.nth(args, pid)
+		val twoVecs = toTwoVec(avail, arg)
+		val name = (case operator
+			     of E.Cosine => "cosine"
+			      | E.ArcCosine => "arccosine"
+			      | E.Sine => "sine"
+			      | E.ArcSine => "arcsine"
+			      | E.Tangent => "tangent"
+			      | E.ArcTangent => "arctangent"
+			   (*end case*))
+		val twoVecs' = List.map (fn x => AvailRHS.assignOp(avail, "twovecfunc", Ty.TensorTy([2], NONE),
+								   Op.scalarIntervalFun(name), [x])) twoVecs
+		val result = buildIntervalFromTwoVec(avail, index, twoVecs')
+						    
+	       in
+		AvailRHS.assignEin(avail, "tempIntervalDec", IR.Var.ty y, mkEin(2::index,
+										params',
+										mkSum(modSumrange(sx),
+										      modTensor(t))), [result])
+	       end
+	     end
+
+
+	 (**)
+	 (*doubleConst or doubleTensor or ...*)
+	 (*(sx or []), duplicate leaf form -> \sum ..
+	   op1 - increasing we do obvious - and insert in sum
+           op1 - decreasing we seperate, swap, same
+	   op1 - otherwise, we two vector -- how?
+           ---split into two -  using inverse map -> (i, ijks)-> (a_0ijk, a_1ijk)
+           ---apply to 2op to get a_i
+           ---build back using tree func
+           ---substitute in place.
+	   ---DO this part in about 80 mins ish
+
+
+	 
+	   op2 - sub is a swap one and then do substitute into sub
+	   op2 - div - nancheck and then simple product chase -- need to check for scalar stuff - swap stuff...??
+
+	   opn - add is clear - split or no?
+	   opn - prod - complciated - lots of avail
+
+           JUST DO IT --affine is similar for one op probably and div... rest is pretty clean
+	  *)
+	in
+	 (case overallRank
+	   of NONE => (*pure scalar operation that we just need to duplicate the index of 2::rest and fix the indexes*)
+	      let
+	       val index' = 2::index
+	       val body'' = EU.mapIndex(body, fn x => x + 1) 
+	       val ein = E.EIN{params=params, index=index', body=body''}
+	      in
+	       if noInterval
+	       then [IR.ASSGN(y, IR.EINAPP(ein, args))]
+	       else raise Fail "impossible"
+	      end
+	    | SOME _ => (case body'
+			  of E.Op1(unary, t) => (AvailRHS.addAssignToList(avail, (y, IR.VAR (handleOp1(unary, t))));
+						 AvailRHS.getAssignments' avail)
+			   | _ => raise Fail "NYI"
+			(* end case *))
+	 (* end case *))
+	end
+
+    fun handleEin(y, oldY, ein as E.EIN{params, index, body}, args, oldArgs) =
+	let
+	 val (sx, leafForm, body') = verifyEinForm(body)
+	 val Ty.TensorTy(shp, iv) = IR.Var.ty oldY
+	in
+	 (case iv
+	   of NONE => [IR.ASSGN(y, IR.EINAPP(ein, args))]
+	    | SOME k => if k = 1
+			then handleIntervalEin(y, oldY, params, index, sx, body, body', leafForm, args, oldArgs)
+			else raise Fail "NYI"
+	 (* end case*))
+	end
+
+
 
 
     fun expand (env, (y, rhs)) = let
@@ -599,7 +1041,7 @@ Do assign, dops
 		 val avail = AvailRHS.new()
 		 val _ = handleOp(avail, y', rator, args', args, y)
 		in
-		 List.map (fn x => IR.ASSGN x) (AvailRHS.getAssignments(avail))
+		 (AvailRHS.getAssignments'(avail))
 		end
 	      (*Affine ops used -- all else pass on (BASIS or pass into low?)*)
                   (* List.map IR.ASSGN (expandOp (env, Env.rename (env, y), rator, args)) *)
