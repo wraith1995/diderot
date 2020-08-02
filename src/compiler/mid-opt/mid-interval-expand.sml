@@ -967,6 +967,44 @@ Do assign, dops
       | uncollectAlpha _ = raise Fail "uncollect"
     fun uncollectAlphas (alphas, opss) = ListPair.map uncollectAlpha (alphas, opss)
 
+    fun extractOpts(sx, index, opts) =
+	let
+	 val indexRank = List.length index
+	 val sxRank = List.length sx
+	 fun sizeFn x = if x < indexRank andalso x >= 0
+			then List.nth(index, x)
+			else if x < sxRank
+			then let val (_, x, y) = List.nth(sx, x)
+			     in 1 + (y - x) end (*size is inclusize...*)
+			else raise Fail ("bad size index: " ^ (Int.toString x))
+				   
+	 val alphas = collectAlphas opts1
+	 val alphaIdx = List.mapPartial (fn E.V x => SOME(x) | E.C _ => NONE) alpha
+					
+	 fun isolate [] = []
+	   | isolate (x::xs) = x::isolate(List.filter (fn y => y <> x) xs)
+	 fun sort data = ListMergeSort.sort (fn (x,y) => x > y) data
+					    
+	 val alphaIdxSort = isolate (sort alphaIdx1)
+	 val index' = List.map sizeFn alphaIdx1Sort
+	 val alphaPairs = (List.tabulate(List.length alphaIdx1Sort, fn x => (List.nth(alphaIdxSort, x), x)))
+	 val alphaIdxMap = (List.foldr (fn ((x,y), a) => IMap.insert(a, x, y)) IMap.empty alphaPairs) (*oldIdx -> idx of idx*)
+	 val alphaIdxMapInv = (List.foldr (fn ((y,x), a) => IMap.insert(a, x, y)) IMap.empty alphaPairs) (* idx of idx -> oldIdx*)
+	 fun mapReplace mapp idx = (case IMap.find(mapp, idx)
+				     of NONE => raise Fail "bad map in split"
+				      | SOME k => k
+				   (* end case*))
+	 fun mapReplace' mapp idx = (case idx
+				      of E.V k => E.V(mapReplace mapp k)
+				       | E.C k => E.C k
+				    (* end case*))
+	 val alphas' = List.map (List.map (mapReplace' alphaIdx1Map)) alphas
+	 val opts' = uncollectAlphas(alphas', opts1)
+	 val replaceAlpha = List.map (fn x => E.V x) (List.map (mapReplace alphaIdxMapInv) (List.tabulate(List.length index, fn x => x)))
+	in
+	 (opts, index', replaceAlpha) (*opts with renamed alphas to operate within index' and then be indexed in the old expression via replaceAlpha*)
+	end
+
     fun splitOpt(sx, index, opts1, opts2) =
 	let
 
@@ -1111,7 +1149,7 @@ GO FOR IT.
 	      run(E.Tensor(pid2, rAlpha)::rest, SOME(ret))
 	     end
 	   | run (E.Tensor(pid, alpha1)::[], SOME(ret)) = ret
-	   | run (E.Tensor(pid, alpha1)::[], NONE) =
+	   | run (E.Tensor(pid, alpha1)::[], NONE) = (*only possible if we start with one; basically just does selection*)
 	     let
 	      val arg = List.nth(args, pid)
 	      val Ty.TensorTy(shp, NONE) = IR.Var.ty arg
