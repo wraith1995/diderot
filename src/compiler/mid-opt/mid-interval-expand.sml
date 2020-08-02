@@ -969,6 +969,7 @@ Do assign, dops
 
     fun extractOpts(sx, index, opts) =
 	let
+	 (* build map from E.V x to size *)
 	 val indexRank = List.length index
 	 val sxRank = List.length sx
 	 fun sizeFn x = if x < indexRank andalso x >= 0
@@ -977,16 +978,20 @@ Do assign, dops
 			then let val (_, x, y) = List.nth(sx, x)
 			     in 1 + (y - x) end (*size is inclusize...*)
 			else raise Fail ("bad size index: " ^ (Int.toString x))
-				   
+
+	 (* Find all relevant E.V xs used in our opts*)
 	 val alphas = collectAlphas opts
 	 val alphaIdx = List.mapPartial (fn E.V x => SOME(x) | E.C _ => NONE) (List.concat alphas)
-					
+
+	 (*Order E.V x in the order in which they are used in the original expression and remove duplicates*)
 	 fun isolate [] = []
 	   | isolate (x::xs) = x::isolate(List.filter (fn y => y <> x) xs)
 	 fun sort data = ListMergeSort.sort (fn (x,y) => x > y) data
-					    
 	 val alphaIdxSort = isolate (sort alphaIdx)
+	 (* Calculate new index via the used E.V x*)
 	 val index' = List.map sizeFn alphaIdxSort
+
+	 (* build map from the old E.V x to the new E.V x (i.e with respect to index and index') and the inverse back*)
 	 val alphaPairs = (List.tabulate(List.length alphaIdxSort, fn x => (List.nth(alphaIdxSort, x), x)))
 	 val alphaIdxMap = (List.foldr (fn ((x,y), a) => IMap.insert(a, x, y)) IMap.empty alphaPairs) (*oldIdx -> idx of idx*)
 	 val alphaIdxMapInv = (List.foldr (fn ((y,x), a) => IMap.insert(a, x, y)) IMap.empty alphaPairs) (* idx of idx -> oldIdx*)
@@ -998,12 +1003,17 @@ Do assign, dops
 				      of E.V k => E.V(mapReplace mapp k)
 				       | E.C k => E.C k
 				    (* end case*))
+
+	 (* Using the map from old E.V x to new E.V x, updated all used alphas to be used in the new *)
 	 val alphas' = List.map (List.map (mapReplace' alphaIdxMap)) alphas
+	 (* Update the opts accordingly *)
 	 val opts' = uncollectAlphas(alphas', opts)
-	 val replaceAlpha = List.map (fn x => E.V x) (List.map (mapReplace alphaIdxMapInv) (List.tabulate(List.length index, fn x => x)))
+	 (*Using the inverse mod, build an alpha to access the resulting tensor in the old expression; no constants, obviously*)
+	 val replaceAlpha = List.map (fn x => E.V x) (List.map (mapReplace alphaIdxMapInv) (List.tabulate(List.length index', fn x => x)))
 	in
+ 	(*return opts with renamed alphas to operate within index' and 
+	  then be indexed in the old expression via replaceAlpha*)
 	 (opts, index', replaceAlpha)
-	   (*opts with renamed alphas to operate within index' and then be indexed in the old expression via replaceAlpha*)
 	end
 
     fun splitOpt(sx, index, opts1, opts2) =
