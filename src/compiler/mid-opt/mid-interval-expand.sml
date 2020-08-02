@@ -1158,33 +1158,43 @@ Do assign, dops
 	in
 	 handleOpn' (opn, ts)
 	end
-    fun alphaAccess(avail, arg, alpha, sx, index) =
+    fun alphaAccessM(b, avail, arg, alpha, sx, index) =
 	let
 	 val Ty.TensorTy(argshp, NONE) = IR.Var.ty arg
-	 val params = [E.TEN(true, argshp, NONE)]
-	 val rank = List.length index
-	 fun sxsize idx = (case List.find (fn (x, y, z) => x=idx) sx
-			    of SOME((x,y,z)) => 1 + (z - y)
-			     | NONE => raise Fail "impossible: bad size"
-			  (* end case*))
-	 fun idxSize(E.V i) = if i < rank andalso 0 <= i
-			      then SOME(List.nth(index, i))
-			      else SOME(sxsize i)
-	   | idxSize (E.C _) = NONE
-	 val index' = List.mapPartial idxSize alpha
-	 val alphaMap = List.mapi (fn (idx, E.V x) => (idx, x)) (List.filter (fn E.V x => true | _ => false) alpha)
-	 fun alphaFind x = (case List.find (fn (idx, y) => x=y) alphaMap
-			     of SOME((idx, _)) => idx
-			      | NONE => raise Fail "impossible: bad idx"
-			   (* end case*))
-
-	 val ein = Ein.EIN{params=params, index=index', body=E.Tensor(0, alpha)}
-
-	 val sx' = List.map (fn (x, y, z) => (alphaFind x, y, z)) sx
-	 val alpha' = List.mapPartial (fn E.V x => SOME(E.V (alphaFind x)) | _ => NONE) alpha
+	 val opts = [E.Tensor(0, E.C (if b then 1 else 0)::alpha)]
+	 val ([E.Tensor(_, alpha')], index', replaceAlpha) = extractOpts(sx, index, opts)
+	 val ein = Ein.EIN{params=[E.TEN(true, argshp, NONE)], index=index', body=E.Tensor(0, alpha')}
 	in
-	 (AvailRHS.assignEin(avail, "alphaAcc", Ty.TensorTy(index', NONE), ein, [arg]), index', alpha', sx')
+	 (AvailRHS.assignEin(avail, "alphaAccM", Ty.TensorTy(index', NONE), ein, [arg]), index', replaceAlpha, sx)
 	end
+    (* fun alphaAccess(avail, arg, alpha, sx, index) = *)
+    (* 	let *)
+    (* 	 val Ty.TensorTy(argshp, NONE) = IR.Var.ty arg *)
+
+    (* 	 val params = [E.TEN(true, argshp, NONE)] *)
+    (* 	 val rank = List.length index *)
+    (* 	 fun sxsize idx = (case List.find (fn (x, y, z) => x=idx) sx *)
+    (* 			    of SOME((x,y,z)) => 1 + (z - y) *)
+    (* 			     | NONE => raise Fail "impossible: bad size" *)
+    (* 			  (* end case*)) *)
+    (* 	 fun idxSize(E.V i) = if i < rank andalso 0 <= i *)
+    (* 			      then SOME(List.nth(index, i)) *)
+    (* 			      else SOME(sxsize i) *)
+    (* 	   | idxSize (E.C _) = NONE *)
+    (* 	 val index' = List.mapPartial idxSize alpha *)
+    (* 	 val alphaMap = List.mapi (fn (idx, E.V x) => (idx, x)) (List.filter (fn E.V x => true | _ => false) alpha) *)
+    (* 	 fun alphaFind x = (case List.find (fn (idx, y) => x=y) alphaMap *)
+    (* 			     of SOME((idx, _)) => idx *)
+    (* 			      | NONE => raise Fail "impossible: bad idx" *)
+    (* 			   (* end case*)) *)
+
+    (* 	 val ein = Ein.EIN{params=params, index=index', body=E.Tensor(0, alpha)} *)
+
+    (* 	 val sx' = List.map (fn (x, y, z) => (alphaFind x, y, z)) sx *)
+    (* 	 val alpha' = List.mapPartial (fn E.V x => SOME(E.V (alphaFind x)) | _ => NONE) alpha *)
+    (* 	in *)
+    (* 	 (AvailRHS.assignEin(avail, "alphaAcc", Ty.TensorTy(index', NONE), ein, [arg]), index', alpha', sx') *)
+    (* 	end *)
 				       
 
     fun handleOp1s (avail, y, sx, index, params, args) (op1, t) =
@@ -1202,23 +1212,25 @@ Do assign, dops
 	       (*min(xmax, max(0, xmin))*)
 	       (*max(abs(xmin), xmax)*)
 	       val arg = List.nth(args, pid)
-	       val xmin = minInterval(avail, arg)
-	       val xmax = minInterval(avail, arg)
-	       val (xminAcc, index', alpha', sx') = alphaAccess(avail, xmin, alpha, sx, index)
-	       val (xmaxAcc, _, _, _) = alphaAccess(avail, xmax, alpha, sx, index)
-	       val minabs = makeAbsTenAlpha(avail, xminAcc, alpha', index')
-	       val xmax' =  vmax2alpha(true, avail, minabs, xmaxAcc, index', alpha', alpha')
+	       (* val xmin = minInterval(avail, arg) *)
+	       (* val xmax = minInterval(avail, arg) *)
+	       val (xminAcc, index', alpha', sx') = alphaAccessM(false, avail, arg, alpha, sx, index) (*index and alpha to subsittute in if you extractouside of the sum and opt*)
+	       val newRank = (List.length index')
+	       val simple = List.tabulate(newRank, fn x => E.V x) (*just do pairwise operations*)
+	       val (xmaxAcc, _, _, _) = alphaAccessM(true, avail, arg, alpha, sx, index)
+	       val minabs = makeAbsTenAlpha(avail, xminAcc, simple, index')
+	       val xmax' =  vmax2alpha(true, avail, minabs, xmaxAcc, index', simple, simple)
 
 	       val zeros = AvailRHS.makeRealLit(avail, index', RealLit.zero true)
-	       val maxzeromin = vmax2alpha(true, avail, zeros, xminAcc, index', alpha', alpha')
-	       val xmin' = vmax2alpha(false, avail, xmaxAcc, maxzeromin, index', alpha', alpha')
-
+	       val maxzeromin = vmax2alpha(true, avail, zeros, xminAcc, index', simple, simple)
+	       val xmin' = vmax2alpha(false, avail, xmaxAcc, maxzeromin, index', simple, simple)
 	       val result = intervalCons(avail, xmin', xmax')				    
 	      in
-	       AvailRHS.assignEin(avail, "tempIntervalPowEven", IR.Var.ty y, mkEin(2::index,
-										   [argToTen result],
-										   mkSum(sx', (E.Tensor(0,alpha')))), [result])
-				 
+	       AvailRHS.assignEin(avail, "tempIntervalPowEven", IR.Var.ty y, mkEin(2::index, [E.TEN(true, index', NONE)],
+										   mkSum(modSumrange(sx'),
+											 E.Op1(E.PowInt(j),
+											       modTensor(E.Tensor(0, alpha'))))),
+				  [result])				 
 	      end
 	   | handleOp1 (E.Abs, t as E.Tensor(pid, alpha)) =
 	     let
@@ -1229,18 +1241,19 @@ abs(min(xmax, max(0, xmin)))
 	      *)
 
 	      val arg = List.nth(args, pid)
-	      val xmin = minInterval(avail, arg)
-	      val xmax = minInterval(avail, arg)
-	      val (xminAcc, index', alpha', sx') = alphaAccess(avail, xmin, alpha, sx, index)
-	      val (xmaxAcc, _, _, _) = alphaAccess(avail, xmax, alpha, sx, index)
+	      val (xminAcc, index', alpha', sx') = alphaAccessM(false, avail, arg, alpha, sx, index)
+	      val (xmaxAcc, _, _, _) = alphaAccessM(true, avail, arg, alpha, sx, index)
+
+	      val newRank = (List.length index')
+	      val simple = List.tabulate(newRank, fn x => E.V x) (*just do pairwise operations*)
+	  
 						  
-						  
-	      val minabs = makeAbsTenAlpha(avail, xmin, alpha', index') 
-	      val xmax' = vmax2alpha(true, avail, minabs, xmaxAcc, index', alpha', alpha') 
+	      val minabs = makeAbsTenAlpha(avail, xminAcc, simple, index') 
+	      val xmax' = vmax2alpha(true, avail, minabs, xmaxAcc, index', simple, simple) 
 
 	      val zeros = AvailRHS.makeRealLit(avail, index', RealLit.zero true)
-	      val zeromax= vmax2alpha(true, avail, zeros, xminAcc, index', alpha', alpha')
-	      val minzeromax= vmax2alpha(false, avail, xmaxAcc, zeromax, index', alpha', alpha')
+	      val zeromax= vmax2alpha(true, avail, zeros, xminAcc, index', simple, simple)
+	      val minzeromax= vmax2alpha(false, avail, xmaxAcc, zeromax, index', simple, simple)
 	      val xmin' = makeAbsTen(avail, minzeromax)
 
 	      val result = intervalCons(avail, xmin', xmax')
@@ -1248,7 +1261,7 @@ abs(min(xmax, max(0, xmin)))
 	      AvailRHS.assignEin(avail, "tempIntervalAbs", IR.Var.ty y, mkEin(2::index,
 									      [argToTen result],
 									      mkSum(sx',
-										    (E.Tensor(0, alpha')))), [result])
+										    modTensor(E.Tensor(0, alpha')))), [result])
 	     end
 	   | handleOp1 (operator : E.unary, t as E.Tensor(pid, alpha)) =
 	     let
