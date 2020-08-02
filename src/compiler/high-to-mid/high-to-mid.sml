@@ -75,7 +75,7 @@ structure HighToMid : sig
               | SOME 2 => [(y, DstIR.EINAPP(MkOperators.mulRR(NONE, NONE), [x, x]))]
 (* FIXME: expand into multiplications
               | SOME n =>
-*) | SOME _ => pow()
+ *) | SOME _ => pow()
               | NONE => pow()
             (* end case *)
           end
