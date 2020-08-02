@@ -1040,8 +1040,8 @@ Do assign, dops
 	     let
 	      val arg1 = List.nth(args, pid1)
 	      val arg2 = List.nth(args, pid2)
-	      val (_, ([E.Tensor(_, alpha1'), E.Tensor(_, alpha2')], index', rAlpha)) =
-		  splitOpt(sx, index, [], [E.Tensor(pid1, alpha1), E.Tensor(pid2, alpha2)])
+	      val ([E.Tensor(_, alpha1'), E.Tensor(_, alpha2')], index', rAlpha) =
+		  extractOpts(sx, index, [E.Tensor(pid1, alpha1), E.Tensor(pid2, alpha2)])
 	      
 	      val ret = make2Prod(avail, arg1, arg2, index', alpha1', alpha2')
 	     in
@@ -1050,8 +1050,8 @@ Do assign, dops
 	   | run (E.Tensor(pid1, alpha1)::E.Tensor(pid2, alpha2)::rest, SOME arg1) =
 	     let
 	      val arg2 = List.nth(args, pid2)
-	      val (_, ([E.Tensor(_, alpha1'), E.Tensor(_, alpha2')], index', rAlpha)) =
-		  splitOpt(sx, index, [], [E.Tensor(pid1, alpha1), E.Tensor(pid2, alpha2)])
+	      val (([E.Tensor(_, alpha1'), E.Tensor(_, alpha2')], index', rAlpha)) =
+		  extractOpts(sx, index, [E.Tensor(pid1, alpha1), E.Tensor(pid2, alpha2)])
 	      val ret = make2Prod(avail, arg1, arg2, index', alpha1', alpha2')
 	     in
 	      run(E.Tensor(pid2, rAlpha)::rest, SOME(ret))
@@ -1061,13 +1061,12 @@ Do assign, dops
 	     let
 	      val arg = List.nth(args, pid)
 	      val Ty.TensorTy(shp, NONE) = IR.Var.ty arg
-	      val (_, ([E.Tensor(_, alpha1')], index', rAlpha)) =
-		  splitOpt(sx, index, [], [E.Tensor(pid, alpha1)])
+	      val (([E.Tensor(_, alpha1')], index', rAlpha)) =
+		  extractOpts(sx, index, [E.Tensor(pid, alpha1)])
 	      val ein = E.EIN{params=[E.TEN(true, shp, NONE)], index=index', body=E.Tensor(0, alpha1')}
 	     in
 	      AvailRHS.assignEin(avail, "prodTwo1", Ty.TensorTy(index', NONE), ein, [arg])
 	     end
-
 	in
 	 run(tensors, NONE)
 	end
