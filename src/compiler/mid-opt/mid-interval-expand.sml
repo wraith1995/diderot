@@ -107,34 +107,6 @@ B_ijkrs = -A_jkirs
 
 .*)
 
-    fun alphaAccess(avail, arg, alpha, sx, index) =
-	let
-	 val Ty.TensorTy(argshp, NONE) = IR.Var.ty arg
-	 val params = [E.TEN(true, argshp, NONE)]
-	 val rank = List.length index
-	 fun sxsize idx = (case List.find (fn (x, y, z) => x=idx) sx
-			    of SOME((x,y,z)) => 1 + (z - y)
-			     | NONE => raise Fail "impossible: bad size"
-			  (* end case*))
-	 fun idxSize(E.V i) = if i < rank
-			      then SOME(List.nth(index, i))
-			      else SOME(sxsize i)
-	   | idxSize (E.C _) = NONE
-	 val index' = List.mapPartial idxSize alpha
-
-	 val alphaMap = List.mapi (fn (idx, E.V x) => (idx, x)) (List.filter (fn E.V x => true | _ => false) alpha)
-	 fun alphaFind x = (case List.find (fn (idx, y) => x=y) alphaMap
-			     of SOME((idx, _)) => idx
-			      | NONE => raise Fail "impossible: bad idx"
-			   (* end case*))
-
-	 val ein = Ein.EIN{params=params, index=index', body=E.Tensor(0, alpha)}
-
-	 val sx' = List.map (fn (x, y, z) => (alphaFind x, y, z)) sx
-	 val alpha' = List.mapPartial (fn E.V x => SOME(E.V (alphaFind x)) | _ => NONE) alpha
-	in
-	 (AvailRHS.assignEin(avail, "alphaAcc", Ty.TensorTy(index', NONE), ein, [arg]), index', alpha', sx')
-	end
 
     fun groupConversionS name avail (lst, s) = let
      val v::vst = lst
@@ -422,6 +394,17 @@ Do assign, dops
 	in
 	 dumbFoldr foldf srcs
 	end
+
+    fun vminmaxV(b, avail, srcs, index) =
+	let
+	 val alpha = List.tabulate(List.length(index), fn x => E.V x)
+	 fun foldf(x, y) = vmax2alpha(b, avail, x, y, index, alpha, alpha)
+	 fun dumbFoldr f (x::y::xs) = dumbFoldr f (f(x,y)::xs)
+	   | dumbFoldr f [x] = x
+	   | dumbFoldr f [] = raise Fail "bad vminmax"
+	in
+	 dumbFoldr foldf srcs
+	end	  
     fun makeAbsTenAlpha(avail, src, alpha, index) =
 	let
 	 val tenTy = IR.Var.ty src
@@ -1017,7 +1000,7 @@ Do assign, dops
 	end
 
     fun splitOpt(sx, index, opts1, opts2) =
-	(extractOpts(sx, index, opts2), extractOpts(sx, index, opts2))
+	(extractOpts(sx, index, opts1), extractOpts(sx, index, opts2), extractOpts(sx, index, opts1@opts2))
 
     fun partitionScalarInterval(es, params) = List.partition (fn x => rankOfExp'(x, params) = 0) es
 
@@ -1090,7 +1073,7 @@ Do assign, dops
 	      val mask = makeIvMask params
 	      val ts' = List.map (modLeaf mask) ts
 	      val index' = 2::index
-	      val opn = E.Opn(E.Add, ts')
+	      val opn = mkSum(modSumrange(sx), E.Opn(E.Add, ts'))
 	      val ein = E.EIN{params=params', index=index', body=opn}
 	     in
 	      AvailRHS.assignEin(avail, "intervalAdd", Ty.TensorTy(index', NONE), ein, args)
@@ -1098,7 +1081,7 @@ Do assign, dops
 	   | handleOpn' (E.Prod,ts) =
 	     let
 	      val (scalar, interval) = partitionScalarInterval(ts, params)
-	      val (scalarT, intervalT) = splitOpt(sx, index, scalar, interval)
+	      val (scalarT, intervalT, combinedT) = splitOpt(sx, index, scalar, interval)
 	      val numInterval = List.length interval
 	      val numScalar = List.length scalar
 	      val binSeqs = binarySequences(numInterval)
@@ -1115,15 +1098,15 @@ Do assign, dops
 		  if numInterval = 1
 		  then (List.nth(prodVars, 0), List.nth(prodVars, 1)) (*min and max already*)
 		  else let
-		   val min = vminmax(false, avail, prodVars, prodIndex, prodAlpha)
-		   val max = vminmax(true, avail, prodVars, prodIndex, prodAlpha)
+		   val min = vminmaxV(false, avail, prodVars, prodIndex)
+		   val max = vminmaxV(true, avail, prodVars, prodIndex)
 		  in
 		   (min, max)
 		  end
-
-	      val (sMin, sMax) =
+	      val (_, combinedIndex, combinedAlpha) = combinedT (* combined alpha is the alpha with respect to the original index/sum*)
+	      val (sMin, sMax, sIndex, sAlpha) =
 		  if numScalar = 0
-		  then (preMin, preMax)
+		  then (preMin, preMax, combinedIndex, combinedAlpha)
 		  else
 		   let
 		    (*gather and fix scalar ones*)
@@ -1152,22 +1135,55 @@ Do assign, dops
 		    val body = E.Opn(E.Prod, scalarTOpts@[E.Tensor(0, prodAlpha)])
 		    val ein = E.EIN{
 			 params = newParams,
-			 index = index,
+			 index = combinedIndex,
 			 body = body
 			}
-		    val min' = AvailRHS.assignEin(avail, "minWithScalar", Ty.TensorTy(index, NONE), ein, preMin::newArgs)
-		    val max' = AvailRHS.assignEin(avail, "maxWithScalar", Ty.TensorTy(index, NONE), ein, preMax::newArgs)
+		    val min' = AvailRHS.assignEin(avail, "minWithScalar", Ty.TensorTy(combinedIndex, NONE), ein, preMin::newArgs)
+		    val max' = AvailRHS.assignEin(avail, "maxWithScalar", Ty.TensorTy(combinedIndex, NONE), ein, preMax::newArgs)
 		    (*FIXME: we could add optimizations here based on what the constants are...*)
 		    val min'' = vmax2(false, avail, min', max')
 		    val max'' = vmax2(true, avail, min', max')
 		   in
-		    (min'', max'')
+		    (min'', max'', combinedIndex, combinedAlpha)
 		   end
+	      val einSum = mkSum(sx, E.Tensor(0, sAlpha))
+	      val einParam = [E.TEN(true, combinedIndex, NONE)]
+	      val einIndex = index (*combinedIndex will be part original index and part sx*)
+	      val ein = E.EIN{params=einParam, index=einIndex, body=einSum}
+	      val sum1 = AvailRHS.assignEin(avail, "sumMin", Ty.TensorTy(index, NONE), ein, [sMin])
+	      val sum2 = AvailRHS.assignEin(avail, "sumMax", Ty.TensorTy(index, NONE), ein, [sMax])
 	     in
-	      intervalCons(avail, sMin, sMax)
+	      intervalCons(avail, sum1, sum2)
 	     end
 	in
 	 handleOpn' (opn, ts)
+	end
+    fun alphaAccess(avail, arg, alpha, sx, index) =
+	let
+	 val Ty.TensorTy(argshp, NONE) = IR.Var.ty arg
+	 val params = [E.TEN(true, argshp, NONE)]
+	 val rank = List.length index
+	 fun sxsize idx = (case List.find (fn (x, y, z) => x=idx) sx
+			    of SOME((x,y,z)) => 1 + (z - y)
+			     | NONE => raise Fail "impossible: bad size"
+			  (* end case*))
+	 fun idxSize(E.V i) = if i < rank andalso 0 <= i
+			      then SOME(List.nth(index, i))
+			      else SOME(sxsize i)
+	   | idxSize (E.C _) = NONE
+	 val index' = List.mapPartial idxSize alpha
+	 val alphaMap = List.mapi (fn (idx, E.V x) => (idx, x)) (List.filter (fn E.V x => true | _ => false) alpha)
+	 fun alphaFind x = (case List.find (fn (idx, y) => x=y) alphaMap
+			     of SOME((idx, _)) => idx
+			      | NONE => raise Fail "impossible: bad idx"
+			   (* end case*))
+
+	 val ein = Ein.EIN{params=params, index=index', body=E.Tensor(0, alpha)}
+
+	 val sx' = List.map (fn (x, y, z) => (alphaFind x, y, z)) sx
+	 val alpha' = List.mapPartial (fn E.V x => SOME(E.V (alphaFind x)) | _ => NONE) alpha
+	in
+	 (AvailRHS.assignEin(avail, "alphaAcc", Ty.TensorTy(index', NONE), ein, [arg]), index', alpha', sx')
 	end
 				       
 
