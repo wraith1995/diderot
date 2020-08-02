@@ -978,16 +978,16 @@ Do assign, dops
 			     in 1 + (y - x) end (*size is inclusize...*)
 			else raise Fail ("bad size index: " ^ (Int.toString x))
 				   
-	 val alphas = collectAlphas opts1
-	 val alphaIdx = List.mapPartial (fn E.V x => SOME(x) | E.C _ => NONE) alpha
+	 val alphas = collectAlphas opts
+	 val alphaIdx = List.mapPartial (fn E.V x => SOME(x) | E.C _ => NONE) (List.concat alphas)
 					
 	 fun isolate [] = []
 	   | isolate (x::xs) = x::isolate(List.filter (fn y => y <> x) xs)
 	 fun sort data = ListMergeSort.sort (fn (x,y) => x > y) data
 					    
-	 val alphaIdxSort = isolate (sort alphaIdx1)
-	 val index' = List.map sizeFn alphaIdx1Sort
-	 val alphaPairs = (List.tabulate(List.length alphaIdx1Sort, fn x => (List.nth(alphaIdxSort, x), x)))
+	 val alphaIdxSort = isolate (sort alphaIdx)
+	 val index' = List.map sizeFn alphaIdxSort
+	 val alphaPairs = (List.tabulate(List.length alphaIdxSort, fn x => (List.nth(alphaIdxSort, x), x)))
 	 val alphaIdxMap = (List.foldr (fn ((x,y), a) => IMap.insert(a, x, y)) IMap.empty alphaPairs) (*oldIdx -> idx of idx*)
 	 val alphaIdxMapInv = (List.foldr (fn ((y,x), a) => IMap.insert(a, x, y)) IMap.empty alphaPairs) (* idx of idx -> oldIdx*)
 	 fun mapReplace mapp idx = (case IMap.find(mapp, idx)
@@ -998,109 +998,17 @@ Do assign, dops
 				      of E.V k => E.V(mapReplace mapp k)
 				       | E.C k => E.C k
 				    (* end case*))
-	 val alphas' = List.map (List.map (mapReplace' alphaIdx1Map)) alphas
-	 val opts' = uncollectAlphas(alphas', opts1)
+	 val alphas' = List.map (List.map (mapReplace' alphaIdxMap)) alphas
+	 val opts' = uncollectAlphas(alphas', opts)
 	 val replaceAlpha = List.map (fn x => E.V x) (List.map (mapReplace alphaIdxMapInv) (List.tabulate(List.length index, fn x => x)))
 	in
-	 (opts, index', replaceAlpha) (*opts with renamed alphas to operate within index' and then be indexed in the old expression via replaceAlpha*)
+	 (opts, index', replaceAlpha)
+	   (*opts with renamed alphas to operate within index' and then be indexed in the old expression via replaceAlpha*)
 	end
 
     fun splitOpt(sx, index, opts1, opts2) =
-	let
+	(extractOpts(sx, index, opts2), extractOpts(sx, index, opts2))
 
-	 val indexRank = List.length index
-	 val sxRank = List.length sx
-	 fun sizeFn x = if x < indexRank andalso x >= 0
-			then List.nth(index, x)
-			else if x < sxRank
-			then let val (_, x, y) = List.nth(sx, x)
-			     in 1 + (y - x) end (*size is inclusize...*)
-			else raise Fail ("bad size index: " ^ (Int.toString x))
-				   
-	 val alphas1 = collectAlphas opts1
-	 val alphas2 = collectAlphas opts2
-	 val alpha1 = List.concat alphas1
-	 val alpha2 = List.concat alphas2
-
-	 val alphaIdx1 = List.mapPartial (fn E.V x => SOME(x) | E.C _ => NONE) alpha1
-	 val alphaIdx2 = List.mapPartial (fn E.V x => SOME(x) | E.C _ => NONE) alpha2
-
-	 
-	 fun isolate [] = []
-	   | isolate (x::xs) = x::isolate(List.filter (fn y => y <> x) xs)
-	 fun sort data = ListMergeSort.sort (fn (x,y) => x > y) data
-	 val alphaIdx1Sort = isolate (sort alphaIdx1)
-	 val alphaIdx2Sort = isolate (sort alphaIdx2)
-				     
-	 val index1 = List.map sizeFn alphaIdx1Sort
-	 val index2 = List.map sizeFn alphaIdx2Sort
-			       
-	 val alpha1Pairs = (List.tabulate(List.length alphaIdx1Sort, fn x => (List.nth(alphaIdx1Sort, x), x)))
-	 val alpha2Pairs = (List.tabulate(List.length alphaIdx1Sort, fn x => (List.nth(alphaIdx2Sort, x), x)))
-			     
-	 val alphaIdx1Map = (List.foldr (fn ((x,y), a) => IMap.insert(a, x, y)) IMap.empty alpha1Pairs) (*oldIdx -> number*)
-	 val alphaIdx2Map = (List.foldr (fn ((x,y), a) => IMap.insert(a, x, y)) IMap.empty alpha1Pairs) 
-	 val alphaIdx1MapInv = (List.foldr (fn ((y,x), a) => IMap.insert(a, x, y)) IMap.empty alpha1Pairs) (*number -> oldIdx*)
-	 val alphaIdx2MapInv = (List.foldr (fn ((y,x), a) => IMap.insert(a, x, y)) IMap.empty alpha1Pairs)
-
-	 fun mapReplace mapp idx = (case IMap.find(mapp, idx)
-				     of NONE => raise Fail "bad map in split"
-				      | SOME k => k
-				   (* end case*))
-	 fun mapReplace' mapp idx = (case idx
-				      of E.V k => E.V(mapReplace mapp k)
-				       | E.C k => E.C k
-				    (* end case*))
-	 val alphas1' = List.map (List.map (mapReplace' alphaIdx1Map)) alphas1
-	 val alphas2' = List.map (List.map (mapReplace' alphaIdx2Map)) alphas2
-	 val opts1' = uncollectAlphas(alphas1', opts1)
-	 val opts2' = uncollectAlphas(alphas2', opts2)
-
-
-	 val replaceAlpha1 = List.map (fn x => E.V x) (List.map (mapReplace alphaIdx1MapInv) (List.tabulate(List.length index1, fn x => x)))
-	 val replaceAlpha2 = List.map (fn x => E.V x) (List.map (mapReplace alphaIdx1MapInv) (List.tabulate(List.length index2, fn x => x)))
-	(*unique, Sort, map from x to idx (new x), idx (new x) to x
-	  get the size of each to get the largest index
-	  using the new x, we make new alphas
-	  using the new alphas, we make new opts
-	  
-	  so we have new alphas and new opts 
-	  What about the replacement alphas?
-	  The map! We used to make it size and we can invert to get the old indecies!
-	 *)
-	in
-	 ((opts1', index1, replaceAlpha1), (opts2', index2, replaceAlpha2))
-	end
-					
-    (*Promote sum indecies to new tensor sizes. Alphas needs correct ordering for these
-    i.e order only used ones
-    then the new alpha needs to have old sum indexes in the right place.
-    so tensor(index..constants..sumindex2) tensor(index..constants..sumindex4)
-    tensor(index...sumindex2...sumindex4) and the above with internal notation
-    
-    convince me htis is correct
-    Exp(alpha1, alpha2, ...) inside an sx and a shape;
-    te two alphas use some portion of each of those
-    We can figure out the type of Exp(alpha1, alpha2) based on the used/unused index - build a map for new index into the old on eand used ti produce an alpha12 so that tensor[alpha12] = Epx(alpha1, alpha2) in the context of the original expression
-
--build size map
--find what is used and relable based on order
--compute new index (num E.V used and their sizes) and the used alphas (ordered coreclty based on new index)
--the new alpha uses the original indexing scheme modulo constants
-
-Draw
-
-This is all in a make product thing.
-calculating sizes map
-calculating tensor alphas 
-calculating tensor index and renormalizing alpha for computation
-calculating new alpha based on the index and bijection in the renormalization
-substitutions.
-GO FOR IT.
-
-
-
-     *)
     fun partitionScalarInterval(es, params) = List.partition (fn x => rankOfExp'(x, params) = 0) es
 
     fun binarySequences(n) =
