@@ -1167,35 +1167,6 @@ Do assign, dops
 	in
 	 (AvailRHS.assignEin(avail, "alphaAccM", Ty.TensorTy(index', NONE), ein, [arg]), index', replaceAlpha, sx)
 	end
-    (* fun alphaAccess(avail, arg, alpha, sx, index) = *)
-    (* 	let *)
-    (* 	 val Ty.TensorTy(argshp, NONE) = IR.Var.ty arg *)
-
-    (* 	 val params = [E.TEN(true, argshp, NONE)] *)
-    (* 	 val rank = List.length index *)
-    (* 	 fun sxsize idx = (case List.find (fn (x, y, z) => x=idx) sx *)
-    (* 			    of SOME((x,y,z)) => 1 + (z - y) *)
-    (* 			     | NONE => raise Fail "impossible: bad size" *)
-    (* 			  (* end case*)) *)
-    (* 	 fun idxSize(E.V i) = if i < rank andalso 0 <= i *)
-    (* 			      then SOME(List.nth(index, i)) *)
-    (* 			      else SOME(sxsize i) *)
-    (* 	   | idxSize (E.C _) = NONE *)
-    (* 	 val index' = List.mapPartial idxSize alpha *)
-    (* 	 val alphaMap = List.mapi (fn (idx, E.V x) => (idx, x)) (List.filter (fn E.V x => true | _ => false) alpha) *)
-    (* 	 fun alphaFind x = (case List.find (fn (idx, y) => x=y) alphaMap *)
-    (* 			     of SOME((idx, _)) => idx *)
-    (* 			      | NONE => raise Fail "impossible: bad idx" *)
-    (* 			   (* end case*)) *)
-
-    (* 	 val ein = Ein.EIN{params=params, index=index', body=E.Tensor(0, alpha)} *)
-
-    (* 	 val sx' = List.map (fn (x, y, z) => (alphaFind x, y, z)) sx *)
-    (* 	 val alpha' = List.mapPartial (fn E.V x => SOME(E.V (alphaFind x)) | _ => NONE) alpha *)
-    (* 	in *)
-    (* 	 (AvailRHS.assignEin(avail, "alphaAcc", Ty.TensorTy(index', NONE), ein, [arg]), index', alpha', sx') *)
-    (* 	end *)
-				       
 
     fun handleOp1s (avail, y, sx, index, params, args) (op1, t) =
 	let
