@@ -1415,7 +1415,7 @@ abs(min(xmax, max(0, xmin)))
 	      val (t1', t2') = (modLeaf mask t1, modLeaf mask t2)
 	      val sx' = modSumrange(sx)
 	      val index' = 2 :: index
-	      val ([numOpt], numIndex, numAlpha) = extractOpts(sx', index', [t1'])
+	      val ([t1''], numIndex, numAlpha) = extractOpts(sx', index', [t1'])
 	      val (divVar, divIndex, divAlpha) = makeExtractedDiv(avail, sx', index', t2', params, args)
 	      val bottomArg =
 		  (case t2
@@ -1450,7 +1450,7 @@ abs(min(xmax, max(0, xmin)))
 	      val (numVar, topInterval) =
 		  let
 		   val pid = leafPid t1'
-		   val t1'' = mapPid (fn x => 0) t1'
+		   val t1''' = mapPid (fn x => 0) t1''
 		   val (params, args, interval) = (case pid
 						    of NONE => ([], [], false)
 						     | SOME pid' =>
@@ -1466,7 +1466,7 @@ abs(min(xmax, max(0, xmin)))
 								  [List.nth(args, pid')], false)
 						       (* end case *))
 					(* end case *))
-		   val ein = E.EIN{params=params, index=numIndex, body=t1''}
+		   val ein = E.EIN{params=params, index=numIndex, body=t1'''}
 		  in
 		   (AvailRHS.assignEin(avail, "numAcc", Ty.TensorTy(numIndex, NONE), ein, args), interval)
 		  end
