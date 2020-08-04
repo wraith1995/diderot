@@ -229,6 +229,18 @@ Do assign, dops
 	 AvailRHS.assignEin(avail, "intervalInterConsEin", Ty.TensorTy(inner, NONE), ein, [src])
 	end
 
+    fun sliceOutEinAlpha(avail, alpha, src) =
+	let
+	 val tenTy = IR.Var.ty src
+	 val Ty.TensorTy(ts, NONE) = tenTy
+
+	 val params = [E.TEN(true, ts, NONE)]
+	 val index = ts
+	 val body = E.Tensor(0, alpha)
+	 val ein = E.EIN{params=params, index=index, body=body}
+	in
+	 AvailRHS.assignEin(avail, "intervalInterConsEinAlpha", Ty.TensorTy(index, NONE), ein, [src])
+	end
 
     fun makeAbsTen(avail, src) =
 	let
@@ -290,7 +302,6 @@ Do assign, dops
 	in
 	 AvailRHS.assignEin(avail, "tensor2Mult", Ty.TensorTy(index, NONE), ein, [arg1, arg2])
 	end
-
     fun makeSubTen(avail, src1, src2) =
 	let
 	 val srcs = [src1, src2]
@@ -816,12 +827,25 @@ Do assign, dops
     fun leafPid (E.Tensor(pid, _)) = SOME(pid)
       | leafPid (E.Lift(e)) = leafPid e
       | leafPid (E.Const _) = NONE
+      | leafPid (E.Img(pid, _, _, _)) = SOME(pid)
+      | leafPid (E.Krn(pid, _, _)) = SOME(pid)
       | leafPid (E.ConstR _) = NONE
       | leafPid (E.Zero _) = NONE
       | leafPid (E.Delta _) = NONE
       | leafPid (E.Epsilon _) = NONE
       | leafPid (E.Eps2 _) = NONE
       | leafPid _ = raise Fail "bad leaf"
+
+    fun mapPid f e =
+	let
+	 fun leafPid (E.Tensor(pid, a)) = E.Tensor(f pid, a)
+	   | leafPid (E.Img(pid, a, b, c)) = E.Img(f pid, a, b, c)
+	   | leafPid (E.Krn(pid, a, b)) = E.Krn(f pid, a, b)
+	   | leafPid e = e
+	in
+	 leafPid e 
+	end
+
 
 
     fun cvtParams (E.TEN(b, shp, NONE)) = E.TEN(b, shp, NONE)
@@ -1168,6 +1192,29 @@ Do assign, dops
 	 (AvailRHS.assignEin(avail, "alphaAccM", Ty.TensorTy(index', NONE), ein, [arg]), index', replaceAlpha, sx)
 	end
 
+    fun makeExtractedDiv(avail, sx, index, opt, params, args) =
+	let
+	 val params' = List.map cvtParams params
+	 val ([opt'], newIndex, replaceAlpha) = extractOpts(sx, index, [opt])
+	 val oneLit = AvailRHS.makeRealLit(avail, newIndex, RealLit.one)
+	 val default = List.tabulate(List.length newIndex, fn x => E.V x)
+	 (**addAssign(t, "lit", IR.Ty.realTy, IR.LIT(Literal.Real (RealLit.one)))*)
+	 val possiblePid = leafPid opt'
+	 val (newArgs, opt'') =
+	     (case possiblePid
+	       of NONE => ([oneLit], mapPid (fn x => 1) opt')
+		| SOME pid => ([oneLit, List.nth(args, pid)], mapPid (fn x => 1) opt')
+	     (* end case *))
+	 val divEin = E.Op2(E.Div, E.Tensor(0, default), opt'')
+	 val divParams = (case possiblePid
+			   of NONE => [E.TEN(true, newIndex, NONE)]
+			    | SOME pid => [E.TEN(true, newIndex, NONE), List.nth(params', pid)])
+	 val ein = E.EIN{params=divParams, index=newIndex, body=divEin}
+	 val ret = AvailRHS.assignEin(avail, "inverseEin", Ty.TensorTy(newIndex, NONE), ein, newArgs)
+	in
+	 (ret, newIndex, replaceAlpha)
+	end
+	  
     fun handleOp1s (avail, y, sx, index, params, args) (op1, t) =
 	let
 	 fun handleOp1 (E.PowInt(j), t as E.Tensor(pid, alpha)) =
@@ -1297,6 +1344,162 @@ abs(min(xmax, max(0, xmin)))
 	 handleOp1 (op1, t)
 	end
 
+    fun handleOp2s (avail, y, sx, index, params, args) (op1, t1, t2) =
+	let
+	 fun handleOp2 (E.Sub) = (*if second is an interval, swap it; then do as in add*)
+	     let
+	      val (t1p, pid1, t2id) = (case t1
+						  of E.Tensor(pid, alpha) => (E.Tensor(0, alpha), SOME(pid), 1)
+						   | E.Img(pid, alpha, pos, j) => (E.Img(0, alpha, pos, j), SOME(pid), 1)
+						   | E.Krn(pid, mus, j) => (E.Krn(0, mus, j), SOME(pid), 1)
+						   | _ => (t1, NONE, 0)
+						(* end case*))
+	      val (t2p, pid2, t2arg) =
+		  (case t2
+		    of E.Tensor(pid, alpha) =>
+		       (case List.nth(params, pid)
+			 of E.TEN(_, _, SOME 1) =>
+			    let
+			     val arg = List.nth(args, pid)
+			     val swaped = swapIntervalMinMax(avail, arg)
+			    in
+			     (E.Tensor(t2id, alpha), SOME(pid), SOME(swaped))
+			    end
+			  | E.TEN(_, _, NONE) =>  (E.Tensor(t2id, alpha), SOME(pid),
+						   SOME(List.nth(args, pid)))
+		       (* end case*))
+		     | E.Img(pid, alpha, pos, j) => (E.Img(t2id, alpha, pos, j), SOME(pid),
+						     SOME(List.nth(args, pid)))
+		     | E.Krn(pid, mus, j) => (E.Krn(t2id, mus, j), SOME(pid),
+					      SOME(List.nth(args, pid)))
+		     | _ => (t2, NONE, NONE)
+		  (* end case *))
+
+	      val oldPids = List.map (Option.valOf) (List.filter (Option.isSome) [pid1, pid2])
+	      val params = List.map (fn x => List.nth(params, x)) oldPids
+	      val mask = makeIvMask params
+	      val newParams = List.map cvtParams params
+	      val newLeafs = List.map (modLeaf mask) ([t1p, t2p])
+
+	      val newArgs = (case (pid1, t2arg)
+			      of (SOME j, SOME arg) => [List.nth(args, j), arg]
+			       | (NONE, SOME arg) => [arg]
+			       | (SOME j, NONE) => [List.nth(args, j)]
+			       | (NONE, NONE) => raise Fail "no tensor argument for E.Sub interval is impossible!"
+			    (*end case*))
+	      val [e1, e2] = newLeafs
+
+	      val newSub = E.Op2(E.Sub, e1, e2)
+	      val body = mkSum(modSumrange(sx), newSub)
+	      val ein = E.EIN{params = newParams, index=2::index, body = body}
+	      val ret = AvailRHS.assignEin(avail, "intervalSub", Ty.TensorTy(2::index, NONE), ein, newArgs)
+	     in
+	      ret
+	     end
+	   | handleOp2 (E.Div) =
+	     let
+	      (*run division for all of these;*)
+	      val mask = makeIvMask params
+	      val (t1', t2') = (modLeaf mask t1, modLeaf mask t2)
+	      val sx' = modSumrange(sx)
+	      val index' = 2 :: index
+	      val ([numOpt], numIndex, numAlpha) = extractOpts(sx', index', [t1'])
+	      val (divVar, divIndex, divAlpha) = makeExtractedDiv(avail, sx', index', t2', params, args)
+	      val bottomArg =
+		  (case t2
+		    of E.Tensor(pid, alpha) =>
+		       (case List.nth(params, pid)
+			 of E.TEN(_, shp, SOME 1) =>
+			    let 
+				val zero = AvailRHS.makeRealLit(avail, shp, RealLit.zero true)
+				val posInf = AvailRHS.makeRealLit(avail, shp, RealLit.posInf)
+				val negInf = AvailRHS.makeRealLit(avail, shp, RealLit.negInf)
+				val min = sliceOutEin(avail, 0, divVar)
+				val max = sliceOutEin(avail, 1, divVar)
+
+				fun opj j = Op.zerotestselect j
+				val op1 = AvailRHS.assignOp(avail, "minnan", Ty.TensorTy(divIndex, NONE), opj 0, [min, max, zero, negInf])
+				val op2 = AvailRHS.assignOp(avail, "minnan", Ty.TensorTy(divIndex, NONE), opj 1, [min, max, zero, posInf])
+				val min' = vmax2(false, avail, op1, op2)
+				val max' = vmax2(true, avail, op1, op2)
+				val consed = intervalCons(avail, min', max')
+			    in
+			     SOME(consed)
+			    end
+			  | E.TEN(_, _, NONE) => (NONE) (*just a scalar*)
+			    
+			  | E.TEN(_, _, _) => raise Fail "E.Div: / by affine with d > 1"
+		       (* end case *))
+		     | _ => NONE
+		  (* end case *))
+
+	      val divVar' = Option.getOpt(bottomArg, divVar)
+
+	      val (numVar, topInterval) =
+		  let
+		   val pid = leafPid t1'
+		   val t1'' = mapPid (fn x => 0) t1'
+		   val (params, args, interval) = (case pid
+						    of NONE => ([], [], false)
+						     | SOME pid' =>
+						       (case List.nth(params, pid')
+							 of E.TEN(_, _, NONE) =>
+							    ([cvtParams (List.nth(params, pid'))],
+							     [List.nth(args, pid')], false)
+							  | E.TEN(_, _, SOME 1) =>
+							    ([cvtParams (List.nth(params, pid'))],
+							     [List.nth(args, pid')], true)
+							  | E.TEN(_, _, _) => raise Fail "affine div"
+							  | _ => ([cvtParams (List.nth(params, pid'))],
+								  [List.nth(args, pid')], false)
+						       (* end case *))
+					(* end case *))
+		   val ein = E.EIN{params=params, index=numIndex, body=t1''}
+		  in
+		   (AvailRHS.assignEin(avail, "numAcc", Ty.TensorTy(numIndex, NONE), ein, args), interval)
+		  end
+
+	      fun revertParamInterval(v) =
+		  let
+		   val Ty.TensorTy(s::shp, NONE) = IR.Var.ty v
+		   val _ = if s = 2
+			   then ()
+			   else raise Fail "bad revertParamInterval"
+		  in
+		   E.TEN(true, shp, SOME 1)
+		  end
+	      fun grabScalarParam(v) =
+		  let
+		   val Ty.TensorTy(shp, NONE) = IR.Var.ty v
+		  in
+		   E.TEN(true, shp, NONE)
+		  end
+	      fun decAlpha alpha = List.map (fn E.V x => E.V (x - 1) | E.C j => E.C j) alpha
+	      fun dropAlpha alpha = decAlpha (List.drop(alpha, 1))
+
+	      val bottomInterval = Option.isSome bottomArg
+	      val (args1, args2) =
+		  (case (bottomInterval, topInterval)
+		    of (false, false) => raise Fail "scalar div in interval"
+		     | (true, true) => ((sx, index, [revertParamInterval numVar, revertParamInterval divVar'], [numVar, divVar']),
+					(E.Prod, [E.Tensor(0, dropAlpha numAlpha), E.Tensor(1, dropAlpha divAlpha)]))
+		     | (true, false) => ((sx, index, [revertParamInterval numVar, grabScalarParam divVar'], [numVar, divVar']),
+					 (E.Prod, [E.Tensor(0, dropAlpha numAlpha), E.Tensor(1, decAlpha divAlpha)]))
+		     | (false, true) => ((sx, index, [grabScalarParam numVar, revertParamInterval divVar'], [numVar, divVar']),
+					 (E.Prod, [E.Tensor(0,  decAlpha numAlpha), E.Tensor(1, dropAlpha divAlpha)]))
+		  (* end case *))
+	      val args1' = (avail, y, #1 args1, #2 args1, #3 args1, #4 args1)
+
+	     in
+	      handleOpn args1' args2
+	     end
+				  
+	   | handleOp2 (E.Max) = raise Fail "bad: no interval max allowed"
+	   | handleOp2 (E.Min) = raise Fail "bad: no interval min allowed"
+	in
+	 handleOp2 op1
+	end
+
     fun handleIntervalEin(y, oldY, params, index, sx, body, body', leafForm, args, oldArgs) =
 	let
 	 val avail = AvailRHS.new ()
@@ -1359,6 +1562,13 @@ abs(min(xmax, max(0, xmin)))
 			     (AvailRHS.addAssignToList(avail, (y, IR.VAR v));
 			      AvailRHS.getAssignments' avail)
 			     end
+			   | E.Op2(binary, t1, t2) =>
+			     let
+			      val v = (handleOp2s (avail, y, sx, index, params, args) (binary, t1, t2))
+			     in
+			      (AvailRHS.addAssignToList(avail, (y, IR.VAR v));
+			       AvailRHS.getAssignments' avail)
+			     end
 			   | E.Opn(opn, ts) =>
 			     let
 			      val v = handleOpn (avail, y, sx, index, params, args) (opn, ts)
@@ -1366,7 +1576,7 @@ abs(min(xmax, max(0, xmin)))
 			      (AvailRHS.addAssignToList(avail, (y, IR.VAR v));
 			       AvailRHS.getAssignments' avail)
 			     end
-			   | _ => raise Fail "NYI"
+			   | _ => raise Fail ("invalid interval in:" ^ (EinPP.toString(E.EIN{params=params,index=index,body=body})))
 			(* end case *))
 	 (* end case *))
 	end

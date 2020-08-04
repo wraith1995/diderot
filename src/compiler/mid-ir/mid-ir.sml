@@ -47,6 +47,10 @@ structure MidOps =
     val hashidxctl = IndexCtl.hash
     val idxctlToString = IndexCtl.toString
 
+    fun samebool(b,b') = b = b'
+    fun hashbool b = if b then 0w1 else 0w3
+    fun boolToString b = if b then "true" else "false"
+
     datatype rator
       = IAdd
       | ISub
@@ -141,6 +145,7 @@ structure MidOps =
       | insideInterval
       | EvaluateBasisAff of BasisDataArray.t * int
       | twocomp
+      | zerotestselect of int
       | scalarIntervalFun of string
 
     fun resultArity IAdd = 1
@@ -236,6 +241,7 @@ structure MidOps =
       | resultArity insideInterval = 1
       | resultArity (EvaluateBasisAff _) = 1
       | resultArity twocomp = 3
+      | resultArity (zerotestselect _) = 3
       | resultArity (scalarIntervalFun _) = 1
 
     fun arity IAdd = 2
@@ -331,6 +337,7 @@ structure MidOps =
       | arity insideInterval = 2
       | arity (EvaluateBasisAff _) = 1
       | arity twocomp = 1
+      | arity (zerotestselect _) = 1
       | arity (scalarIntervalFun _) = 1
 
     fun isPure (MkDynamic _) = false
@@ -436,6 +443,7 @@ structure MidOps =
       | same (insideInterval, insideInterval) = true
       | same (EvaluateBasisAff(a0,a1), EvaluateBasisAff(b0,b1)) = BasisDataArray.same(a0, b0) andalso sameint(a1, b1)
       | same (twocomp, twocomp) = true
+      | same (zerotestselect(a0), zerotestselect(b0)) = sameint(a0, b0)
       | same (scalarIntervalFun(a0), scalarIntervalFun(b0)) = samestring(a0, b0)
       | same _ = false
 
@@ -532,7 +540,8 @@ structure MidOps =
       | hash insideInterval = 0w479
       | hash (EvaluateBasisAff(a0,a1)) = 0w487 + BasisDataArray.hash a0 + hashint a1
       | hash twocomp = 0w491
-      | hash (scalarIntervalFun(a0)) = 0w499 + hashstring a0
+      | hash (zerotestselect(a0)) = 0w499 + hashint a0
+      | hash (scalarIntervalFun(a0)) = 0w503 + hashstring a0
 
     fun toString IAdd = "IAdd"
       | toString ISub = "ISub"
@@ -627,6 +636,7 @@ structure MidOps =
       | toString insideInterval = "insideInterval"
       | toString (EvaluateBasisAff(a0,a1)) = concat["EvaluateBasisAff<", BasisDataArray.toString a0, ",", intToString a1, ">"]
       | toString twocomp = "twocomp"
+      | toString (zerotestselect(a0)) = concat["zerotestselect<", intToString a0, ">"]
       | toString (scalarIntervalFun(a0)) = concat["scalarIntervalFun<", stringToString a0, ">"]
 
   end
