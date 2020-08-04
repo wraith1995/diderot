@@ -1200,7 +1200,7 @@ Do assign, dops
 	 val default = List.tabulate(List.length newIndex, fn x => E.V x)
 	 (**addAssign(t, "lit", IR.Ty.realTy, IR.LIT(Literal.Real (RealLit.one)))*)
 	 val possiblePid = leafPid opt'
-	 val (newArgs, opt'') =
+	 val (newArgs, opt'') = 
 	     (case possiblePid
 	       of NONE => ([oneLit], mapPid (fn x => 1) opt')
 		| SOME pid => ([oneLit, List.nth(args, pid)], mapPid (fn x => 1) opt')
@@ -1398,7 +1398,19 @@ abs(min(xmax, max(0, xmin)))
 	     end
 	   | handleOp2 (E.Div) =
 	     let
-	      (*run division for all of these;*)
+	      (*This code:
+		  make a/b into a_ialpha/b_ibeta with i the interval var (depending on prescence of interval)
+		  extract a, index, ialpha
+		  extract 1/b, index, ibeta - this makes ibeta work
+		  
+		  for 1/b, if b is an interval, account for infentities as needed and min/max
+
+		  access a so ialpha works
+
+		  rebuild provide alpha as alpha and beta as beta, build corresponding tensor expression, build old style params.
+		  This allows one to basically build the old ein with converted args ( the accesed 1/a and the 1/b accessed with some swaping)
+		  This can be passed to the handleOpn function with the prod argument.
+	       *)
 	      val mask = makeIvMask params
 	      val (t1', t2') = (modLeaf mask t1, modLeaf mask t2)
 	      val sx' = modSumrange(sx)
@@ -1489,7 +1501,6 @@ abs(min(xmax, max(0, xmin)))
 					 (E.Prod, [E.Tensor(0,  decAlpha numAlpha), E.Tensor(1, dropAlpha divAlpha)]))
 		  (* end case *))
 	      val args1' = (avail, y, #1 args1, #2 args1, #3 args1, #4 args1)
-
 	     in
 	      handleOpn args1' args2
 	     end
