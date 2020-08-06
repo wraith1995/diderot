@@ -1626,24 +1626,65 @@ abs(min(xmax, max(0, xmin)))
 	 val tensorProductGroupings = List.map (fn x => ListPair.map pairMap(x, acc)) binseq
 
 	 val tensorProducts = List.map (fn  x => makeTensorProdFactorized(avail, x)) tensorProductGroupings
+	 val size = let
+	  val (e::es) = tensorProducts
+	  val Ty.TensorTy([dim], NONE) = IR.Var.ty e
+	 in
+	  dim
+	 end
 
+	 (*min/max ^*)
+	 val tensorProductMin = vminmaxV(false, avail, tensorProducts, [size])
+	 val tensorProductMax = vminmaxV(true, avail, tensorProducts, [size])
 
-	 fun convert(basis) =
+	 fun nthswap(b, idx) =
+	     let
+	      val (m, ma) = if b
+			    then (tensorProductMax, tensorProductMin)
+			    else (tensorProductMin, tensorProductMax)
+			       
+	     in
+	      (AvailRHS.assignOp(avail, "swapx", Ty.realTy, Op.TensorIndex(Ty.TensorTy([size], NONE), [idx]), [m]),
+	       AvailRHS.assignOp(avail, "swapy", Ty.realTy, Op.TensorIndex(Ty.TensorTy([size], NONE), [idx]), [ma]))
+	     end
+
+	 fun swapperVar(reallist) =
+	     let
+	      val swappers = List.map (fn x => Real.>(x,0.0)) reallist
+	      val skippers = List.map (fn x => Real.!=(x,0.0)) reallist
+	      fun build((swap, skip)::rest, r::rest', c) =
+		  if skip
+		  then build(rest, rest', c + 1)
+		  else (nthswap(swap, c), r) :: build(rest, rest', c + 1)
+
+	      val correctOrder = build(ListPair.zip (swappers, skippers), reallist, 0)
+	      val (minlist, maxlist, reallitlist) = List.foldr (fn (((a,b), c), (l1, l2, l3)) => (a::l1, b::l2, c::l3)) ([], [], []) correctOrder
+	      val reallitvars = AvailRHS.makeRealLits(avail, reallitlist)
+	     in
+	      (flatConsVectors(avail, minlist), flatConsVectors(avail, maxlist), flatConsVectors(avail, reallitvars))
+	     end
+	 fun convertMin(basis) = (*FIXME NOT MIN/MAX*)
 	     let
 	      val monoArray = BasisData.explode basis
 	      val monoList = ArrayNd.toList monoArray
-	      val data = ListPair.zip (monoList, tensorProducts)
-	      val data' = List.filter (fn (x,y) => Real.!=(x, 0.0)) data
-	      val (realLits, monoVars) = ListPair.unzip data'
-	      val d = List.length monoVars
-	      val litVars = AvailRHS.makeRealLits(avail, realLits)
-	      val monoVarVec = AvailRHS.assignCons(avail, "monoCons", monoVars, Ty.TensorTy([d], NONE))
-	      val litVarVec = AvailRHS.assignCons(avail, "litCons", litVars, Ty.TensorTy([d], NONE))
+	      val (minVec, maxVec, realVec) = swapperVar(monoList)
+	      val vprodmin = makeVProd(avail, minVec, realVec)
 	     in
-	      makeVProd(avail, monoVarVec, litVarVec)
+	      vprodmin
 	     end
+	 fun convertMax(basis) = (*FIXME NOT MIN/MAX*)
+	     let
+	      val monoArray = BasisData.explode basis
+	      val monoList = ArrayNd.toList monoArray
+	      val (minVec, maxVec, realVec) = swapperVar(monoList)
+	      val vprodmax = makeVProd(avail, maxVec, realVec)
+	     in
+	      vprodmax
+	     end
+	 val minCons = ArrayNd.convertToTree(basisArrayData, convertMin, (groupConversionS "consBasisMin" avail))
+	 val maxCons = ArrayNd.convertToTree(basisArrayData, convertMax, (groupConversionS "consBasisMax" avail))
 	in
-	 ArrayNd.convertToTree(basisArrayData, convert, (groupConversionS "consBasis" avail))
+	 intervalCons(avail, minCons, maxCons)
 	end
 
 
