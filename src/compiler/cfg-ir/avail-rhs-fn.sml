@@ -48,6 +48,7 @@ functor AvailRHSFn (
     val assignCons : t * string   * IR.var list * IR.Ty.ty-> IR.var
 
     val makeRealLit : t * int list * RealLit.t -> IR.var
+    val makeRealLits : t * real list -> IR.var list
     val makeNan : t * int list -> IR.var
     val makeIntLit : t * int -> IR.var
 
@@ -153,7 +154,48 @@ functor AvailRHSFn (
 	   | conses ((d)::ds, s, x) = conses(ds, d::s, assignCons(t, "lit", List.tabulate(d, fn y => x ), IR.Ty.tensorTy' (d::s)))
 	in
 	 conses(reved, [], nanVar)
-	end						      
+	end
+    fun realToRealLit x =
+	let
+	 val preProc  = String.implode o (List.map (fn #"~" => #"-" | a => a)) o String.explode
+	 fun mkReal ss = let
+	  val (isNeg, rest) = (case Substring.getc ss
+				of SOME(#"-", r) => (true, r)
+				 | SOME(#"+", r) => (false, r)
+				 | _ => (false, ss)
+			      (* end case *))
+	  val (whole, rest) = Substring.splitl Char.isDigit rest
+	  val rest = (case Substring.getc rest
+		       of SOME(#".", _) => Substring.triml 1 rest (* remove "." if it exists*)
+			| _ => rest
+		     (* end case*))
+	  val (frac, rest) = Substring.splitl Char.isDigit rest
+	  val exp = if Substring.isEmpty rest
+		    then 0
+		    else let
+                     val rest = Substring.triml 1 rest (* remove "e" or "E" *)
+		    in
+                     #1(valOf(IntInf.scan StringCvt.DEC Substring.getc rest))
+		    end
+	 in
+	  (RealLit.real{
+             isNeg = isNeg,
+             whole = Substring.string whole,
+             frac = Substring.string frac,
+             exp = exp
+	  })
+	 end
+	in
+	 mkReal (Substring.extract (preProc(Real.toString x), 0, NONE))
+	end		       
+	  
+    fun makeRealLits(t, datas) =
+	let
+	 val datas' = List.map realToRealLit datas
+	 val lits = List.map (fn x => Literal.Real x) datas'
+	in
+	 List.map (fn x => addAssign(t, "lit", IR.Ty.realTy, IR.LIT(x))) lits
+	end
 
     fun makeNan(t, intlist) =
 	let

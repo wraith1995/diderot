@@ -302,6 +302,110 @@ Do assign, dops
 	in
 	 AvailRHS.assignEin(avail, "tensor2Mult", Ty.TensorTy(index, NONE), ein, [arg1, arg2])
 	end
+    fun makeVProd(avail, arg1, arg2)  =
+	let
+	 val Ty.TensorTy([dim], NONE) = IR.Var.ty arg1
+	 val Ty.TensorTy([dim'], NONE) = IR.Var.ty arg1
+	 val _ = if dim = dim'
+		 then ()
+		 else raise Fail "impossible: unequal dims in Vprod"
+	 val alpha = [E.V 0]
+	 val index = [dim]
+	in
+	 make2Prod(avail, arg1, arg2, index, alpha, alpha)
+	end
+
+    fun makeVScale(avail, scale, arg) =
+	let
+	 val _ = (case IR.Var.ty scale
+		   of Ty.TensorTy([], NONE) => ()
+		    | Ty.TensorTy([dim], NONE) =>  if dim = 1 orelse dim = 0
+						   then ()
+						   else raise Fail "can't scale by vector"
+		    | _ => raise Fail "can't scale by vector"
+		 (* end case *))
+	 val Ty.TensorTy([dim], NONE) = IR.Var.ty arg
+	 val params = [E.TEN(true, [], NONE), E.TEN(true, [dim], NONE)]
+	 val args = [scale, arg]
+	 val body = E.Opn(E.Prod, [E.Tensor(0, []), E.Tensor(0, [E.V 0])])
+	 val ein = E.EIN{params=params, index=[dim], body=body}
+	in
+	 AvailRHS.assignEin(avail, "scale", Ty.TensorTy([dim], NONE), ein, args)
+	end
+
+    fun makeVIndex(avail, arg, idx) =
+	let
+	 val ty = IR.Var.ty arg
+	 val Ty.TensorTy([dim], NONE) = ty
+	 val _ = if 0 <= idx andalso idx < dim
+		 then ()
+		 else raise Fail ("bad idx in VIndex")
+	 val opper = Op.TensorIndex(ty, [idx])
+	in
+	 AvailRHS.assignOp(avail, "acc", Ty.realTy, opper, [arg])
+	end
+    fun getVElements(avail, arg) =
+	let
+	 val ty = IR.Var.ty arg
+	 val Ty.TensorTy([dim], NONE) = ty
+	in
+	 List.tabulate(dim, fn x => makeVIndex(avail, arg, x))
+	end
+		    
+    fun makeCons(avail, args) =
+	let
+	 val len = List.length args
+	 val _ = if len >= 2
+		 then ()
+		 else raise Fail "bad cons len"
+	 val a::_ = args
+	 val ty = IR.Var.ty a
+	 val Ty.TensorTy(shp, NONE) = ty
+	 val newShp = len::shp
+	 val _ = if List.all (fn x => Ty.same(x, ty)) (List.map IR.Var.ty args)
+		 then ()
+		 else raise Fail "bad tys for cons"
+	in
+	 AvailRHS.assignCons(avail, "cons", args, Ty.TensorTy(newShp, NONE))
+	end
+    fun flatConsVectors(avail, args : IR.var list) =
+	let
+	 fun seperateThem(num, stuff, r::args : IR.var list) = let val vs = getVElements(avail, r)
+						 in seperateThem(num+List.length vs, List.@(stuff, vs), args)
+						 end
+	   | seperateThem (num, stuff, []) = (num, stuff)
+
+	 val (num, stuff) = seperateThem(0, [], args)
+	in
+	 AvailRHS.assignCons(avail, "consSplatter", stuff, Ty.TensorTy([num], NONE))
+	end
+
+    fun makeTensorProdFactorized(avail, args) =
+	let
+	 val tys = List.map (IR.Var.ty) args
+	 val _ = if List.length args < 2
+		 then raise Fail "bad tensor product"
+		 else ()
+
+	 val t::tys' = tys
+	 val Ty.TensorTy([dim], NONE) = t
+	 val _ = List.all (fn x => Ty.same(t, x)) tys'
+
+	 fun recurse (old, []) = old
+	   | recurse (old, r::rest) =
+	     let
+	      val seperated = List.tabulate(dim, fn x => makeVIndex(avail, r, x))
+	      val scaled = List.map (fn x => makeVScale(avail, x, old)) seperated
+	      val cons = flatConsVectors(avail, scaled)
+	     in
+	      recurse(cons, rest)
+	     end
+	 val a::args' = args
+
+			  
+	in
+	 recurse(a, args)
+	end
     fun makeSubTen(avail, src1, src2) =
 	let
 	 val srcs = [src1, src2]
@@ -528,159 +632,6 @@ Do assign, dops
     
      *)
 			
-
-    fun handleOp(avail, y, oper, args, oldArgs, oldY) =
-	let
-	 fun finish(link) = AvailRHS.addAssignToList(avail, (y, IR.VAR link))
-	 fun handleOp' (Op.intervalSimple, [a]) = intervalCons(avail, a, a)
-	   | handleOp' (Op.intervalMixed, [a, b]) = intervalCons(avail, a, b)
-	   | handleOp' (Op.intervalAffine, [a]) = (*builds interval via affine -> compute rad, center and then sub/add*)
-	     let
-	      val [a'] = oldArgs
-	      val Ty.TensorTy(_, SOME k ) = IR.Var.ty a'
-	      val rad = radius(avail, a, k)
-	      val center = sliceOutEin(avail, 0, a)
-	      val min = makeSubTen(avail, center, rad)
-	      val max = makeAddTen(avail, [center, rad])
-				  
-	     in
-	      intervalCons(avail, min, max)
-	     end
-	   | handleOp' (Op.intervalToAffine, [a]) =
-	     let
-	      val rad = makeIntervalWidth(avail, a)
-	      val scattered = scatterPatternVecs(avail, rad)
-	      val center = makeIntervalMidPoint(avail, a)
-	      val zeros = intervalZeros(avail, a)
-						
-	     in
-	      affineCons(avail, center, scattered, zeros)
-	     end
-	   | handleOp' (Op.affineNative(t1, t2, t3), [a, b, c]) =
-	     let
-	      val (innerTy, count) = (case t2
-				       of Ty.SeqTy(t as Ty.TensorTy(r::rs, NONE), SOME d) => if (List.length rs) <> 0
-											     then (t, d)
-											     else raise Fail "bad error size"
-					| Ty.TensorTy(r::ts, NONE) => if (List.length ts) <> 0
-								      then (Ty.TensorTy(ts, NONE), r)
-								      else raise Fail "bad error size"
-					| _ => raise Fail "bad error types"
-				     (* end case*))
-	      val  _ = if Ty.same(t1, innerTy) andalso Ty.same(innerTy, t3)
-		       then ()
-		       else raise Fail "bad error types for affine cons"
-
-				  
-	      val tenargs = (case t2
-			      of Ty.SeqTy(t as Ty.TensorTy(_, NONE), SOME d) =>
-				 List.tabulate(count, fn x => AvailRHS.assignOp(avail, "affineSeqAcc", t, Op.Subscript(t2),
-										[b, AvailRHS.makeIntLit(avail, x)]))
-			       | Ty.TensorTy(t::ts, NONE) => List.tabulate(count, fn x => sliceOutEin(avail, x + 1, b))
-			       | _ => raise Fail "impossible"
-			    (* end case*))
-	     in
-	      affineCons(avail, a, tenargs, c)
-	     end
-	   | handleOp' (Op.affineNative2(t), [a, b]) = affine2Cons(avail, a, b)
-	   | handleOp' (Op.errors, [a]) =
-	     let
-	      val [a'] = oldArgs
-	      val Ty.TensorTy(shp, SOME k ) = IR.Var.ty a'
-	     in
-	      if k < 2
-	      then raise Fail "bad error op: k <= 1"
-	      else if k = 2 (*d=0*)
-	      then AvailRHS.makeNan(avail, shp) (*raise Fail "bad error op: k = 2" (*QUESTION: should there be a shp zero here*)*)
-	      else if k = 3 (*d = 1; just a scalar*)
-	      then sliceOut(avail, 1, a) (*d >= 2*)
-	      else AvailRHS.assignCons(avail, "errorCons", List.tabulate(k - 2,
-									 fn x => sliceOut(avail, x + 1, a)),
-				       Ty.TensorTy((k-2)::shp, NONE))
-	     end
-	   | handleOp' (Op.lasterr, [a]) =
-	     let
-	      val [a'] = oldArgs
-	      val Ty.TensorTy(shp, SOME k ) = IR.Var.ty a'
-	     in
-	      if k < 2
-	      then raise Fail "bad errorn op: k <= 1"
-	      else sliceOut(avail, k - 1, a)
-	     end
-	   | handleOp' (Op.radius, [a]) =
-	     let
-	      val [a'] = oldArgs
-	      val Ty.TensorTy(shp, SOME k ) = IR.Var.ty a'
-	     in
-	      radius(avail, a, k)
-	     end
-	   | handleOp' (Op.minInterval, [a]) = minInterval(avail, a)
-	   | handleOp' (Op.maxInterval, [a]) = maxInterval(avail, a)
-	   | handleOp' (Op.intersection, [a, b]) =
-	     let
-	   (*clampTTT, a < x < b*)
-	   (*min_a min_b max_a*)
-	   (*min_a max_b max_a*)
-	   (*if B \subset_neq A then this will presreve b
-	    if A \subset_neq B  then will give A
-	    if the intersect A then B so min_b < min_a < max_b < max_a
-	   or min_a < min_b < max_a < max_b then
-
-           if they are seperate so either max_a < min_b < max_b or max_b < min_a
-
-	   We now do clamp a_0... < b_i... < a_1... for i=0..1, ....
-	    *)
-	      val [t1, t2] = List.map (IR.Var.ty) [a, b]
-	      val (Ty.TensorTy(t::ts, NONE), Ty.TensorTy(t'::ts', NONE)) = (t1, t2)
-	      val _ = if Ty.same(t1, t2)
-		      then ()
-		      else raise Fail "bad intersection -not same shape"									     
-	      val _ = if t=t' andalso t=2
-		      then ()
-		      else raise Fail "bad intersection-non-interval"
-
-	      val tens = [E.TEN(true, t::ts, NONE), E.TEN(true, t::ts, NONE)]
-	      val vs = (List.tabulate(List.length ts, fn x => E.V (x+1)))
-	      val clamp = E.Op3(E.Clamp, E.Tensor(0, E.C 0 :: vs), E.Tensor(1, E.V 0 :: vs), E.Tensor(0, E.C 1 :: vs))
-	      val ein1 = E.EIN{params=tens, index=t::ts, body=clamp}
-	     in
-	      AvailRHS.assignEin(avail, "intervalIntersection", Ty.TensorTy(t::ts, NONE), ein1, [a, b])
-	     end
-	   | handleOp' (Op.hull, [a, b]) =
-	     let
-	      val mins = [minInterval(avail, a), minInterval(avail, b)]
-	      val maxes = [maxInterval(avail, a), maxInterval(avail, b)]
-	      val min = vmax(false, avail, mins)
-	      val max = vmax(true, avail, maxes)
-	     in
-	      intervalCons(avail, min, max)
-	     end
-	   | handleOp' (Op.extend, [a, new]) =
-	     let
-	      val ty = IR.Var.ty a
-	      val Ty.TensorTy(k::shp, NONE) = ty
-	      val start = sliceOut(avail, 0, a)
-	      val endV = sliceOut(avail, k - 1, a)
-              val rest = List.tabulate(k-2, fn x => sliceOut(avail, x + 1, a))
-	     in
-	      affineCons(avail, start, rest@[new], endV)
-	     end
-	   | handleOp' (Op.insideInterval, [ten, interval]) = AvailRHS.assignOp(avail, "insided", IR.Var.ty ten, Op.twocomp,
-										[minInterval(avail, interval), ten,
-										 maxInterval(avail, interval)])
-	   | handleOp' (oper as Op.EvaluateBasis(bda), [arg]) =
-	     (case IR.Var.ty oldY
-	       of Ty.TensorTy(_, NONE) => AvailRHS.assignOp(avail, "plainbasis", IR.Var.ty y, oper, [arg])
-		| Ty.TensorTy(_, SOME k) =>
-		  let
-		  in
-		   AvailRHS.assignOp(avail, "intervalbasis", IR.Var.ty y, Op.EvaluateBasisAff(bda, k), [arg])
-		  end
-	     (* end case*))
-	   | handleOp' (oper, vs) = AvailRHS.assignOp(avail, "temp", IR.Var.ty y, oper, vs)
-	in
-	 finish(handleOp'(oper, args))
-	end
 
 
     fun verifyEinForm(body) =
@@ -1605,8 +1556,251 @@ abs(min(xmax, max(0, xmin)))
 			else raise Fail "NYI"
 	 (* end case*))
 	end
+    structure BDA = BasisDataArray
+    fun intervalBasisExpand(avail, shp, bda, arg, BDA.Unknown) =
+	let
+	 val (basisArrayData, meta) = BDA.explode bda
+	 (*for the even, we need:*)
+	 (*min(xmax, max(0, xmin))*)
+	 (*max(abs(xmin), xmax)*)
+	 val Ty.TensorTy([dim], NONE) = IR.Var.ty arg
+	 val oddmin = sliceOutEin(avail, 0, arg)
+	 val oddmax = sliceOutEin(avail, 1, arg)
+	 val zeros = AvailRHS.makeRealLit(avail, [dim], RealLit.zero true)
+	 val ones = AvailRHS.makeRealLit(avail, [dim], RealLit.one)
+
+	 val zeromax = vmax2(true, avail, zeros, oddmin)
+	 val evenmin = vmax2(false, avail, oddmax, zeromax)
+			    
+	 val absmin = makeAbsTen(avail, oddmin)
+	 val evenmax = vmax2(true, avail, absmin, oddmax)
+
+	 val dim' = BDA.domainDim bda
+	 val minDegree = BDA.minDegree meta
+	 val maxDegree = BDA.maxDegree meta
+	 val degDiff = maxDegree - minDegree
+	 val degrees = List.tabulate(dim', fn x => (x, degDiff))
+	 val maxDegress =  List.tabulate(dim', fn x => (x, maxDegree))
+	 (*(0,1) -> (0,..., degree) -> (0,.., dim -1)*)
+	 fun getPowers(degree, oddstart, evenstart) =
+	     if degree = 0
+	     then (ones, ones)::getPowers(degree, oddstart, evenstart)
+	     else if Int.mod(degree, 2) = 1 andalso degree <= maxDegree
+	     then
+	      let
+	       val (omi, omx) = oddstart
+	       val (newoddmin, newoddmax) = (makeVProd(avail, oddmin, makeVProd(avail, oddmin, omi)),
+					     makeVProd(avail, oddmax, makeVProd(avail, oddmax, omx)))
+	      in
+	       (newoddmin, newoddmax) :: getPowers(degree + 1, (newoddmin, newoddmax), evenstart)
+	      end
+	     else if Int.mod(degree, 2) = 0 andalso degree <= maxDegree
+	     then
+	      let
+	       val (emi, emx) = evenstart
+	       val (newevenmin, newevenmax) = (makeVProd(avail, evenmin, makeVProd(avail, evenmin, emi)),
+					       makeVProd(avail, evenmax, makeVProd(avail, evenmax, emx)))
+
+	      in
+	       (newevenmin, newevenmax) :: getPowers(degree + 1, oddstart, (newevenmin, newevenmax))
+	      end
+	     else []
+
+	 val pows : (IR.var * IR.var) list = getPowers(0, (oddmin, oddmax), (evenmin, evenmax))
+	 val (mins, maxes) = ListPair.unzip pows (*mins: degree 0 (x,y,z), degree 1 (x,y,z), ...*)
+	 (*min: By var by degree list (x0 x1,...), (y0,...), ...*)
+	 fun nth(v, x) = makeVIndex(avail, v, x)
+	 val minVectors = List.foldr (fn (x, bydim) => List.tabulate(dim, fn z=> nth(x, z)::List.nth(bydim, z))) (List.tabulate(dim, fn _ => [])) mins
+	 val maxVectors = List.foldr (fn (x, bydim) => List.tabulate(dim, fn z => nth(x, z)::List.nth(bydim, z))) (List.tabulate(dim, fn _ => [])) maxes
+	 val minVectorVars = List.map (fn x => AvailRHS.assignCons(avail, "pows", x, Ty.TensorTy([List.length x], NONE))) minVectors
+	 val maxVectorVars = List.map (fn x => AvailRHS.assignCons(avail, "pows", x, Ty.TensorTy([List.length x], NONE))) maxVectors
+
+				      (*for binary sequences, do tensor products:*)
+	 val binseq = binarySequences(dim)
+	 val acc = List.tabulate(dim, fn x => x)
+	 fun pairVec x = if x = 0
+			 then minVectorVars
+			 else if x = 1 then maxVectorVars
+			 else raise Fail "bad"
+	 fun pairMap(x,y) = List.nth(pairVec x, y)
+	 val tensorProductGroupings = List.map (fn x => ListPair.map pairMap(x, acc)) binseq
+
+	 val tensorProducts = List.map (fn  x => makeTensorProdFactorized(avail, x)) tensorProductGroupings
 
 
+	 fun convert(basis) =
+	     let
+	      val monoArray = BasisData.explode basis
+	      val monoList = ArrayNd.toList monoArray
+	      val data = ListPair.zip (monoList, tensorProducts)
+	      val data' = List.filter (fn (x,y) => Real.!=(x, 0.0)) data
+	      val (realLits, monoVars) = ListPair.unzip data'
+	      val d = List.length monoVars
+	      val litVars = AvailRHS.makeRealLits(avail, realLits)
+	      val monoVarVec = AvailRHS.assignCons(avail, "monoCons", monoVars, Ty.TensorTy([d], NONE))
+	      val litVarVec = AvailRHS.assignCons(avail, "litCons", litVars, Ty.TensorTy([d], NONE))
+	     in
+	      makeVProd(avail, monoVarVec, litVarVec)
+	     end
+	in
+	 ArrayNd.convertToTree(basisArrayData, convert, (groupConversionS "consBasis" avail))
+	end
+
+
+    fun handleOp(avail, y, oper, args, oldArgs, oldY) =
+	let
+	 fun finish(link) = AvailRHS.addAssignToList(avail, (y, IR.VAR link))
+	 fun handleOp' (Op.intervalSimple, [a]) = intervalCons(avail, a, a)
+	   | handleOp' (Op.intervalMixed, [a, b]) = intervalCons(avail, a, b)
+	   | handleOp' (Op.intervalAffine, [a]) = (*builds interval via affine -> compute rad, center and then sub/add*)
+	     let
+	      val [a'] = oldArgs
+	      val Ty.TensorTy(_, SOME k ) = IR.Var.ty a'
+	      val rad = radius(avail, a, k)
+	      val center = sliceOutEin(avail, 0, a)
+	      val min = makeSubTen(avail, center, rad)
+	      val max = makeAddTen(avail, [center, rad])
+				  
+	     in
+	      intervalCons(avail, min, max)
+	     end
+	   | handleOp' (Op.intervalToAffine, [a]) =
+	     let
+	      val rad = makeIntervalWidth(avail, a)
+	      val scattered = scatterPatternVecs(avail, rad)
+	      val center = makeIntervalMidPoint(avail, a)
+	      val zeros = intervalZeros(avail, a)
+						
+	     in
+	      affineCons(avail, center, scattered, zeros)
+	     end
+	   | handleOp' (Op.affineNative(t1, t2, t3), [a, b, c]) =
+	     let
+	      val (innerTy, count) = (case t2
+				       of Ty.SeqTy(t as Ty.TensorTy(r::rs, NONE), SOME d) => if (List.length rs) <> 0
+											     then (t, d)
+											     else raise Fail "bad error size"
+					| Ty.TensorTy(r::ts, NONE) => if (List.length ts) <> 0
+								      then (Ty.TensorTy(ts, NONE), r)
+								      else raise Fail "bad error size"
+					| _ => raise Fail "bad error types"
+				     (* end case*))
+	      val  _ = if Ty.same(t1, innerTy) andalso Ty.same(innerTy, t3)
+		       then ()
+		       else raise Fail "bad error types for affine cons"
+
+				  
+	      val tenargs = (case t2
+			      of Ty.SeqTy(t as Ty.TensorTy(_, NONE), SOME d) =>
+				 List.tabulate(count, fn x => AvailRHS.assignOp(avail, "affineSeqAcc", t, Op.Subscript(t2),
+										[b, AvailRHS.makeIntLit(avail, x)]))
+			       | Ty.TensorTy(t::ts, NONE) => List.tabulate(count, fn x => sliceOutEin(avail, x + 1, b))
+			       | _ => raise Fail "impossible"
+			    (* end case*))
+	     in
+	      affineCons(avail, a, tenargs, c)
+	     end
+	   | handleOp' (Op.affineNative2(t), [a, b]) = affine2Cons(avail, a, b)
+	   | handleOp' (Op.errors, [a]) =
+	     let
+	      val [a'] = oldArgs
+	      val Ty.TensorTy(shp, SOME k ) = IR.Var.ty a'
+	     in
+	      if k < 2
+	      then raise Fail "bad error op: k <= 1"
+	      else if k = 2 (*d=0*)
+	      then AvailRHS.makeNan(avail, shp) (*raise Fail "bad error op: k = 2" (*QUESTION: should there be a shp zero here*)*)
+	      else if k = 3 (*d = 1; just a scalar*)
+	      then sliceOut(avail, 1, a) (*d >= 2*)
+	      else AvailRHS.assignCons(avail, "errorCons", List.tabulate(k - 2,
+									 fn x => sliceOut(avail, x + 1, a)),
+				       Ty.TensorTy((k-2)::shp, NONE))
+	     end
+	   | handleOp' (Op.lasterr, [a]) =
+	     let
+	      val [a'] = oldArgs
+	      val Ty.TensorTy(shp, SOME k ) = IR.Var.ty a'
+	     in
+	      if k < 2
+	      then raise Fail "bad errorn op: k <= 1"
+	      else sliceOut(avail, k - 1, a)
+	     end
+	   | handleOp' (Op.radius, [a]) =
+	     let
+	      val [a'] = oldArgs
+	      val Ty.TensorTy(shp, SOME k ) = IR.Var.ty a'
+	     in
+	      radius(avail, a, k)
+	     end
+	   | handleOp' (Op.minInterval, [a]) = minInterval(avail, a)
+	   | handleOp' (Op.maxInterval, [a]) = maxInterval(avail, a)
+	   | handleOp' (Op.intersection, [a, b]) =
+	     let
+	   (*clampTTT, a < x < b*)
+	   (*min_a min_b max_a*)
+	   (*min_a max_b max_a*)
+	   (*if B \subset_neq A then this will presreve b
+	    if A \subset_neq B  then will give A
+	    if the intersect A then B so min_b < min_a < max_b < max_a
+	   or min_a < min_b < max_a < max_b then
+
+           if they are seperate so either max_a < min_b < max_b or max_b < min_a
+
+	   We now do clamp a_0... < b_i... < a_1... for i=0..1, ....
+	    *)
+	      val [t1, t2] = List.map (IR.Var.ty) [a, b]
+	      val (Ty.TensorTy(t::ts, NONE), Ty.TensorTy(t'::ts', NONE)) = (t1, t2)
+	      val _ = if Ty.same(t1, t2)
+		      then ()
+		      else raise Fail "bad intersection -not same shape"									     
+	      val _ = if t=t' andalso t=2
+		      then ()
+		      else raise Fail "bad intersection-non-interval"
+
+	      val tens = [E.TEN(true, t::ts, NONE), E.TEN(true, t::ts, NONE)]
+	      val vs = (List.tabulate(List.length ts, fn x => E.V (x+1)))
+	      val clamp = E.Op3(E.Clamp, E.Tensor(0, E.C 0 :: vs), E.Tensor(1, E.V 0 :: vs), E.Tensor(0, E.C 1 :: vs))
+	      val ein1 = E.EIN{params=tens, index=t::ts, body=clamp}
+	     in
+	      AvailRHS.assignEin(avail, "intervalIntersection", Ty.TensorTy(t::ts, NONE), ein1, [a, b])
+	     end
+	   | handleOp' (Op.hull, [a, b]) =
+	     let
+	      val mins = [minInterval(avail, a), minInterval(avail, b)]
+	      val maxes = [maxInterval(avail, a), maxInterval(avail, b)]
+	      val min = vmax(false, avail, mins)
+	      val max = vmax(true, avail, maxes)
+	     in
+	      intervalCons(avail, min, max)
+	     end
+	   | handleOp' (Op.extend, [a, new]) =
+	     let
+	      val ty = IR.Var.ty a
+	      val Ty.TensorTy(k::shp, NONE) = ty
+	      val start = sliceOut(avail, 0, a)
+	      val endV = sliceOut(avail, k - 1, a)
+              val rest = List.tabulate(k-2, fn x => sliceOut(avail, x + 1, a))
+	     in
+	      affineCons(avail, start, rest@[new], endV)
+	     end
+	   | handleOp' (Op.insideInterval, [ten, interval]) = AvailRHS.assignOp(avail, "insided", IR.Var.ty ten, Op.twocomp,
+										[minInterval(avail, interval), ten,
+										 maxInterval(avail, interval)])
+	   | handleOp' (oper as Op.EvaluateBasis(bda), [arg]) =
+	     (case IR.Var.ty oldY
+	       of Ty.TensorTy(_, NONE) => AvailRHS.assignOp(avail, "plainbasis", IR.Var.ty y, oper, [arg])
+		| Ty.TensorTy(shp, SOME 1) => intervalBasisExpand(avail, shp, bda, arg, BDA.analyzeBasis bda)
+		| Ty.TensorTy(_, SOME k) =>
+		  let
+		   val () =()
+		  in
+		   AvailRHS.assignOp(avail, "intervalbasis", IR.Var.ty y, Op.EvaluateBasisAff(bda, k), [arg])
+		  end
+	     (* end case*))
+	   | handleOp' (oper, vs) = AvailRHS.assignOp(avail, "temp", IR.Var.ty y, oper, vs)
+	in
+	 finish(handleOp'(oper, args))
+	end
 
 
     fun expand (env, (y, rhs)) = let

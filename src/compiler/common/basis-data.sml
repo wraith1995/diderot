@@ -35,6 +35,8 @@ structure BasisData : sig
 	   val cast : t * int -> t
 	   val product : t* t -> t
 
+	   val explode : t -> Real.real ArrayNd.ArrayNd
+
 			     
 			 
 	  end = struct
@@ -44,6 +46,8 @@ type r = Real.real
 structure A = ArrayNd
 
 datatype Rep = Array of r A.ArrayNd (*to add sparse representation later*)
+
+
 
 (* why I can't find this in the interger spec is beyond me *)
 fun power (x, 0) = 1  
@@ -59,6 +63,8 @@ datatype t = BasisFunc of {
 	  strForm : Atom.atom, (* string representation used*)
 	  coeffs : Rep (*storage of coefficients*)
 	 }
+fun explode'(Array(b)) = b
+fun explode(BasisFunc{coeffs,...}) = explode'(coeffs)
 fun dimDomain(BasisFunc{dim,...}) = dim
 fun empty(dim, degree) = BasisFunc {dim = dim,
 				    degree = degree,
