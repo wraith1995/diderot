@@ -1578,13 +1578,10 @@ abs(min(xmax, max(0, xmin)))
 	 val dim' = BDA.domainDim bda
 	 val minDegree = BDA.minDegree meta
 	 val maxDegree = BDA.maxDegree meta
-	 val degDiff = maxDegree - minDegree
-	 val degrees = List.tabulate(dim', fn x => (x, degDiff))
-	 val maxDegress =  List.tabulate(dim', fn x => (x, maxDegree))
 	 (*(0,1) -> (0,..., degree) -> (0,.., dim -1)*)
 	 fun getPowers(degree, oddstart, evenstart) =
 	     if degree = 0
-	     then (ones, ones)::getPowers(degree, oddstart, evenstart)
+	     then (ones, ones)::getPowers(degree + 1, oddstart, evenstart)
 	     else if Int.mod(degree, 2) = 1 andalso degree <= maxDegree
 	     then
 	      let
@@ -1611,7 +1608,7 @@ abs(min(xmax, max(0, xmin)))
 	 (*min: By var by degree list (x0 x1,...), (y0,...), ...*)
 	 fun nth(v, x) = makeVIndex(avail, v, x)
 	 val minVectors = List.foldr (fn (x, bydim) => List.tabulate(dim, fn z=> nth(x, z)::List.nth(bydim, z))) (List.tabulate(dim, fn _ => [])) mins
-	 val maxVectors = List.foldr (fn (x, bydim) => List.tabulate(dim, fn z => nth(x, z)::List.nth(bydim, z))) (List.tabulate(dim, fn _ => [])) maxes
+	 val maxVectors = List.foldr (fn (x, bydim) => List.tabulate(dim, fn z => nth(x, z)::List.nth(bydim, z))) (List.tabulate(dim, fn _ => [])) maxes (*size is dim; list of degree vars*)
 	 val minVectorVars = List.map (fn x => AvailRHS.assignCons(avail, "pows", x, Ty.TensorTy([List.length x], NONE))) minVectors
 	 val maxVectorVars = List.map (fn x => AvailRHS.assignCons(avail, "pows", x, Ty.TensorTy([List.length x], NONE))) maxVectors
 
@@ -1623,7 +1620,7 @@ abs(min(xmax, max(0, xmin)))
 			 else if x = 1 then maxVectorVars
 			 else raise Fail "bad"
 	 fun pairMap(x,y) = List.nth(pairVec x, y)
-	 val tensorProductGroupings = List.map (fn x => ListPair.map pairMap(x, acc)) binseq
+	 val tensorProductGroupings = List.map (fn x => ListPair.map pairMap (x, acc)) binseq
 
 	 val tensorProducts = List.map (fn  x => makeTensorProdFactorized(avail, x)) tensorProductGroupings
 	 val size = let
@@ -1639,7 +1636,7 @@ abs(min(xmax, max(0, xmin)))
 
 	 fun nthswap(b, idx) =
 	     let
-	      val (m, ma) = if b
+	      val (m, ma) = if b (*if swap*)
 			    then (tensorProductMax, tensorProductMin)
 			    else (tensorProductMin, tensorProductMax)
 			       
@@ -1650,8 +1647,8 @@ abs(min(xmax, max(0, xmin)))
 
 	 fun swapperVar(reallist) =
 	     let
-	      val swappers = List.map (fn x => Real.>(x,0.0)) reallist
-	      val skippers = List.map (fn x => Real.!=(x,0.0)) reallist
+	      val swappers = List.map (fn x => Real.<(x,0.0)) reallist (*swap if realit < 0*)
+	      val skippers = List.map (fn x => Real.==(x,0.0)) reallist (*skip if realit = 0 *)
 	      fun build((swap, skip)::rest, r::rest', c) =
 		  if skip
 		  then build(rest, rest', c + 1)
