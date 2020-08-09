@@ -47,6 +47,11 @@ structure LowOps =
     val hashidxctl = IndexCtl.hash
     val idxctlToString = IndexCtl.toString
 
+    fun samebool(b,b') = b = b'
+    fun hashbool b = if b then 0w1 else 0w3
+    fun boolToString b = if b then "true" else "false"
+
+
     datatype rator
       = IAdd
       | ISub
@@ -80,6 +85,13 @@ structure LowOps =
       | VNeg of int
       | VSum of int
       | VDot of int
+      | VMin of int
+      | VMax of int
+      | VAbs of int
+      | VAnd of int
+      | VL of bool * int
+      | VAll of int
+      | VMaskAndMove of int
       | VIndex of int * int
       | TensorIndex of ty * shape
       | ProjectLast of ty * shape
@@ -138,6 +150,7 @@ structure LowOps =
       | Load of int * int * ty * int
       | Save of int * int * ty * int
       | LoadScalar of int * int * int
+      | scalarIntervalFun of string
 
     fun resultArity IAdd = 1
       | resultArity ISub = 1
@@ -171,6 +184,13 @@ structure LowOps =
       | resultArity (VNeg _) = 1
       | resultArity (VSum _) = 1
       | resultArity (VDot _) = 1
+      | resultArity (VMin _) = 1
+      | resultArity (VMax _) = 1
+      | resultArity (VAbs _) = 1
+      | resultArity (VAnd _) = 1
+      | resultArity (VL _) = 2
+      | resultArity (VAll _) = 1
+      | resultArity (VMaskAndMove _) = 1
       | resultArity (VIndex _) = 1
       | resultArity (TensorIndex _) = 1
       | resultArity (ProjectLast _) = 1
@@ -229,6 +249,7 @@ structure LowOps =
       | resultArity (Load _) = 1
       | resultArity (Save _) = 0
       | resultArity (LoadScalar _) = 1
+      | resultArity (scalarIntervalFun _) = 1
 
     fun arity IAdd = 2
       | arity ISub = 2
@@ -262,6 +283,13 @@ structure LowOps =
       | arity (VNeg _) = 2
       | arity (VSum _) = 1
       | arity (VDot _) = 2
+      | arity (VMin _) = 2
+      | arity (VMax _) = 2
+      | arity (VAbs _) = 1
+      | arity (VAnd _) = 2
+      | arity (VL _) = 1
+      | arity (VAll _) = 1
+      | arity (VMaskAndMove _) = 3
       | arity (VIndex _) = 1
       | arity (TensorIndex _) = 1
       | arity (ProjectLast _) = 1
@@ -320,6 +348,7 @@ structure LowOps =
       | arity (Load _) = 0
       | arity (Save _) = 2
       | arity (LoadScalar _) = 0
+      | arity (scalarIntervalFun _) = 1
 
     fun isPure (MkDynamic _) = false
       | isPure (Append _) = false
@@ -363,6 +392,13 @@ structure LowOps =
       | same (VNeg(a0), VNeg(b0)) = sameint(a0, b0)
       | same (VSum(a0), VSum(b0)) = sameint(a0, b0)
       | same (VDot(a0), VDot(b0)) = sameint(a0, b0)
+      | same (VMin(a0), VMin(b0)) = sameint(a0, b0)
+      | same (VMax(a0), VMax(b0)) = sameint(a0, b0)
+      | same (VAbs(a0), VAbs(b0)) = sameint(a0, b0)
+      | same (VAnd(a0), VAnd(b0)) = sameint(a0, b0)
+      | same (VL(a0,a1), VL(b0,b1)) = samebool(a0, b0) andalso sameint(a1, b1)
+      | same (VAll(a0), VAll(b0)) = sameint(a0, b0)
+      | same (VMaskAndMove(a0), VMaskAndMove(b0)) = sameint(a0, b0)
       | same (VIndex(a0,a1), VIndex(b0,b1)) = sameint(a0, b0) andalso sameint(a1, b1)
       | same (TensorIndex(a0,a1), TensorIndex(b0,b1)) = samety(a0, b0) andalso sameshape(a1, b1)
       | same (ProjectLast(a0,a1), ProjectLast(b0,b1)) = samety(a0, b0) andalso sameshape(a1, b1)
@@ -421,6 +457,7 @@ structure LowOps =
       | same (Load(a0,a1,a2,a3), Load(b0,b1,b2,b3)) = sameint(a0, b0) andalso sameint(a1, b1) andalso samety(a2, b2) andalso sameint(a3, b3)
       | same (Save(a0,a1,a2,a3), Save(b0,b1,b2,b3)) = sameint(a0, b0) andalso sameint(a1, b1) andalso samety(a2, b2) andalso sameint(a3, b3)
       | same (LoadScalar(a0,a1,a2), LoadScalar(b0,b1,b2)) = sameint(a0, b0) andalso sameint(a1, b1) andalso sameint(a2, b2)
+      | same (scalarIntervalFun(a0), scalarIntervalFun(b0)) = samestring(a0, b0)
       | same _ = false
 
     fun hash IAdd = 0w3
@@ -455,64 +492,72 @@ structure LowOps =
       | hash (VNeg(a0)) = 0w127 + hashint a0
       | hash (VSum(a0)) = 0w131 + hashint a0
       | hash (VDot(a0)) = 0w137 + hashint a0
-      | hash (VIndex(a0,a1)) = 0w139 + hashint a0 + hashint a1
-      | hash (TensorIndex(a0,a1)) = 0w149 + hashty a0 + hashshape a1
-      | hash (ProjectLast(a0,a1)) = 0w151 + hashty a0 + hashshape a1
-      | hash EigenVecs2x2 = 0w157
-      | hash EigenVecs3x3 = 0w163
-      | hash EigenVals2x2 = 0w167
-      | hash EigenVals3x3 = 0w173
-      | hash (Zero(a0)) = 0w179 + hashty a0
-      | hash (Select(a0,a1)) = 0w181 + hashty a0 + hashint a1
-      | hash (Tuple(a0)) = 0w191 + hashtys a0
-      | hash (Subscript(a0)) = 0w193 + hashty a0
-      | hash (MkDynamic(a0,a1)) = 0w197 + hashty a0 + hashint a1
-      | hash (Append(a0)) = 0w199 + hashty a0
-      | hash (Prepend(a0)) = 0w211 + hashty a0
-      | hash (Concat(a0)) = 0w223 + hashty a0
-      | hash Range = 0w227
-      | hash (Length(a0)) = 0w229 + hashty a0
-      | hash (SphereQuery(a0,a1)) = 0w233 + hashint a0 + hashty a1
-      | hash Sqrt = 0w239
-      | hash Cos = 0w241
-      | hash ArcCos = 0w251
-      | hash Sin = 0w257
-      | hash ArcSin = 0w263
-      | hash Tan = 0w269
-      | hash ArcTan = 0w271
-      | hash Exp = 0w277
-      | hash Sign = 0w281
-      | hash IfWrap = 0w283
-      | hash (Ceiling(a0)) = 0w293 + hashint a0
-      | hash (Floor(a0)) = 0w307 + hashint a0
-      | hash (Round(a0)) = 0w311 + hashint a0
-      | hash (Trunc(a0)) = 0w313 + hashint a0
-      | hash IntToReal = 0w317
-      | hash (RealToInt(a0)) = 0w331 + hashint a0
-      | hash (NumStrands(a0)) = 0w337 + StrandSets.hash a0
-      | hash (Strands(a0,a1)) = 0w347 + hashty a0 + StrandSets.hash a1
-      | hash (Transform(a0)) = 0w349 + ImageInfo.hash a0
-      | hash (Translate(a0)) = 0w353 + ImageInfo.hash a0
-      | hash (ControlIndex(a0,a1,a2)) = 0w359 + ImageInfo.hash a0 + hashidxctl a1 + hashint a2
-      | hash (LoadVoxel(a0)) = 0w367 + ImageInfo.hash a0
-      | hash (Inside(a0,a1)) = 0w373 + ImageInfo.hash a0 + hashint a1
-      | hash (IndexInside(a0,a1)) = 0w379 + ImageInfo.hash a0 + hashint a1
-      | hash (ImageDim(a0,a1)) = 0w383 + ImageInfo.hash a0 + hashint a1
-      | hash (LoadSeq(a0,a1)) = 0w389 + hashty a0 + hashstring a1
-      | hash (LoadImage(a0,a1)) = 0w397 + hashty a0 + hashstring a1
-      | hash (LoadFem(a0)) = 0w401 + hashty a0
-      | hash (ExtractFemItem(a0,a1)) = 0w409 + hashty a0 + FemOpt.hash a1
-      | hash (ExtractFemItem2(a0,a1,a2)) = 0w419 + hashty a0 + hashty a1 + FemOpt.hash a2
-      | hash (ExtractFem(a0,a1)) = 0w421 + hashty a0 + hashty a1
-      | hash (ExtractFemItemN(a0,a1,a2,a3,a4,a5,a6)) = 0w431 + hashtys a0 + hashty a1 + FemOpt.hash a2 + Stamp.hash a3 + hashstring a4 + hashtys a5 + hashty a6
-      | hash KillAll = 0w433
-      | hash StabilizeAll = 0w439
-      | hash (Print(a0)) = 0w443 + hashtys a0
-      | hash (MathFn(a0)) = 0w449 + MathFns.hash a0
-      | hash (Check(a0)) = 0w457 + hashint a0
-      | hash (Load(a0,a1,a2,a3)) = 0w461 + hashint a0 + hashint a1 + hashty a2 + hashint a3
-      | hash (Save(a0,a1,a2,a3)) = 0w463 + hashint a0 + hashint a1 + hashty a2 + hashint a3
-      | hash (LoadScalar(a0,a1,a2)) = 0w467 + hashint a0 + hashint a1 + hashint a2
+      | hash (VMin(a0)) = 0w139 + hashint a0
+      | hash (VMax(a0)) = 0w149 + hashint a0
+      | hash (VAbs(a0)) = 0w151 + hashint a0
+      | hash (VAnd(a0)) = 0w157 + hashint a0
+      | hash (VL(a0,a1)) = 0w163 + hashbool a0 + hashint a1
+      | hash (VAll(a0)) = 0w167 + hashint a0
+      | hash (VMaskAndMove(a0)) = 0w173 + hashint a0
+      | hash (VIndex(a0,a1)) = 0w179 + hashint a0 + hashint a1
+      | hash (TensorIndex(a0,a1)) = 0w181 + hashty a0 + hashshape a1
+      | hash (ProjectLast(a0,a1)) = 0w191 + hashty a0 + hashshape a1
+      | hash EigenVecs2x2 = 0w193
+      | hash EigenVecs3x3 = 0w197
+      | hash EigenVals2x2 = 0w199
+      | hash EigenVals3x3 = 0w211
+      | hash (Zero(a0)) = 0w223 + hashty a0
+      | hash (Select(a0,a1)) = 0w227 + hashty a0 + hashint a1
+      | hash (Tuple(a0)) = 0w229 + hashtys a0
+      | hash (Subscript(a0)) = 0w233 + hashty a0
+      | hash (MkDynamic(a0,a1)) = 0w239 + hashty a0 + hashint a1
+      | hash (Append(a0)) = 0w241 + hashty a0
+      | hash (Prepend(a0)) = 0w251 + hashty a0
+      | hash (Concat(a0)) = 0w257 + hashty a0
+      | hash Range = 0w263
+      | hash (Length(a0)) = 0w269 + hashty a0
+      | hash (SphereQuery(a0,a1)) = 0w271 + hashint a0 + hashty a1
+      | hash Sqrt = 0w277
+      | hash Cos = 0w281
+      | hash ArcCos = 0w283
+      | hash Sin = 0w293
+      | hash ArcSin = 0w307
+      | hash Tan = 0w311
+      | hash ArcTan = 0w313
+      | hash Exp = 0w317
+      | hash Sign = 0w331
+      | hash IfWrap = 0w337
+      | hash (Ceiling(a0)) = 0w347 + hashint a0
+      | hash (Floor(a0)) = 0w349 + hashint a0
+      | hash (Round(a0)) = 0w353 + hashint a0
+      | hash (Trunc(a0)) = 0w359 + hashint a0
+      | hash IntToReal = 0w367
+      | hash (RealToInt(a0)) = 0w373 + hashint a0
+      | hash (NumStrands(a0)) = 0w379 + StrandSets.hash a0
+      | hash (Strands(a0,a1)) = 0w383 + hashty a0 + StrandSets.hash a1
+      | hash (Transform(a0)) = 0w389 + ImageInfo.hash a0
+      | hash (Translate(a0)) = 0w397 + ImageInfo.hash a0
+      | hash (ControlIndex(a0,a1,a2)) = 0w401 + ImageInfo.hash a0 + hashidxctl a1 + hashint a2
+      | hash (LoadVoxel(a0)) = 0w409 + ImageInfo.hash a0
+      | hash (Inside(a0,a1)) = 0w419 + ImageInfo.hash a0 + hashint a1
+      | hash (IndexInside(a0,a1)) = 0w421 + ImageInfo.hash a0 + hashint a1
+      | hash (ImageDim(a0,a1)) = 0w431 + ImageInfo.hash a0 + hashint a1
+      | hash (LoadSeq(a0,a1)) = 0w433 + hashty a0 + hashstring a1
+      | hash (LoadImage(a0,a1)) = 0w439 + hashty a0 + hashstring a1
+      | hash (LoadFem(a0)) = 0w443 + hashty a0
+      | hash (ExtractFemItem(a0,a1)) = 0w449 + hashty a0 + FemOpt.hash a1
+      | hash (ExtractFemItem2(a0,a1,a2)) = 0w457 + hashty a0 + hashty a1 + FemOpt.hash a2
+      | hash (ExtractFem(a0,a1)) = 0w461 + hashty a0 + hashty a1
+      | hash (ExtractFemItemN(a0,a1,a2,a3,a4,a5,a6)) = 0w463 + hashtys a0 + hashty a1 + FemOpt.hash a2 + Stamp.hash a3 + hashstring a4 + hashtys a5 + hashty a6
+      | hash KillAll = 0w467
+      | hash StabilizeAll = 0w479
+      | hash (Print(a0)) = 0w487 + hashtys a0
+      | hash (MathFn(a0)) = 0w491 + MathFns.hash a0
+      | hash (Check(a0)) = 0w499 + hashint a0
+      | hash (Load(a0,a1,a2,a3)) = 0w503 + hashint a0 + hashint a1 + hashty a2 + hashint a3
+      | hash (Save(a0,a1,a2,a3)) = 0w509 + hashint a0 + hashint a1 + hashty a2 + hashint a3
+      | hash (LoadScalar(a0,a1,a2)) = 0w521 + hashint a0 + hashint a1 + hashint a2
+      | hash (scalarIntervalFun(a0)) = 0w523 + hashstring a0
 
     fun toString IAdd = "IAdd"
       | toString ISub = "ISub"
@@ -546,6 +591,13 @@ structure LowOps =
       | toString (VNeg(a0)) = concat["VNeg<", intToString a0, ">"]
       | toString (VSum(a0)) = concat["VSum<", intToString a0, ">"]
       | toString (VDot(a0)) = concat["VDot<", intToString a0, ">"]
+      | toString (VMin(a0)) = concat["VMin<", intToString a0, ">"]
+      | toString (VMax(a0)) = concat["VMax<", intToString a0, ">"]
+      | toString (VAbs(a0)) = concat["VAbs<", intToString a0, ">"]
+      | toString (VAnd(a0)) = concat["VAnd<", intToString a0, ">"]
+      | toString (VL(a0,a1)) = concat["VL<", boolToString a0, ",", intToString a1, ">"]
+      | toString (VAll(a0)) = concat["VAll<", intToString a0, ">"]
+      | toString (VMaskAndMove(a0)) = concat["VMaskAndMove<", intToString a0, ">"]
       | toString (VIndex(a0,a1)) = concat["VIndex<", intToString a0, ",", intToString a1, ">"]
       | toString (TensorIndex(a0,a1)) = concat["TensorIndex<", tyToString a0, ",", shapeToString a1, ">"]
       | toString (ProjectLast(a0,a1)) = concat["ProjectLast<", tyToString a0, ",", shapeToString a1, ">"]
@@ -604,6 +656,7 @@ structure LowOps =
       | toString (Load(a0,a1,a2,a3)) = concat["Load<", intToString a0, ",", intToString a1, ",", tyToString a2, ",", intToString a3, ">"]
       | toString (Save(a0,a1,a2,a3)) = concat["Save<", intToString a0, ",", intToString a1, ",", tyToString a2, ",", intToString a3, ">"]
       | toString (LoadScalar(a0,a1,a2)) = concat["LoadScalar<", intToString a0, ",", intToString a1, ",", intToString a2, ">"]
+      | toString (scalarIntervalFun(a0)) = concat["scalarIntervalFun<", stringToString a0, ">"]
 
   end
 

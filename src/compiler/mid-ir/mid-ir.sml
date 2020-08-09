@@ -241,7 +241,7 @@ structure MidOps =
       | resultArity insideInterval = 1
       | resultArity (EvaluateBasisAff _) = 1
       | resultArity twocomp = 3
-      | resultArity (zerotestselect _) = 3
+      | resultArity (zerotestselect _) = 4
       | resultArity (scalarIntervalFun _) = 1
 
     fun arity IAdd = 2

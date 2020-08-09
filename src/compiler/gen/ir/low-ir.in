@@ -47,6 +47,11 @@ structure LowOps =
     val hashidxctl = IndexCtl.hash
     val idxctlToString = IndexCtl.toString
 
+    fun samebool(b,b') = b = b'
+    fun hashbool b = if b then 0w1 else 0w3
+    fun boolToString b = if b then "true" else "false"
+
+
 @BODY@
 
   end

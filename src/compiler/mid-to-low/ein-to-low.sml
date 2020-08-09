@@ -74,35 +74,36 @@ structure EinToLow : sig
    *   bodyFn -- the function for generating the body
    *)
     fun unroll (shape, index, bodyFn) = let
-          val avail = AvailRHS.new()
-          fun bodyFn' (mapp, n, m) = bodyFn (avail, IMap.insert(mapp, n, m))
-          fun iter (mapp, xs, ys, shape, n, zs) = (case (xs, ys)
-                 of ([], []) => bodyFn (avail, mapp)
-                  | ([x], []) =>
-                      Mk.cons (avail, shape, List.rev (bodyFn' (mapp, n, x) :: zs))
-                  | (x::xr, []) =>
-                      iter (mapp, xr, [], shape, n, bodyFn' (mapp, n, x) :: zs)
-                  | ([], [y]) =>
-                      iter (mapp, List.tabulate (y, Fn.id), [], shape, n, zs)
-                  | ([], y::yr) => let
-                      val _ :: shape' = shape
-                      val n' = n + 1
-                      fun lp (i, ws) = if (i < y)
-                            then let
-                              val w = iter (IMap.insert (mapp, n, i), [], yr, shape', n+1, [])
-                              in
-                                lp (i+1, w::ws)
-                              end
-                            else Mk.cons (avail, shape, List.rev ws)
-                      in
-                        lp (0, [])
-                      end
-                  | _ => raise Fail "unroll: shape is larger than index"
-                (* end case *))
-          in
-            ignore (iter (IMap.empty, [], index, shape, 0, []));
-            avail
-          end
+     val avail = AvailRHS.new()
+     fun bodyFn' (mapp, n, m) = bodyFn (avail, IMap.insert(mapp, n, m))
+     fun iter (mapp, xs, ys, shape, n, zs) = (*ys is index, xs comes from when last [y]*)
+	 (case (xs, ys)
+	   of ([], []) => bodyFn (avail, mapp)
+	    | ([x], []) =>
+	      Mk.cons (avail, shape, List.rev (bodyFn' (mapp, n, x) :: zs))
+	    | (x::xr, []) =>
+	      iter (mapp, xr, [], shape, n, bodyFn' (mapp, n, x) :: zs)
+	    | ([], [y]) => (*we've now done this for every index so for each one in the last index, we run the body func'; last index could be a vector*)
+	      iter (mapp, List.tabulate (y, Fn.id), [], shape, n, zs) (* transition *)
+	    | ([], y::yr) => let (*for each idx, we do it for each instantce of the possible index*)
+	     val _ :: shape' = shape
+	     fun lp (i, ws) = if (i < y)
+			      then let
+			       val w = iter (IMap.insert (mapp, n, i), [], yr, shape', n+1, [])
+			      in
+			       lp (i+1, w::ws)
+			      end
+			      else Mk.cons (avail, shape, List.rev ws)
+	    in
+	     lp (0, [])
+	    end
+	    | _ => raise Fail "unroll: shape is larger than index"
+	 (* end case *))
+    in
+     (*empy map, [], index, shape, depth, saved results?*)
+     ignore (iter (IMap.empty, [], index, shape, 0, []));
+     avail
+    end
 
   (* in the general case, we expand the body to scalar code *)
     fun scalarExpand (params, body, index, lowArgs) =
@@ -212,7 +213,30 @@ structure EinToLow : sig
 							      
                     | _  => scalarExpand (params, body, index, args)
                   (* end case *)
-                end
+           end
+	    | E.Op2(oper, E.Tensor(id1, alpha as _::_), E.Tensor(id2, beta as _::_)) =>
+	      let
+	       val (n, vecIX, index') = dropIndex index
+	       fun grab(oper) = 
+		   (case (matchFindLast(alpha, n), matchFindLast(beta, n))
+                     of ((SOME ix1, NONE), (SOME ix2, NONE)) => let
+                      val vecA = createP (args, vecIX, id1, ix1)
+                      val vecB = createP (args, vecIX, id2, ix2)
+                      val binop = ToVec.binopV (oper vecIX, vecIX)
+                     in
+                      unroll (
+                       index, index',
+                       fn (avail, mapp) => binop (avail, mapp, vecA, vecB))
+                     end
+		      | _ => scalarExpand (params, body, index, args)
+		   (* end case *))
+	      in
+	       (case oper
+		 of E.Min => grab (Op.VMin)
+		  | E.Max => grab (Op.VMax)
+		  | _ => scalarExpand (params, body, index, args)
+	       (* end case *))
+	      end
             | E.Opn(E.Add, es as E.Tensor(_, _::_)::_) => let
                 val (n, vecIX, index') = dropIndex index
                 fun sample ([], rest) =
@@ -228,20 +252,30 @@ structure EinToLow : sig
                   sample (es, [])
                 end
             | E.Op1(E.Neg, E.Tensor(id, alpha as (_::_))) => let
-                val (n, vecIX, index') = dropIndex index
-                in
-                  case matchFindLast (alpha, n)
-                   of (SOME ix1, NONE) => unroll (
-                        index, index',
-                        fn (avail, mapp) => ToVec.negV (avail, mapp, createP (args, vecIX, id, ix1)))
-                    | _ => scalarExpand (params, body, index, args)
-                  (* end case *)
-                end
+             val (n, vecIX, index') = dropIndex index
+            in
+             (case matchFindLast (alpha, n)
+               of (SOME ix1, NONE) => unroll (
+				      index, index',
+				      fn (avail, mapp) => ToVec.negV (avail, mapp, createP (args, vecIX, id, ix1)))
+		| _ => scalarExpand (params, body, index, args)
+	     (* end case *))
+            end
+            | E.Op1(E.Abs, E.Tensor(id, alpha as (_::_))) => let
+             val (n, vecIX, index') = dropIndex index
+            in
+             (case matchFindLast (alpha, n)
+               of (SOME ix1, NONE) => unroll (
+				      index, index',
+				      fn (avail, mapp) => ToVec.absV (avail, mapp, createP (args, vecIX, id, ix1)))
+		| _ => scalarExpand (params, body, index, args)
+	     (* end case *))
+            end							       
             | E.Opn(E.Prod, [E.Tensor(s, []), E.Tensor(v, shp as _::_)]) =>
                 expandScale (s, v, shp, params, body, index, args)
             | E.Opn(E.Prod, [E.Tensor(v, shp as _::_), E.Tensor(s , [])]) =>
                 expandScale (s, v, shp, params, body, index, args)
-            | E.Opn(E.Prod, [E.Tensor(id1 , alpha as [_]), E.Tensor(id2, beta as [_])]) => let
+            | E.Opn(E.Prod, [E.Tensor(id1 , alpha as _::_), E.Tensor(id2, beta as _::_)]) => let (*QUESTION: WHY Was this ONLY VECTORS????*)
                 val (n, vecIX, index') = dropIndex index
                 in
                   case (matchFindLast(alpha, n), matchFindLast(beta, n))
@@ -266,7 +300,7 @@ structure EinToLow : sig
                             fn (avail, mapp) => binop (avail, mapp, vecA, vecB))
                         end
                     | ((SOME ix1, NONE), (NONE, NONE)) => let
-                      (* n is the last index of alpha and nowhere else, ossile scaleVector *)
+                      (* n is the last index of alpha and nowhere else, possile scaleVector *)
                         val vecA = createI (args, id2, beta)
                         val vecB = createP (args, vecIX, id1, ix1)
                         val binop = ToVec.binopV (Op.VScale vecIX, vecIX)
@@ -277,7 +311,29 @@ structure EinToLow : sig
                         end
                     | _ => scalarExpand (params, body, index, args)
                   (* end case *)
-                end
+            end
+	    | E.Op3(E.Clamp, E.Tensor(id1, alpha as _::_), E.Tensor(id2, beta as _::_), E.Tensor(id3, gamma as _::_)) =>
+	      let
+	       val (n, vecIX, index') = dropIndex index
+	      in
+	       (case (matchFindLast(alpha, n), matchFindLast(beta, n), matchFindLast(gamma, n))
+		 of ((SOME ix1, NONE), (SOME ix2, NONE), (SOME ix3, NONE)) =>
+		    let
+		     val vecA = createP (args, vecIX, id1, ix1)
+                     val vecB = createP (args, vecIX, id2, ix2)
+		     val vecC = createP (args, vecIX, id3, ix3)
+		     val triop = ToVec.tribinopV(Op.VMax vecIX, Op.VMin vecIX, vecIX)
+                     (* min(b, max(x,a)) *)
+		     (* val minop = ToVec.binopV (Op.VMin vecIX, vecIX) *)
+		     (* val maxop = ToVec.binopV (Op.VMax vecIX, vecIX) *)
+		    in
+		     unroll (
+                      index, index',
+                      fn (avail, mapp) => triop (avail, mapp, vecA, vecB, vecC))
+		    end
+		  | _ => scalarExpand (params, body, index, args)
+	       (* end case*))
+	      end
             |  _ => expandInner (params, body, index, args)
 					      (* end case *))
 					      handle exn => raise exn

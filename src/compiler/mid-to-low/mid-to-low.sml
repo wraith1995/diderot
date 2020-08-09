@@ -203,6 +203,82 @@ structure MidToLow : sig
 		end
 	      | SrcOp.Check(j) => assign(DstOp.Check(j))
 	      | SrcOp.Load(i, j, t, k) => FemToLow.expandSave(y, i, j, cvtTy t, k)
+	      | SrcOp.twocomp =>
+		let
+		 val avail = AvailRHS.new ()
+		 val [a, x, b] = args'
+		 val ty as DstTy.TensorTy(shp) = DstIR.Var.ty a
+		 val dim  = List.foldr (fn (x,y) => x * y) 1 shp
+		 val array = ArrayNd.toList (ArrayNd.fromArray( ArrayNd.getInverseIndex(ArrayNd.computeInverseIndex(ArrayNd.array'(0, shp)))))
+		 fun oper j = if List.length shp <= 1
+			      then let val [j'] = j in DstOp.VIndex(dim, j') end
+			      else DstOp.TensorIndex(ty, j)
+		 fun buildflat (v) = AvailRHS.assignCons(avail, "consSelct",
+							 List.map (fn j =>
+								      AvailRHS.assignOp(avail, "select", DstTy.realTy, oper j, [v])) array,
+							 DstTy.TensorTy([dim]))
+		 val conseda = buildflat a
+		 val consedx = buildflat x
+		 val consedb = buildflat b
+
+		 val vl = AvailRHS.assignOp(avail, "vlax", DstTy.TensorTy([dim]), DstOp.VL(true, dim), [conseda, consedx])
+		 val vl' = AvailRHS.assignOp(avail, "vlxb", DstTy.TensorTy([dim]), DstOp.VL(true, dim), [consedx, consedb])
+		 val vlall = AvailRHS.assignOp(avail, "valllow", DstTy.BoolTy, DstOp.VAll(dim), [vl])
+		 val vlall' = AvailRHS.assignOp(avail, "vallupp", DstTy.BoolTy, DstOp.VAll(dim), [vl'])
+		 val ret = AvailRHS.assignOp(avail, "andlowupp", DstTy.BoolTy, DstOp.BAnd, [vlall, vlall'])
+
+		 val lstAssign = (y, DstIR.VAR ret)
+		 val _ = AvailRHS.addAssignToList(avail, lstAssign)
+		in
+		 List.rev (AvailRHS.getAssignments(avail))
+		end
+	      | SrcOp.zerotestselect(idx) =>
+		let
+		 val avail = AvailRHS.new ()
+		 val [mi, ma, zero, inf] = args'
+				      
+		 val ty as DstTy.TensorTy(shp) = DstIR.Var.ty mi
+		 val dim  = List.foldr (fn (x,y) => x * y) 1 shp
+		 val array = ArrayNd.toList (ArrayNd.fromArray( ArrayNd.getInverseIndex(ArrayNd.computeInverseIndex(ArrayNd.array'(0, shp)))))
+		 fun oper j = if List.length shp <= 1
+			      then let val [j'] = j in DstOp.VIndex(dim, j') end
+			      else DstOp.TensorIndex(ty, j)
+		 fun buildflat (v) = AvailRHS.assignCons(avail, "consSelct",
+							 List.map (fn j =>
+								      AvailRHS.assignOp(avail, "select", DstTy.realTy, oper j, [v])) array,
+							 DstTy.TensorTy([dim]))
+
+		 val miv = buildflat mi
+		 val mav = buildflat ma
+		 val mzero = buildflat zero
+		 val minf = buildflat inf
+		 val args'' = [miv, mav]
+
+		 val vl = AvailRHS.assignOp(avail, "vlax", DstTy.TensorTy([dim]), DstOp.VL(true, dim), [miv, mzero])
+		 val vl' = AvailRHS.assignOp(avail, "vlxb", DstTy.TensorTy([dim]), DstOp.VL(true, dim), [mzero, mav])
+		 val vand = AvailRHS.assignOp(avail, "vand", DstTy.TensorTy([dim]), DstOp.VAnd(dim), [vl, vl'])
+
+		 val ret = AvailRHS.assignOp(avail, "vmaskmove", DstTy.TensorTy([dim]), DstOp.VMaskAndMove(dim), [vand, List.nth(args'', idx), minf])
+		 val flattenret = List.tabulate(dim, fn x => AvailRHS.assignOp(avail, "select", DstTy.realTy, DstOp.TensorIndex(DstTy.TensorTy([dim]), [x]), [ret]))
+
+					       
+		 fun groupConversionS (lst, s) = let
+		  val v::vst = lst
+		  val ty = DstIR.Var.ty v
+		  val DstTy.TensorTy(shape') = ty
+		 in
+		  AvailRHS.assignCons(avail, "consP", lst, DstTy.TensorTy(s::shape'))
+		 end
+
+		 (*recombined:*)
+		 val combined = ArrayNd.convertToTree(ArrayNd.fromList'(flattenret, shp), fn x => x, groupConversionS)
+						     
+		 val lstAssign = (y, DstIR.VAR combined)
+		 val _ = AvailRHS.addAssignToList(avail, lstAssign)
+		in
+		 List.rev (AvailRHS.getAssignments(avail))
+		end
+	      | SrcOp.scalarIntervalFun(str) => assign(DstOp.scalarIntervalFun(str))
               | rator => raise Fail("bogus operator " ^ SrcOp.toString rator)
             (* end case *)
           end

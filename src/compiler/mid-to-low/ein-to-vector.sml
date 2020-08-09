@@ -25,6 +25,9 @@ structure EinToVector : sig
   (* vector negation *)
     val negV : AvailRHS.t * index_env * param -> LowIR.var
 
+  (* vector abs *)
+    val absV : AvailRHS.t * index_env * param -> LowIR.var
+
   (* vector sum of a sequence of vectors *)
     val addV : AvailRHS.t * index_env * param list -> LowIR.var
 
@@ -39,6 +42,9 @@ structure EinToVector : sig
 
   (* generic binary operations on vectors *)
     val binopV : LowOps.rator * int -> AvailRHS.t * index_env * param * param -> LowIR.var
+
+    (*  *)
+    val tribinopV : LowOps.rator * LowOps.rator * int -> AvailRHS.t * index_env * param * param * param -> LowIR.var
 
   end = struct
 
@@ -86,7 +92,15 @@ structure EinToVector : sig
           val ty as Ty.TensorTy[dim] = IR.Var.ty v
           in
             AvailRHS.addAssign (avail, "negV", ty, IR.OP(Op.VNeg dim, [v]))
-          end
+    end
+
+    fun absV (avail, mapp, vec) = let
+     val v = paramToVar (avail, mapp, vec)
+     val ty as Ty.TensorTy[dim] = IR.Var.ty v
+    in
+     AvailRHS.addAssign (avail, "absV", ty, IR.OP(Op.VAbs dim, [v]))
+    end
+				    
 
   (* vector addition for a sequence of vectors *)
     fun addV (avail, mapp, vs) = let
@@ -127,6 +141,16 @@ structure EinToVector : sig
           in
            AvailRHS.addAssign (avail, "binopV", Ty.TensorTy[dim], IR.OP(rator, [u, v]))
 	   handle exn => raise exn
-          end
+    end
+
+    fun tribinopV (rator1, rator2, dim) (avail, mapp, u, v, w) = let
+          val u = paramToVar (avail, mapp, u)
+          val v = paramToVar (avail, mapp, v)
+	  val w = paramToVar (avail, mapp, w)
+	  val inter = AvailRHS.addAssign (avail, "binopV", Ty.TensorTy[dim], IR.OP(rator1, [u, v]))
+          in
+	   AvailRHS.addAssign (avail, "binopV", Ty.TensorTy[dim], IR.OP(rator2, [inter, w]))
+	   handle exn => raise exn
+    end						    
 
   end
