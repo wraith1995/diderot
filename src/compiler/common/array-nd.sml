@@ -22,6 +22,7 @@ structure ArrayNd : sig
 	   val getInverseIndex : 'a ArrayNd -> (int list) Array.array
 	   val buildIndexInfo : int list -> (int list -> int option) * (int list) Array.array
 
+										  
 	   (*a constant*)
 	   val maxLen : int
 	   (* ways to build these guys*)

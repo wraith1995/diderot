@@ -1382,7 +1382,7 @@ abs(min(xmax, max(0, xmin)))
 
 				fun opj j = Op.zerotestselect j
 				val op1 = AvailRHS.assignOp(avail, "minnan", Ty.TensorTy(divIndex, NONE), opj 0, [min, max, zero, negInf])
-				val op2 = AvailRHS.assignOp(avail, "minnan", Ty.TensorTy(divIndex, NONE), opj 1, [min, max, zero, posInf])
+				val op2 = AvailRHS.assignOp(avail, "maxnan", Ty.TensorTy(divIndex, NONE), opj 1, [min, max, zero, posInf])
 				val min' = vmax2(false, avail, op1, op2)
 				val max' = vmax2(true, avail, op1, op2)
 				val consed = intervalCons(avail, min', max')

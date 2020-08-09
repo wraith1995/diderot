@@ -12,7 +12,6 @@
 structure SimplifyFem : sig
 	   val transform : Simple.program -> Simple.program
 
-	   (*debug only:*)
 	   val analysisOnly : Simple.program -> Simple.program
 
 	   val getPropString : SimpleVar.t -> string
@@ -766,8 +765,10 @@ return to Strands until Fixed
 		)
 	      | doit (S.E_Project(v, i)) =
 		let val _ =  checkExistence ("_project_" ^ (Int.toString i) ^ "_") v
-		    val Tuple(vs) = getFemPres v
-		in List.nth(vs, i)
+		in (case getFemPres v
+		     of  Tuple(vs) => List.nth(vs, i)
+		       | Array(p) => p
+		   (* end case*))
 		end
 	      | doit (S.E_Slice(v, _, _)) = (((checkExistence ("_slice")) v; NOTHING))
 	      | doit (S.E_Coerce {srcTy, dstTy, x}) =
@@ -1691,15 +1692,18 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
 	   in (stms, S.E_Tuple(vs')) end
 	 | doit (S.E_Project(v,i)) =
 	   let
-	    val retPres' = (case retPres
+	    val retPres' = (case (getFemPres v)
 			     of Tuple(ts) => List.nth(ts, i)
-			      | _ => raise Fail "impossible femPres" (* end case*))
+			      | Array(p) => p
+			      | _ => raise Fail ("impossible femPres for " ^ (SimpleVar.uniqueNameOf v) ^ " or " ^ (SimpleVar.uniqueNameOf retVar) ^ " because pres is " ^ (presToString retPres)) (* end case*))
 	    val retTyTemp = (case V.typeOf v
 			      of Ty.T_Tuple(ts) => List.nth(ts, i)
+			       | Ty.T_Sequence(p, SOME _) => p
 			       | _ => raise Fail "impossible tuple ty" (* end case*))
 	    val retTyTempCvt = (case V.typeOf (cvtVar v)
-			      of Ty.T_Tuple(ts) => List.nth(ts, i)
-			       | _ => raise Fail "impossible tuple ty" (* end case*))
+				 of Ty.T_Tuple(ts) => List.nth(ts, i)
+				  | Ty.T_Sequence(p, SOME _) => p
+				  | _ => raise Fail "impossible tuple ty" (* end case*))
 
 	    
 	   in
@@ -2068,3 +2072,4 @@ NOTE: think about {}s and def of rep (not SSA): comprehensions, {}s
       end
 
   end
+
