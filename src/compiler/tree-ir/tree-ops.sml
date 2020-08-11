@@ -58,6 +58,11 @@ structure TreeOps =
     val hashidxctl = IndexCtl.hash
     val idxctlToString = IndexCtl.toString
 
+    fun samebool(b,b') = b = b'
+    fun hashbool b = if b then 0w1 else 0w3
+    fun boolToString b = if b then "true" else "false"
+
+
     datatype rator
       = IAdd
       | ISub
@@ -96,6 +101,15 @@ structure TreeOps =
       | VNeg of int * int
       | VSum of int * int
       | VDot of int * int
+			
+      | VMin of int * int
+      | VMax of int * int
+      | VMaskAndMove of int * int
+      | VAbs of int * int
+      | VAnd of int * int
+      | VL of bool * int * int
+      | VAll of int * int
+			
       | VIndex of int * int * int
       | VCeiling of int * int
       | VFloor of int * int
@@ -150,6 +164,7 @@ structure TreeOps =
       | Load of int * int * ty * int
       | Save of int * int * ty * int
       | LoadScalar of int * int * int
+      | scalarIntervalFun of string
 
     fun resultArity IAdd = 1
       | resultArity ISub = 1
@@ -188,6 +203,13 @@ structure TreeOps =
       | resultArity (VNeg _) = 1
       | resultArity (VSum _) = 1
       | resultArity (VDot _) = 1
+      | resultArity (VMin _) = 1
+      | resultArity (VMax _) = 1
+      | resultArity (VAbs _) = 1
+      | resultArity (VAnd _) = 1
+      | resultArity (VL _) = 1
+      | resultArity (VAll _) = 1
+      | resultArity (VMaskAndMove _) = 1
       | resultArity (VIndex _) = 1
       | resultArity (VCeiling _) = 1
       | resultArity (VFloor _) = 1
@@ -242,6 +264,7 @@ structure TreeOps =
       | resultArity (Load _) = 1
       | resultArity (Save _) = 0
       | resultArity (LoadScalar _) = 1
+      | resultArity (scalarIntervalFun _) = 1
 
     fun arity IAdd = 2
       | arity ISub = 2
@@ -280,6 +303,13 @@ structure TreeOps =
       | arity (VNeg _) = 2
       | arity (VSum _) = 1
       | arity (VDot _) = 2
+      | arity (VMin _) = 2
+      | arity (VMax _) = 2
+      | arity (VAbs _) = 1
+      | arity (VAnd _) = 2
+      | arity (VL _) = 2
+      | arity (VAll _) = 1
+      | arity (VMaskAndMove _) = 3
       | arity (VIndex _) = 1
       | arity (VCeiling _) = 1
       | arity (VFloor _) = 1
@@ -334,6 +364,7 @@ structure TreeOps =
       | arity (Load _) = 1
       | arity (Save _) = 2
       | arity (LoadScalar _) = 0
+      | arity (scalarIntervalFun _) = 1
 
     fun isPure (MkDynamic _) = false
       | isPure (Append _) = false
@@ -379,6 +410,13 @@ structure TreeOps =
       | same (VNeg(a0,a1), VNeg(b0,b1)) = sameint(a0, b0) andalso sameint(a1, b1)
       | same (VSum(a0,a1), VSum(b0,b1)) = sameint(a0, b0) andalso sameint(a1, b1)
       | same (VDot(a0,a1), VDot(b0,b1)) = sameint(a0, b0) andalso sameint(a1, b1)
+      | same (VMin(a0,a1), VMin(b0,b1)) = sameint(a0, b0) andalso sameint(a1, b1)
+      | same (VMax(a0,a1), VMax(b0,b1)) = sameint(a0, b0) andalso sameint(a1, b1)
+      | same (VAbs(a0,a1), VAbs(b0,b1)) = sameint(a0, b0) andalso sameint(a1, b1)
+      | same (VAnd(a0,a1), VAnd(b0,b1)) = sameint(a0, b0) andalso sameint(a1, b1)
+      | same (VL(a0,a1,a2), VL(b0,b1,b2)) = samebool(a0, b0) andalso sameint(a1, b1) andalso sameint(a2, b2)
+      | same (VAll(a0,a1), VAll(b0,b1)) = sameint(a0, b0) andalso sameint(a1, b1)
+      | same (VMaskAndMove(a0,a1), VMaskAndMove(b0,b1)) = sameint(a0, b0) andalso sameint(a1, b1)
       | same (VIndex(a0,a1,a2), VIndex(b0,b1,b2)) = sameint(a0, b0) andalso sameint(a1, b1) andalso sameint(a2, b2)
       | same (VCeiling(a0,a1), VCeiling(b0,b1)) = sameint(a0, b0) andalso sameint(a1, b1)
       | same (VFloor(a0,a1), VFloor(b0,b1)) = sameint(a0, b0) andalso sameint(a1, b1)
@@ -433,6 +471,7 @@ structure TreeOps =
       | same (Load(a0,a1,a2,a3), Load(b0,b1,b2,b3)) = sameint(a0, b0) andalso sameint(a1, b1) andalso samety(a2, b2) andalso sameint(a3, b3)
       | same (Save(a0,a1,a2,a3), Save(b0,b1,b2,b3)) = sameint(a0, b0) andalso sameint(a1, b1) andalso samety(a2, b2) andalso sameint(a3, b3)
       | same (LoadScalar(a0,a1,a2), LoadScalar(b0,b1,b2)) = sameint(a0, b0) andalso sameint(a1, b1) andalso sameint(a2, b2)
+      | same (scalarIntervalFun(a0), scalarIntervalFun(b0)) = samestring(a0, b0)
       | same _ = false
 
     fun hash IAdd = 0w3
@@ -472,60 +511,68 @@ structure TreeOps =
       | hash (VNeg(a0,a1)) = 0w151 + hashint a0 + hashint a1
       | hash (VSum(a0,a1)) = 0w157 + hashint a0 + hashint a1
       | hash (VDot(a0,a1)) = 0w163 + hashint a0 + hashint a1
-      | hash (VIndex(a0,a1,a2)) = 0w167 + hashint a0 + hashint a1 + hashint a2
-      | hash (VCeiling(a0,a1)) = 0w173 + hashint a0 + hashint a1
-      | hash (VFloor(a0,a1)) = 0w179 + hashint a0 + hashint a1
-      | hash (VRound(a0,a1)) = 0w181 + hashint a0 + hashint a1
-      | hash (VTrunc(a0,a1)) = 0w191 + hashint a0 + hashint a1
-      | hash (VToInt(a0)) = 0w193 + VectorLayout.hash a0
-      | hash (TensorIndex(a0,a1)) = 0w197 + hashty a0 + hashshape a1
-      | hash (ProjectLast(a0,a1)) = 0w199 + hashty a0 + hashshape a1
-      | hash (TensorCopy(a0)) = 0w211 + hashshape a0
-      | hash (TensorRef(a0)) = 0w223 + hashshape a0
-      | hash EigenVecs2x2 = 0w227
-      | hash EigenVecs3x3 = 0w229
-      | hash EigenVals2x2 = 0w233
-      | hash EigenVals3x3 = 0w239
-      | hash (Select(a0,a1)) = 0w241 + hashty a0 + hashint a1
-      | hash (Tuple(a0)) = 0w251 + hashtys a0
-      | hash (Subscript(a0)) = 0w257 + hashty a0
-      | hash (MkDynamic(a0,a1)) = 0w263 + hashty a0 + hashint a1
-      | hash (Append(a0,a1)) = 0w269 + hashty a0 + hashty a1
-      | hash (Prepend(a0,a1)) = 0w271 + hashty a0 + hashty a1
-      | hash (Concat(a0)) = 0w277 + hashty a0
-      | hash Range = 0w281
-      | hash (Length(a0)) = 0w283 + hashty a0
-      | hash (SphereQuery(a0,a1)) = 0w293 + hashint a0 + hashty a1
-      | hash Sqrt = 0w307
-      | hash Cos = 0w311
-      | hash ArcCos = 0w313
-      | hash Sin = 0w317
-      | hash ArcSin = 0w331
-      | hash Tan = 0w337
-      | hash ArcTan = 0w347
-      | hash Exp = 0w349
-      | hash Sign = 0w353
-      | hash IfWrap = 0w359
-      | hash IntToReal = 0w367
-      | hash (NumStrands(a0)) = 0w373 + StrandSets.hash a0
-      | hash (Transform(a0)) = 0w379 + ImageInfo.hash a0
-      | hash (Translate(a0)) = 0w383 + ImageInfo.hash a0
-      | hash (BaseAddress(a0)) = 0w389 + ImageInfo.hash a0
-      | hash (ControlIndex(a0,a1,a2)) = 0w397 + ImageInfo.hash a0 + hashidxctl a1 + hashint a2
-      | hash (LoadVoxel(a0)) = 0w401 + ImageInfo.hash a0
-      | hash (Inside(a0,a1,a2)) = 0w409 + VectorLayout.hash a0 + ImageInfo.hash a1 + hashint a2
-      | hash (IndexInside(a0,a1)) = 0w419 + ImageInfo.hash a0 + hashint a1
-      | hash (ImageDim(a0,a1)) = 0w421 + ImageInfo.hash a0 + hashint a1
-      | hash (LoadFem(a0)) = 0w431 + hashty a0
-      | hash (ExtractFemItem(a0,a1)) = 0w433 + hashty a0 + FemOpt.hash a1
-      | hash (ExtractFemItem2(a0,a1,a2)) = 0w439 + hashty a0 + hashty a1 + FemOpt.hash a2
-      | hash (ExtractFem(a0,a1)) = 0w443 + hashty a0 + hashty a1
-      | hash (ExtractFemItemN(a0,a1,a2,a3,a4,a5,a6)) = 0w449 + hashtys a0 + hashty a1 + FemOpt.hash a2 + hashstring a3 + hashstring a4 + hashtys a5 + hashty a6
-      | hash (MathFn(a0)) = 0w457 + MathFns.hash a0
-      | hash (Check(a0)) = 0w461 + hashint a0
-      | hash (Load(a0,a1,a2,a3)) = 0w463 + hashint a0 + hashint a1 + hashty a2 + hashint a3
-      | hash (Save(a0,a1,a2,a3)) = 0w467 + hashint a0 + hashint a1 + hashty a2 + hashint a3
-      | hash (LoadScalar(a0,a1,a2)) = 0w479 + hashint a0 + hashint a1 + hashint a2
+      | hash (VMin(a0,a1)) = 0w167 + hashint a0 + hashint a1
+      | hash (VMax(a0,a1)) = 0w173 + hashint a0 + hashint a1
+      | hash (VAbs(a0,a1)) = 0w179 + hashint a0 + hashint a1
+      | hash (VAnd(a0,a1)) = 0w181 + hashint a0 + hashint a1
+      | hash (VL(a0,a1,a2)) = 0w191 + hashbool a0 + hashint a1 + hashint a2
+      | hash (VAll(a0,a1)) = 0w193 + hashint a0 + hashint a1
+      | hash (VMaskAndMove(a0,a1)) = 0w197 + hashint a0 + hashint a1
+      | hash (VIndex(a0,a1,a2)) = 0w199 + hashint a0 + hashint a1 + hashint a2
+      | hash (VCeiling(a0,a1)) = 0w211 + hashint a0 + hashint a1
+      | hash (VFloor(a0,a1)) = 0w223 + hashint a0 + hashint a1
+      | hash (VRound(a0,a1)) = 0w227 + hashint a0 + hashint a1
+      | hash (VTrunc(a0,a1)) = 0w229 + hashint a0 + hashint a1
+      | hash (VToInt(a0)) = 0w233 + VectorLayout.hash a0
+      | hash (TensorIndex(a0,a1)) = 0w239 + hashty a0 + hashshape a1
+      | hash (ProjectLast(a0,a1)) = 0w241 + hashty a0 + hashshape a1
+      | hash (TensorCopy(a0)) = 0w251 + hashshape a0
+      | hash (TensorRef(a0)) = 0w257 + hashshape a0
+      | hash EigenVecs2x2 = 0w263
+      | hash EigenVecs3x3 = 0w269
+      | hash EigenVals2x2 = 0w271
+      | hash EigenVals3x3 = 0w277
+      | hash (Select(a0,a1)) = 0w281 + hashty a0 + hashint a1
+      | hash (Tuple(a0)) = 0w283 + hashtys a0
+      | hash (Subscript(a0)) = 0w293 + hashty a0
+      | hash (MkDynamic(a0,a1)) = 0w307 + hashty a0 + hashint a1
+      | hash (Append(a0,a1)) = 0w311 + hashty a0 + hashty a1
+      | hash (Prepend(a0,a1)) = 0w313 + hashty a0 + hashty a1
+      | hash (Concat(a0)) = 0w317 + hashty a0
+      | hash Range = 0w331
+      | hash (Length(a0)) = 0w337 + hashty a0
+      | hash (SphereQuery(a0,a1)) = 0w347 + hashint a0 + hashty a1
+      | hash Sqrt = 0w349
+      | hash Cos = 0w353
+      | hash ArcCos = 0w359
+      | hash Sin = 0w367
+      | hash ArcSin = 0w373
+      | hash Tan = 0w379
+      | hash ArcTan = 0w383
+      | hash Exp = 0w389
+      | hash Sign = 0w397
+      | hash IfWrap = 0w401
+      | hash IntToReal = 0w409
+      | hash (NumStrands(a0)) = 0w419 + StrandSets.hash a0
+      | hash (Transform(a0)) = 0w421 + ImageInfo.hash a0
+      | hash (Translate(a0)) = 0w431 + ImageInfo.hash a0
+      | hash (BaseAddress(a0)) = 0w433 + ImageInfo.hash a0
+      | hash (ControlIndex(a0,a1,a2)) = 0w439 + ImageInfo.hash a0 + hashidxctl a1 + hashint a2
+      | hash (LoadVoxel(a0)) = 0w443 + ImageInfo.hash a0
+      | hash (Inside(a0,a1,a2)) = 0w449 + VectorLayout.hash a0 + ImageInfo.hash a1 + hashint a2
+      | hash (IndexInside(a0,a1)) = 0w457 + ImageInfo.hash a0 + hashint a1
+      | hash (ImageDim(a0,a1)) = 0w461 + ImageInfo.hash a0 + hashint a1
+      | hash (LoadFem(a0)) = 0w463 + hashty a0
+      | hash (ExtractFemItem(a0,a1)) = 0w467 + hashty a0 + FemOpt.hash a1
+      | hash (ExtractFemItem2(a0,a1,a2)) = 0w479 + hashty a0 + hashty a1 + FemOpt.hash a2
+      | hash (ExtractFem(a0,a1)) = 0w487 + hashty a0 + hashty a1
+      | hash (ExtractFemItemN(a0,a1,a2,a3,a4,a5,a6)) = 0w491 + hashtys a0 + hashty a1 + FemOpt.hash a2 + hashstring a3 + hashstring a4 + hashtys a5 + hashty a6
+      | hash (MathFn(a0)) = 0w499 + MathFns.hash a0
+      | hash (Check(a0)) = 0w503 + hashint a0
+      | hash (Load(a0,a1,a2,a3)) = 0w509 + hashint a0 + hashint a1 + hashty a2 + hashint a3
+      | hash (Save(a0,a1,a2,a3)) = 0w521 + hashint a0 + hashint a1 + hashty a2 + hashint a3
+      | hash (LoadScalar(a0,a1,a2)) = 0w523 + hashint a0 + hashint a1 + hashint a2
+      | hash (scalarIntervalFun(a0)) = 0w541 + hashstring a0
 
     fun toString IAdd = "IAdd"
       | toString ISub = "ISub"
@@ -564,6 +611,13 @@ structure TreeOps =
       | toString (VNeg(a0,a1)) = concat["VNeg<", intToString a0, ",", intToString a1, ">"]
       | toString (VSum(a0,a1)) = concat["VSum<", intToString a0, ",", intToString a1, ">"]
       | toString (VDot(a0,a1)) = concat["VDot<", intToString a0, ",", intToString a1, ">"]
+      | toString (VMin(a0,a1)) = concat["VMin<", intToString a0, ",", intToString a1, ">"]
+      | toString (VMax(a0,a1)) = concat["VMax<", intToString a0, ",", intToString a1, ">"]
+      | toString (VAbs(a0,a1)) = concat["VAbs<", intToString a0, ",", intToString a1, ">"]
+      | toString (VAnd(a0,a1)) = concat["VAnd<", intToString a0, ",", intToString a1, ">"]
+      | toString (VL(a0,a1,a2)) = concat["VL<", boolToString a0, ",", intToString a1, ",", intToString a2, ">"]
+      | toString (VAll(a0,a1)) = concat["VAll<", intToString a0, ",", intToString a1, ">"]
+      | toString (VMaskAndMove(a0,a1)) = concat["VMaskAndMove<", intToString a0, ",", intToString a1, ">"]
       | toString (VIndex(a0,a1,a2)) = concat["VIndex<", intToString a0, ",", intToString a1, ",", intToString a2, ">"]
       | toString (VCeiling(a0,a1)) = concat["VCeiling<", intToString a0, ",", intToString a1, ">"]
       | toString (VFloor(a0,a1)) = concat["VFloor<", intToString a0, ",", intToString a1, ">"]
@@ -618,5 +672,6 @@ structure TreeOps =
       | toString (Load(a0,a1,a2,a3)) = concat["Load<", intToString a0, ",", intToString a1, ",", tyToString a2, ",", intToString a3, ">"]
       | toString (Save(a0,a1,a2,a3)) = concat["Save<", intToString a0, ",", intToString a1, ",", tyToString a2, ",", intToString a3, ">"]
       | toString (LoadScalar(a0,a1,a2)) = concat["LoadScalar<", intToString a0, ",", intToString a1, ",", intToString a2, ">"]
+      | toString (scalarIntervalFun(a0)) = concat["scalarIntervalFun<", stringToString a0, ">"]
 
   end

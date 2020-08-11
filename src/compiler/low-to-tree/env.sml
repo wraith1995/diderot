@@ -5,7 +5,6 @@
  * COPYRIGHT (c) 2016 The University of Chicago
  * All rights reserved.
  *)
-
 structure Env : sig
 
   (* the translated bindings of LowIR variables.  If the variable has a vector type,

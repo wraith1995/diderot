@@ -22,6 +22,7 @@ structure Paths : sig
 
   (* SIMD support *)
     val hasSSE : bool
+    val hasSSE41 : bool
     val hasAVX : bool
     val hasAVX512 : bool
 
@@ -169,6 +170,7 @@ structure Paths : sig
             then SOME flg
             else findFirstFlag flgs
       val bestSSEFlag = findFirstFlag ["-msse4.2","-msse4.1","-msse3","-msse2","-msse"]
+      val hasSSE41 = findFirstFlag ["-msse4.1"]
       val bestAVXFlag = findFirstFlag ["-mavx2","-mavx"]
     (* the AVX512 flags are broken down by feature (e.g., "-mavx512f" for foundation instructions,
      * "-mavx512dq" for double and quad-word instructions, etc.  We just grab them all.
@@ -178,8 +180,9 @@ structure Paths : sig
     val hasSSE = Option.isSome bestSSEFlag
     val hasAVX = Option.isSome bestAVXFlag
     val hasAVX512 = not (List.null avx512Flags)
+    val hasSSE41 = Option.isSome hasSSE41
     val simdFlags =
-          avx512Flags @ Option.fold (op ::) (Option.fold (op ::) [] bestSSEFlag) bestAVXFlag
+          (if hasSSE41 then ["-msse4.1"] else []) @ avx512Flags @ Option.fold (op ::) (Option.fold (op ::) [] bestSSEFlag) bestAVXFlag
     end (* local *)
 
   (* add a, possibly empty, option to a list of options *)

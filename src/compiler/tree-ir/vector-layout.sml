@@ -107,11 +107,23 @@ structure VectorLayout : sig
     fun scalar w = {wid=w, padded=false, pieces=List.tabulate(w, fn _ => 1)}
 
     local
-      val log2MaxWidth = 4      (* maxWidth == log2(512/32) *)
+     fun maxHDVecBits b =
+	 if Paths.hasAVX512
+	 then 512
+	 else if Paths.hasAVX
+	 then 256
+	 else if Paths.hasSSE
+	 then 128
+	 else if b then 64 else 32
+
+     fun log2(x, ret) = if x = 1 then ret
+			else log2(Int.div(x, 2), ret + 1)
+
+      fun log2MaxWidth b = log2(Int.div(maxHDVecBits b, if b then 64 else 32), 0)      (* maxWidth == log2(512/32) *)
       fun twoToThe n = Word.toIntX(Word.<<(0w1, Word.fromInt n))
     in
-    fun gccVectorSizes false = List.tabulate (log2MaxWidth, twoToThe)
-      | gccVectorSizes true = List.tabulate (log2MaxWidth-1, twoToThe)
+    fun gccVectorSizes false = List.tabulate (log2MaxWidth false, twoToThe)
+      | gccVectorSizes true = List.tabulate (log2MaxWidth true, twoToThe)
     end (* local *)
 
     fun valid (sizes : int list) = let

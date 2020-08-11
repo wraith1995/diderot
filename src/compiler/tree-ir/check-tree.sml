@@ -93,6 +93,13 @@ structure CheckTree : sig
             | Op.VNeg d => (vecTy d, [vecTy d])
             | Op.VSum d => (Ty.realTy, [vecTy d])
             | Op.VDot d => (Ty.realTy, [vecTy d, vecTy d])
+	    | Op.VMin d => (vecTy d, [vecTy d, vecTy d])
+	    | Op.VMax d => (vecTy d, [vecTy d, vecTy d])
+	    | Op.VAbs d => (vecTy d, [vecTy d])
+	    | Op.VAnd d => (vecTy d, [vecTy d, vecTy d])
+	    | Op.VL(_, a, b) => let val d = (a,b) in (vecTy d, [vecTy d, vecTy d]) end
+	    | Op.VAll d => (Ty.BoolTy, [vecTy d])
+	    | Op.VMaskAndMove d => (vecTy d, [vecTy d, vecTy d])
             | Op.VIndex(d, pw, idx) =>
                 if chkIndex (idx, d)
                   then (Ty.realTy, [vecTy(d, pw)])
@@ -184,6 +191,7 @@ structure CheckTree : sig
                 end
             | Op.ImageDim(info, _) => (Ty.IntTy, [Ty.ImageTy info])
             | Op.MathFn f => MathFns.sigOf (Ty.realTy, f)
+	    | Op.scalarIntervalFun _ => (Ty.TensorTy [2], [Ty.TensorTy [2]])
             | _ => raise Fail("sigOf: invalid operator " ^ Op.toString rator)
           (* end case *))
 

@@ -386,6 +386,8 @@ structure Gen : sig
     fun library (spec : TSpec.t, defs, prog) = let
      val IR.Program{inputs, strand, create, ...} = prog
      val includes = List.map (fn x => CL.D_Verbatim(["#include " ^ x ^" \n"])) (#includes spec)
+     val includes = CL.D_Verbatim(["#include <immintrin.h> \\ all avaliable intriniscs\n"]) :: includes
+     (*#include <immintrin.h> // all avaliable intrinsics*)
           val env = mkEnv spec
           val baseName = OS.Path.joinDirFile{dir = #outDir spec, file = #outBase spec}
           val substitutions = mkSubs (spec, strand, create)

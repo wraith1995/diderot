@@ -54,6 +54,13 @@ structure TreeTypeOf : sig
             | Op.VNeg d => Ty.VecTy d
             | Op.VSum d => Ty.realTy
             | Op.VDot d => Ty.realTy
+	    | Op.VMin d => Ty.VecTy d
+	    | Op.VMax d => Ty.VecTy d
+	    | Op.VAbs d => Ty.VecTy d
+	    | Op.VAnd d => Ty.VecTy d
+	    | Op.VL(b, a, c) => Ty.VecTy (a, c)
+	    | Op.VAll(_) => Ty.BoolTy
+	    | Op.VMaskAndMove d => Ty.VecTy d
             | Op.VIndex(d, pw, _) => Ty.realTy
             | Op.VCeiling d => Ty.VecTy d
             | Op.VFloor d => Ty.VecTy d
@@ -123,6 +130,7 @@ structure TreeTypeOf : sig
 	    | Op.Tuple(tys) => Ty.TupleTy(tys)
 	    | Op.Check _ => Ty.BoolTy
 	    | Op.Load(_,_,ty,_)  => ty
+	    | Op.scalarIntervalFun _ => Ty.TensorTy([2]) (*scalarFIXME*)
             | _ => raise Fail("invalid operator " ^ Op.toString rator)
           (* end case *))
 

@@ -374,6 +374,25 @@ structure LowToTree : sig
                   end
               | Op.VMul _ => bindVOp TOp.VMul
               | Op.VNeg _ => bindVOp TOp.VNeg
+	      | Op.VMin _ => bindVOp TOp.VMin
+	      | Op.VMax _ => bindVOp TOp.VMax
+	      | Op.VAbs d => let
+	       val [v] = args
+	       val (layout, vs, stms) = vectorArg (env, v)
+	       val exps = mkArgs (fn (w, p, x) => (TOp.VAbs(w, p), [x])) (layout, vs)
+	      in
+	       (Env.VEC(layout, exps), stms)
+	      end
+	      | Op.VAnd _ => bindVOp TOp.VAnd
+	      | Op.VL(b, _) => bindVOp (fn (a,c) => TOp.VL(b, a, c))
+	      | Op.VAll _ => let
+                  val [v] = args
+                  val (layout, pieces, stms) = vectorArg (env, v)
+                  val e::es = mkArgs (fn (w, p, x) => (TOp.VAll(w, p), [x])) (layout, pieces)
+                  in
+                    (Env.TREE(List.foldr (fn (e, es) => T.E_Op(TOp.BAnd, [e, es])) e es), stms)
+              end
+	      | Op.VMaskAndMove _ => bindVOp TOp.VMaskAndMove 
               | Op.VSum _ => let
                   val [v] = args
                   val (layout, pieces, stms) = vectorArg (env, v)
@@ -506,6 +525,7 @@ structure LowToTree : sig
               | Op.IndexInside(info, s) => bindTREE (TOp.IndexInside(info, s))
               | Op.ImageDim(info, d) => bindTREE(TOp.ImageDim(info, d))
               | Op.MathFn f => bindTREE (TOp.MathFn f)
+	      | Op.scalarIntervalFun f => bindTREE' (TOp.scalarIntervalFun f)
               | Op.IfWrap => bindTREE(TOp.IfWrap )
 	      | Op.LoadFem(ty) => bindTREE (TOp.LoadFem(U.trType ty))
 	      | Op.ExtractFemItem(ty, opt) => bindTREE (TOp.ExtractFemItem(U.trType ty, opt))
