@@ -15,7 +15,6 @@
 
 #ifndef _DIDEROT_DIDEROT_HXX_
 #define _DIDEROT_DIDEROT_HXX_
-
 #include "base.hxx"
 #include "util.hxx"
 #include "options.hxx"
