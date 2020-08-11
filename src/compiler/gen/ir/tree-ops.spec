@@ -57,6 +57,13 @@ VMul   : int * int : 1 : 2 : vector element-wise multiplication
 VNeg   : int * int : 1 : 2 : vector negation
 VSum   : int * int : 1 : 1 : sum elements of a vector
 VDot   : int * int : 1 : 2 : dot product of two vectors
+VMin   : int * int : 1 : 2 : elementwise min
+VMax   : int * int : 1 : 2 : elementwise Max
+VAbs   : int * int : 1 : 1 : elementwise abs
+VAnd   : int * int : 1 : 2 : elementwise bitwise and
+VL     : bool * int * int : 1 : 2 : elementwise > ; stored in floats as 0 or 1
+VAll   : int * int : 1 : 1 : && reduction; returns bool
+VMaskAndMove : int * int : 1 : 3 : irst arg is vec of true or false floats - second is first option (false) and third is second option (true)
 # VIndex<d,w,i> -- project i'th element (0-based) of vector with type VecTy(d,w)
 VIndex  : int * int * int : 1 : 1 : project
 # compute integral parts of vectors
@@ -176,3 +183,4 @@ Check : int : 1 : 1 : check if cache int has the arg value
 Load : int * int * ty * int : 1 : 1 : load int number x at given sizes to value ty of size int
 !Save : int * int * ty * int : 0 : 2 : save int number x at given sizes to value ty of size int
 LoadScalar : int * int * int : 1 : 0 : load int number x at given size + offset to value ty of size int
+scalarIntervalFun : string : 1 : 1 : scalar sine, arcsine, etc... string is a hack for now out of lazyness -- takes 2 vector and dumps two vector....

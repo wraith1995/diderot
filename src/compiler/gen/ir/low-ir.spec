@@ -56,7 +56,7 @@ VMax   : int : 1 : 2 : elementwise Max
 VAbs   : int : 1 : 1 : elementwise abs
 
 VAnd   : int : 1 : 2 : elementwise and
-VL     : bool * int : 2 : 1 : Vbool diffs < and <=; returns true if all comparisions are meet.
+VL     : bool * int : 2 : 1 : Vbool diffs < and <=;
 VAll   : int : 1 : 1 : all floats are treated as bools and they are all true.
 VMaskAndMove : int : 1 : 3 : first arg is vec of true or false floats - second is first option (false) and third is second option (true)
 # VIndex<d,w,i> -- project i'th element (0-based) of vector with type VecTy(d,w)
