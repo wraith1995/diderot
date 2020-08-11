@@ -299,7 +299,8 @@ structure CLang =
     val mkNew = E_New
     fun mkSubscript(e1, e2) = if prec e1 < postP
           then E_Subscript(E_Grp e1, e2)
-          else E_Subscript(e1, e2)
+			      else E_Subscript(e1, e2)
+    fun mkIndex(e, j) = E_Subscript(e, E_Int(IntLit.fromInt j, intTy))
     fun mkSelect (e, f) = if prec e < postP
           then E_Select(E_Grp e, f)
           else E_Select(e, f)

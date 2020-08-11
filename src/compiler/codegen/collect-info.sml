@@ -25,6 +25,13 @@ structure CollectInfo : sig
                                          * the hardware.
                                          *)
       | VSum of int * int               (* `VSum(w, pw)`: vector addition *)
+			
+      | VMin of int * int
+      | VMax of int * int
+      | VAbs of int * int
+      | VAll of int * int
+      | VMaskAndMove of int * int
+				
       | VDot of int * int
       | VCeiling of int * int
       | VFloor of int * int
@@ -45,7 +52,8 @@ structure CollectInfo : sig
       | SphereQuery of int * string
       | RIfWrap
       | MeshGeometryQueryInsert of string * string
-      
+      | scalarIntervalFun of string
+			       
     val collect : TreeIR.program -> t
 
     val listTypes : t -> TreeTypes.t list
@@ -63,6 +71,12 @@ structure CollectInfo : sig
       | VScale of int * int
       | VSum of int * int
       | VDot of int * int
+      | VMin of int * int
+      | VMax of int * int
+      | VAbs of int * int
+      | VAll of int * int
+      | VMaskAndMove of int * int
+      (*VAnd and VL are easy*)
       | VCeiling of int * int
       | VFloor of int * int
       | VRound of int * int
@@ -82,6 +96,7 @@ structure CollectInfo : sig
       | SphereQuery of int * string
       | RIfWrap
       | MeshGeometryQueryInsert of string * string
+      | scalarIntervalFun of string
             
 
    (* operator to string (for debugging) *)
@@ -97,6 +112,11 @@ structure CollectInfo : sig
             | VScale(w, pw) => vop2s ("VScale", w, pw)
             | VSum(w, pw) => vop2s ("VSum", w, pw)
             | VDot(w, pw) => vop2s ("VDot", w, pw)
+	    | VMin(w, pw) => vop2s ("VMin", w, pw)
+	    | VMax(w, pw) => vop2s ("VMax", w, pw)
+	    | VAbs(w, pw) => vop2s ("VAbs", w, pw)
+	    | VAll(w, pw) => vop2s ("VAll", w, pw)
+	    | VMaskAndMove(w, pw) => vop2s ("VMaskAndMove", w, pw)
             | VCeiling(w, pw) => vop2s ("VCeiling", w, pw)
             | VFloor(w, pw) => vop2s ("VFloor", w, pw)
             | VRound(w, pw) => vop2s ("VRound", w, pw)
@@ -152,6 +172,12 @@ structure CollectInfo : sig
                 | RIfWrap  => 0w127
 		| MeshGeometryQueryInsert(s1,s2) => 0w131 + (HashString.hashString s1)
 						    + (HashString.hashString s2)
+		| VMin(w, _) => 0w137 +  0w7 * Word.fromInt w
+		| VMax(w, _) => 0w139 + 0w7 * Word.fromInt w
+		| VAbs(w, _) => 0w149 + 0w7 * Word.fromInt w
+		| VAll(w, _) => 0w151 + 0w7 * Word.fromInt w
+		| VMaskAndMove(w, _) => 0w157 + 0w7 * Word.fromInt w
+		| scalarIntervalFun(s) => 0w163 + 0w7 * (HashString.hashString s)
               (* end case *))
         fun sameKey (op1, op2) = (case (op1, op2)
                of (Print ty1, Print ty2) => TreeTypes.same(ty1, ty2)
@@ -160,6 +186,11 @@ structure CollectInfo : sig
                 | (VScale(w1, _), VScale(w2, _)) => (w1 = w2)
                 | (VSum(w1, _), VSum(w2, _)) => (w1 = w2)
                 | (VDot(w1, _), VDot(w2, _)) => (w1 = w2)
+		| (VMin(w1, _), VMin(w2, _)) => (w1 = w2)
+		| (VMax(w1, _), VMax(w2, _)) => (w1 = w2)
+		| (VAbs(w1, _), VAbs(w2, _)) => (w1 = w2)
+		| (VAll(w1, _), VAll(w2, _)) => (w1 = w2)
+		| (VMaskAndMove(w1, _), VMaskAndMove(w2, _)) => (w1 = w2)
                 | (VCeiling(w1, _), VCeiling(w2, _)) => (w1 = w2)
                 | (VFloor(w1, _), VFloor(w2, _)) => (w1 = w2)
                 | (VRound(w1, _), VRound(w2, _)) => (w1 = w2)
@@ -181,6 +212,7 @@ structure CollectInfo : sig
                 | (RIfWrap,RIfWrap) => true
 		| (MeshGeometryQueryInsert(s11,s12), MeshGeometryQueryInsert(s21,s22)) =>
 		  (s11=s21) andalso (s12=s22)
+		| (scalarIntervalFun s1, scalarIntervalFun s2)  => s1=s2
                 | _ => false
               (* end case *))
       end)
@@ -235,6 +267,9 @@ structure CollectInfo : sig
                        of Ty.BoolTy => ()
                         | Ty.IntTy => ()
                         | Ty.StringTy => ()
+			(* | Ty.VecTy(w, pw) => if w = 1 andalso pw = 1 *)
+			(* 		     then () *)
+			(* 		     else  *)
                         (* | Ty.VecTy(1, 1) => () *)
                         | Ty.TensorTy shp => insertTensorTy shp
                         | Ty.TensorRefTy shp => insertTensorTy shp
@@ -272,6 +307,13 @@ structure CollectInfo : sig
                   | Op.VScale(w, pw) => insert (VScale(w, pw))
                   | Op.VSum(w, pw) => insert (VSum(w, pw))
                   | Op.VDot(w, pw) => insert (VDot(w, pw))
+					     
+		  | Op.VMin(w, pw) => (insert (VMin(w, pw)); insert (VCons(w, pw)))
+		  | Op.VMax(w, pw) => (insert (VMax(w, pw)); insert (VCons(w, pw)))
+		  | Op.VAbs(w, pw) => (insert (VAbs(w, pw)); insert (VCons(w, pw)))
+		  | Op.VAll(w, pw) => (insert (VAll(w, pw)); insert (VCons(w, pw)))
+		  | Op.VMaskAndMove(w, pw) => (insert (VMaskAndMove(w, pw)); insert (VCons(w, pw)))
+						
                   | Op.VCeiling(w, pw) => insert (VCeiling(w, pw))
                   | Op.VFloor(w, pw) => insert (VFloor(w, pw))
                   | Op.VRound(w, pw) => insert (VRound(w, pw))
@@ -293,6 +335,7 @@ structure CollectInfo : sig
                   | Op.IfWrap => insert RIfWrap
 		  | Op.ExtractFemItem2(t1,t2, (FemOpt.NearbyCellQuery(file),data as FemData.Mesh(mesh))) =>
 		    insert (MeshGeometryQueryInsert(Atom.toString file, Atom.toString (FemData.nameOf data)))
+		  | Op.scalarIntervalFun s => insert (scalarIntervalFun s)
                   | _ => ()
                 (* end case *))
           in

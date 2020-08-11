@@ -1031,14 +1031,72 @@ structure GenTysAndOps : sig
     fun doOp env (rator, dcls) = let
      val realTy = Env.realTy env
      val intTy = Env.intTy env
-          fun mkVec (w, pw, f) = CL.mkVec(
-                RN.vecTy w,
-                List.tabulate(pw, fn i => if i < w then f i else CL.mkFlt(zero, realTy)))
-          fun mkVMap (ty, name, f, w, pw) = let
-                fun f' i = CL.mkApply(f, [CL.mkSubscript(CL.mkVar "v", mkInt i)])
-                in
-                  mkFunc(ty, name, [CL.PARAM([], ty, "v")], mkReturn (mkVec (w, pw, f')))
-                end
+     val isDouble = realTy = CL.double
+     val realBits = if isDouble
+     		    then 64
+     		    else 32
+     val maxHDVecBits =
+     	 if Paths.hasAVX512
+     	 then 512
+     	 else if Paths.hasAVX
+     	 then 256
+     	 else if Paths.hasSSE
+     	 then 128
+     	 else realBits
+     val maxHHVecSize = Int.div(maxHDVecBits, realBits)
+
+     fun instrinicOpToInstruction (VMin(w, pw)) =
+	 if pw * realBits > maxHHVecSize then raise Fail "build vector too big for hardware"
+	 else if pw * realBits = 512
+	 then SOME(if isDouble then "_mm512_min_pd"
+		   else "_mm512_min_ps")
+	 else if pw * realBits = 256
+	 then SOME(if isDouble then "_mm256_min_pd"
+		   else "_mm256_min_ps")
+	 else if pw * realBits = 128
+	 then SOME(if isDouble then "_mm_min_pd"
+		   else "_mm_min_ps")
+	 else NONE
+       | instrinicOpToInstruction (VMax(w, pw)) =
+	 if pw * realBits > maxHHVecSize then raise Fail "build vector too big for hardware"
+	 else if pw * realBits = 512
+	 then SOME(if isDouble then "_mm512_max_pd"
+		   else "_mm512_max_ps")
+	 else if pw * realBits = 256
+	 then SOME(if isDouble then "_mm256_max_pd"
+		   else "_mm256_max_ps")
+	 else if pw * realBits = 128
+	 then SOME(if isDouble then "_mm_max_pd"
+		   else "_mm_max_ps")
+	 else NONE
+       | instrinicOpToInstruction (VMaskAndMove(w, pw)) =
+	 if pw * realBits > maxHHVecSize then raise Fail "build vector too big for hardware"
+	 else if pw * realBits = 512
+	 then SOME(if isDouble then "_mm512_mask_blend_pd"
+		   else "_mm512_mask_blend_ps")
+	 else if pw * realBits = 256
+	 then SOME(if isDouble then "_mm256_blendv_pd"
+		   else "_mm256_blendv_ps")
+	 else if pw * realBits = 128 andalso Paths.hasSSE41
+	 then SOME (if isDouble then "_mm_blendv_pd"
+		    else "_mm_blendv_ps")
+	 else NONE
+       | instrinicOpToInstruction _ = NONE
+
+     (* fun reduceSizeSplit(pw)  = *)
+     (* 	 if pw <= maxHHVecSize *)
+     (* 	 then (pw, 0) *)
+     (* 	 else let val (pw', pows) = reduceSizeSplit(Int.div(pw, 2)) in (pw', pows + 1) end *)
+
+     (* fun splitVector(v, (w, pw)) = raise Fail "oops" *)
+     fun mkVec (w, pw, f) = CL.mkVec(
+          RN.vecTy w,
+          List.tabulate(pw, fn i => if i < w then f i else CL.mkFlt(zero, realTy)))
+     fun mkVMap (ty, name, f, w, pw) = let
+      fun f' i = CL.mkApply(f, [CL.mkSubscript(CL.mkVar "v", mkInt i)])
+     in
+      mkFunc(ty, name, [CL.PARAM([], ty, "v")], mkReturn (mkVec (w, pw, f')))
+     end
           val dcl = (case rator
                  of Print(Ty.TensorRefTy shape) => genTensorPrinter true shape
                   | Print(Ty.TupleTy tys) => CL.D_Verbatim[] (* no printer needed*)
@@ -1100,7 +1158,141 @@ structure GenTysAndOps : sig
                               CL.mkDeclInit(vTy, "w", CL.mkBinOp(CL.mkVar "u", CL.#*, CL.mkVar "v")),
                               mkReturn(mkSum(w-1))
                             ])
-                      end
+                  end
+		  | VMin(w,pw) => let
+		   val operation = instrinicOpToInstruction(VMin(w, pw))
+		   val name = RN.vmin w
+		   val vTy = RN.vecTy w
+		   val params = [CL.PARAM([], vTy, "u"), CL.PARAM([], vTy, "v")]
+		   val body = (case operation
+				of SOME(oper) => CL.mkApply(oper, [CL.E_Var("u"), CL.E_Var("v")])
+				 | NONE =>
+				   let
+				    (*acc for w*)
+				    val accsU = List.tabulate(w, fn x => CL.mkIndex(CL.E_Var "u", x))
+				    val accsV = List.tabulate(w, fn x => CL.mkIndex(CL.E_Var "v", x))
+				    val mineed = ListPair.map (fn (a,b) => CL.mkApply("std::min", [a,b])) (accsU, accsV)
+				    (* apply std func*)
+				    (* regroup*)
+				   in
+				    CL.mkApply((RN.vcons w), mineed)
+				   end
+			      (* end case *))
+		   val body' = CL.mkReturn (SOME(body))
+		  in
+		   mkFunc(vTy, name, params, CL.mkBlock([body']))
+		  end
+		  | VMax(w,pw) => let
+		   val operation = instrinicOpToInstruction(VMax(w, pw))
+		   val name = RN.vmax w
+		   val vTy = RN.vecTy w
+		   val params = [CL.PARAM([], vTy, "u"), CL.PARAM([], vTy, "v")]
+		   val body = (case operation
+				of SOME(oper) => CL.mkApply(oper, [CL.E_Var("u"), CL.E_Var("v")])
+				 | NONE =>
+				   let
+				    (*acc for w*)
+				    val accsU = List.tabulate(w, fn x => CL.mkIndex(CL.E_Var "u", x))
+				    val accsV = List.tabulate(w, fn x => CL.mkIndex(CL.E_Var "v", x))
+				    val maxd = ListPair.map (fn (a,b) => CL.mkApply("std::max", [a,b])) (accsU, accsV)
+							      (* apply std func*)
+							      (* regroup*)
+				   in
+				    CL.mkApply((RN.vcons w), maxd)
+				   end
+			      (* end case *))
+		   val body' = CL.mkReturn (SOME(body))
+		  in
+		   mkFunc(vTy, name, params, CL.mkBlock([body']))
+		  end				    
+		  | VAbs(w, pw) =>
+		    let
+		     val name = RN.vmax w
+		     val vTy = RN.vecTy w
+		     val params = [CL.PARAM([], vTy, "u")]
+
+		     val neg1Exp = CL.E_Int(IntLit.fromInt (~1), CL.intTy)
+		     val vconsed = CL.mkApply(RN.vcons w, List.tabulate(w, fn _ => neg1Exp))
+		     val anded = CL.mkBinOp(CL.E_Var "u", CL.#&&, vconsed)
+		     val body = CL.mkReturn (SOME(anded))
+		    in
+		     mkFunc(vTy, name, params, CL.mkBlock([body]))
+		    end
+		  | VMaskAndMove(w, pw) => let
+		   val operation = instrinicOpToInstruction(VMaskAndMove(w, pw))
+		   val name = RN.vmaskandmove w
+		   val vTy = RN.vecTy w
+		   val params = [CL.PARAM([], vTy, "u"), CL.PARAM([], vTy, "v"), CL.PARAM([], vTy, "w")]
+		   val body = (case operation
+				of SOME(oper) => CL.mkApply(oper, [CL.E_Var("u"), CL.E_Var("v"), CL.E_Var("w")])
+				 | NONE =>
+				   let
+				    (*acc for w*)
+				    val accsU = List.tabulate(w, fn x => CL.mkIndex(CL.E_Var "u", x))
+				    val accsV = List.tabulate(w, fn x => CL.mkIndex(CL.E_Var "v", x))
+				    val accsW = List.tabulate(w, fn x => CL.mkIndex(CL.E_Var "W", x))
+				    val ziped = ListPair.zip(accsU, accsV)
+				    val maxd = ListPair.map (fn ((a,b),c) => CL.E_Cond(a, b, c)) (ziped, accsW)
+				   in
+				    CL.mkApply((RN.vcons w), maxd)
+				   end
+			      (* end case *))
+		   val body' = CL.mkReturn (SOME(body))
+		  in
+		   mkFunc(vTy, name, params, CL.mkBlock([body']))
+		  end
+		  | VAll(w, pw) =>
+		    let
+		     val name = RN.vall w
+		     val vTy = RN.vecTy w
+		     val params = [CL.PARAM([], vTy, "arg")]
+		     (*_mm512_reduce_and_epi32 *)
+		     (*build divisions: __builtin_shufflevector*)
+		     fun accSeqs(wp, rest) = if wp = 1 then rest
+					     else
+					      let
+					       val tabs = List.tabulate(wp, fn x => x)
+					       val half = Int.div(wp, 2)
+					       val modi = Int.mod(wp, 2)
+					       (*Example: 0, 1, 2, 3, 4 -> half=2,mod=1 so first = [0,1,2]*)
+					       val first = List.take(tabs, half) @ (if modi = 0
+										    then []
+										    else [1 + List.nth(List.take(tabs, half), half - 1)])
+					       val second = List.take(List.drop(tabs, half), half + modi) (*2,3,4*)
+								    
+					      in
+					       accSeqs(half + modi, (first, second) :: rest)
+					      end
+		     val seqAccs = List.rev (accSeqs(w, []))
+
+		     val ret = List.foldr (fn ((leftAcc, rightAcc), (rVar, decs)) =>
+					      let
+					       val spf = "__builtin_shufflevector"
+					       val prevDecs = List.length decs
+					       val s1v = "inter" ^ (Int.toString prevDecs)
+					       val s2v = "inter" ^ (Int.toString (prevDecs + 1))
+					       val leftAcc' = List.map (fn x => CL.E_Int(IntLit.fromInt x, CL.intTy)) leftAcc
+					       val rightAcc' = List.map (fn x => CL.E_Int(IntLit.fromInt x, CL.intTy)) rightAcc
+					       val rVar' = CL.E_Var rVar
+					       val s1 = CL.S_Decl([], CL.autoTy, s1v, SOME(CL.I_Exp(CL.mkApply(spf, [rVar', rVar']@leftAcc'))))
+					       val s2 = CL.S_Decl([], CL.autoTy, s2v, SOME(CL.I_Exp(CL.mkApply(spf, [rVar', rVar']@rightAcc'))))
+					       val s3v = "anded" ^ (Int.toString (prevDecs + 2))
+					       val s3 = CL.S_Decl([], CL.autoTy, s3v, SOME(CL.I_Exp(CL.mkBinOp(
+												      CL.E_Var s1v,
+												      CL.#&&, CL.E_Var(s2v)))))
+								 
+					      in
+					       (s3v, s3::s1::s2::decs)
+					      end
+					  ) ("arg", []) seqAccs
+		     val (retVar, retStms) = ret
+
+		     val retStm = CL.mkReturn (SOME(CL.mkBinOp(CL.mkIndex(CL.mkVar retVar, 0), CL.#== , CL.E_Int(IntLit.fromInt 1, CL.intTy))))
+
+		     val body = CL.mkBlock(List.rev (retStm::retStms))
+		    in
+		     mkFunc(CL.boolTy, name, params, body)
+		    end
                   | VCeiling(w, pw) => mkVMap (RN.vecTy w, RN.vceiling w, "diderot::ceiling", w, pw)
                   | VFloor(w, pw) => mkVMap (RN.vecTy w, RN.vfloor w, "diderot::floor", w, pw)
                   | VRound(w, pw) => mkVMap (RN.vecTy w, RN.vround w, "diderot::round", w, pw)

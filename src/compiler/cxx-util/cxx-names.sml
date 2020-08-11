@@ -62,6 +62,13 @@ structure CxxNames : sig
     val vscale    : int -> string
     val vsum      : int -> string
     val vdot      : int -> string
+			     
+    val vmin      : int -> string
+    val vmax      : int -> string
+    val vabs      : int -> string
+    val vall      : int -> string
+    val vmaskandmove : int -> string
+				
     val vclamp    : int -> string
     val vlerp     : int -> string
     val vceiling  : int -> string
@@ -136,6 +143,13 @@ structure CxxNames : sig
     val vscale = vName "vscale"
     val vsum = vName "vsum"
     val vdot = vName "vdot"
+		     
+    val vmin = vName "vmin"
+    val vmax = vName "vmax"
+    val vabs = vName "vabs"
+    val vall = vName "vall"
+    val vmaskandmove = vName "vMaskMove"
+			     
     val vclamp = vName "vclamp"
     val vlerp = vName "vlerp"
     val vceiling = vName "vceiling"
