@@ -57,6 +57,7 @@ VMul   : int * int : 1 : 2 : vector element-wise multiplication
 VNeg   : int * int : 1 : 2 : vector negation
 VSum   : int * int : 1 : 1 : sum elements of a vector
 VDot   : int * int : 1 : 2 : dot product of two vectors
+
 VMin   : int * int : 1 : 2 : elementwise min
 VMax   : int * int : 1 : 2 : elementwise Max
 VAbs   : int * int : 1 : 1 : elementwise abs

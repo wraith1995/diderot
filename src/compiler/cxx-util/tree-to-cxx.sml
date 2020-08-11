@@ -199,6 +199,8 @@ structure TreeToCxx : sig
 					      then CL.mkBinOp(a, CL.#<=, b)
 					      else CL.mkBinOp(a, CL.#<, b)
 	    | (Op.VAll(w, pw), [a]) => CL.mkApply(RN.vall w, [a])
+	    | (Op.scalarIntervalFun s, [a]) => raise Fail "scalar interval function unfinished"
+						 
             | (Op.VIndex(w, p, i), [a]) => if w = 1
 					   then a
 					   else CL.mkSubscript(a, mkInt i)
