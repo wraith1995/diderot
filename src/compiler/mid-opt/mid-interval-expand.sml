@@ -80,32 +80,6 @@ structure MidIntervalExpand : sig
     structure EU = EinUtil
     structure EP = EinPP
     structure IMap = IntRedBlackMap
-    (*given a tensor shape and an alpha, compute a new shape and alpha to represent the result after alpha is used in another op*)
-    (*
-\sum ijk...
-
-    *)
-
-
-
-
-    (**index, sx -> alpha_ijk..
-       sum index, index index, constant index
-       --constants are eliminated
-       --sums are preserved 
-       --index are permuted
-\sum gamma E.Tensor(gamma..constants..alpha) 
-
---Remove constants
-alpha, gamma -> E.Tensor(gamma..alpha)
-\sum_krs -A_jkirs
-B_ijkrs = -A_jkirs
-\sum B_ijk
-3 3 E.V 1 E.V 2 E.V 0
-3 3 E.V 0 E.V 1 E.V 2
-3 3 ... ... 
-
-.*)
 
 
     fun groupConversionS name avail (lst, s) = let
@@ -140,12 +114,7 @@ B_ijkrs = -A_jkirs
     val firstCounter            = cntUnused
     val lastCounter             = cntUnused
 
-    (*Plan: opts here, expands here, deal with new mid in mid to low, vectorization, c++, lifting, parsing, affine fix
-     *)
-    (*plan: probe and such - ops expand here -  further expansion (TOM)
-Do assign, dops
-     ops first because easy - tensor[j::sigma] -- low opt tensor index*)
-
+    (*Many util functions for dealing with common situations:*)
     fun intervalCons(avail, a,b) =
 	let
 	 val tenTy = IR.Var.ty a
@@ -163,7 +132,43 @@ Do assign, dops
 	in
 	 AvailRHS.assignCons(avail, "affine2Cons", [a,b], tenTy')
 	end
+    fun sliceOutEin(avail, outerIdx, src) =
+	let
+	 val tenTy = IR.Var.ty src
+	 val Ty.TensorTy(ts, NONE) = tenTy
+	 val outer::inner = ts
+	 val _ = if 0 <= outerIdx andalso outerIdx <= outer
+		 then ()
+		 else raise Fail "bad interval expansion"
+	 val _ = if List.length inner = 0
+		 then raise Fail "bad interval expansion"
+		 else ()
+
+	 val params = [E.TEN(true, ts, NONE)]
+	 val index = inner
+	 val body = E.Tensor(0, E.C outer :: (List.tabulate(List.length inner, fn x => E.V x)))
+	 val ein = E.EIN{params=params, index=index, body=body}
+
+	in
+	 AvailRHS.assignEin(avail, "intervalInterConsEin", Ty.TensorTy(inner, NONE), ein, [src])
+	end
+
 	  
+
+    fun unEvenCons(avail, vs : IR.var list, baseShp : int list) =
+	let
+	 val tys = List.map IR.Var.ty vs
+	 val shps = List.map (fn Ty.TensorTy(shp, _) => shp | _ => raise Fail "attempting cons of non-tensor") tys
+	 val accs = ListPair.map (fn (x,y) => if y = baseShp then [x]
+					      else let val top::rest = y
+						   in if rest = baseShp
+						      then List.tabulate(top, fn j => sliceOutEin(avail, j, x))
+						      else raise Fail "bad base shape cons" end) (vs, shps)
+	 val accsCon = List.concat accs
+	 val num = List.length accsCon
+	in
+	 AvailRHS.assignCons(avail, "consAffine", accsCon, Ty.TensorTy(num::baseShp, NONE))
+	end
 
     fun affineCons(avail, v : IR.var, errs : IR.var list, errn : IR.var) =
 	let
@@ -208,39 +213,19 @@ Do assign, dops
 	 sliced
 	end
 
-    fun sliceOutEin(avail, outerIdx, src) =
-	let
-	 val tenTy = IR.Var.ty src
-	 val Ty.TensorTy(ts, NONE) = tenTy
-	 val outer::inner = ts
-	 val _ = if 0 <= outerIdx andalso outerIdx <= outer
-		 then ()
-		 else raise Fail "bad interval expansion"
-	 val _ = if List.length inner = 0
-		 then raise Fail "bad interval expansion"
-		 else ()
 
-	 val params = [E.TEN(true, ts, NONE)]
-	 val index = inner
-	 val body = E.Tensor(0, E.C outer :: (List.tabulate(List.length inner, fn x => E.V x)))
-	 val ein = E.EIN{params=params, index=index, body=body}
+    (* fun sliceOutEinAlpha(avail, alpha, src) = *)
+    (* 	let *)
+    (* 	 val tenTy = IR.Var.ty src *)
+    (* 	 val Ty.TensorTy(ts, NONE) = tenTy *)
 
-	in
-	 AvailRHS.assignEin(avail, "intervalInterConsEin", Ty.TensorTy(inner, NONE), ein, [src])
-	end
-
-    fun sliceOutEinAlpha(avail, alpha, src) =
-	let
-	 val tenTy = IR.Var.ty src
-	 val Ty.TensorTy(ts, NONE) = tenTy
-
-	 val params = [E.TEN(true, ts, NONE)]
-	 val index = ts
-	 val body = E.Tensor(0, alpha)
-	 val ein = E.EIN{params=params, index=index, body=body}
-	in
-	 AvailRHS.assignEin(avail, "intervalInterConsEinAlpha", Ty.TensorTy(index, NONE), ein, [src])
-	end
+    (* 	 val params = [E.TEN(true, ts, NONE)] *)
+    (* 	 val index = ts *)
+    (* 	 val body = E.Tensor(0, alpha) *)
+    (* 	 val ein = E.EIN{params=params, index=index, body=body} *)
+    (* 	in *)
+    (* 	 AvailRHS.assignEin(avail, "intervalInterConsEinAlpha", Ty.TensorTy(index, NONE), ein, [src]) *)
+    (* 	end *)
 
     fun makeAbsTen(avail, src) =
 	let
@@ -614,26 +599,8 @@ Do assign, dops
 	in
 	 results
 	end
-    (*intersection, hull; extend, inside - special*)
-    (*rest: covered above + cons bs (or deltas maybe)*)
-    (*Radius: get t_1, t_2,... -> add, add*)
-    (*make vadd, make vsub
-      make abs, make vmax
-      intervalToAffine shape pattern
-      tensorToAffine/co -> cons builder
-    all destructors obvious
-    Vcomp for inside, extend is cons, hull/intersection need vmax
-    
-    plan: this today + fix the eval basis thing or the cvtTy thing... - fix evalBasis here!
-    plan: ein/basis/vectorized next 2 days
-    plan: const lift monday and tuesday
-    plan: parse on Wed (simple changes + the n-tree)
-    plan: test next days
-    
-     *)
-			
 
-
+    (*Check for the normalized and floated ein form:*)
     fun verifyEinForm(body) =
 	let
 	 val (sx, body') = (case body
@@ -681,6 +648,7 @@ Do assign, dops
 	 else raise Fail "badly formed mid ein"
 	end
 
+    (* Ensures the normalized ein has correctly numbered indecies (no skipped numbers)*)
     fun normalizeEin(sx, index, body)=
 	let
 	 (*for all sx, we need to make them be index::len(sx)*)
@@ -872,9 +840,13 @@ Do assign, dops
 	 ArrayNd.convertToTree(inverseArray, swapFn , groupConversionS "swapInterval" avail)
 	end
 
+    (* Various helper functions for the conversion - mainly for dealing indecies and params or building ein stuff*)
     fun inc(E.V x) = E.V (x + 1)
       | inc (E.C j) = E.C j
     fun modAlpha alpha = E.V 0 :: (List.map inc alpha)
+    fun modAlphaK k alpha = if k <= 0 then alpha
+			    else if k = 1 then E.C 0 :: (modAlpha alpha)
+			    else modAlpha alpha
     fun incAlpha alpha = List.map inc alpha
     fun modTensor(E.Tensor(pid, alpha)) = E.Tensor(0, E.V 0 :: (List.map inc alpha))
     fun modSumrange(xs) = List.map (fn (x,y,z) => (x + 1, y, z)) xs
@@ -899,7 +871,8 @@ Do assign, dops
 
     fun mkEin (index, params, b) = E.EIN{index=index, params=params, body=b}
 
-
+    fun kIndex (k, index) = if k <= 1 then index
+			    else k::index
 
     fun collectAlpha (E.Tensor(_, alpha)) = alpha
       | collectAlpha (E.Zero alpha) = alpha
@@ -908,9 +881,7 @@ Do assign, dops
       | collectAlpha (E.Eps2(mu1, mu2)) = [mu1, mu2]
       | collectAlpha (E.Img(_, alpha, _, _)) = alpha
       | collectAlpha _ = []
-
     fun collectAlphas ops = List.map collectAlpha ops
-
     fun alphaReplaceError(a, b) r = if List.length a = List.length b
 				    then r
 				    else raise Fail "bad alpha replace"
@@ -924,7 +895,9 @@ Do assign, dops
       | uncollectAlpha ([], e) = e
       | uncollectAlpha _ = raise Fail "uncollect"
     fun uncollectAlphas (alphas, opss) = ListPair.map uncollectAlpha (alphas, opss)
-
+    (*Given an \lambda_index \sum(sx) body with opts in body , build an (opts', index', alpha ) 
+      such that \lambda_index' body with opts' in body can be substitured in the original lambda via alpha
+     *)
     fun extractOpts(sx, index, opts) =
 	let
 	 (* build map from E.V x to size *)
@@ -973,6 +946,62 @@ Do assign, dops
 	  then be indexed in the old expression via replaceAlpha*)
 	 (opts, index', replaceAlpha)
 	end
+
+    fun extractSummedOpts(sx, index, opts) =
+	let
+	 (* build map from E.V x to size *)
+	 val indexRank = List.length index
+	 val sxRank = List.length sx
+	 fun sizeFn x = if x < indexRank andalso x >= 0
+			then List.nth(index, x)
+			else if x < sxRank
+			then let val (_, x, y) = List.nth(sx, x)
+			     in 1 + (y - x) end (*size is inclusize...*)
+			else raise Fail ("bad size index: " ^ (Int.toString x))
+
+	 fun nonSxOpt(x) = if x < indexRank andalso x >= 0
+			   then SOME x
+			   else NONE
+				  
+
+	 (* Find all relevant E.V xs used in our opts*)
+	 val alphas = collectAlphas opts
+	 val alphaIdx = List.mapPartial (fn E.V x => SOME(x) | E.C _ => NONE) (List.concat alphas)
+
+	 (*Order E.V x in the order in which they are used in the original expression and remove duplicates*)
+	 fun isolate [] = []
+	   | isolate (x::xs) = x::isolate(List.filter (fn y => y <> x) xs)
+	 fun sort data = ListMergeSort.sort (fn (x,y) => x > y) data
+	 val alphaIdxSort = isolate (sort alphaIdx)
+	 (* Calculate new index via the used E.V x*)
+	 val index' = List.map sizeFn (List.mapPartial nonSxOpt alphaIdxSort) (*filter out SX from the new index*)
+
+	 (* build map from the old E.V x to the new E.V x (i.e with respect to index and index') and the inverse back*)
+	 val alphaPairs = (List.tabulate(List.length alphaIdxSort, fn x => (List.nth(alphaIdxSort, x), x)))
+	 val alphaIdxMap = (List.foldr (fn ((x,y), a) => IMap.insert(a, x, y)) IMap.empty alphaPairs) (*oldIdx -> idx of idx*)
+	 val alphaIdxMapInv = (List.foldr (fn ((y,x), a) => IMap.insert(a, x, y)) IMap.empty alphaPairs) (* idx of idx -> oldIdx*)
+	 fun mapReplace mapp idx = (case IMap.find(mapp, idx)
+				     of NONE => raise Fail "bad map in split"
+				      | SOME k => k
+				   (* end case*))
+	 fun mapReplace' mapp idx = (case idx
+				      of E.V k => E.V(mapReplace mapp k)
+				       | E.C k => E.C k
+				    (* end case*))
+
+	 (* Using the map from old E.V x to new E.V x, updated all used alphas to be used in the new *)
+	 val alphas' = List.map (List.map (mapReplace' alphaIdxMap)) alphas
+	 (* Update the opts accordingly *)
+	 val opts' = uncollectAlphas(alphas', opts)
+	 (*Using the inverse mod, build an alpha to access the resulting tensor in the old expression; no constants, obviously*)
+	 val replaceAlpha = List.map (fn x => E.V x) (List.mapPartial nonSxOpt (List.map (mapReplace alphaIdxMapInv) (List.tabulate(List.length index', fn x => x))))
+	in
+ 	(*return opts with renamed alphas to operate within index' and 
+	  then be indexed in the old expression via replaceAlpha*)
+	 (opts, index', replaceAlpha)
+	end
+
+
 
     fun splitOpt(sx, index, opts1, opts2) =
 	(extractOpts(sx, index, opts1), extractOpts(sx, index, opts2), extractOpts(sx, index, opts1@opts2))
@@ -1037,6 +1066,25 @@ Do assign, dops
 	     end
 	in
 	 run(tensors, NONE)
+	end
+
+    fun cleanTensorPIDs(terms, params, args) =
+	let
+	 val params' = ref []
+	 val args' = ref []
+	 val pidc = ref 0
+	 fun mapFn(E.Tensor(pid, shp)) = let val pid1 = (!pidc)
+					 in (pidc := (1 + !pidc); params' := List.nth(params, pid)::(!params'); args' := List.nth(args, pid)::(!args');
+					     E.Tensor(pid1, shp))
+					 end
+	   | mapFn (E.Img(pid, a, b, c)) = let val pid1 = (!pidc)
+					   in (pidc := (1 + !pidc); params' := List.nth(params, pid)::(!params'); args' := List.nth(args, pid)::(!args'); E.Img(pid1, a, b, c)) end
+	   | mapFn (E.Krn(pid, a, b)) = let val pid1 = (!pidc)
+					in (pidc := (1 + !pidc); params' := List.nth(params, pid)::(!params'); args' := List.nth(args, pid)::(!args'); E.Krn(pid1, a, b)) end
+					       
+	   | mapFn e = e
+	in
+	 (List.map mapFn terms, !params', !args')
 	end
 	  
 
@@ -1143,6 +1191,25 @@ Do assign, dops
 	 (AvailRHS.assignEin(avail, "alphaAccM", Ty.TensorTy(index', NONE), ein, [arg]), index', replaceAlpha, sx)
 	end
 
+    fun alphaAccessK(avail, k, args, params, sx, index) (pid, t) =
+	let
+	 val (pid, alpha) = (case t
+			      of E.Tensor(pid, alpha) => (pid, alpha)
+			       | _ => raise Fail "bad alphaAccessK"
+			    (* end case *))
+	 val arg = List.nth(args, pid)
+	 val param = List.nth(params, pid)
+			     
+	 val Ty.TensorTy(argshp, NONE) = IR.Var.ty arg
+	 (* val sx' = modSumrange sx, modAlpha *)
+	 val opts = [E.Tensor(0,  alpha)]
+	 val ([E.Tensor(_, alpha')], index', rAlpha) = extractOpts(sx, index, opts)
+	 val ein = E.EIN{params=[E.TEN(true, argshp, NONE)], index=index', body=E.Tensor(0, alpha')}
+	 val ret = AvailRHS.assignEin(avail, "alphaAccK", Ty.TensorTy(index', NONE), ein, [arg])
+	in
+	 (ret, index', rAlpha, pid)
+	end
+
     fun makeExtractedDiv(avail, sx, index, opt, params, args) =
 	let
 	 val params' = List.map cvtParams params
@@ -1181,9 +1248,8 @@ Do assign, dops
 	       (*min(xmax, max(0, xmin))*)
 	       (*max(abs(xmin), xmax)*)
 	       val arg = List.nth(args, pid)
-	       (* val xmin = minInterval(avail, arg) *)
-	       (* val xmax = minInterval(avail, arg) *)
-	       val (xminAcc, index', alpha', sx') = alphaAccessM(false, avail, arg, alpha, sx, index) (*index and alpha to subsittute in if you extractouside of the sum and opt*)
+	       val (xminAcc, index', alpha', sx') = alphaAccessM(false, avail, arg, alpha, sx, index)
+	       (*index and alpha to subsittute in if you extractouside of the sum and opt*)
 	       val newRank = (List.length index')
 	       val simple = List.tabulate(newRank, fn x => E.V x) (*just do pairwise operations*)
 	       val (xmaxAcc, _, _, _) = alphaAccessM(true, avail, arg, alpha, sx, index)
@@ -1203,12 +1269,10 @@ Do assign, dops
 	      end
 	   | handleOp1 (E.Abs, t as E.Tensor(pid, alpha)) =
 	     let
-	      
 	      (*
 max(abs(xmin), xmax)
 abs(min(xmax, max(0, xmin))) 
 	      *)
-
 	      val arg = List.nth(args, pid)
 	      val (xminAcc, index', alpha', sx') = alphaAccessM(false, avail, arg, alpha, sx, index)
 	      val (xmaxAcc, _, _, _) = alphaAccessM(true, avail, arg, alpha, sx, index)
@@ -1478,32 +1542,6 @@ abs(min(xmax, max(0, xmin)))
 		 else raise Fail "bad params to interval ein"
 	 val noInterval = List.all (detectBadTen (~1)) params
 	 val overallRank = rankOfExp(body')
-
-
-
-
-	 (**)
-	 (*doubleConst or doubleTensor or ...*)
-	 (*(sx or []), duplicate leaf form -> \sum ..
-	   op1 - increasing we do obvious - and insert in sum
-           op1 - decreasing we seperate, swap, same
-	   op1 - otherwise, we two vector -- how?
-           ---split into two -  using inverse map -> (i, ijks)-> (a_0ijk, a_1ijk)
-           ---apply to 2op to get a_i
-           ---build back using tree func
-           ---substitute in place.
-	   ---DO this part in about 80 mins ish
-
-
-	 
-	   op2 - sub is a swap one and then do substitute into sub
-	   op2 - div - nancheck and then simple product chase -- need to check for scalar stuff - swap stuff...??
-
-	   opn - add is clear - split or no?
-	   opn - prod - complciated - lots of avail
-
-           JUST DO IT --affine is similar for one op probably and div... rest is pretty clean
-	  *)
 	in
 	 (case overallRank
 	   of NONE => (*pure scalar operation that we just need to duplicate the index of 2::rest and fix the indexes*)
@@ -1543,6 +1581,314 @@ abs(min(xmax, max(0, xmin)))
 	 (* end case *))
 	end
 
+    fun handleOp1Aff (k, avail, y, sx, index, params, args) (unary, t) =
+	let
+	 val () = ()
+	in
+	 (case unary
+	   of E.Neg =>
+	      let
+	       (*figure out indexes for \lambda \sum -a -> \lambda -\sum a so \sum a*)
+	       val ([E.Tensor(pid, alpha)], newIndex, accAlpha) = extractSummedOpts(sx, index, [t])
+
+	       (*Compute E.Sum t*)
+	       val t' = E.Tensor(0, modAlpha alpha)
+	       val sx' = modSumrange(sx)
+	       val new = mkSum(sx', t')
+	       val reorderedAndSum = E.EIN{params=[cvtParams (List.nth(params, pid))], index = kIndex(k,newIndex), body = new}
+	       val acc = AvailRHS.assignEin(avail, "sumAcc", Ty.TensorTy(kIndex(k, newIndex), NONE), reorderedAndSum, [List.nth(args, pid)])
+	       (*For non ec, compute -t[k::rest]*)
+
+	       val negateBody = E.Op1(E.Neg, E.Tensor(0, modAlphaK (k-1) accAlpha))
+	       (*FIXME: k index*)
+	       val negRet = E.EIN{params=[E.TEN(true, kIndex(k, newIndex), NONE)], index=kIndex(k-1, newIndex), body=negateBody}
+	       val negAcc = AvailRHS.assignEin(avail, "neg", Ty.TensorTy(kIndex(k-1, newIndex), NONE), negRet, [acc])
+	       (*Combine ec part and ec part*)
+	       val ret = unEvenCons(avail, [negAcc, sliceOutEin(avail, k - 1, acc)], newIndex)
+	      in
+	       ret
+	      end
+			     
+	    | E.PowInt(j) => raise Fail "okay"
+	    | _ => let
+	     (*unpack:*)
+	     val E.Tensor(pid, alpha) = t
+	     val arg = List.nth(args, pid)
+	     val param = List.nth(params, pid)
+	     val E.TEN(_, shp, _) = param
+
+	     (*build an interval:*)
+	     val rad = radius(avail, arg, k)
+	     val center = sliceOutEin(avail, 0, arg)
+	     val min = makeSubTen(avail, center, rad)
+	     val max = makeAddTen(avail, [center, rad])
+	     val interval = intervalCons(avail, min, max)
+	     (*build an interval via EIN:*)
+	     val intervalOp = handleOp1s(avail, y, sx, index, [E.TEN(true, shp, SOME 1)], [interval]) (unary, E.Tensor(0, alpha))
+
+
+	     (*recast to an affine form: *)
+	     val intervalRad = radius(avail, intervalOp, 1)
+	     val midPoint = makeIntervalMidPoint(avail, intervalOp)
+	     val zero = AvailRHS.makeRealLit(avail, index, RealLit.zero true)
+	     val zeros = List.tabulate(Int.max(0, k - 2), fn x => zero)
+	     val ret = affineCons(avail, midPoint, zeros, intervalRad)
+	    in
+	     ret
+	    end
+	 (* end case *))
+	end
+    fun handleAffineAdd(k, avail, y, sx, index, params, args) ts =
+	let
+	 val (scalar, affine) = partitionScalarInterval(ts, params)
+	 val (affineT, affineIndex, affineAlpha) = extractOpts(sx, index, affine)
+	 (*https://pdfs.semanticscholar.org/aa3f/370bb19228eeb220f1f127f4855efd97d154.pdf*)
+	 (*affine add is just regular things*)
+	 (* Check for inconsistent params *)
+	 val params' = List.map cvtParams params
+	 val mask = makeIvMask params
+	 val affineT' = List.map (modLeaf mask) affineT (* adds k::index *)
+	 (*adjust params for clarity*)
+	 val (affineT'', params'', args') = cleanTensorPIDs(affineT', params', args)
+	 val affineAdds = if List.length affineT = 1
+			  then List.nth(affineT'', 0) (* if only one affine, we access this*)
+			  else E.Opn(E.Add, affineT'')
+	 val addAffineEin = E.EIN{body=affineAdds, index=k::affineIndex, params=params''}
+	 val addedAffine = AvailRHS.assignEin(avail, "addAffine", Ty.TensorTy(k::affineIndex, NONE), addAffineEin, args')
+
+	 val (scalarT, scalarIndex, scalarAlpha) = extractOpts(sx, index, scalar)				 
+	 val ret = if List.length scalarT = 0
+		   then addedAffine
+		   else
+		    let
+		     val (scalarT', params''', args') = cleanTensorPIDs(scalarT, params', args)
+
+		     val accScalar = AvailRHS.assignEin(avail, "scalarAcc", Ty.TensorTy(scalarIndex, NONE),
+							E.EIN{params=params'', index=scalarIndex, body=E.Opn(E.Add, scalarT')}, args')
+		     val midPoint = sliceOutEin(avail, 0, addedAffine)
+
+		     val _ = if scalarIndex = affineIndex
+			     then ()
+			     else raise Fail "error in op: index is badly choosen"
+		     (*add scalar + affine*)	       
+		     val scalarAffineEin = E.EIN{body=E.Opn(E.Add, E.Tensor(0, affineAlpha)::[E.Tensor(1, scalarAlpha)]),
+					      index=scalarIndex,
+					      params = [argToTen midPoint, argToTen accScalar]}
+		     val preSum = AvailRHS.assignEin(avail, "preSum", Ty.TensorTy(scalarIndex, NONE), scalarAffineEin, [midPoint, accScalar])
+		     (*Recombine via affine*)
+		     val restAcc = List.tabulate(k - 1, fn x => sliceOutEin(avail, x + 1, addedAffine))
+		    in
+		     unEvenCons(avail, preSum::restAcc, scalarIndex)
+		    end
+	 (* add the sum if it exists *)
+	 val fin = if List.length sx = 0
+		   then ret
+		   else let
+		    val (_, sumIndex, sumAlpha) = extractOpts(sx, index, ts)
+		    val finEin = E.EIN{body = E.Sum(modSumrange(sx), E.Tensor(0, modAlpha sumAlpha)), index=sumIndex, params=[argToTen ret]}
+		   in
+		    AvailRHS.assignEin(avail, "summed", Ty.TensorTy(sumIndex, NONE), finEin, [ret])
+		   end
+	in
+	 fin
+	end
+
+    fun executeAffineProd(k, avail, sx, index) affines =
+	let
+	 val index' = k::index
+	 val sx' = modSumrange sx
+	 fun decompVars v = List.tabulate(k, fn x => sliceOutEin(avail, k, v))
+	 fun doDecomp (v, NONE) = decompVars v
+	   | doDecomp (v, SOME vs) = vs
+
+	 fun run((vara, sIndex, sAlpha, _)::(vara', sIndex', sAlpha', _)::rest, b) =
+	     let
+	      val vars = doDecomp(vara, b)
+	      val vars' = doDecomp(vara', NONE)
+	      (* (E.C 0, E.C 0, E.C 0 E.C j + E.C j E.C 0, abs E.C 0 E.C n+1 + abs E.C 0 E.C n+1 + rads * rads') *)
+	      (* val params  = [argToTen var, argToTen var'] *)
+	      val (([E.Tensor(_, alpha1'), E.Tensor(_, alpha2')], nIndex, rAlpha)) =
+		  extractOpts(sx, index, [E.Tensor(0, sAlpha), E.Tensor(1, sAlpha')])
+	      val alpha1'' = fn x => ( alpha1')
+	      val alpha2'' = fn x => ( alpha2')
+	      (* val alpha1C'' = fn x => (E.C x :: alpha1') *)
+	      (* val alpha2C'' = fn x => (E.C x :: alpha2') *)
+
+	      val var = fn x => List.nth(vars, x)
+	      val var' = fn x => List.nth(vars', x)
+
+	      val center = make2Prod(avail, var 0, var' 0, nIndex, alpha1'' 0, alpha1'' 0)
+
+	      val middle  = fn j =>
+			       let
+				val l = make2Prod(avail, var 0, var' j, nIndex, alpha1'' 0, alpha2'' j)
+				val r = make2Prod(avail, var 0, var' j, nIndex, alpha1'' j, alpha2'' 0)
+			       in
+				makeAddTen(avail, [l, r])
+			       end
+	      val middles = List.tabulate(Int.max(0, k - 2), middle)
+
+	      val absl = List.map (fn v => makeAbsTen(avail, v)) vars
+	      val absr = List.map (fn v => makeAbsTen(avail, v)) vars'
+	      val fabsl = fn x => List.nth(absl, x)
+	      val fabsr = fn x => List.nth(absr, x)
+
+	      val absCenter1 = make2Prod(avail, fabsl 0, var' (k-1), nIndex, alpha1'' 0, alpha2'' (k - 1))
+	      val absCenter2 = make2Prod(avail, var (k-1), fabsr 0, nIndex, alpha1'' (k - 1), alpha2'' 0)
+
+	      (*SUM? Scalar code?*)
+	      val radl = makeAddTen(avail, List.tabulate(k - 1, fn x => fabsl (x + 1)))
+	      val radr = makeAddTen(avail, List.tabulate(k - 1, fn x => fabsr (x + 1)))
+
+	      val radProd = make2Prod(avail, radl, radr, nIndex, alpha1', alpha2')
+
+	      val errn = makeAddTen(avail, [absCenter1, absCenter2, radProd])
+
+	      val ret = affineCons(avail, center, middles, errn)
+	     in
+	      run((ret, nIndex, rAlpha, 0)::rest, SOME ([center]@middles@[errn]))
+	     end
+	   | run ([(var, sIndex, sAlpha, _)], NONE) = (decompVars var, sIndex, sAlpha)
+	   | run ([(var, sIndex, sAlpha, _)], SOME vs) = (vs, sIndex, sAlpha)
+
+	in
+	 run(affines, NONE)
+	end
+
+    fun handleAffineProd(k, avail, y, sx, index, params, args) ts =
+	let
+	 val (scalar, affines) = partitionScalarInterval(ts, params)
+
+
+	 val doAcc = alphaAccessK(avail, k, args, params, sx, index)
+	 val affines' = ListPair.map doAcc (List.tabulate(List.length affines, fn x => x), affines)
+	 (*0. access the affines
+	  1. Make the prod function and run this. (E.C 0, E.C 0, E.C 0 E.C j + E.C j E.C 0, abs E.C 0 E.C n+1 + abs E.C 0 E.C n+1 + \sum rads)
+	  2. return the alpha 
+	  3. do scalar access and then scalar multiply
+	  *)
+	 val (affineVars, affineIndex, affineAlpha) = executeAffineProd(k, avail, sx, index) affines'
+
+	 val (scaledVars, scaledIndex, scaledAlpha)  =
+	     if List.length scalar = 0
+	     then (affineVars, affineIndex, affineAlpha)
+	     else
+	      let
+	       val (scalars', scalarIndex, scalarAlpha) = extractOpts(sx, index, scalar)
+	       fun rebuildParams(E.Tensor(pid, alpha)::rest, cnt, new, params, args) =
+		   let val param = List.nth(params, pid)
+		       val arg = List.nth(args, pid)
+		   in
+		    rebuildParams(rest, cnt + 1, E.Tensor(cnt, alpha)::new, param::params, arg::args)
+		   end
+		 | rebuildParams (E.Img(pid, alpha, pos, j)::rest, cnt, new, params, args) =
+		   let val param = List.nth(params, pid)
+		       val arg = List.nth(args, pid)
+		   in
+		    rebuildParams(rest, cnt + 1, E.Img(cnt, alpha, pos, j)::new, param::params, arg::args)
+		   end
+		 | rebuildParams (E.Krn(pid, mus, j)::rest, cnt, new, params, args) =
+		   let val param = List.nth(params, pid)
+		       val arg = List.nth(args, pid)
+		   in
+		    rebuildParams(rest, cnt + 1, E.Krn(cnt, mus, j)::new, param::params, arg::args)
+		   end
+		 | rebuildParams ([], _, rest, params, args) =
+		   (List.rev rest, List.rev params, List.rev args)
+		     
+	       val (scalars'', newParams, newArgs) = rebuildParams(scalars', 1, [], [], [])
+
+	       val scaleEin = E.EIN{index=scalarIndex, body=E.Opn(E.Prod, scalars''), params = newParams}
+	       val scaleVar = AvailRHS.assignEin(avail, "scaleAffineMul", Ty.TensorTy(scalarIndex, NONE), scaleEin, newArgs)
+
+
+	       val (preSumOpts, preSumIndex, preSumAlpha) = extractOpts(sx, index, [E.Tensor(0, affineAlpha), E.Tensor(1, scalarAlpha)])
+	       val preSumEin = E.EIN{index=preSumIndex, body=E.Opn(E.Prod, preSumOpts), params=[E.TEN(true, affineIndex, NONE),
+												E.TEN(true, scalarIndex, NONE)]}
+
+	       val nonErrnVars = List.tabulate(k-1, fn x =>
+						       AvailRHS.assignEin(avail, "preSumMul", Ty.TensorTy(preSumIndex, NONE),
+									  preSumEin, [List.nth(affineVars, x), scaleVar])
+					      )
+
+	       val absScaleVar = makeAbsTen(avail, scaleVar)
+	       val errn = AvailRHS.assignEin(avail, "preSumMulN", Ty.TensorTy(preSumIndex, NONE),
+									  preSumEin, [List.nth(affineVars, k - 1), absScaleVar])
+						(*Build*)
+	      in
+	       (nonErrnVars@[errn], preSumIndex, preSumAlpha)
+	      end
+	 (*sum each component*)
+	 (*combine!*)
+
+	 val ret = if List.length sx = 0
+		   then  AvailRHS.assignCons(avail, "sumAffMulCons", scaledVars, Ty.TensorTy(k::scaledIndex, NONE))
+		   else
+		    let
+		     val ([E.Tensor(_, sumAlpha)], sumIndex, _) = extractSummedOpts(sx, index, [E.Tensor(0, scaledAlpha)])
+		     val ein = E.EIN{index=sumIndex, body=E.Sum(sx, E.Tensor(0, sumAlpha)), params=[E.TEN(true, scaledIndex, NONE)]}
+		     val summedEins = List.tabulate(k, fn x =>
+							  AvailRHS.assignEin(avail, "sumAffMul", Ty.TensorTy(sumIndex, NONE),
+									     ein, [List.nth(scaledVars, x)]))
+		    in
+		     AvailRHS.assignCons(avail, "sumAffMulCons", summedEins, Ty.TensorTy(k::sumIndex, NONE))
+		    end
+				     
+				 
+
+	in
+	 ret
+	end
+	  
+    fun handleAffineEin(k, y, oldY, params, index, sx, body, body', leafForm, args, oldArgs) =
+	let
+	 val avail = AvailRHS.new ()
+	 fun rankOfExp(e) = let val i = rankOfExp'(e, params) in if i = 0
+								 then NONE
+								 else if i > 0
+								 then SOME(i)
+								 else raise Fail "bad interval rank" end
+
+
+	 val tests = List.all (detectBadTen k) params 
+	 val _ = if tests
+		 then ()
+		 else raise Fail "bad params to interval ein"
+	 val noAffine = List.all (detectBadTen (~1)) params
+	 val overallRank = rankOfExp(body')
+	in
+	 (case overallRank
+	   of NONE =>
+	      let
+	       val ein = E.EIN{params=params,index=index, body=body}
+	       val orig = AvailRHS.assignEin(avail, "scalarMid", Ty.TensorTy(index, NONE), ein, args)
+	       val zero = AvailRHS.makeRealLit(avail, index, RealLit.zero true)
+	       val ret = affineCons(avail, orig, List.tabulate(Int.max(0, k - 2), fn x => zero), zero)
+	      in
+	       if noAffine
+	       then (AvailRHS.addAssignToList(avail, (y, IR.VAR ret));
+		     AvailRHS.getAssignments' avail)
+	       else raise Fail "bad params"
+	      end
+	    | SOME kp =>
+	      if k = kp
+	      then
+	       (case body'
+		 of E.Op1(unary, t) =>
+		    let
+		     val v = (handleOp1Aff (k, avail, y, sx, index, params, args) (unary, t))
+		    in
+		     (AvailRHS.addAssignToList(avail, (y, IR.VAR v));
+		      AvailRHS.getAssignments' avail)
+		    end
+		  | _ => raise Fail "okay"
+	       (* end case *))
+	      else raise Fail ("bad rank arg to affine form: " ^ (Int.toString k) ^ " with body of " ^ (Int.toString kp))
+	 (*categorize into interval and non-interval - interval: build interval, run handleInterval, convert out.
+					 non-interval: Sub, ADD, DIV, PROD, neg, PowInt,*)
+	 (* end case *))
+	end
+
     fun handleEin(y, oldY, ein as E.EIN{params, index, body}, args, oldArgs) =
 	let
 	 val (sx, leafForm, body') = verifyEinForm(body)
@@ -1553,7 +1899,7 @@ abs(min(xmax, max(0, xmin)))
 	   of NONE => [IR.ASSGN(y, IR.EINAPP(ein, args))]
 	    | SOME k => if k = 1
 			then handleIntervalEin(y, oldY, params, index, sx', body, body'', leafForm, args, oldArgs)
-			else raise Fail "NYI"
+			else handleAffineEin(k, y, oldY, params, index, sx', body, body'', leafForm, args, oldArgs)
 	 (* end case*))
 	end
     structure BDA = BasisDataArray

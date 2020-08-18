@@ -19,6 +19,9 @@ strand dumb(int i)
   output real r = 2.0;
   output tensor[3][2][] fum = {};
   output (int[], int[]) fug  = ({1,2}, {1,2});
+  output tensor[3, 3] gr = [[1,2,3], [4,5,6], [7,8,9]];
+  output tensor[3, 10] grr = [[1,2,3,4,5,6,7,8,9,10], [1,2,3,4,5,6,7,8,9,10], [1,2,3,4,5,6,7,8,9,10]];
+  
     
   output (int[2], int) g = ({2,3},2);
   update{
@@ -30,6 +33,8 @@ strand dumb(int i)
     print(fum[0][0]);
     print(d •( d ));
     print(dd);
+    print(gr ⊗ ( [1,2,3] ));
+    print(grr •( [1,2,3,4,5,6,7,8,9,10] ));
     print((2,3,4)[1]);
     r = d •( d );
     print(fug);
